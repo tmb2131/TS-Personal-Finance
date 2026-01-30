@@ -500,11 +500,10 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               </div>
             </div>
           </div>
-          {/* Table with sticky header */}
+          {/* Table with sticky header (same structure as Annual Trends table) */}
           <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
-            <div className="overflow-x-auto">
-              <table className="w-full caption-bottom text-sm">
-              <TableHeader>
+            <table className="w-full caption-bottom text-sm">
+            <TableHeader>
                 <TableRow className="border-b">
                   <TableHead className="sticky top-0 z-20 bg-background">
                     <button
@@ -641,8 +640,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                 </TableCell>
               </TableRow>
               </TableBody>
-              </table>
-            </div>
+            </table>
           </div>
         </CardContent>
       </Card>

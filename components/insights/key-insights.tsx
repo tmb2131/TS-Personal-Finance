@@ -4,10 +4,26 @@ import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Progress } from '@/components/ui/progress'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
-import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, Wallet, AlertCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle } from 'lucide-react'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  PieChart,
+  Pie,
+  Legend,
+} from 'recharts'
 
 export function KeyInsights() {
   const { currency, convertAmount } = useCurrency()
@@ -244,6 +260,36 @@ export function KeyInsights() {
       .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
       .slice(0, 6) // Top 6 accounts
 
+    // Net worth over time: last 12 months by month (exclude Trust)
+    const byMonth = historicalNetWorth.reduce<Record<string, { personal: number; family: number }>>((acc, item) => {
+      const d = new Date(item.date)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const amount = currency === 'USD' ? (item.amount_usd || 0) : (item.amount_gbp || 0)
+      if (!acc[key]) acc[key] = { personal: 0, family: 0 }
+      if (item.category === 'Personal') acc[key].personal += amount
+      else if (item.category === 'Family') acc[key].family += amount
+      return acc
+    }, {})
+    const netWorthChartData = Object.entries(byMonth)
+      .map(([month, v]) => ({
+        month,
+        total: v.personal + v.family,
+        Personal: v.personal,
+        Family: v.family,
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-12)
+      .map((d) => ({
+        ...d,
+        label: d.month.slice(0, 7).replace('-', '/'),
+      }))
+
+    // Personal vs Family for donut (current snapshot)
+    const personalVsFamilyPie = [
+      { name: 'Personal', value: Math.max(0, currentPersonal), fill: '#3b82f6' },
+      { name: 'Family', value: Math.max(0, currentFamily), fill: '#8b5cf6' },
+    ].filter((d) => d.value > 0)
+
     return {
       currentTotal,
       currentPersonal,
@@ -255,6 +301,8 @@ export function KeyInsights() {
       familyVsLastYear,
       topAccounts,
       lastYearTotal,
+      netWorthChartData,
+      personalVsFamilyPie,
     }
   }, [accountBalances, historicalNetWorth, currency, fxRate, convertAmount])
 
@@ -739,107 +787,98 @@ export function KeyInsights() {
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Net Worth</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Current net worth is {formatCurrencyLarge(netWorthInsights.currentTotal)} (Trust excluded).
+          </p>
         </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          {/* Summary Statements */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <p className="text-sm">
-                Current net worth is{' '}
-                <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</span>
-                {' '}(Personal: {formatCurrencyLarge(netWorthInsights.currentPersonal)}, Family: {formatCurrencyLarge(netWorthInsights.currentFamily)}).
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              {netWorthInsights.vsLastYear > 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+        <CardContent className="pt-6 space-y-6">
+          {/* Vs last year — prominent */}
+          <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
+            <span className="text-sm font-medium text-muted-foreground">Vs last year</span>
+            {netWorthInsights.vsLastYear > 0 ? (
+              <>
+                <TrendingUp className="h-8 w-8 text-green-600" />
+                <span className="text-2xl font-bold text-green-600">
+                  +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
+                </span>
+                <span className="text-sm font-medium text-green-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
+              </>
+            ) : (
+              <>
+                <TrendingDown className="h-8 w-8 text-red-600" />
+                <span className="text-2xl font-bold text-red-600">
+                  {formatCurrencyLarge(netWorthInsights.vsLastYear)}
+                </span>
+                <span className="text-sm font-medium text-red-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
+              </>
+            )}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Net worth over time — small line chart */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Net worth over time</h3>
+              {netWorthInsights.netWorthChartData.length > 0 ? (
+                <div className="h-[180px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                      <Tooltip formatter={(v: number) => [formatCurrencyLarge(v), 'Total']} labelFormatter={(l) => l} />
+                      <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-muted-foreground">No historical data yet.</p>
               )}
-              <p className="text-sm">
-                Net worth has{' '}
-                <span className="font-semibold">
-                  {netWorthInsights.vsLastYear > 0 ? 'increased' : 'decreased'} by {formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
-                </span>{' '}
-                compared to last year.
-              </p>
             </div>
-            <div className="flex items-start gap-3">
-              {netWorthInsights.vsFiveYearAvg > 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+
+            {/* Personal vs Family — donut */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Personal vs Family</h3>
+              {netWorthInsights.personalVsFamilyPie.length > 0 ? (
+                <div className="h-[180px] w-full flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={netWorthInsights.personalVsFamilyPie}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={2}
+                        dataKey="value"
+                        nameKey="name"
+                      >
+                        {netWorthInsights.personalVsFamilyPie.map((entry, i) => (
+                          <Cell key={i} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => formatCurrencyLarge(v)} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-muted-foreground">No balance data yet.</p>
               )}
-              <p className="text-sm">
-                Net worth is{' '}
-                <span className="font-semibold">
-                  {formatCurrencyLarge(Math.abs(netWorthInsights.vsFiveYearAvg))} {netWorthInsights.vsFiveYearAvg > 0 ? 'above' : 'below'}
-                </span>{' '}
-                the average over the past 5 years
-                <span className="text-xs text-muted-foreground ml-1">(Trust excluded)</span>.
-              </p>
             </div>
           </div>
 
-          {/* Breakdown by Personal vs Family */}
-          <div className="grid md:grid-cols-2 gap-6 pt-4">
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                {netWorthInsights.personalVsLastYear > 0 ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-red-600" />
-                )}
-                <h3 className="font-semibold text-sm">Personal:</h3>
-              </div>
-              <ul className="space-y-1.5">
-                <li className="text-sm">
-                  Current: <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentPersonal)}</span>
-                </li>
-                <li className="text-sm">
-                  Change vs last year: <span className={netWorthInsights.personalVsLastYear > 0 ? 'text-green-600' : 'text-red-600'}>
-                    {netWorthInsights.personalVsLastYear > 0 ? '+' : ''}{formatCurrencyLarge(netWorthInsights.personalVsLastYear)}
-                  </span>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                {netWorthInsights.familyVsLastYear > 0 ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-red-600" />
-                )}
-                <h3 className="font-semibold text-sm">Family:</h3>
-                <span className="text-xs text-muted-foreground">(Trust excluded)</span>
-              </div>
-              <ul className="space-y-1.5">
-                <li className="text-sm">
-                  Current: <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentFamily)}</span>
-                </li>
-                <li className="text-sm">
-                  Change vs last year: <span className={netWorthInsights.familyVsLastYear > 0 ? 'text-green-600' : 'text-red-600'}>
-                    {netWorthInsights.familyVsLastYear > 0 ? '+' : ''}{formatCurrencyLarge(netWorthInsights.familyVsLastYear)}
-                  </span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Key Accounts */}
-          <div className="pt-4">
-            <h3 className="font-semibold text-sm mb-3 pb-2 border-b">Key Accounts:</h3>
-            <ul className="space-y-1.5">
+          {/* Key Accounts — compact */}
+          <div>
+            <h3 className="text-sm font-semibold mb-2 border-b pb-2">Key accounts</h3>
+            <ul className="space-y-1 text-sm">
               {netWorthInsights.topAccounts.map((account) => (
-                <li key={`${account.institution}-${account.accountName}`} className="text-sm">
-                  {account.institution} - {account.accountName}: {formatCurrencyLarge(account.balance)}
+                <li key={`${account.institution}-${account.accountName}`}>
+                  {account.institution} — {account.accountName}: {formatCurrencyLarge(account.balance)}
                 </li>
               ))}
               {netWorthInsights.topAccounts.length === 0 && (
-                <li className="text-sm text-muted-foreground flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  No accounts found. Please sync account data.
+                <li className="text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" /> No accounts found. Sync account data to see balances.
                 </li>
               )}
             </ul>
@@ -851,83 +890,79 @@ export function KeyInsights() {
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Annual Budget</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))} vs {new Date().getFullYear()} target.
+          </p>
         </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          {/* Summary Statements */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              {annualBudgetInsights.overallGap < 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-              )}
-              <p className="text-sm">
-                Overall, we're estimated to be{' '}
-                <span className="font-semibold">
-                  {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))}
-                </span>{' '}
-                compared to our {new Date().getFullYear()} budget this year, tracking spending{' '}
-                {formatCurrency(annualBudgetInsights.totalTracking)} this year vs. a budget of{' '}
-                {formatCurrency(annualBudgetInsights.totalBudget)}.
-              </p>
+        <CardContent className="pt-6 space-y-6">
+          {/* Spend vs Budget — progress bar */}
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Spend vs budget</span>
+              <span>
+                {formatCurrency(annualBudgetInsights.totalTracking)} / {formatCurrency(annualBudgetInsights.totalBudget)}
+              </span>
             </div>
-            <div className="flex items-start gap-3">
-              {annualBudgetInsights.gapExcludingHolidays < 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-              )}
-              <p className="text-sm">
-                Excluding savings from 'Holidays', we're still estimated to be{' '}
-                <span className="font-semibold">
-                  {annualBudgetInsights.gapExcludingHolidays < 0 ? 'under' : 'over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.gapExcludingHolidays))}
-                </span>
-                .
-              </p>
-            </div>
+            <Progress
+              value={Math.min(100, (annualBudgetInsights.totalBudget > 0 ? (annualBudgetInsights.totalTracking / annualBudgetInsights.totalBudget) * 100 : 0))}
+              className={annualBudgetInsights.overallGap > 0 ? '[&>div]:bg-red-500' : '[&>div]:bg-green-600'}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {formatPercentAbs(annualBudgetInsights.gapPercent)} {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
+            </p>
           </div>
 
-          {/* Breakdown */}
-          <div className="grid md:grid-cols-2 gap-6 pt-4">
+          {/* Under / Over budget — horizontal bars */}
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <h3 className="font-semibold text-sm">Under budget:</h3>
+                <h3 className="font-semibold text-sm">Under budget</h3>
               </div>
-              <ul className="space-y-1.5">
-                {annualBudgetInsights.underBudget.map((item) => (
-                  <li key={item.category} className="text-sm">
-                    {item.category}{' '}
-                    <span className="font-semibold text-green-600">
-                      {formatCurrency(Math.abs(item.gap))}
-                    </span>{' '}
-                    under budget
-                  </li>
-                ))}
-                {annualBudgetInsights.underBudget.length === 0 && (
-                  <li className="text-sm text-muted-foreground italic">No categories under budget</li>
-                )}
-              </ul>
+              {annualBudgetInsights.underBudget.length > 0 ? (
+                <div className="space-y-3">
+                  {annualBudgetInsights.underBudget.map((item) => {
+                    const maxGap = Math.max(...annualBudgetInsights.underBudget.map((i) => Math.abs(i.gap)), 1)
+                    const pct = (Math.abs(item.gap) / maxGap) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No categories under budget</p>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <XCircle className="h-4 w-4 text-red-600" />
-                <h3 className="font-semibold text-sm">Over budget:</h3>
+                <h3 className="font-semibold text-sm">Over budget</h3>
               </div>
-              <ul className="space-y-1.5">
-                {annualBudgetInsights.overBudget.map((item) => (
-                  <li key={item.category} className="text-sm">
-                    {item.category}{' '}
-                    <span className="font-semibold text-red-600">
-                      {formatCurrency(Math.abs(item.gap))}
-                    </span>{' '}
-                    over budget
-                  </li>
-                ))}
-                {annualBudgetInsights.overBudget.length === 0 && (
-                  <li className="text-sm text-muted-foreground italic">No categories over budget</li>
-                )}
-              </ul>
+              {annualBudgetInsights.overBudget.length > 0 ? (
+                <div className="space-y-3">
+                  {annualBudgetInsights.overBudget.map((item) => {
+                    const maxGap = Math.max(...annualBudgetInsights.overBudget.map((i) => Math.abs(i.gap)), 1)
+                    const pct = (Math.abs(item.gap) / maxGap) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No categories over budget</p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -937,81 +972,83 @@ export function KeyInsights() {
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Annual Spend</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            This year vs 4-year average.
+          </p>
         </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          {/* Summary Statements */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              {annualSpendInsights.vsFourYearAvg > 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-              )}
-              <p className="text-sm">
-                We're estimated to spend{' '}
-                <span className="font-semibold">
-                  {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))} {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'}
-                </span>{' '}
-                this year than we have on average over the past four years.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              {annualSpendInsights.vsLastYear > 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-              )}
-              <p className="text-sm">
-                We're estimated to spend{' '}
-                <span className="font-semibold">
-                  {formatCurrency(Math.abs(annualSpendInsights.vsLastYear))} {annualSpendInsights.vsLastYear > 0 ? 'less' : 'more'}
-                </span>{' '}
-                than last year.
-              </p>
-            </div>
+        <CardContent className="pt-6 space-y-6">
+          {/* Vs 4-year average — prominent call-out */}
+          <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
+            <span className="text-sm font-medium text-muted-foreground">Vs 4-year average</span>
+            {annualSpendInsights.vsFourYearAvg > 0 ? (
+              <>
+                <TrendingDown className="h-8 w-8 text-green-600" />
+                <span className="text-2xl font-bold text-green-600">
+                  {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))} less
+                </span>
+                <span className="text-sm font-medium text-green-600">{formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}</span>
+              </>
+            ) : (
+              <>
+                <TrendingUp className="h-8 w-8 text-red-600" />
+                <span className="text-2xl font-bold text-red-600">
+                  {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))} more
+                </span>
+                <span className="text-sm font-medium text-red-600">{formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}</span>
+              </>
+            )}
           </div>
 
-          {/* Breakdown */}
-          <div className="grid md:grid-cols-2 gap-6 pt-4">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Spending less — horizontal bar chart */}
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <h3 className="font-semibold text-sm">Spending less:</h3>
+                <h3 className="font-semibold text-sm">Spending less vs average</h3>
               </div>
-              <ul className="space-y-1.5">
-                {annualSpendInsights.spendingLess.map((item) => (
-                  <li key={item.category} className="text-sm">
-                    {item.category}{' '}
-                    <span className="font-semibold text-green-600">
-                      {formatCurrency(Math.abs(item.vsFourYearAvg))}
-                    </span>{' '}
-                    less than on average
-                  </li>
-                ))}
-                {annualSpendInsights.spendingLess.length === 0 && (
-                  <li className="text-sm text-muted-foreground italic">No categories spending less than average</li>
-                )}
-              </ul>
+              {annualSpendInsights.spendingLess.length > 0 ? (
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={annualSpendInsights.spendingLess.map((i) => ({ category: i.category, value: Math.abs(i.vsFourYearAvg) }))}
+                      layout="vertical"
+                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
+                    >
+                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
+                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
+                      <Bar dataKey="value" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'Less than avg']} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+              )}
             </div>
+            {/* Spending more — horizontal bar chart */}
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <XCircle className="h-4 w-4 text-red-600" />
-                <h3 className="font-semibold text-sm">Spending more:</h3>
+                <h3 className="font-semibold text-sm">Spending more vs average</h3>
               </div>
-              <ul className="space-y-1.5">
-                {annualSpendInsights.spendingMore.map((item) => (
-                  <li key={item.category} className="text-sm">
-                    {item.category}{' '}
-                    <span className="font-semibold text-red-600">
-                      {formatCurrency(Math.abs(item.vsFourYearAvg))}
-                    </span>{' '}
-                    more than on average
-                  </li>
-                ))}
-                {annualSpendInsights.spendingMore.length === 0 && (
-                  <li className="text-sm text-muted-foreground italic">No categories spending more than average</li>
-                )}
-              </ul>
+              {annualSpendInsights.spendingMore.length > 0 ? (
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={annualSpendInsights.spendingMore.map((i) => ({ category: i.category, value: Math.abs(i.vsFourYearAvg) }))}
+                      layout="vertical"
+                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
+                    >
+                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
+                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
+                      <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'More than avg']} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -1021,65 +1058,82 @@ export function KeyInsights() {
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Monthly Spend</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            This month vs trailing 12‑month average.
+          </p>
         </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          {/* Summary Statement */}
-          <div className="flex items-start gap-3">
+        <CardContent className="pt-6 space-y-6">
+          {/* Vs TTM — prominent */}
+          <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
+            <span className="text-sm font-medium text-muted-foreground">Vs TTM average</span>
             {monthlySpendInsights.vsTtmAvg > 0 ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <>
+                <TrendingDown className="h-8 w-8 text-green-600" />
+                <span className="text-2xl font-bold text-green-600">
+                  {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} less
+                </span>
+                <span className="text-sm font-medium text-green-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>
+              </>
             ) : (
-              <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <>
+                <TrendingUp className="h-8 w-8 text-red-600" />
+                <span className="text-2xl font-bold text-red-600">
+                  {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} more
+                </span>
+                <span className="text-sm font-medium text-red-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>
+              </>
             )}
-            <p className="text-sm">
-              We're estimated to spend{' '}
-              <span className="font-semibold">
-                {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'}
-              </span>{' '}
-              this month than we have on average over the past year.
-            </p>
           </div>
 
-          {/* Breakdown */}
-          <div className="grid md:grid-cols-2 gap-6 pt-4">
+          {/* Categories driving delta — horizontal bar charts */}
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <XCircle className="h-4 w-4 text-red-600" />
-                <h3 className="font-semibold text-sm">Spending more:</h3>
+                <h3 className="font-semibold text-sm">Spending more vs average</h3>
               </div>
-              <ul className="space-y-1.5">
-                {monthlySpendInsights.spendingMore.map((item) => (
-                  <li key={item.category} className="text-sm">
-                    {item.category}{' '}
-                    <span className="font-semibold text-red-600">
-                      {formatCurrency(Math.abs(item.diff))}
-                    </span>{' '}
-                    more than on average
-                  </li>
-                ))}
-                {monthlySpendInsights.spendingMore.length === 0 && (
-                  <li className="text-sm text-muted-foreground italic">No categories spending more than average</li>
-                )}
-              </ul>
+              {monthlySpendInsights.spendingMore.length > 0 ? (
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={monthlySpendInsights.spendingMore.map((i) => ({ category: i.category, value: Math.abs(i.diff) }))}
+                      layout="vertical"
+                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
+                    >
+                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
+                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
+                      <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'More than avg']} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <h3 className="font-semibold text-sm">Spending less:</h3>
+                <h3 className="font-semibold text-sm">Spending less vs average</h3>
               </div>
-              <ul className="space-y-1.5">
-                {monthlySpendInsights.spendingLess.map((item) => (
-                  <li key={item.category} className="text-sm">
-                    {item.category}{' '}
-                    <span className="font-semibold text-green-600">
-                      {formatCurrency(Math.abs(item.diff))}
-                    </span>{' '}
-                    less than on average
-                  </li>
-                ))}
-                {monthlySpendInsights.spendingLess.length === 0 && (
-                  <li className="text-sm text-muted-foreground italic">No categories spending less than average</li>
-                )}
-              </ul>
+              {monthlySpendInsights.spendingLess.length > 0 ? (
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={monthlySpendInsights.spendingLess.map((i) => ({ category: i.category, value: Math.abs(i.diff) }))}
+                      layout="vertical"
+                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
+                    >
+                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
+                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
+                      <Bar dataKey="value" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'Less than avg']} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+              )}
             </div>
           </div>
         </CardContent>
