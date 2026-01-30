@@ -456,10 +456,10 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="bg-muted/50">
         <CardTitle>Annual Trends</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {/* Top Movers Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Total Variance */}
@@ -530,18 +530,21 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <p className="text-lg font-bold text-muted-foreground">No Increases</p>
                 )}
               </div>
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-3 pt-2 border-t">
                 {topMovers.topIncreases.length > 0 ? (
-                  <>
-                    {topMovers.topIncreases.map((item, idx) => (
-                      <div key={item.category} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{item.category}</span>
-                        <span className="font-semibold text-red-600">
-                          {formatCurrency(Math.abs(item.change))}
-                        </span>
+                  topMovers.topIncreases.map((item) => {
+                    const maxVal = Math.max(...topMovers.topIncreases.map((i) => Math.abs(i.change)), 1)
+                    const pct = (Math.abs(item.change) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
-                    ))}
-                  </>
+                    )
+                  })
                 ) : (
                   <p className="text-xs text-muted-foreground">No categories with increased spending</p>
                 )}
@@ -567,18 +570,21 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <p className="text-lg font-bold text-muted-foreground">No Decreases</p>
                 )}
               </div>
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-3 pt-2 border-t">
                 {topMovers.topDecreases.length > 0 ? (
-                  <>
-                    {topMovers.topDecreases.map((item, idx) => (
-                      <div key={item.category} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{item.category}</span>
-                        <span className="font-semibold text-green-600">
-                          {formatCurrency(item.change)}
-                        </span>
+                  topMovers.topDecreases.map((item) => {
+                    const maxVal = Math.max(...topMovers.topDecreases.map((i) => Math.abs(i.change)), 1)
+                    const pct = (Math.abs(item.change) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
-                    ))}
-                  </>
+                    )
+                  })
                 ) : (
                   <p className="text-xs text-muted-foreground">No categories with decreased spending</p>
                 )}

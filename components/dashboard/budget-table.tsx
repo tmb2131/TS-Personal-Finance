@@ -388,7 +388,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
         <CardHeader className="bg-muted/50">
           <CardTitle>Expenses</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {/* Executive Summary Cards */}
           <div className="mb-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -460,18 +460,21 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       <p className="text-lg font-bold text-muted-foreground">None</p>
                     )}
                   </div>
-                  <div className="space-y-1 pt-2 border-t">
+                  <div className="space-y-3 pt-2 border-t">
                     {topCategories.aboveBudget.length > 0 ? (
-                      <>
-                        {topCategories.aboveBudget.map((item) => (
-                          <div key={item.category} className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">{item.category}</span>
-                            <span className="font-semibold text-green-600">
-                              {formatCurrencyCompact(item.gap)}
-                            </span>
+                      topCategories.aboveBudget.map((item) => {
+                        const maxGap = Math.max(...topCategories.aboveBudget.map((i) => Math.abs(i.gap)), 1)
+                        const pct = (Math.abs(item.gap) / maxGap) * 100
+                        return (
+                          <div key={item.category} className="flex items-center gap-2">
+                            <span className="text-sm w-24 truncate">{item.category}</span>
+                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
                           </div>
-                        ))}
-                      </>
+                        )
+                      })
                     ) : (
                       <p className="text-xs text-muted-foreground">No categories above budget</p>
                     )}
@@ -497,18 +500,21 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       <p className="text-lg font-bold text-muted-foreground">None</p>
                     )}
                   </div>
-                  <div className="space-y-1 pt-2 border-t">
+                  <div className="space-y-3 pt-2 border-t">
                     {topCategories.belowBudget.length > 0 ? (
-                      <>
-                        {topCategories.belowBudget.map((item) => (
-                          <div key={item.category} className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">{item.category}</span>
-                            <span className="font-semibold text-red-600">
-                              {formatCurrencyCompact(Math.abs(item.gap))}
-                            </span>
+                      topCategories.belowBudget.map((item) => {
+                        const maxGap = Math.max(...topCategories.belowBudget.map((i) => Math.abs(i.gap)), 1)
+                        const pct = (Math.abs(item.gap) / maxGap) * 100
+                        return (
+                          <div key={item.category} className="flex items-center gap-2">
+                            <span className="text-sm w-24 truncate">{item.category}</span>
+                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
                           </div>
-                        ))}
-                      </>
+                        )
+                      })
                     ) : (
                       <p className="text-xs text-muted-foreground">No categories below budget</p>
                     )}

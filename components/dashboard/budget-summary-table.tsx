@@ -170,7 +170,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {/* Executive Summary Card */}
         <div className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

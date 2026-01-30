@@ -508,6 +508,13 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
     }
   }
 
+  // Period label for "£X more/less than [period]" in Total Variance card
+  const getComparisonPeriodLabel = (deltaForCards: string) => {
+    if (deltaForCards === 'delta_last_month') return getMonthName(1)
+    if (deltaForCards === 'delta_l3m') return 'last 3M avg'
+    return 'L12M avg'
+  }
+
   // Get month names (assuming current month is January 2026)
   const getMonthName = (offset: number) => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -614,7 +621,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
       <CardHeader className="bg-muted/50">
         <CardTitle>Monthly Trends</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {/* Key Insights Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Total Variance */}
@@ -644,7 +651,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {formatCurrency(Math.abs(topMovers.totalVariance))}
                   </span>
                   <span className="text-xs text-muted-foreground ml-1">
-                    {topMovers.totalVariance < 0 ? 'more' : 'less'} than comparison
+                    {topMovers.totalVariance < 0 ? 'more' : 'less'} than {getComparisonPeriodLabel(topMovers.deltaForCards)}
                   </span>
                 </p>
                 <p className="text-xs">
@@ -652,7 +659,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {formatPercentAbs(topMovers.totalVariancePercent)}
                   </span>
                   <span className="text-muted-foreground ml-1">
-                    {topMovers.totalVariance < 0 ? 'more' : 'less'} than comparison
+                    {topMovers.totalVariance < 0 ? 'more' : 'less'} than {getComparisonPeriodLabel(topMovers.deltaForCards)}
                   </span>
                 </p>
                 <div className="pt-1 mt-1 border-t">
@@ -692,18 +699,21 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <p className="text-lg font-bold text-muted-foreground">No Increases</p>
                 )}
               </div>
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-3 pt-2 border-t">
                 {topMovers.topIncreases.length > 0 ? (
-                  <>
-                    {topMovers.topIncreases.map((item) => (
-                      <div key={item.category} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{item.category}</span>
-                        <span className="font-semibold text-red-600">
-                          {formatCurrency(Math.abs(item.change))}
-                        </span>
+                  topMovers.topIncreases.map((item) => {
+                    const maxVal = Math.max(...topMovers.topIncreases.map((i) => Math.abs(i.change)), 1)
+                    const pct = (Math.abs(item.change) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
-                    ))}
-                  </>
+                    )
+                  })
                 ) : (
                   <p className="text-xs text-muted-foreground">No categories with increased spending</p>
                 )}
@@ -729,18 +739,21 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <p className="text-lg font-bold text-muted-foreground">No Decreases</p>
                 )}
               </div>
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-3 pt-2 border-t">
                 {topMovers.topDecreases.length > 0 ? (
-                  <>
-                    {topMovers.topDecreases.map((item) => (
-                      <div key={item.category} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{item.category}</span>
-                        <span className="font-semibold text-green-600">
-                          {formatCurrency(item.change)}
-                        </span>
+                  topMovers.topDecreases.map((item) => {
+                    const maxVal = Math.max(...topMovers.topDecreases.map((i) => Math.abs(i.change)), 1)
+                    const pct = (Math.abs(item.change) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
-                    ))}
-                  </>
+                    )
+                  })
                 ) : (
                   <p className="text-xs text-muted-foreground">No categories with decreased spending</p>
                 )}
