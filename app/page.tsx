@@ -2,14 +2,18 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { NetWorthChartWrapper } from '@/components/dashboard/net-worth-chart-wrapper'
+import { IncomeVsExpensesChart } from '@/components/dashboard/income-vs-expenses-chart'
 import { BudgetTableWrapper } from '@/components/dashboard/budget-table-wrapper'
 import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-table-wrapper'
 import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
+import { DashboardNavigation } from '@/components/dashboard/dashboard-navigation'
 import {
   NetWorthChartSkeleton,
   BudgetTableSkeleton,
   TrendsTableSkeleton,
+  IncomeVsExpensesChartSkeleton,
 } from '@/components/dashboard/skeletons'
+import { IncomeVsExpensesChartWrapper } from '@/components/dashboard/income-vs-expenses-chart-wrapper'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -31,25 +35,38 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Section 1: Net Worth Chart - Loads independently */}
-      <Suspense fallback={<NetWorthChartSkeleton />}>
-        <NetWorthChartWrapper />
-      </Suspense>
+      <DashboardNavigation />
+
+      {/* Section 1: Net Worth + Income vs Expenses (side by side on large screens) */}
+      <div id="net-worth-chart" className="scroll-mt-24 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <Suspense fallback={<NetWorthChartSkeleton />}>
+          <NetWorthChartWrapper />
+        </Suspense>
+        <Suspense fallback={<IncomeVsExpensesChartSkeleton />}>
+          <IncomeVsExpensesChartWrapper />
+        </Suspense>
+      </div>
 
       {/* Section 2: Budget Table - Loads independently */}
-      <Suspense fallback={<BudgetTableSkeleton />}>
-        <BudgetTableWrapper />
-      </Suspense>
+      <div id="budget-table" className="scroll-mt-24">
+        <Suspense fallback={<BudgetTableSkeleton />}>
+          <BudgetTableWrapper />
+        </Suspense>
+      </div>
 
       {/* Section 3: Annual Trends - Loads independently */}
-      <Suspense fallback={<TrendsTableSkeleton />}>
-        <AnnualTrendsTableWrapper />
-      </Suspense>
+      <div id="annual-trends" className="scroll-mt-24">
+        <Suspense fallback={<TrendsTableSkeleton />}>
+          <AnnualTrendsTableWrapper />
+        </Suspense>
+      </div>
 
       {/* Section 4: Monthly Trends - Loads independently */}
-      <Suspense fallback={<TrendsTableSkeleton />}>
-        <MonthlyTrendsTableWrapper />
-      </Suspense>
+      <div id="monthly-trends" className="scroll-mt-24">
+        <Suspense fallback={<TrendsTableSkeleton />}>
+          <MonthlyTrendsTableWrapper />
+        </Suspense>
+      </div>
     </div>
   )
 }

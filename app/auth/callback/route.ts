@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { getAllowedEmails } from '@/lib/allowed-emails'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -9,11 +10,8 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies()
-    
-    // Create a response object that we'll use for the redirect
-    // This ensures cookies set during exchangeCodeForSession are included
-    const redirectUrl = `${origin}${next}`
-    const response = NextResponse.redirect(redirectUrl)
+
+    const response = NextResponse.redirect(`${origin}${next}`)
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,7 +22,6 @@ export async function GET(request: Request) {
             return cookieStore.get(name)?.value
           },
           set(name: string, value: string, options: CookieOptions) {
-            // Set on both cookieStore and response to ensure cookies are preserved
             cookieStore.set({ name, value, ...options })
             response.cookies.set({ name, value, ...options })
           },
@@ -35,15 +32,18 @@ export async function GET(request: Request) {
         },
       }
     )
-    
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (!error) {
-      // Return the response with all cookies set
+
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (!error && data.user) {
+      const allowedEmails = getAllowedEmails()
+      if (!allowedEmails.includes(data.user.email ?? '')) {
+        await supabase.auth.signOut()
+        return NextResponse.redirect(`${origin}/login?error=not_allowed`)
+      }
       return response
     }
   }
 
-  // If error, redirect to login with error parameter
   return NextResponse.redirect(`${origin}/login?error=auth_code_error`)
 }

@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { KPICard } from '@/components/kpi-card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
-import { AccountBalance, FXRateCurrent } from '@/lib/types'
+import { AccountBalance } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
 
 const CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Taconic', 'House', 'Trust']
@@ -59,9 +59,8 @@ const normalizeCategory = (category: string): string => {
 }
 
 export function AccountsOverview() {
-  const { currency, convertAmount } = useCurrency()
+  const { currency, convertAmount, fxRate } = useCurrency()
   const [accounts, setAccounts] = useState<AccountBalance[]>([])
-  const [fxRate, setFxRate] = useState<number>(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -69,19 +68,11 @@ export function AccountsOverview() {
     async function fetchData() {
       const supabase = createClient()
       
-      const [accountsResult, fxResult] = await Promise.all([
-        supabase
-          .from('account_balances')
-          .select('*')
-          .order('category')
-          .order('institution'),
-        supabase
-          .from('fx_rate_current')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(1)
-          .single(),
-      ])
+      const accountsResult = await supabase
+        .from('account_balances')
+        .select('*')
+        .order('category')
+        .order('institution')
 
       if (accountsResult.error) {
         console.error('Error fetching accounts:', accountsResult.error)
@@ -92,13 +83,9 @@ export function AccountsOverview() {
       
       setError(null)
 
-      if (fxResult.data) {
-        setFxRate(fxResult.data.gbpusd_rate)
-      }
-
       // Get the most recent balance for each account and normalize categories
       const accountsMap = new Map<string, AccountBalance>()
-      accountsResult.data.forEach((account: AccountBalance) => {
+      ;(accountsResult.data ?? []).forEach((account: AccountBalance) => {
         const key = `${account.institution}-${account.account_name}`
         const existing = accountsMap.get(key)
         if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {

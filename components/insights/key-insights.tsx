@@ -24,13 +24,12 @@ import {
 } from 'recharts'
 
 export function KeyInsights() {
-  const { currency, convertAmount } = useCurrency()
+  const { currency, convertAmount, fxRate } = useCurrency()
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
   const [historicalNetWorth, setHistoricalNetWorth] = useState<HistoricalNetWorth[]>([])
   const [accountBalances, setAccountBalances] = useState<AccountBalance[]>([])
-  const [fxRate, setFxRate] = useState<number>(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,18 +37,12 @@ export function KeyInsights() {
     async function fetchData() {
       const supabase = createClient()
       
-      const [budgetResult, annualResult, monthlyResult, netWorthResult, accountsResult, fxResult] = await Promise.all([
+      const [budgetResult, annualResult, monthlyResult, netWorthResult, accountsResult] = await Promise.all([
         supabase.from('budget_targets').select('*'),
         supabase.from('annual_trends').select('*'),
         supabase.from('monthly_trends').select('*'),
         supabase.from('historical_net_worth').select('*').order('date', { ascending: false }),
         supabase.from('account_balances').select('*').order('date_updated', { ascending: false }),
-        supabase
-          .from('fx_rate_current')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(1)
-          .single(),
       ])
 
       // Check for errors
@@ -59,7 +52,6 @@ export function KeyInsights() {
         monthlyResult.error,
         netWorthResult.error,
         accountsResult.error,
-        fxResult.error,
       ].filter(Boolean)
 
       if (errors.length > 0) {
@@ -85,7 +77,6 @@ export function KeyInsights() {
         })
         setAccountBalances(Array.from(accountsMap.values()))
       }
-      if (fxResult.data) setFxRate(fxResult.data.gbpusd_rate)
 
       setLoading(false)
     }
@@ -339,33 +330,37 @@ export function KeyInsights() {
     return `${absValue.toFixed(1)}%`
   }
 
-  // Annual Budget Insights
+  // Annual Budget Insights — always use GBP from data; convert to USD with current FX when currency is USD
   const annualBudgetInsights = useMemo(() => {
     const expenses = budgetData.filter((b) => !expenseCategories.includes(b.category))
-    
+
     const totalBudget = expenses.reduce((sum, b) => {
-      const budget = currency === 'USD' ? b.annual_budget_usd : b.annual_budget_gbp
-      return sum + Math.abs(budget)
+      const budgetGbp = Math.abs(b.annual_budget_gbp)
+      const budget = currency === 'USD' ? convertAmount(budgetGbp, 'GBP', fxRate) : budgetGbp
+      return sum + budget
     }, 0)
 
     const totalTracking = expenses.reduce((sum, b) => {
-      const tracking = currency === 'USD' ? b.tracking_est_usd : b.tracking_est_gbp
-      return sum + Math.abs(tracking)
+      const trackingGbp = Math.abs(b.tracking_est_gbp)
+      const tracking = currency === 'USD' ? convertAmount(trackingGbp, 'GBP', fxRate) : trackingGbp
+      return sum + tracking
     }, 0)
 
     const overallGap = totalTracking - totalBudget
 
-    // Calculate gap per category
+    // Calculate gap per category (always from GBP, convert when USD)
     const categoryGaps = expenses
       .map((b) => {
-        const budget = currency === 'USD' ? b.annual_budget_usd : b.annual_budget_gbp
-        const tracking = currency === 'USD' ? b.tracking_est_usd : b.tracking_est_gbp
-        const gap = Math.abs(tracking) - Math.abs(budget)
+        const budgetGbp = Math.abs(b.annual_budget_gbp)
+        const trackingGbp = Math.abs(b.tracking_est_gbp)
+        const budget = currency === 'USD' ? convertAmount(budgetGbp, 'GBP', fxRate) : budgetGbp
+        const tracking = currency === 'USD' ? convertAmount(trackingGbp, 'GBP', fxRate) : trackingGbp
+        const gap = tracking - budget
         return {
           category: b.category,
           gap,
-          budget: Math.abs(budget),
-          tracking: Math.abs(tracking),
+          budget,
+          tracking,
         }
       })
       .filter((item) => Math.abs(item.gap) > 100) // Only show significant gaps
@@ -392,12 +387,13 @@ export function KeyInsights() {
       underBudget: underBudget.slice(0, 5), // Top 5
       overBudget: overBudget.slice(0, 5), // Top 5
     }
-  }, [budgetData, currency, expenseCategories])
+  }, [budgetData, currency, expenseCategories, fxRate, convertAmount])
 
   // Annual Spend Insights
   const annualSpendInsights = useMemo(() => {
     const expenses = annualTrends.filter((a) => !expenseCategories.includes(a.category))
-    
+    const mult = currency === 'USD' ? fxRate : 1
+
     // Values are negative for expenses (e.g., -100 means spending 100)
     const currentYearEst = expenses.reduce((sum, a) => sum + a.cur_yr_est, 0)
     const lastYear = expenses.reduce((sum, a) => sum + a.cur_yr_minus_1, 0)
@@ -413,15 +409,17 @@ export function KeyInsights() {
     // So: avg - cur = -120 - (-100) = -20 means spending MORE (wrong)
     // Let's think: spending less means cur > avg (less negative)
     // So: cur - avg = -100 - (-120) = 20 (positive = spending less) ✓
-    const vsFourYearAvg = currentYearEst - fourYearAvg // Positive = spending less
-    const vsLastYear = currentYearEst - lastYear // Positive = spending less
+    const vsFourYearAvgGbp = currentYearEst - fourYearAvg // Positive = spending less
+    const vsLastYearGbp = currentYearEst - lastYear
+    const vsFourYearAvg = vsFourYearAvgGbp * mult
+    const vsLastYear = vsLastYearGbp * mult
 
-    // Calculate percentage change vs 4-year average
+    // Calculate percentage change vs 4-year average (unchanged by currency)
     const vsFourYearAvgPercent = fourYearAvg !== 0 
-      ? (vsFourYearAvg / Math.abs(fourYearAvg)) * 100 
+      ? (vsFourYearAvgGbp / Math.abs(fourYearAvg)) * 100 
       : 0
 
-    // Calculate per-category differences
+    // Calculate per-category differences (convert to display currency)
     const categoryDiffs = expenses
       .map((a) => {
         const curEst = a.cur_yr_est
@@ -429,12 +427,12 @@ export function KeyInsights() {
         const avg = (a.cur_yr_minus_4 + a.cur_yr_minus_3 + a.cur_yr_minus_2 + a.cur_yr_minus_1) / 4
         return {
           category: a.category,
-          vsFourYearAvg: curEst - avg, // Positive = spending less, Negative = spending more
-          vsLastYear: curEst - lastYr,
+          vsFourYearAvg: (curEst - avg) * mult,
+          vsLastYear: (curEst - lastYr) * mult,
         }
       })
-      .filter((item) => Math.abs(item.vsFourYearAvg) > 1000)
-      .sort((a, b) => b.vsFourYearAvg - a.vsFourYearAvg) // Sort descending (spending less first)
+      .filter((item) => Math.abs(item.vsFourYearAvg) > (1000 * mult))
+      .sort((a, b) => b.vsFourYearAvg - a.vsFourYearAvg)
 
     const spendingLess = categoryDiffs.filter((item) => item.vsFourYearAvg > 0).slice(0, 5)
     const spendingMore = categoryDiffs.filter((item) => item.vsFourYearAvg < 0).slice(0, 5)
@@ -446,36 +444,38 @@ export function KeyInsights() {
       spendingLess,
       spendingMore,
     }
-  }, [annualTrends, expenseCategories])
+  }, [annualTrends, expenseCategories, currency, fxRate])
 
-  // Monthly Spend Insights
+  // Monthly Spend Insights — values in GBP from monthly_trends; convert to USD with current FX when currency is USD
   const monthlySpendInsights = useMemo(() => {
     const expenses = monthlyTrends.filter((m) => !expenseCategories.includes(m.category))
-    
+    const mult = currency === 'USD' ? fxRate : 1
+
     // Values are negative for expenses
     const currentMonthEst = expenses.reduce((sum, m) => sum + m.cur_month_est, 0)
     const ttmAvg = expenses.reduce((sum, m) => sum + m.ttm_avg, 0)
 
     // Positive = spending less (less negative)
-    const vsTtmAvg = currentMonthEst - ttmAvg
+    const vsTtmAvgGbp = currentMonthEst - ttmAvg
+    const vsTtmAvg = vsTtmAvgGbp * mult
 
-    // Calculate percentage change vs TTM average
+    // Calculate percentage change vs TTM average (unchanged by currency)
     const vsTtmAvgPercent = ttmAvg !== 0 
-      ? (vsTtmAvg / Math.abs(ttmAvg)) * 100 
+      ? (vsTtmAvgGbp / Math.abs(ttmAvg)) * 100 
       : 0
 
-    // Calculate per-category differences
+    // Calculate per-category differences (convert to display currency)
     const categoryDiffs = expenses
       .map((m) => {
         const curEst = m.cur_month_est
         const avg = m.ttm_avg
         return {
           category: m.category,
-          diff: curEst - avg, // Positive = spending less, Negative = spending more
+          diff: (curEst - avg) * mult,
         }
       })
-      .filter((item) => Math.abs(item.diff) > 100)
-      .sort((a, b) => a.diff - b.diff) // Sort ascending (spending more first, then spending less)
+      .filter((item) => Math.abs(item.diff) > (100 * mult))
+      .sort((a, b) => a.diff - b.diff)
 
     const spendingMore = categoryDiffs.filter((item) => item.diff < 0).slice(0, 5)
     const spendingLess = categoryDiffs.filter((item) => item.diff > 0).slice(0, 5)
@@ -486,7 +486,7 @@ export function KeyInsights() {
       spendingMore,
       spendingLess,
     }
-  }, [monthlyTrends, expenseCategories])
+  }, [monthlyTrends, expenseCategories, currency, fxRate])
 
   if (loading) {
     return (
@@ -612,7 +612,7 @@ export function KeyInsights() {
   return (
     <div className="space-y-8">
       {/* Executive Summary */}
-      <Card className="border-2">
+      <Card id="executive-summary" className="border-2 scroll-mt-24">
         <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
           <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance</p>
@@ -925,7 +925,7 @@ export function KeyInsights() {
       </Card>
 
       {/* Annual Budget Section */}
-      <Card>
+      <Card id="annual-budget" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Annual Budget</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
@@ -1095,7 +1095,7 @@ export function KeyInsights() {
       </Card>
 
       {/* Monthly Spend Section */}
-      <Card>
+      <Card id="monthly-spend" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Monthly Spend</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">

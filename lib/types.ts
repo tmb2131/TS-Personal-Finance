@@ -80,6 +80,12 @@ export interface YoYNetWorth {
   amount_gbp: number | null
 }
 
+export interface InvestmentReturn {
+  id: string
+  income_source: string
+  amount_gbp: number
+}
+
 export interface RecurringPreference {
   id: string
   counterparty_pattern: string

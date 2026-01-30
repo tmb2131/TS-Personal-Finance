@@ -15,6 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { AnnualTrend } from '@/lib/types'
+import { endOfYear, type RatesByYear } from '@/lib/utils/fx-rates'
 import { cn } from '@/utils/cn'
 import { AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
@@ -25,41 +26,40 @@ type SortDirection = 'asc' | 'desc' | null
 interface AnnualTrendsTableProps {
   initialData?: AnnualTrend[]
   initialFxRate?: number
+  initialRatesByYear?: RatesByYear
 }
 
-export function AnnualTrendsTable({ initialData, initialFxRate }: AnnualTrendsTableProps = {}) {
-  const { currency } = useCurrency()
+export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYear }: AnnualTrendsTableProps = {}) {
+  const { currency, fxRate: contextFxRate } = useCurrency()
+  const currentYear = new Date().getFullYear()
   const [data, setData] = useState<AnnualTrend[]>(initialData || [])
-  const [fxRate, setFxRate] = useState<number>(initialFxRate || 1.25) // Default fallback
+  const [fxRate, setFxRate] = useState<number>(initialFxRate ?? contextFxRate)
+  const [ratesByYear, setRatesByYear] = useState<RatesByYear>(initialRatesByYear || {})
   const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
   const [sortField, setSortField] = useState<SortField>('cur_yr_est_vs_4yr_avg')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   useEffect(() => {
-    // If we have initial data, use it and don't re-fetch
     if (initialData) {
       setData(initialData)
       setLoading(false)
-      if (initialFxRate) {
-        setFxRate(initialFxRate)
-      }
+      if (initialFxRate) setFxRate(initialFxRate)
+      if (initialRatesByYear) setRatesByYear(initialRatesByYear)
       return
     }
 
-    // Otherwise fetch fresh data
     async function fetchData() {
       setLoading(true)
       const supabase = createClient()
-      
-      const [trendsResult, fxResult] = await Promise.all([
+      const [trendsResult, fxRatesResult] = await Promise.all([
         supabase.from('annual_trends').select('*').order('category'),
         supabase
-          .from('fx_rate_current')
-          .select('*')
-          .order('date', { ascending: false })
-          .limit(1)
-          .single(),
+          .from('fx_rates')
+          .select('date, gbpusd_rate')
+          .gte('date', endOfYear(currentYear - 4))
+          .lte('date', endOfYear(currentYear))
+          .order('date', { ascending: true }),
       ])
 
       if (trendsResult.error) {
@@ -68,19 +68,31 @@ export function AnnualTrendsTable({ initialData, initialFxRate }: AnnualTrendsTa
         setLoading(false)
         return
       }
-      
       setError(null)
 
-      if (fxResult.data) {
-        setFxRate(fxResult.data.gbpusd_rate)
+      const rows = (fxRatesResult.data || []) as { date: string; gbpusd_rate: number | null }[]
+      const dateToRate = new Map<string, number>()
+      rows.forEach((r) => {
+        const d = (r.date || '').split('T')[0]
+        if (r.gbpusd_rate != null && r.gbpusd_rate > 0) dateToRate.set(d, r.gbpusd_rate)
+      })
+      const sortedDates = Array.from(dateToRate.keys()).sort()
+      const byYear: RatesByYear = {}
+      for (let y = currentYear - 4; y <= currentYear; y++) {
+        const eoy = endOfYear(y)
+        const prior = sortedDates.filter((d) => d <= eoy).pop()
+        byYear[y] = prior != null ? dateToRate.get(prior)! : 1.25
       }
-
+      if (sortedDates.length === 0) {
+        for (let y = currentYear - 4; y <= currentYear; y++) byYear[y] = contextFxRate
+      }
+      setRatesByYear(byYear)
       setData(trendsResult.data as AnnualTrend[])
       setLoading(false)
     }
 
     fetchData()
-  }, [currency, initialData, initialFxRate])
+  }, [currency, initialData, initialFxRate, initialRatesByYear, currentYear, contextFxRate])
 
   // Format currency as £0.0K
   const formatCurrency = (value: number) => {
@@ -126,17 +138,21 @@ export function AnnualTrendsTable({ initialData, initialFxRate }: AnnualTrendsTa
     return `${absValue.toFixed(1)}%`
   }
 
-  // Process data with currency conversion and sorting
+  // Data in annual_trends is stored in GBP. When GBP selected show as-is (×1); when USD selected convert GBP → USD (× EoY rate).
   const processedData = useMemo(() => {
-    const multiplier = currency === 'USD' ? fxRate : 1
+    const r4 = currency === 'USD' ? (ratesByYear[currentYear - 4] ?? fxRate) : 1
+    const r3 = currency === 'USD' ? (ratesByYear[currentYear - 3] ?? fxRate) : 1
+    const r2 = currency === 'USD' ? (ratesByYear[currentYear - 2] ?? fxRate) : 1
+    const r1 = currency === 'USD' ? (ratesByYear[currentYear - 1] ?? fxRate) : 1
+    const r0 = currency === 'USD' ? (ratesByYear[currentYear] ?? fxRate) : 1
     const converted = data.map((row) => ({
       ...row,
-      cur_yr_minus_4: row.cur_yr_minus_4 * multiplier,
-      cur_yr_minus_3: row.cur_yr_minus_3 * multiplier,
-      cur_yr_minus_2: row.cur_yr_minus_2 * multiplier,
-      cur_yr_minus_1: row.cur_yr_minus_1 * multiplier,
-      cur_yr_est: row.cur_yr_est * multiplier,
-      cur_yr_est_vs_4yr_avg: row.cur_yr_est_vs_4yr_avg * multiplier,
+      cur_yr_minus_4: row.cur_yr_minus_4 * r4,
+      cur_yr_minus_3: row.cur_yr_minus_3 * r3,
+      cur_yr_minus_2: row.cur_yr_minus_2 * r2,
+      cur_yr_minus_1: row.cur_yr_minus_1 * r1,
+      cur_yr_est: row.cur_yr_est * r0,
+      cur_yr_est_vs_4yr_avg: row.cur_yr_est_vs_4yr_avg * r0,
     }))
 
     // Sort data
@@ -167,7 +183,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate }: AnnualTrendsTa
     })
 
     return sorted
-  }, [data, fxRate, currency, sortField, sortDirection])
+  }, [data, ratesByYear, fxRate, currency, sortField, sortDirection, currentYear])
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -221,9 +237,6 @@ export function AnnualTrendsTable({ initialData, initialFxRate }: AnnualTrendsTa
       backgroundColor: `rgba(239, 68, 68, ${opacity})`, // red-500 with low opacity
     }
   }
-
-  // Get current year
-  const currentYear = new Date().getFullYear()
 
   // Calculate top movers
   const topMovers = useMemo(() => {

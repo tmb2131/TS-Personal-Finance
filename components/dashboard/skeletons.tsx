@@ -22,6 +22,19 @@ export function NetWorthChartSkeleton() {
   )
 }
 
+export function IncomeVsExpensesChartSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-48" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-64 w-full" />
+      </CardContent>
+    </Card>
+  )
+}
+
 export function BudgetTableSkeleton() {
   return (
     <Card>

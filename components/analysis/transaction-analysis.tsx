@@ -15,6 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
+import { fetchFxRatesUpTo, buildGetRateForDate } from '@/lib/utils/fx-rates'
 import { Receipt, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -26,14 +27,14 @@ interface AggregatedTransaction {
 }
 
 export function TransactionAnalysis() {
-  const { currency, convertAmount } = useCurrency()
+  const { currency, convertAmount, fxRate } = useCurrency()
   const [periodType, setPeriodType] = useState<'YTD' | 'MTD'>('YTD')
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
-  const [fxRate, setFxRate] = useState<number>(1)
+  const [ratesByDate, setRatesByDate] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,25 +42,6 @@ export function TransactionAnalysis() {
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear()
     return Array.from({ length: 5 }, (_, i) => currentYear - i)
-  }, [])
-
-  // Fetch FX rate on mount
-  useEffect(() => {
-    async function fetchFxRate() {
-      const supabase = createClient()
-      const fxResult = await supabase
-        .from('fx_rate_current')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (fxResult.data) {
-        setFxRate(fxResult.data.gbpusd_rate)
-      }
-    }
-
-    fetchFxRate()
   }, [])
 
   // Fetch categories based on selected period
@@ -163,10 +145,30 @@ export function TransactionAnalysis() {
       setError(null)
 
       setTransactions(data as TransactionLog[] || [])
+
+      // Fetch historical FX rates for transaction dates (for null amount conversion)
+      const txs = (data || []) as TransactionLog[]
+      if (txs.length > 0) {
+        const maxDate = txs.reduce((max, tx) => {
+          const d = typeof tx.date === 'string' ? tx.date.split('T')[0] : tx.date
+          return d > max ? d : max
+        }, '')
+        const supabaseFx = createClient()
+        const rates = await fetchFxRatesUpTo(supabaseFx, maxDate)
+        setRatesByDate(rates)
+      } else {
+        setRatesByDate(new Map())
+      }
     }
 
     fetchTransactions()
   }, [periodType, selectedYear, selectedMonth, selectedCategory])
+
+  // Rate for a given date (transaction date when one of amount_usd/amount_gbp is null)
+  const getRateForDate = useMemo(
+    () => buildGetRateForDate(ratesByDate, fxRate),
+    [ratesByDate, fxRate]
+  )
 
   // Aggregate transactions by first 9 letters of counterparty
   const aggregatedTransactions = useMemo(() => {
@@ -175,11 +177,11 @@ export function TransactionAnalysis() {
     transactions.forEach((tx) => {
       const counterparty = tx.counterparty || 'Unknown'
       const counterpartyKey = counterparty.substring(0, 9).trim()
-      
-      // Get converted amount
+      const rate = getRateForDate(typeof tx.date === 'string' ? tx.date : tx.date)
+      // Use FX rate for transaction date when one side is null
       const amount = currency === 'USD'
-        ? (tx.amount_usd || (tx.amount_gbp ? tx.amount_gbp * fxRate : 0))
-        : (tx.amount_gbp || (tx.amount_usd ? tx.amount_usd / fxRate : 0))
+        ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
+        : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
 
       if (grouped.has(counterpartyKey)) {
         const existing = grouped.get(counterpartyKey)!
@@ -197,7 +199,7 @@ export function TransactionAnalysis() {
 
     return Array.from(grouped.values())
       .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)) // Sort descending by absolute amount
-  }, [transactions, currency, fxRate])
+  }, [transactions, currency, getRateForDate])
 
   // Calculate total spend and 80% threshold
   const { totalSpend, threshold80Percent } = useMemo(() => {
@@ -241,15 +243,16 @@ export function TransactionAnalysis() {
     const totals = new Map<string, number>()
     
     transactions.forEach((tx) => {
+      const rate = getRateForDate(typeof tx.date === 'string' ? tx.date : tx.date)
       const amount = currency === 'USD'
-        ? (tx.amount_usd || (tx.amount_gbp ? tx.amount_gbp * fxRate : 0))
-        : (tx.amount_gbp || (tx.amount_usd ? tx.amount_usd / fxRate : 0))
+        ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
+        : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
       
       totals.set(tx.category, (totals.get(tx.category) || 0) + Math.abs(amount))
     })
 
     return totals
-  }, [transactions, currency, fxRate])
+  }, [transactions, currency, getRateForDate])
 
   if (loading) {
     return (

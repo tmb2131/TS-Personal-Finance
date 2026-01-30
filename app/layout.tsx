@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
+import { AuthTimeoutProvider } from '@/lib/contexts/auth-timeout-provider'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { Toaster } from 'sonner'
@@ -23,17 +24,19 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <CurrencyProvider>
+          <AuthTimeoutProvider>
           <div className="flex h-screen overflow-hidden">
             <Sidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
               <Header />
-              <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+              <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-44 md:pb-6">
                 {children}
               </main>
             </div>
           </div>
           <Toaster position="top-right" richColors />
           <ChatWidget />
+          </AuthTimeoutProvider>
         </CurrencyProvider>
       </body>
     </html>

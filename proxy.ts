@@ -1,21 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-// Get allowed emails from environment variable, fallback to default for development
-const getAllowedEmails = (): string[] => {
-  const envEmails = process.env.ALLOWED_EMAILS
-  if (envEmails) {
-    return envEmails.split(',').map(email => email.trim())
-  }
-  // Fallback to default emails for backward compatibility
-  return [
-    'thomas.brosens@gmail.com',
-    'sriya.sundaresan@gmail.com',
-    'admin@findash.com' // Developer bypass
-  ]
-}
-
-const ALLOWED_EMAILS = getAllowedEmails()
+import { getAllowedEmails } from '@/lib/allowed-emails'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
@@ -33,38 +18,18 @@ export async function proxy(request: NextRequest) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          request.cookies.set({ name, value, ...options })
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+          request.cookies.set({ name, value: '', ...options })
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request: { headers: request.headers },
           })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+          response.cookies.set({ name, value: '', ...options })
         },
       },
     }
@@ -74,9 +39,12 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Check if accessing login page
-  if (request.nextUrl.pathname === '/login') {
-    if (user && ALLOWED_EMAILS.includes(user.email || '')) {
+  const pathname = request.nextUrl.pathname
+  const allowedEmails = getAllowedEmails()
+
+  // Allow login page (redirect to insights if already allowed user)
+  if (pathname === '/login') {
+    if (user && allowedEmails.includes(user.email || '')) {
       return NextResponse.redirect(new URL('/insights', request.url))
     }
     return response
@@ -84,11 +52,24 @@ export async function proxy(request: NextRequest) {
 
   // Protect all other routes
   if (!user) {
+    // API routes: return 401 JSON so client can handle (e.g. chat widget)
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Check if user email is allowed
-  if (!ALLOWED_EMAILS.includes(user.email || '')) {
+  // Restrict to allowed emails
+  if (!allowedEmails.includes(user.email || '')) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -97,15 +78,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - auth (auth routes - CRITICAL fix)
-     * - login (login page - CRITICAL fix)
-     * - images/public (public assets)
-     */
     '/((?!_next/static|_next/image|favicon.ico|auth|login|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -15,6 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { MonthlyTrend } from '@/lib/types'
+import { endOfMonth, type RatesByMonthOffset } from '@/lib/utils/fx-rates'
 import { cn } from '@/utils/cn'
 import { AlertCircle, TrendingUp, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
@@ -24,48 +25,103 @@ type SortDirection = 'asc' | 'desc' | null
 
 interface MonthlyTrendsTableProps {
   initialData?: MonthlyTrend[]
+  initialRatesByMonth?: RatesByMonthOffset
 }
 
-export function MonthlyTrendsTable({ initialData }: MonthlyTrendsTableProps = {}) {
-  const { currency } = useCurrency()
+export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: MonthlyTrendsTableProps = {}) {
+  const { currency, fxRate: contextFxRate } = useCurrency()
   const [data, setData] = useState<MonthlyTrend[]>(initialData || [])
+  const [ratesByMonth, setRatesByMonth] = useState<RatesByMonthOffset | null>(initialRatesByMonth ?? null)
+  const [currentFxRate, setCurrentFxRate] = useState<number>(contextFxRate)
   const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
   const [sortField, setSortField] = useState<SortField>('delta_last_month')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   useEffect(() => {
-    // If we have initial data, use it and don't re-fetch
     if (initialData) {
       setData(initialData)
       setLoading(false)
+      if (initialRatesByMonth) setRatesByMonth(initialRatesByMonth)
       return
     }
 
-    // Otherwise fetch fresh data
     async function fetchData() {
       setLoading(true)
       const supabase = createClient()
-      const { data: trendsData, error } = await supabase
-        .from('monthly_trends')
-        .select('*')
-        .order('category')
+      const now = new Date()
+      let y = now.getFullYear()
+      let m = now.getMonth() + 1
+      const monthAgo = (monthsBack: number) => {
+        let mm = m - monthsBack
+        let yy = y
+        while (mm <= 0) {
+          mm += 12
+          yy -= 1
+        }
+        return endOfMonth(yy, mm)
+      }
+      const eom3 = monthAgo(3)
+      const eom2 = monthAgo(2)
+      const eom1 = monthAgo(1)
+      const eom0 = endOfMonth(y, m)
 
-      if (error) {
-        console.error('Error fetching monthly trends:', error)
+      const [trendsRes, fxRes] = await Promise.all([
+        supabase.from('monthly_trends').select('*').order('category'),
+        supabase
+          .from('fx_rates')
+          .select('date, gbpusd_rate')
+          .gte('date', eom3)
+          .lte('date', eom0)
+          .order('date', { ascending: true }),
+      ])
+
+      if (trendsRes.error) {
+        console.error('Error fetching monthly trends:', trendsRes.error)
         setError('Failed to load monthly trends data. Please try refreshing the page.')
         setLoading(false)
         return
       }
-      
       setError(null)
+      setData(trendsRes.data as MonthlyTrend[])
 
-      setData(trendsData as MonthlyTrend[])
+      const rows = (fxRes.data || []) as { date: string; gbpusd_rate: number | null }[]
+      const dateToRate = new Map<string, number>()
+      rows.forEach((r) => {
+        const d = (r.date || '').split('T')[0]
+        if (r.gbpusd_rate != null && r.gbpusd_rate > 0) dateToRate.set(d, r.gbpusd_rate)
+      })
+      const sortedDates = Array.from(dateToRate.keys()).sort()
+      const getRate = (dateStr: string) => {
+        const prior = sortedDates.filter((d) => d <= dateStr).pop()
+        return prior != null ? dateToRate.get(prior)! : contextFxRate
+      }
+      setCurrentFxRate(contextFxRate)
+      setRatesByMonth({
+        current: sortedDates.length ? getRate(eom0) : contextFxRate,
+        minus1: sortedDates.length ? getRate(eom1) : contextFxRate,
+        minus2: sortedDates.length ? getRate(eom2) : contextFxRate,
+        minus3: sortedDates.length ? getRate(eom3) : contextFxRate,
+      })
       setLoading(false)
     }
 
     fetchData()
-  }, [initialData])
+  }, [initialData, initialRatesByMonth, contextFxRate])
+
+  // When we have initialRatesByMonth, use it for current rate fallback
+  useEffect(() => {
+    if (initialRatesByMonth) {
+      setCurrentFxRate(initialRatesByMonth.current)
+    }
+  }, [initialRatesByMonth])
+
+  // When USD selected but no EoM rates (e.g. table used without wrapper), use context FX rate
+  useEffect(() => {
+    if (currency === 'USD' && ratesByMonth == null) {
+      setCurrentFxRate(contextFxRate)
+    }
+  }, [currency, ratesByMonth, contextFxRate])
 
   // Format currency as £0.0K
   const formatCurrency = (value: number) => {
@@ -111,14 +167,46 @@ export function MonthlyTrendsTable({ initialData }: MonthlyTrendsTableProps = {}
     return `${absValue.toFixed(1)}%`
   }
 
-  // Calculate deltas
+  // Data in monthly_trends is stored in GBP. When GBP selected show as-is; when USD selected convert GBP → USD (multiply by rate).
   const processedData = useMemo(() => {
-    return data.map((row) => ({
-      ...row,
-      delta_vs_last_month: row.cur_month_est - row.cur_month_minus_1, // Current Month - Previous Month
-      delta_vs_l12m_avg: row.cur_month_est - row.ttm_avg,
-    }))
-  }, [data])
+    const r = currency === 'USD' ? ratesByMonth : null
+    const fallbackRate = currency === 'USD' ? currentFxRate : 1
+    const mult = (row: MonthlyTrend, key: keyof Pick<MonthlyTrend, 'cur_month_minus_3' | 'cur_month_minus_2' | 'cur_month_minus_1' | 'cur_month_est' | 'ttm_avg'>) => {
+      const gbpValue = row[key] as number
+      if (currency === 'GBP') return gbpValue
+      // USD: convert GBP → USD using EoM rates when available, else current rate
+      if (r) {
+        switch (key) {
+          case 'cur_month_minus_3': return gbpValue * r.minus3
+          case 'cur_month_minus_2': return gbpValue * r.minus2
+          case 'cur_month_minus_1': return gbpValue * r.minus1
+          case 'cur_month_est': return gbpValue * r.current
+          case 'ttm_avg': return gbpValue * r.minus1
+          default: return gbpValue * fallbackRate
+        }
+      }
+      return gbpValue * fallbackRate
+    }
+    return data.map((row) => {
+      const c3 = mult(row, 'cur_month_minus_3')
+      const c2 = mult(row, 'cur_month_minus_2')
+      const c1 = mult(row, 'cur_month_minus_1')
+      const c0 = mult(row, 'cur_month_est')
+      const ttm = mult(row, 'ttm_avg')
+      const l3m_avg = (c3 + c2 + c1) / 3
+      return {
+        ...row,
+        cur_month_minus_3: c3,
+        cur_month_minus_2: c2,
+        cur_month_minus_1: c1,
+        cur_month_est: c0,
+        ttm_avg: ttm,
+        delta_vs_last_month: c0 - c1,
+        delta_vs_l12m_avg: c0 - ttm,
+        delta_vs_l3m: c0 - l3m_avg,
+      }
+    })
+  }, [data, currency, ratesByMonth, currentFxRate])
 
   // Sort data
   const sortedData = useMemo(() => {

@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { TransactionAnalysis } from '@/components/analysis/transaction-analysis'
 import { YoYNetWorthWaterfall } from '@/components/analysis/yoy-net-worth-waterfall'
 import { CumulativeSpendChart } from '@/components/analysis/cumulative-spend-chart'
@@ -5,7 +7,16 @@ import { AnnualCumulativeSpendChart } from '@/components/analysis/annual-cumulat
 import { CashRunwayCards } from '@/components/analysis/cash-runway-cards'
 import { AnalysisNavigation } from '@/components/analysis/analysis-navigation'
 
-export default function AnalysisPage() {
+export default async function AnalysisPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div>

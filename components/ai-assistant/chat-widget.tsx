@@ -38,9 +38,9 @@ export function ChatWidget() {
     const valueToSubmit = localInput.trim()
     if (!valueToSubmit || isLoading) return
 
+    setLocalInput('') // Clear input immediately so it feels snappy
     if (sendMessage) {
       await sendMessage({ text: valueToSubmit })
-      setLocalInput('') // Clear input after submission
     }
   }
 

@@ -211,10 +211,10 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
                   </p>
                   <div className="pt-1 mt-1 border-t">
                     <p className="text-xs text-muted-foreground">
-                      Net Income Tracking: <span className="font-medium">{formatCurrencyLarge(Math.abs(totals.netIncome.tracking))}</span>
+                      Net Income Tracking: <span className="font-medium">{totals.netIncome.tracking < 0 ? '(' : ''}{formatCurrencyLarge(Math.abs(totals.netIncome.tracking))}{totals.netIncome.tracking < 0 ? ')' : ''}</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Net Income Budget: <span className="font-medium">{formatCurrencyLarge(Math.abs(totals.netIncome.annualBudget))}</span>
+                      Net Income Budget: <span className="font-medium">{totals.netIncome.annualBudget < 0 ? '(' : ''}{formatCurrencyLarge(Math.abs(totals.netIncome.annualBudget))}{totals.netIncome.annualBudget < 0 ? ')' : ''}</span>
                     </p>
                   </div>
                 </div>

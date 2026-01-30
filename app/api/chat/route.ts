@@ -4,6 +4,17 @@ import { streamText } from 'ai'
 import { z } from 'zod'
 
 export async function POST(req: Request) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   let messages: unknown
 
   try {
@@ -41,8 +52,6 @@ export async function POST(req: Request) {
         return { role: msg.role, content: '' } as { role: 'user' | 'assistant' | 'system'; content: string }
       }
     ) as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
-
-    const supabase = await createClient()
 
   console.log('[chat] Starting streamText with', modelMessages.length, 'messages')
   console.log('[chat] Model messages:', JSON.stringify(modelMessages.map(m => ({ role: m.role, contentLength: m.content.length, contentPreview: m.content.substring(0, 100) })), null, 2))
@@ -412,13 +421,16 @@ EXAMPLE QUERIES YOU CAN HANDLE:
             start.setHours(0, 0, 0, 0)
             end.setHours(23, 59, 59, 999)
             
+            // Use a high limit for the DB query so aggregation (totals) includes ALL matching
+            // transactions. The tool's `limit` param only caps how many we return in the response.
+            const queryLimit = 10000
             let queryBuilder = supabase
               .from('transaction_log')
               .select('*')
               .gte('date', start.toISOString().split('T')[0])
               .lte('date', end.toISOString().split('T')[0])
               .order('date', { ascending: false })
-              .limit(limit)
+              .limit(queryLimit)
             
             if (category) {
               queryBuilder = queryBuilder.eq('category', category)

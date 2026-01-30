@@ -160,6 +160,29 @@ const SHEET_CONFIGS: SheetConfig[] = [
     }),
   },
   {
+    name: 'Investment Return',
+    range: 'A:B',
+    table: 'investment_return',
+    transform: (row) => {
+      const source = (row[0] ?? '').toString().trim()
+      if (!source || source.toLowerCase() === 'income sources') return null
+      const raw = (row[1] ?? '').toString().trim()
+      let amount = 0
+      if (raw) {
+        const num = parseFloat(raw.replace(/[£$,\s]/g, ''))
+        if (!isNaN(num)) {
+          if (raw.toUpperCase().endsWith('K')) amount = num * 1000
+          else if (raw.toUpperCase().endsWith('M')) amount = num * 1e6
+          else amount = num
+        }
+      }
+      return {
+        income_source: source,
+        amount_gbp: amount,
+      }
+    },
+  },
+  {
     name: 'YoY Net Worth',
     range: 'A:C',
     table: 'yoy_net_worth',
@@ -387,6 +410,13 @@ export async function syncGoogleSheet() {
             .from(config.table)
             .upsert(transformedData, {
               onConflict: 'category',
+            });
+          upsertResult = { data, error };
+        } else if (config.table === 'investment_return') {
+          const { data, error } = await supabase
+            .from(config.table)
+            .upsert(transformedData, {
+              onConflict: 'income_source',
             });
           upsertResult = { data, error };
         } else if (config.table === 'fx_rate_current') {

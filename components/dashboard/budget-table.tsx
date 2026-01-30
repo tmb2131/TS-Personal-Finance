@@ -92,17 +92,23 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     fetchData()
   }, [currency, initialData, processData])
 
+  // Derive display data so we show initialData on first paint (avoids flash of empty before useEffect runs)
+  const displayData = useMemo(
+    () => (data.length ? data : (initialData?.length ? processData(initialData) : [])),
+    [data, initialData, processData]
+  )
+
   // Separate income and expense data
   const incomeData = useMemo(() => {
-    return data.filter(
+    return displayData.filter(
       (row) => row.category === 'Income' || row.category === 'Gift Money'
     )
-  }, [data])
+  }, [displayData])
 
   // Filter and sort expense data
   const expenseData = useMemo(() => {
     // Filter out income categories and categories with budget = 0, YTD = 0, and gap = 0
-    const filtered = data.filter(
+    const filtered = displayData.filter(
       (row) =>
         row.category !== 'Income' &&
         row.category !== 'Gift Money' &&
@@ -128,7 +134,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     })
 
     return sorted
-  }, [data, expenseSortField, expenseSortDirection])
+  }, [displayData, expenseSortField, expenseSortDirection])
 
   // Calculate expense totals
   const expenseTotals = useMemo(() => {

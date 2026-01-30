@@ -1,6 +1,6 @@
 'use client'
 
-import { Wallet, Receipt, TrendingUp, BarChart3, Activity } from 'lucide-react'
+import { LineChart, Table, Calendar, CalendarDays } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const navButtonClass = cn(
@@ -18,11 +18,10 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
-  { id: 'cash-runway', label: 'Cash Runway', icon: Wallet },
-  { id: 'transaction-analysis', label: 'Transaction Analysis', icon: Receipt },
-  { id: 'ytd-spend', label: 'YTD Spend Over Time', icon: TrendingUp },
-  { id: 'annual-cumulative', label: 'Annual Cumulative Spend', icon: BarChart3 },
-  { id: 'yoy-net-worth', label: 'YoY Net Worth Change', icon: Activity },
+  { id: 'net-worth-chart', label: 'Net Worth Chart', icon: LineChart },
+  { id: 'budget-table', label: 'Budget Table', icon: Table },
+  { id: 'annual-trends', label: 'Annual Trends', icon: Calendar },
+  { id: 'monthly-trends', label: 'Monthly Trends', icon: CalendarDays },
 ]
 
 function scrollToSection(id: string, e?: React.MouseEvent) {
@@ -45,9 +44,9 @@ function scrollToSection(id: string, e?: React.MouseEvent) {
   mainElement.scrollTo({ top: relativeTop - headerOffset, behavior: 'smooth' })
 }
 
-export function AnalysisNavigation() {
+export function DashboardNavigation() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       {navigationItems.map((item) => {
         const Icon = item.icon
         return (

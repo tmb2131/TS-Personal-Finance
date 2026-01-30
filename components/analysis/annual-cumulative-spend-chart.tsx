@@ -23,31 +23,11 @@ import {
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
 export function AnnualCumulativeSpendChart() {
-  const { currency } = useCurrency()
+  const { currency, fxRate } = useCurrency()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
-  const [fxRate, setFxRate] = useState<number>(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Fetch FX rate
-  useEffect(() => {
-    async function fetchFxRate() {
-      const supabase = createClient()
-      const fxResult = await supabase
-        .from('fx_rate_current')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (fxResult.data) {
-        setFxRate(fxResult.data.gbpusd_rate)
-      }
-    }
-
-    fetchFxRate()
-  }, [])
 
   // Fetch transactions for past 5 years and budget data
   useEffect(() => {

@@ -113,9 +113,15 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
     fetchData()
   }, [currency, initialData, processData])
 
+  // Derive display data so we show initialData on first paint (avoids flash of empty before useEffect runs)
+  const displayData = useMemo(
+    () => (data.length ? data : (initialData?.length ? processData(initialData) : [])),
+    [data, initialData, processData]
+  )
+
   // Filter data based on selected categories
   const filteredData = useMemo(() => {
-    return data
+    return displayData
       .filter((item: any) => item.year != null && !isNaN(item.year) && isFinite(item.year))
       .map((item: any) => {
         const filtered: any = { year: Number(item.year) }
@@ -137,7 +143,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
         filtered.Total = total
         return filtered
       })
-  }, [data, showPersonal, showFamily, showTrust])
+  }, [displayData, showPersonal, showFamily, showTrust])
 
   if (loading) {
     return (
@@ -201,7 +207,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-8">
         {/* Category Filters */}
         <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
           <div className="flex items-center space-x-2">

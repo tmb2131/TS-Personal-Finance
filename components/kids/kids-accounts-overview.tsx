@@ -24,9 +24,8 @@ interface ChildSummary {
 }
 
 export function KidsAccountsOverview() {
-  const { currency, convertAmount } = useCurrency()
+  const { currency, convertAmount, fxRate } = useCurrency()
   const [accounts, setAccounts] = useState<KidsAccount[]>([])
-  const [fxRate, setFxRate] = useState<number>(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,20 +33,12 @@ export function KidsAccountsOverview() {
     async function fetchData() {
       const supabase = createClient()
       
-      const [accountsResult, fxResult] = await Promise.all([
-        supabase
-          .from('kids_accounts')
-          .select('*')
-          .order('child_name')
-          .order('account_type')
-          .order('date_updated', { ascending: false }),
-        supabase
-          .from('fx_rate_current')
-          .select('gbpusd_rate')
-          .order('date', { ascending: false })
-          .limit(1)
-          .single(),
-      ])
+      const accountsResult = await supabase
+        .from('kids_accounts')
+        .select('*')
+        .order('child_name')
+        .order('account_type')
+        .order('date_updated', { ascending: false })
 
       if (accountsResult.error) {
         console.error('Error fetching kids accounts:', accountsResult.error)
@@ -57,9 +48,6 @@ export function KidsAccountsOverview() {
       }
       
       setError(null)
-      if (fxResult.data?.gbpusd_rate != null) {
-        setFxRate(fxResult.data.gbpusd_rate)
-      }
 
       // Get the most recent balance for each account (grouped by child_name, account_type, and notes)
       // This allows multiple accounts of the same type for the same child if they have different notes

@@ -1,6 +1,17 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { AccountsOverview } from '@/components/accounts/accounts-overview'
 
-export default function AccountsPage() {
+export default async function AccountsPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div>

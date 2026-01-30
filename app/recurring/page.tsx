@@ -1,7 +1,18 @@
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { RecurringPayments } from '@/components/recurring/recurring-payments'
 import { RecurringPaymentsTable } from '@/components/recurring/recurring-payments-table'
 
-export default function RecurringPage() {
+export default async function RecurringPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div>

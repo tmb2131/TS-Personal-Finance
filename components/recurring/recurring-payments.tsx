@@ -15,31 +15,11 @@ import { cn } from '@/utils/cn'
 import { toast } from 'sonner'
 
 export function RecurringPayments() {
-  const { currency } = useCurrency()
+  const { currency, fxRate } = useCurrency()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [preferences, setPreferences] = useState<RecurringPreference[]>([])
-  const [fxRate, setFxRate] = useState<number>(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // Fetch FX rate
-  useEffect(() => {
-    async function fetchFxRate() {
-      const supabase = createClient()
-      const fxResult = await supabase
-        .from('fx_rate_current')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (fxResult.data) {
-        setFxRate(fxResult.data.gbpusd_rate)
-      }
-    }
-
-    fetchFxRate()
-  }, [])
 
   // Fetch transactions and preferences
   useEffect(() => {
