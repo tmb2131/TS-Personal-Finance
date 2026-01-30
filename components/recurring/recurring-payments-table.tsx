@@ -29,7 +29,7 @@ interface AggregatedRecurringPayment {
 }
 
 export function RecurringPaymentsTable() {
-  const { currency } = useCurrency()
+  const { currency, fxRate } = useCurrency()
   const [payments, setPayments] = useState<RecurringPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -70,10 +70,15 @@ export function RecurringPaymentsTable() {
     payments.forEach((payment) => {
       const normalizedName = (payment.name || '').toLowerCase().trim()
       
-      // Get amount in selected currency
-      const amount = currency === 'USD'
-        ? (payment.annualized_amount_usd || 0)
-        : (payment.annualized_amount_gbp || 0)
+      // Get amount in selected currency: prefer native value, convert the other if missing
+      const amount =
+        currency === 'USD'
+          ? (payment.annualized_amount_usd != null
+              ? payment.annualized_amount_usd
+              : (payment.annualized_amount_gbp ?? 0) * fxRate)
+          : (payment.annualized_amount_gbp != null
+              ? payment.annualized_amount_gbp
+              : (payment.annualized_amount_usd ?? 0) / (fxRate || 1))
       
       if (grouped.has(normalizedName)) {
         const existing = grouped.get(normalizedName)!
@@ -96,7 +101,7 @@ export function RecurringPaymentsTable() {
 
     return Array.from(grouped.values())
       .sort((a, b) => Math.abs(b.annualizedAmount) - Math.abs(a.annualizedAmount)) // Sort descending by amount
-  }, [payments, currency])
+  }, [payments, currency, fxRate])
 
   // Calculate total spend and 80% threshold
   const { totalSpend, threshold80Percent } = useMemo(() => {

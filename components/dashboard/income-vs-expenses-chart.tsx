@@ -107,7 +107,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     let giftMoney = 0
     let expenses = 0
     budgets.forEach((b) => {
-      const tracking = currency === 'USD' ? (b.tracking_est_usd ?? 0) : (b.tracking_est_gbp ?? 0)
+      const tracking = currency === 'USD' ? (b.tracking_est_gbp ?? 0) * fxRate : (b.tracking_est_gbp ?? 0)
       if (b.category === 'Income') income += Math.abs(tracking)
       else if (b.category === 'Gift Money') giftMoney += Math.abs(tracking)
       else expenses += Math.abs(tracking)
@@ -175,7 +175,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
             </Label>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
+        <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <BarChart
             data={chartData}
             margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}

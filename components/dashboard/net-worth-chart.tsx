@@ -242,7 +242,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
+        <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <ComposedChart data={filteredData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis 

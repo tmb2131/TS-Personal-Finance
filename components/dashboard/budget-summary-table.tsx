@@ -159,7 +159,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="bg-muted/50">
         <div className="flex items-center justify-between">
           <CardTitle>Budget Tracker</CardTitle>
           {isAllGood && (
@@ -224,13 +224,13 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
         </div>
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead></TableHead>
-              <TableHead className="text-right">Budget</TableHead>
-              <TableHead className="text-right">Tracking</TableHead>
-              <TableHead className="text-right">YTD</TableHead>
-              <TableHead className="text-right">Gap</TableHead>
-              <TableHead className="w-32"></TableHead>
+            <TableRow className="bg-muted">
+              <TableHead className="bg-muted"></TableHead>
+              <TableHead className="text-right bg-muted">Budget</TableHead>
+              <TableHead className="text-right bg-muted">Tracking</TableHead>
+              <TableHead className="text-right bg-muted">YTD</TableHead>
+              <TableHead className="text-right bg-muted">Gap</TableHead>
+              <TableHead className="w-32 bg-muted"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

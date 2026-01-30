@@ -611,7 +611,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="bg-muted/50">
         <CardTitle>Monthly Trends</CardTitle>
       </CardHeader>
       <CardContent>
@@ -755,7 +755,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
               <TableRow className="border-b">
-              <TableHead className="sticky top-0 z-20 bg-background">
+              <TableHead className="sticky top-0 z-20 bg-muted">
                 <button
                   onClick={() => handleSort('category')}
                   className="flex items-center hover:opacity-70 transition-opacity"
@@ -764,7 +764,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_month_minus_3')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -773,7 +773,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="cur_month_minus_3" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_month_minus_2')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -782,7 +782,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="cur_month_minus_2" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_month_minus_1')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -791,7 +791,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="cur_month_minus_1" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right border-l-2 border-r-2 border-gray-700 bg-background">
+              <TableHead className="sticky top-0 z-20 text-right border-l-2 border-r-2 border-gray-700 bg-muted">
                 <button
                   onClick={() => handleSort('cur_month_est')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -800,8 +800,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="cur_month_est" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right w-24 bg-background">Trend</TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right w-24 bg-muted">Trend</TableHead>
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('ttm_avg')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -810,7 +810,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="ttm_avg" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('z_score')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -819,7 +819,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="z_score" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('delta_last_month')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -828,7 +828,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="delta_last_month" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('delta_l3m')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -837,7 +837,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="delta_l3m" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('delta_l12m')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"

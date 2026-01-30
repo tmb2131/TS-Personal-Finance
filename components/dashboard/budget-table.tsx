@@ -28,7 +28,7 @@ interface BudgetTableProps {
 }
 
 export function BudgetTable({ initialData }: BudgetTableProps = {}) {
-  const { currency } = useCurrency()
+  const { currency, fxRate, convertAmount } = useCurrency()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
@@ -37,26 +37,37 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const [incomeSortField, setIncomeSortField] = useState<SortField>('category')
   const [incomeSortDirection, setIncomeSortDirection] = useState<SortDirection>('asc')
 
-  // Process data function - use useCallback to memoize with currency dependency
-  const processData = useCallback((budgets: BudgetTarget[]) => {
-    return budgets.map((budget) => {
-      const annualBudget = currency === 'USD' ? budget.annual_budget_usd : budget.annual_budget_gbp
-      const tracking = currency === 'USD' ? budget.tracking_est_usd : budget.tracking_est_gbp
-      const ytd = currency === 'USD' ? budget.ytd_usd : budget.ytd_gbp
-      
-      // Gap = Tracking - Budget (for all categories)
-      // This formula works for both income and expenses
-      const gap = tracking - annualBudget
+  // Process data: always use GBP from data; convert to USD with current FX when currency is USD (matches Key Insights)
+  const processData = useCallback(
+    (budgets: BudgetTarget[]) => {
+      return budgets.map((budget) => {
+        const annualBudget =
+          currency === 'USD'
+            ? convertAmount(budget.annual_budget_gbp, 'GBP', fxRate)
+            : budget.annual_budget_gbp
+        const tracking =
+          currency === 'USD'
+            ? convertAmount(budget.tracking_est_gbp, 'GBP', fxRate)
+            : budget.tracking_est_gbp
+        const ytd =
+          currency === 'USD'
+            ? convertAmount(budget.ytd_gbp, 'GBP', fxRate)
+            : budget.ytd_gbp
 
-      return {
-        category: budget.category,
-        annualBudget,
-        tracking,
-        ytd,
-        gap,
-      }
-    })
-  }, [currency])
+        // Gap = Tracking - Budget (for all categories)
+        const gap = tracking - annualBudget
+
+        return {
+          category: budget.category,
+          annualBudget,
+          tracking,
+          ytd,
+          gap,
+        }
+      })
+    },
+    [currency, fxRate, convertAmount]
+  )
 
   useEffect(() => {
     // If we have initial data, reprocess it when currency changes
@@ -374,7 +385,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
 
       {/* Expenses Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="bg-muted/50">
           <CardTitle>Expenses</CardTitle>
         </CardHeader>
         <CardContent>
@@ -510,8 +521,8 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
           <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="sticky top-0 z-20 bg-background">
+                <TableRow className="border-b bg-muted">
+                  <TableHead className="sticky top-0 z-20 bg-muted">
                     <button
                       onClick={() => handleExpenseSort('category')}
                       className="flex items-center hover:opacity-70 transition-opacity"
@@ -520,7 +531,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
                     <button
                       onClick={() => handleExpenseSort('annualBudget')}
                       className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -529,7 +540,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
                     <button
                       onClick={() => handleExpenseSort('tracking')}
                       className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -538,7 +549,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
                     <button
                       onClick={() => handleExpenseSort('ytd')}
                       className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -547,7 +558,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       <SortIcon field="ytd" currentField={expenseSortField} direction={expenseSortDirection} />
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
                     <button
                       onClick={() => handleExpenseSort('gap')}
                       className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -556,7 +567,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       <SortIcon field="gap" currentField={expenseSortField} direction={expenseSortDirection} />
                     </button>
                   </TableHead>
-                  <TableHead className="sticky top-0 z-20 w-32 bg-background"></TableHead>
+                  <TableHead className="sticky top-0 z-20 w-32 bg-muted"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

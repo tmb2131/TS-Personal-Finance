@@ -592,8 +592,8 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
         <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
-              <TableRow className="border-b">
-              <TableHead className="sticky top-0 z-20 bg-background">
+              <TableRow className="border-b bg-muted">
+              <TableHead className="sticky top-0 z-20 bg-muted">
                 <button
                   onClick={() => handleSort('category')}
                   className="flex items-center hover:opacity-70 transition-opacity"
@@ -602,7 +602,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_yr_minus_4')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -611,7 +611,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <SortIcon field="cur_yr_minus_4" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_yr_minus_3')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -620,7 +620,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <SortIcon field="cur_yr_minus_3" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_yr_minus_2')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -629,7 +629,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <SortIcon field="cur_yr_minus_2" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_yr_minus_1')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -638,7 +638,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <SortIcon field="cur_yr_minus_1" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right border-l-2 border-r-2 border-gray-700 bg-background">
+              <TableHead className="sticky top-0 z-20 text-right border-l-2 border-r-2 border-gray-700 bg-muted">
                 <button
                   onClick={() => handleSort('cur_yr_est')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -647,10 +647,10 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <SortIcon field="cur_yr_est" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right w-24 bg-background">
+              <TableHead className="sticky top-0 z-20 text-right w-24 bg-muted">
                 Trend
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_yr_est_vs_last_yr')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -659,7 +659,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <SortIcon field="cur_yr_est_vs_last_yr" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-background">
+              <TableHead className="sticky top-0 z-20 text-right bg-muted">
                 <button
                   onClick={() => handleSort('cur_yr_est_vs_4yr_avg')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"

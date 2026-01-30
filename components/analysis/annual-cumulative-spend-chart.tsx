@@ -161,19 +161,19 @@ export function AnnualCumulativeSpendChart() {
     const currentYear = new Date().getFullYear()
     const years = [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1, currentYear]
     
-    // Calculate total annual budget (sum of all expense categories)
+    // Calculate total annual budget (sum of all expense categories). Use GBP as source of truth, convert to USD.
     const totalAnnualBudget = budgetData
       .filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
       .reduce((sum, b) => {
-        const budget = currency === 'USD' ? b.annual_budget_usd : b.annual_budget_gbp
+        const budget = currency === 'USD' ? (b.annual_budget_gbp ?? 0) * fxRate : (b.annual_budget_gbp ?? 0)
         return sum + Math.abs(budget) // Budgets are stored as negative for expenses
       }, 0)
 
-    // Calculate 2026 estimated total spend from Budget Tracker (sum of tracking_est for expense categories)
+    // Calculate 2026 estimated total spend from Budget Tracker (sum of tracking_est for expense categories). Use GBP as source of truth, convert to USD.
     const estimatedTotalSpend2026 = budgetData
       .filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
       .reduce((sum, b) => {
-        const tracking = currency === 'USD' ? b.tracking_est_usd : b.tracking_est_gbp
+        const tracking = currency === 'USD' ? (b.tracking_est_gbp ?? 0) * fxRate : (b.tracking_est_gbp ?? 0)
         return sum + Math.abs(tracking) // Tracking values are stored as negative for expenses
       }, 0)
 

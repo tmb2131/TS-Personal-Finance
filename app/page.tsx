@@ -7,6 +7,7 @@ import { BudgetTableWrapper } from '@/components/dashboard/budget-table-wrapper'
 import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-table-wrapper'
 import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
 import { DashboardNavigation } from '@/components/dashboard/dashboard-navigation'
+import { DashboardBackToTop } from '@/components/dashboard/dashboard-back-to-top'
 import {
   NetWorthChartSkeleton,
   BudgetTableSkeleton,
@@ -26,7 +27,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6">
       {/* Header - Renders immediately */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
@@ -37,36 +38,44 @@ export default async function DashboardPage() {
 
       <DashboardNavigation />
 
-      {/* Section 1: Net Worth + Income vs Expenses (side by side on large screens) */}
-      <div id="net-worth-chart" className="scroll-mt-24 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <Suspense fallback={<NetWorthChartSkeleton />}>
-          <NetWorthChartWrapper />
-        </Suspense>
-        <Suspense fallback={<IncomeVsExpensesChartSkeleton />}>
-          <IncomeVsExpensesChartWrapper />
-        </Suspense>
-      </div>
+      {/* Section 1: Net Worth + Income vs Expenses */}
+      <section id="net-worth-chart" className="scroll-mt-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <Suspense fallback={<NetWorthChartSkeleton />}>
+            <NetWorthChartWrapper />
+          </Suspense>
+          <Suspense fallback={<IncomeVsExpensesChartSkeleton />}>
+            <IncomeVsExpensesChartWrapper />
+          </Suspense>
+        </div>
+      </section>
 
-      {/* Section 2: Budget Table - Loads independently */}
-      <div id="budget-table" className="scroll-mt-24">
+      {/* Section 2: Budget Table */}
+      <section id="budget-table" className="scroll-mt-24 pt-8 md:pt-10 border-t border-border">
         <Suspense fallback={<BudgetTableSkeleton />}>
           <BudgetTableWrapper />
         </Suspense>
-      </div>
+      </section>
 
-      {/* Section 3: Annual Trends - Loads independently */}
-      <div id="annual-trends" className="scroll-mt-24">
+      {/* Section 3: Annual Trends */}
+      <section id="annual-trends" className="scroll-mt-24 pt-8 md:pt-10 border-t border-border">
         <Suspense fallback={<TrendsTableSkeleton />}>
           <AnnualTrendsTableWrapper />
         </Suspense>
-      </div>
+      </section>
 
-      {/* Section 4: Monthly Trends - Loads independently */}
-      <div id="monthly-trends" className="scroll-mt-24">
+      {/* Section 4: Monthly Trends */}
+      <section id="monthly-trends" className="scroll-mt-24 pt-8 md:pt-10 border-t border-border">
         <Suspense fallback={<TrendsTableSkeleton />}>
           <MonthlyTrendsTableWrapper />
         </Suspense>
-      </div>
+      </section>
+
+      {/* Footer: repeat nav + back to top */}
+      <footer className="pt-8 md:pt-10 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-6">
+        <DashboardNavigation />
+        <DashboardBackToTop />
+      </footer>
     </div>
   )
 }

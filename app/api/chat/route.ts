@@ -663,7 +663,7 @@ EXAMPLE QUERIES YOU CAN HANDLE:
               }
             })
             
-            // Calculate variance for each budget category
+            // Calculate variance for each budget category. Use GBP as source of truth, convert to USD with current FX rate.
             const comparisons = budgets.map((budget) => {
               const actual = actualByCategory[budget.category] || { gbp: 0, usd: 0 }
               
@@ -671,9 +671,7 @@ EXAMPLE QUERIES YOU CAN HANDLE:
               const budgetGBP = period === 'ytd' 
                 ? (budget.ytd_gbp || 0) 
                 : (budget.annual_budget_gbp || 0)
-              const budgetUSD = period === 'ytd'
-                ? (budget.ytd_usd || 0)
-                : (budget.annual_budget_usd || 0)
+              const budgetUSD = (period === 'ytd' ? (budget.ytd_gbp ?? 0) : (budget.annual_budget_gbp ?? 0)) * fxRate
               
               // Calculate variance (Budget - Actual, positive = under budget, negative = over budget)
               const varianceGBP = budgetGBP - actual.gbp

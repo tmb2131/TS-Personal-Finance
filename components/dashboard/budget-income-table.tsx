@@ -143,7 +143,7 @@ export function BudgetIncomeTable({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="bg-muted/50">
         <CardTitle>Income</CardTitle>
         <p className="text-sm text-muted-foreground">All amounts are after tax</p>
       </CardHeader>
@@ -203,8 +203,8 @@ export function BudgetIncomeTable({
         </div>
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>
+            <TableRow className="bg-muted">
+              <TableHead className="bg-muted">
                 <button
                   onClick={() => onSort('category')}
                   className="flex items-center hover:opacity-70 transition-opacity"
@@ -222,7 +222,7 @@ export function BudgetIncomeTable({
                   <SortIcon field="annualBudget" />
                 </button>
               </TableHead>
-              <TableHead className="text-right">
+              <TableHead className="text-right bg-muted">
                 <button
                   onClick={() => onSort('tracking')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -240,7 +240,7 @@ export function BudgetIncomeTable({
                   <SortIcon field="ytd" />
                 </button>
               </TableHead>
-              <TableHead className="text-right">
+              <TableHead className="text-right bg-muted">
                 <button
                   onClick={() => onSort('gap')}
                   className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
@@ -249,7 +249,7 @@ export function BudgetIncomeTable({
                   <SortIcon field="gap" />
                 </button>
               </TableHead>
-              <TableHead className="w-32"></TableHead>
+              <TableHead className="w-32 bg-muted"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
