@@ -286,7 +286,6 @@ export function YoYNetWorthWaterfall() {
               angle={-45}
               textAnchor="end"
               height={100}
-              tick={{ fontSize: 12 }}
               stroke="#6b7280"
               tick={(props: any) => {
                 const { x, y, payload } = props
