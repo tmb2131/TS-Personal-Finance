@@ -311,7 +311,7 @@ export function CumulativeSpendChart() {
                 angle={-45}
                 textAnchor="end"
                 height={80}
-                interval="auto"
+                interval="preserveStartEnd"
                 minTickGap={30}
               />
               <YAxis
