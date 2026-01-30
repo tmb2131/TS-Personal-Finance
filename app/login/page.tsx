@@ -58,8 +58,8 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
+    <div className="fixed inset-0 z-10 flex items-center justify-center bg-background">
+      <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <CardTitle>TS Personal Finance</CardTitle>
           <CardDescription>
@@ -90,8 +90,8 @@ function LoginForm() {
 
 function LoginFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
+    <div className="fixed inset-0 z-10 flex items-center justify-center bg-background">
+      <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <CardTitle>TS Personal Finance</CardTitle>
           <CardDescription>
