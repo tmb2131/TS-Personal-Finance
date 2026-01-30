@@ -1,6 +1,6 @@
 import { TransactionLog } from '@/lib/types'
 
-export interface RecurringPayment {
+export interface DetectedRecurringPayment {
   counterpartyPattern: string
   counterpartyName: string
   frequency: 'Monthly' | 'Yearly'

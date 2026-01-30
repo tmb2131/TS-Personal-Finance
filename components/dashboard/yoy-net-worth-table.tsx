@@ -15,7 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
-import { ArrowUpDown, TrendingUp } from 'lucide-react'
+import { AlertCircle, ArrowUpDown, TrendingUp } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 type SortField = 'category' | 'amount'

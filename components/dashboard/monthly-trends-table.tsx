@@ -162,7 +162,7 @@ export function MonthlyTrendsTable({ initialData }: MonthlyTrendsTableProps = {}
 
   // Calculate totals
   const totals = useMemo(() => {
-    const totals = sortedData.reduce(
+    const sums = sortedData.reduce(
       (acc, row) => ({
         cur_month_minus_3: acc.cur_month_minus_3 + Math.abs(row.cur_month_minus_3),
         cur_month_minus_2: acc.cur_month_minus_2 + Math.abs(row.cur_month_minus_2),
@@ -184,9 +184,8 @@ export function MonthlyTrendsTable({ initialData }: MonthlyTrendsTableProps = {}
         delta_vs_l12m_avg: 0,
       }
     )
-    // Calculate Last 3M Avg as the average of the last 3 months
-    totals.l3m_avg = (totals.cur_month_minus_3 + totals.cur_month_minus_2 + totals.cur_month_minus_1) / 3
-    return totals
+    const l3m_avg = (sums.cur_month_minus_3 + sums.cur_month_minus_2 + sums.cur_month_minus_1) / 3
+    return { ...sums, l3m_avg }
   }, [sortedData])
 
   // Calculate top movers based on selected sort
