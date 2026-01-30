@@ -1,0 +1,128 @@
+# TS Personal Finance - Personal Finance Dashboard
+
+A modern personal finance dashboard built with Next.js 14, Supabase, and Google Sheets integration.
+
+## Features
+
+- 📊 **Net Worth Tracking**: Visualize net worth over time with stacked bar charts
+- 💰 **Budget Tracking**: Monitor spending against annual budgets with gap analysis
+- 📈 **Monthly Trends**: Track spending patterns with Z-score outlier detection
+- 🏦 **Accounts Overview**: Detailed view of all account balances grouped by category
+- 📉 **Annual Analysis**: Year-over-year spending trends and waterfall charts
+- 💱 **Multi-Currency Support**: Toggle between GBP and USD across the entire dashboard
+- 🔄 **Google Sheets Sync**: One-click sync from Google Sheets (source of truth)
+
+## Tech Stack
+
+- **Framework**: Next.js 14+ (App Router, TypeScript)
+- **Styling**: Tailwind CSS
+- **UI Components**: Shadcn/UI (Radix Primitives)
+- **Charts**: Recharts
+- **Backend/Database**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth (Magic Link/Email)
+- **Integration**: Google Sheets API (v4)
+
+## Setup
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=your_service_account_private_key
+```
+
+### 3. Database Setup
+
+Run the SQL migration in Supabase:
+
+1. Go to your Supabase project dashboard
+2. Navigate to SQL Editor
+3. Copy and paste the contents of `supabase/migrations/001_initial_schema.sql`
+4. Execute the migration
+
+### 4. Google Sheets API Setup
+
+1. Create a Google Cloud Project
+2. Enable the Google Sheets API
+3. Create a Service Account
+4. Download the JSON key file
+5. Share your Google Sheet with the service account email
+6. Add the credentials to your `.env.local` file
+
+### 5. Run Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Google Sheet Structure
+
+The app expects a Google Sheet with the following tabs:
+
+1. **Account Balances**: Institution, Account Name, Category, Currency, Balances
+2. **Transaction Log**: Date, Category, Counterparty, Amounts (USD/GBP)
+3. **Budget Targets**: Category, Annual Budgets (GBP/USD)
+4. **Historical Net Worth**: Date, Category, Amounts (USD/GBP)
+5. **FX Rates**: Date, GBP/USD Rate, EUR/USD Rate
+6. **FX Rate Current**: Date, GBP/USD Rate
+7. **Annual Trends**: Category, Historical years, Current year estimate
+8. **Monthly Trends**: Category, Last 3 months, Current month estimate, TTM avg, Z-score
+
+## Authentication
+
+Access is restricted to:
+- `thomas.brosens@gmail.com`
+- `sriya.sundaresan@gmail.com`
+
+Users will receive a magic link via email to authenticate.
+
+## Project Structure
+
+```
+findash/
+├── app/                    # Next.js app router pages
+│   ├── accounts/          # Accounts overview page
+│   ├── analysis/          # Analysis & trends page
+│   ├── login/             # Login page
+│   ├── actions.ts         # Server actions
+│   └── layout.tsx         # Root layout
+├── components/            # React components
+│   ├── dashboard/        # Dashboard-specific components
+│   ├── accounts/         # Accounts-specific components
+│   ├── analysis/         # Analysis-specific components
+│   └── ui/               # Shadcn UI components
+├── lib/                  # Utility libraries
+│   ├── contexts/         # React contexts (Currency)
+│   ├── supabase/        # Supabase client setup
+│   ├── sync-google-sheet.ts  # Google Sheets sync service
+│   └── types.ts         # TypeScript type definitions
+├── supabase/
+│   └── migrations/      # Database migrations
+└── utils/               # Utility functions
+```
+
+## Deployment
+
+The app is configured for deployment on Vercel:
+
+1. Push your code to GitHub
+2. Import the project in Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy!
+
+## License
+
+Private project - All rights reserved

@@ -1,0 +1,1089 @@
+'use client'
+
+import { useEffect, useState, useMemo } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
+import { useCurrency } from '@/lib/contexts/currency-context'
+import { createClient } from '@/lib/supabase/client'
+import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
+import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, Wallet, AlertCircle } from 'lucide-react'
+
+export function KeyInsights() {
+  const { currency, convertAmount } = useCurrency()
+  const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
+  const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
+  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
+  const [historicalNetWorth, setHistoricalNetWorth] = useState<HistoricalNetWorth[]>([])
+  const [accountBalances, setAccountBalances] = useState<AccountBalance[]>([])
+  const [fxRate, setFxRate] = useState<number>(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      const supabase = createClient()
+      
+      const [budgetResult, annualResult, monthlyResult, netWorthResult, accountsResult, fxResult] = await Promise.all([
+        supabase.from('budget_targets').select('*'),
+        supabase.from('annual_trends').select('*'),
+        supabase.from('monthly_trends').select('*'),
+        supabase.from('historical_net_worth').select('*').order('date', { ascending: false }),
+        supabase.from('account_balances').select('*').order('date_updated', { ascending: false }),
+        supabase
+          .from('fx_rate_current')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(1)
+          .single(),
+      ])
+
+      // Check for errors
+      const errors = [
+        budgetResult.error,
+        annualResult.error,
+        monthlyResult.error,
+        netWorthResult.error,
+        accountsResult.error,
+        fxResult.error,
+      ].filter(Boolean)
+
+      if (errors.length > 0) {
+        console.error('Errors fetching insights data:', errors)
+        setError('Failed to load some insights data. Please try refreshing the page.')
+      } else {
+        setError(null)
+      }
+
+      if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
+      if (annualResult.data) setAnnualTrends(annualResult.data as AnnualTrend[])
+      if (monthlyResult.data) setMonthlyTrends(monthlyResult.data as MonthlyTrend[])
+      if (netWorthResult.data) setHistoricalNetWorth(netWorthResult.data as HistoricalNetWorth[])
+      if (accountsResult.data) {
+        // Get most recent balance for each account
+        const accountsMap = new Map<string, AccountBalance>()
+        accountsResult.data.forEach((account: AccountBalance) => {
+          const key = `${account.institution}-${account.account_name}`
+          const existing = accountsMap.get(key)
+          if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
+            accountsMap.set(key, account)
+          }
+        })
+        setAccountBalances(Array.from(accountsMap.values()))
+      }
+      if (fxResult.data) setFxRate(fxResult.data.gbpusd_rate)
+
+      setLoading(false)
+    }
+
+    fetchData()
+  }, [])
+
+  // Filter out income categories
+  const expenseCategories = useMemo(() => {
+    return ['Income', 'Gift Money']
+  }, [])
+
+  // Net Worth Insights
+  const netWorthInsights = useMemo(() => {
+    // Calculate current net worth from account balances (same method as Dashboard AccountsOverview)
+    // Use the exact same calculation as the Dashboard's grandTotals
+    // IMPORTANT: Trust is NOT included in Family (same as Dashboard)
+    const categorySummary = accountBalances.reduce((acc: any, account) => {
+      const category = account.category
+      if (!acc[category]) {
+        acc[category] = { personal: 0, family: 0, total: 0 }
+      }
+      
+      const personalAmount = convertAmount(account.balance_personal_local, account.currency, fxRate)
+      const familyAmount = convertAmount(account.balance_family_local, account.currency, fxRate)
+      const totalAmount = convertAmount(account.balance_total_local, account.currency, fxRate)
+      
+      acc[category].personal += personalAmount
+      acc[category].family += familyAmount
+      acc[category].total += totalAmount
+      
+      return acc
+    }, {})
+
+    // Calculate grand totals (same as Dashboard)
+    // Exclude Trust from Family calculation
+    const grandTotals = Object.entries(categorySummary).reduce(
+      (acc: any, [category, item]: [string, any]) => {
+        acc.personal += item.personal
+        // Only include Family if category is NOT Trust
+        if (category !== 'Trust') {
+          acc.family += item.family
+        }
+        acc.total += item.total
+        return acc
+      },
+      { personal: 0, family: 0, total: 0 }
+    )
+
+    const currentPersonal = grandTotals.personal
+    const currentFamily = grandTotals.family
+
+    const currentTotal = currentPersonal + currentFamily
+
+    // Get historical net worth data grouped by year
+    const currentYear = new Date().getFullYear()
+    const lastYear = currentYear - 1
+    
+    const netWorthByYear = historicalNetWorth.reduce((acc: any, item: HistoricalNetWorth) => {
+      const year = new Date(item.date).getFullYear()
+      const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
+      
+      if (!acc[year]) {
+        acc[year] = { Personal: 0, Family: 0, Total: 0, dates: [] }
+      }
+      
+      if (item.category === 'Personal') {
+        acc[year].Personal += amount || 0
+      } else if (item.category === 'Family') {
+        acc[year].Family += amount || 0
+      }
+      acc[year].Total += amount || 0
+      acc[year].dates.push(new Date(item.date))
+      
+      return acc
+    }, {})
+
+    // For comparison, get the most recent historical net worth entry for last year
+    // IMPORTANT: Exclude Trust from historical data to match current calculation
+    // Get the most recent Personal value for last year
+    const lastYearPersonalEntries = historicalNetWorth
+      .filter((item: HistoricalNetWorth) => {
+        const year = new Date(item.date).getFullYear()
+        return year === lastYear && item.category === 'Personal'
+      })
+      .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+    
+    const lastYearPersonal = lastYearPersonalEntries.length > 0
+      ? (currency === 'USD' ? lastYearPersonalEntries[0].amount_usd : lastYearPersonalEntries[0].amount_gbp) || 0
+      : 0
+    
+    // Get the most recent Family value for last year (excluding Trust)
+    const lastYearFamilyEntries = historicalNetWorth
+      .filter((item: HistoricalNetWorth) => {
+        const year = new Date(item.date).getFullYear()
+        return year === lastYear && item.category === 'Family'
+      })
+      .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+    
+    const lastYearFamily = lastYearFamilyEntries.length > 0
+      ? (currency === 'USD' ? lastYearFamilyEntries[0].amount_usd : lastYearFamilyEntries[0].amount_gbp) || 0
+      : 0
+    
+    // Calculate last year's total (Personal + Family, excluding Trust) to match current calculation
+    const lastYearTotal = lastYearPersonal + lastYearFamily
+    
+    // Calculate 5-year average (current year - 1 through current year - 5)
+    // IMPORTANT: Exclude Trust from each year's calculation, use most recent entry per category per year
+    const yearsForAvg = [currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4, currentYear - 5]
+    const fiveYearAvg = yearsForAvg.reduce((sum, year) => {
+      // Get most recent Personal entry for this year
+      const yearPersonalEntries = historicalNetWorth
+        .filter((item: HistoricalNetWorth) => {
+          const itemYear = new Date(item.date).getFullYear()
+          return itemYear === year && item.category === 'Personal'
+        })
+        .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      
+      const yearPersonal = yearPersonalEntries.length > 0
+        ? (currency === 'USD' ? yearPersonalEntries[0].amount_usd : yearPersonalEntries[0].amount_gbp) || 0
+        : 0
+      
+      // Get most recent Family entry for this year (excluding Trust)
+      const yearFamilyEntries = historicalNetWorth
+        .filter((item: HistoricalNetWorth) => {
+          const itemYear = new Date(item.date).getFullYear()
+          return itemYear === year && item.category === 'Family'
+        })
+        .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      
+      const yearFamily = yearFamilyEntries.length > 0
+        ? (currency === 'USD' ? yearFamilyEntries[0].amount_usd : yearFamilyEntries[0].amount_gbp) || 0
+        : 0
+      
+      return sum + (yearPersonal + yearFamily)
+    }, 0) / 5
+
+    // Calculate changes (comparing Personal + Family, excluding Trust)
+    const vsLastYear = currentTotal - lastYearTotal
+    const vsFiveYearAvg = currentTotal - fiveYearAvg
+
+    // Calculate percentage change vs last year
+    const vsLastYearPercent = lastYearTotal !== 0 
+      ? (vsLastYear / Math.abs(lastYearTotal)) * 100 
+      : 0
+
+    // Calculate Personal vs Family changes using the most recent historical data
+    const personalVsLastYear = currentPersonal - lastYearPersonal
+    const familyVsLastYear = currentFamily - lastYearFamily
+
+    // Calculate top accounts by balance (from account balances)
+    const topAccounts = accountBalances
+      .map((account) => {
+        const totalBalance = convertAmount(account.balance_total_local, account.currency, fxRate)
+        return {
+          institution: account.institution,
+          accountName: account.account_name,
+          balance: totalBalance,
+        }
+      })
+      .filter((item) => Math.abs(item.balance) > 1000) // Only significant amounts
+      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+      .slice(0, 6) // Top 6 accounts
+
+    return {
+      currentTotal,
+      currentPersonal,
+      currentFamily,
+      vsLastYear,
+      vsLastYearPercent,
+      vsFiveYearAvg,
+      personalVsLastYear,
+      familyVsLastYear,
+      topAccounts,
+      lastYearTotal,
+    }
+  }, [accountBalances, historicalNetWorth, currency, fxRate, convertAmount])
+
+  const formatCurrency = (value: number) => {
+    const valueInK = Math.abs(value) / 1000
+    const currencySymbol = currency === 'USD' ? '$' : '£'
+    // Round to nearest integer, but show at least 1 decimal if less than 10k
+    if (valueInK < 10) {
+      return `${currencySymbol}${valueInK.toFixed(1)}k`
+    }
+    return `${currencySymbol}${Math.round(valueInK)}k`
+  }
+
+  const formatCurrencyLarge = (value: number) => {
+    const valueInM = Math.abs(value) / 1000000
+    const currencySymbol = currency === 'USD' ? '$' : '£'
+    if (valueInM >= 1) {
+      return `${currencySymbol}${valueInM.toFixed(1)}M`
+    }
+    return formatCurrency(value)
+  }
+
+  const formatPercent = (value: number) => {
+    const absValue = Math.abs(value)
+    if (absValue < 0.1) {
+      return '<0.1%'
+    }
+    return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
+  }
+
+  const formatPercentAbs = (value: number) => {
+    const absValue = Math.abs(value)
+    if (absValue < 0.1) {
+      return '<0.1%'
+    }
+    return `${absValue.toFixed(1)}%`
+  }
+
+  // Annual Budget Insights
+  const annualBudgetInsights = useMemo(() => {
+    const expenses = budgetData.filter((b) => !expenseCategories.includes(b.category))
+    
+    const totalBudget = expenses.reduce((sum, b) => {
+      const budget = currency === 'USD' ? b.annual_budget_usd : b.annual_budget_gbp
+      return sum + Math.abs(budget)
+    }, 0)
+
+    const totalTracking = expenses.reduce((sum, b) => {
+      const tracking = currency === 'USD' ? b.tracking_est_usd : b.tracking_est_gbp
+      return sum + Math.abs(tracking)
+    }, 0)
+
+    const overallGap = totalTracking - totalBudget
+
+    // Calculate gap per category
+    const categoryGaps = expenses
+      .map((b) => {
+        const budget = currency === 'USD' ? b.annual_budget_usd : b.annual_budget_gbp
+        const tracking = currency === 'USD' ? b.tracking_est_usd : b.tracking_est_gbp
+        const gap = Math.abs(tracking) - Math.abs(budget)
+        return {
+          category: b.category,
+          gap,
+          budget: Math.abs(budget),
+          tracking: Math.abs(tracking),
+        }
+      })
+      .filter((item) => Math.abs(item.gap) > 100) // Only show significant gaps
+      .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
+
+    const underBudget = categoryGaps.filter((item) => item.gap < 0)
+    const overBudget = categoryGaps.filter((item) => item.gap > 0)
+
+    // Calculate excluding Holidays
+    const holidaysGap = categoryGaps.find((item) => item.category === 'Holidays')?.gap || 0
+    const gapExcludingHolidays = overallGap - holidaysGap
+
+    // Calculate percentage change vs budget
+    const gapPercent = totalBudget !== 0 
+      ? (overallGap / totalBudget) * 100 
+      : 0
+
+    return {
+      overallGap,
+      gapPercent,
+      gapExcludingHolidays,
+      totalBudget,
+      totalTracking,
+      underBudget: underBudget.slice(0, 5), // Top 5
+      overBudget: overBudget.slice(0, 5), // Top 5
+    }
+  }, [budgetData, currency, expenseCategories])
+
+  // Annual Spend Insights
+  const annualSpendInsights = useMemo(() => {
+    const expenses = annualTrends.filter((a) => !expenseCategories.includes(a.category))
+    
+    // Values are negative for expenses (e.g., -100 means spending 100)
+    const currentYearEst = expenses.reduce((sum, a) => sum + a.cur_yr_est, 0)
+    const lastYear = expenses.reduce((sum, a) => sum + a.cur_yr_minus_1, 0)
+    const fourYearAvg = expenses.reduce((sum, a) => {
+      const avg = (a.cur_yr_minus_4 + a.cur_yr_minus_3 + a.cur_yr_minus_2 + a.cur_yr_minus_1) / 4
+      return sum + avg
+    }, 0)
+
+    // For negative values: if cur_yr_est = -100 and avg = -120, we're spending 20 less
+    // So: avg - cur_yr_est = -120 - (-100) = -20 (negative means spending MORE)
+    // We want: cur_yr_est - avg = -100 - (-120) = 20 (positive means spending LESS)
+    // Actually wait, if cur is -100 and avg is -120, cur is less negative = spending less
+    // So: avg - cur = -120 - (-100) = -20 means spending MORE (wrong)
+    // Let's think: spending less means cur > avg (less negative)
+    // So: cur - avg = -100 - (-120) = 20 (positive = spending less) ✓
+    const vsFourYearAvg = currentYearEst - fourYearAvg // Positive = spending less
+    const vsLastYear = currentYearEst - lastYear // Positive = spending less
+
+    // Calculate percentage change vs 4-year average
+    const vsFourYearAvgPercent = fourYearAvg !== 0 
+      ? (vsFourYearAvg / Math.abs(fourYearAvg)) * 100 
+      : 0
+
+    // Calculate per-category differences
+    const categoryDiffs = expenses
+      .map((a) => {
+        const curEst = a.cur_yr_est
+        const lastYr = a.cur_yr_minus_1
+        const avg = (a.cur_yr_minus_4 + a.cur_yr_minus_3 + a.cur_yr_minus_2 + a.cur_yr_minus_1) / 4
+        return {
+          category: a.category,
+          vsFourYearAvg: curEst - avg, // Positive = spending less, Negative = spending more
+          vsLastYear: curEst - lastYr,
+        }
+      })
+      .filter((item) => Math.abs(item.vsFourYearAvg) > 1000)
+      .sort((a, b) => b.vsFourYearAvg - a.vsFourYearAvg) // Sort descending (spending less first)
+
+    const spendingLess = categoryDiffs.filter((item) => item.vsFourYearAvg > 0).slice(0, 5)
+    const spendingMore = categoryDiffs.filter((item) => item.vsFourYearAvg < 0).slice(0, 5)
+
+    return {
+      vsFourYearAvg,
+      vsFourYearAvgPercent,
+      vsLastYear,
+      spendingLess,
+      spendingMore,
+    }
+  }, [annualTrends, expenseCategories])
+
+  // Monthly Spend Insights
+  const monthlySpendInsights = useMemo(() => {
+    const expenses = monthlyTrends.filter((m) => !expenseCategories.includes(m.category))
+    
+    // Values are negative for expenses
+    const currentMonthEst = expenses.reduce((sum, m) => sum + m.cur_month_est, 0)
+    const ttmAvg = expenses.reduce((sum, m) => sum + m.ttm_avg, 0)
+
+    // Positive = spending less (less negative)
+    const vsTtmAvg = currentMonthEst - ttmAvg
+
+    // Calculate percentage change vs TTM average
+    const vsTtmAvgPercent = ttmAvg !== 0 
+      ? (vsTtmAvg / Math.abs(ttmAvg)) * 100 
+      : 0
+
+    // Calculate per-category differences
+    const categoryDiffs = expenses
+      .map((m) => {
+        const curEst = m.cur_month_est
+        const avg = m.ttm_avg
+        return {
+          category: m.category,
+          diff: curEst - avg, // Positive = spending less, Negative = spending more
+        }
+      })
+      .filter((item) => Math.abs(item.diff) > 100)
+      .sort((a, b) => a.diff - b.diff) // Sort ascending (spending more first, then spending less)
+
+    const spendingMore = categoryDiffs.filter((item) => item.diff < 0).slice(0, 5)
+    const spendingLess = categoryDiffs.filter((item) => item.diff > 0).slice(0, 5)
+
+    return {
+      vsTtmAvg,
+      vsTtmAvgPercent,
+      spendingMore,
+      spendingLess,
+    }
+  }, [monthlyTrends, expenseCategories])
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        {/* Executive Summary Skeleton */}
+        <Card className="border-2">
+          <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64 mt-2" />
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-3 p-4 rounded-lg border bg-card">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <Skeleton className="h-3 w-20 mb-1" />
+                      <Skeleton className="h-8 w-32" />
+                    </div>
+                    <div className="space-y-1 pt-2 border-t">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Net Worth Section Skeleton */}
+        <Card>
+          <CardHeader className="bg-muted/50">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-3 w-64 mt-1" />
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <Skeleton className="h-5 w-5 rounded-full mt-0.5" />
+                  <Skeleton className="h-4 flex-1" />
+                </div>
+              ))}
+            </div>
+            <div className="grid md:grid-cols-2 gap-6 pt-4">
+              {[1, 2].map((i) => (
+                <div key={i}>
+                  <Skeleton className="h-4 w-24 mb-3 pb-2 border-b" />
+                  <ul className="space-y-1.5">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="pt-4">
+              <Skeleton className="h-4 w-32 mb-3 pb-2 border-b" />
+              <ul className="space-y-1.5">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-4 w-full" />
+                ))}
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Other Sections Skeleton */}
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardHeader className="bg-muted/50">
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div className="space-y-3">
+                {[1, 2].map((j) => (
+                  <div key={j} className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 rounded-full mt-0.5" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                ))}
+              </div>
+              <div className="grid md:grid-cols-2 gap-6 pt-4">
+                {[1, 2].map((j) => (
+                  <div key={j}>
+                    <Skeleton className="h-4 w-32 mb-3 pb-2 border-b" />
+                    <ul className="space-y-1.5">
+                      {[1, 2, 3].map((k) => (
+                        <Skeleton key={k} className="h-4 w-full" />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-xl">Key Insights</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EmptyState
+            icon={AlertCircle}
+            title="Error loading insights"
+            description={error}
+          />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Executive Summary */}
+      <Card className="border-2">
+        <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
+          <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance</p>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Net Worth Summary */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-blue-600" />
+                <h3 className="font-semibold text-sm uppercase tracking-wide">Net Worth</h3>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Current Value <span className="text-[10px]">(Trust excluded)</span></p>
+                  <p className="text-2xl font-bold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</p>
+                </div>
+                <div className="space-y-1 pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    {netWorthInsights.vsLastYear > 0 ? (
+                      <>
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-semibold text-green-600">
+                          +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                        <span className="text-sm font-semibold text-red-600">
+                          {formatCurrencyLarge(netWorthInsights.vsLastYear)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium ${netWorthInsights.vsLastYear > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPercent(netWorthInsights.vsLastYearPercent)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">vs last year</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Annual Budget Summary */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-purple-600" />
+                <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Budget</h3>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  {annualBudgetInsights.overallGap < 0 ? (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <p className="text-lg font-bold text-green-600">Under Budget</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                      <p className="text-lg font-bold text-red-600">Over Budget</p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1 pt-2 border-t">
+                  <p className="text-sm">
+                    <span className="font-semibold">{formatCurrency(Math.abs(annualBudgetInsights.overallGap))}</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} target
+                    </span>
+                  </p>
+                  <p className="text-xs">
+                    <span className={`font-medium ${annualBudgetInsights.overallGap < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPercentAbs(annualBudgetInsights.gapPercent)}
+                    </span>
+                    <span className="text-muted-foreground ml-1">
+                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Annual Spend Summary */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-orange-600" />
+                <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Spend</h3>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">vs 4-Year Average</p>
+                  {annualSpendInsights.vsFourYearAvg > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="h-5 w-5 text-green-600" />
+                      <p className="text-lg font-bold text-green-600">Spending Less</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-red-600" />
+                      <p className="text-lg font-bold text-red-600">Spending More</p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1 pt-2 border-t">
+                  <p className="text-sm">
+                    <span className="font-semibold">{formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))}</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
+                    </span>
+                  </p>
+                  <p className="text-xs">
+                    <span className={`font-medium ${annualSpendInsights.vsFourYearAvg > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}
+                    </span>
+                    <span className="text-muted-foreground ml-1">
+                      {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Spend Summary */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-indigo-600" />
+                <h3 className="font-semibold text-sm uppercase tracking-wide">Monthly Spend</h3>
+              </div>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">vs TTM Average</p>
+                  {monthlySpendInsights.vsTtmAvg > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="h-5 w-5 text-green-600" />
+                      <p className="text-lg font-bold text-green-600">Spending Less</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-red-600" />
+                      <p className="text-lg font-bold text-red-600">Spending More</p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1 pt-2 border-t">
+                  <p className="text-sm">
+                    <span className="font-semibold">{formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))}</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
+                    </span>
+                  </p>
+                  <p className="text-xs">
+                    <span className={`font-medium ${monthlySpendInsights.vsTtmAvg > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}
+                    </span>
+                    <span className="text-muted-foreground ml-1">
+                      {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Net Worth Section */}
+      <Card>
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-xl">Net Worth</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
+          {/* Summary Statements */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <p className="text-sm">
+                Current net worth is{' '}
+                <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</span>
+                {' '}(Personal: {formatCurrencyLarge(netWorthInsights.currentPersonal)}, Family: {formatCurrencyLarge(netWorthInsights.currentFamily)}).
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              {netWorthInsights.vsLastYear > 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              )}
+              <p className="text-sm">
+                Net worth has{' '}
+                <span className="font-semibold">
+                  {netWorthInsights.vsLastYear > 0 ? 'increased' : 'decreased'} by {formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
+                </span>{' '}
+                compared to last year.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              {netWorthInsights.vsFiveYearAvg > 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              )}
+              <p className="text-sm">
+                Net worth is{' '}
+                <span className="font-semibold">
+                  {formatCurrencyLarge(Math.abs(netWorthInsights.vsFiveYearAvg))} {netWorthInsights.vsFiveYearAvg > 0 ? 'above' : 'below'}
+                </span>{' '}
+                the average over the past 5 years
+                <span className="text-xs text-muted-foreground ml-1">(Trust excluded)</span>.
+              </p>
+            </div>
+          </div>
+
+          {/* Breakdown by Personal vs Family */}
+          <div className="grid md:grid-cols-2 gap-6 pt-4">
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                {netWorthInsights.personalVsLastYear > 0 ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600" />
+                )}
+                <h3 className="font-semibold text-sm">Personal:</h3>
+              </div>
+              <ul className="space-y-1.5">
+                <li className="text-sm">
+                  Current: <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentPersonal)}</span>
+                </li>
+                <li className="text-sm">
+                  Change vs last year: <span className={netWorthInsights.personalVsLastYear > 0 ? 'text-green-600' : 'text-red-600'}>
+                    {netWorthInsights.personalVsLastYear > 0 ? '+' : ''}{formatCurrencyLarge(netWorthInsights.personalVsLastYear)}
+                  </span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                {netWorthInsights.familyVsLastYear > 0 ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600" />
+                )}
+                <h3 className="font-semibold text-sm">Family:</h3>
+                <span className="text-xs text-muted-foreground">(Trust excluded)</span>
+              </div>
+              <ul className="space-y-1.5">
+                <li className="text-sm">
+                  Current: <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentFamily)}</span>
+                </li>
+                <li className="text-sm">
+                  Change vs last year: <span className={netWorthInsights.familyVsLastYear > 0 ? 'text-green-600' : 'text-red-600'}>
+                    {netWorthInsights.familyVsLastYear > 0 ? '+' : ''}{formatCurrencyLarge(netWorthInsights.familyVsLastYear)}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Key Accounts */}
+          <div className="pt-4">
+            <h3 className="font-semibold text-sm mb-3 pb-2 border-b">Key Accounts:</h3>
+            <ul className="space-y-1.5">
+              {netWorthInsights.topAccounts.map((account) => (
+                <li key={`${account.institution}-${account.accountName}`} className="text-sm">
+                  {account.institution} - {account.accountName}: {formatCurrencyLarge(account.balance)}
+                </li>
+              ))}
+              {netWorthInsights.topAccounts.length === 0 && (
+                <li className="text-sm text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  No accounts found. Please sync account data.
+                </li>
+              )}
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Annual Budget Section */}
+      <Card>
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-xl">Annual Budget</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
+          {/* Summary Statements */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              {annualBudgetInsights.overallGap < 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              )}
+              <p className="text-sm">
+                Overall, we're estimated to be{' '}
+                <span className="font-semibold">
+                  {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))}
+                </span>{' '}
+                compared to our {new Date().getFullYear()} budget this year, tracking spending{' '}
+                {formatCurrency(annualBudgetInsights.totalTracking)} this year vs. a budget of{' '}
+                {formatCurrency(annualBudgetInsights.totalBudget)}.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              {annualBudgetInsights.gapExcludingHolidays < 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              )}
+              <p className="text-sm">
+                Excluding savings from 'Holidays', we're still estimated to be{' '}
+                <span className="font-semibold">
+                  {annualBudgetInsights.gapExcludingHolidays < 0 ? 'under' : 'over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.gapExcludingHolidays))}
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+
+          {/* Breakdown */}
+          <div className="grid md:grid-cols-2 gap-6 pt-4">
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <h3 className="font-semibold text-sm">Under budget:</h3>
+              </div>
+              <ul className="space-y-1.5">
+                {annualBudgetInsights.underBudget.map((item) => (
+                  <li key={item.category} className="text-sm">
+                    {item.category}{' '}
+                    <span className="font-semibold text-green-600">
+                      {formatCurrency(Math.abs(item.gap))}
+                    </span>{' '}
+                    under budget
+                  </li>
+                ))}
+                {annualBudgetInsights.underBudget.length === 0 && (
+                  <li className="text-sm text-muted-foreground italic">No categories under budget</li>
+                )}
+              </ul>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                <XCircle className="h-4 w-4 text-red-600" />
+                <h3 className="font-semibold text-sm">Over budget:</h3>
+              </div>
+              <ul className="space-y-1.5">
+                {annualBudgetInsights.overBudget.map((item) => (
+                  <li key={item.category} className="text-sm">
+                    {item.category}{' '}
+                    <span className="font-semibold text-red-600">
+                      {formatCurrency(Math.abs(item.gap))}
+                    </span>{' '}
+                    over budget
+                  </li>
+                ))}
+                {annualBudgetInsights.overBudget.length === 0 && (
+                  <li className="text-sm text-muted-foreground italic">No categories over budget</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Annual Spend Section */}
+      <Card>
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-xl">Annual Spend</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
+          {/* Summary Statements */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              {annualSpendInsights.vsFourYearAvg > 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              )}
+              <p className="text-sm">
+                We're estimated to spend{' '}
+                <span className="font-semibold">
+                  {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))} {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'}
+                </span>{' '}
+                this year than we have on average over the past four years.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              {annualSpendInsights.vsLastYear > 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              )}
+              <p className="text-sm">
+                We're estimated to spend{' '}
+                <span className="font-semibold">
+                  {formatCurrency(Math.abs(annualSpendInsights.vsLastYear))} {annualSpendInsights.vsLastYear > 0 ? 'less' : 'more'}
+                </span>{' '}
+                than last year.
+              </p>
+            </div>
+          </div>
+
+          {/* Breakdown */}
+          <div className="grid md:grid-cols-2 gap-6 pt-4">
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <h3 className="font-semibold text-sm">Spending less:</h3>
+              </div>
+              <ul className="space-y-1.5">
+                {annualSpendInsights.spendingLess.map((item) => (
+                  <li key={item.category} className="text-sm">
+                    {item.category}{' '}
+                    <span className="font-semibold text-green-600">
+                      {formatCurrency(Math.abs(item.vsFourYearAvg))}
+                    </span>{' '}
+                    less than on average
+                  </li>
+                ))}
+                {annualSpendInsights.spendingLess.length === 0 && (
+                  <li className="text-sm text-muted-foreground italic">No categories spending less than average</li>
+                )}
+              </ul>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                <XCircle className="h-4 w-4 text-red-600" />
+                <h3 className="font-semibold text-sm">Spending more:</h3>
+              </div>
+              <ul className="space-y-1.5">
+                {annualSpendInsights.spendingMore.map((item) => (
+                  <li key={item.category} className="text-sm">
+                    {item.category}{' '}
+                    <span className="font-semibold text-red-600">
+                      {formatCurrency(Math.abs(item.vsFourYearAvg))}
+                    </span>{' '}
+                    more than on average
+                  </li>
+                ))}
+                {annualSpendInsights.spendingMore.length === 0 && (
+                  <li className="text-sm text-muted-foreground italic">No categories spending more than average</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Monthly Spend Section */}
+      <Card>
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-xl">Monthly Spend</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
+          {/* Summary Statement */}
+          <div className="flex items-start gap-3">
+            {monthlySpendInsights.vsTtmAvg > 0 ? (
+              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+            )}
+            <p className="text-sm">
+              We're estimated to spend{' '}
+              <span className="font-semibold">
+                {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'}
+              </span>{' '}
+              this month than we have on average over the past year.
+            </p>
+          </div>
+
+          {/* Breakdown */}
+          <div className="grid md:grid-cols-2 gap-6 pt-4">
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                <XCircle className="h-4 w-4 text-red-600" />
+                <h3 className="font-semibold text-sm">Spending more:</h3>
+              </div>
+              <ul className="space-y-1.5">
+                {monthlySpendInsights.spendingMore.map((item) => (
+                  <li key={item.category} className="text-sm">
+                    {item.category}{' '}
+                    <span className="font-semibold text-red-600">
+                      {formatCurrency(Math.abs(item.diff))}
+                    </span>{' '}
+                    more than on average
+                  </li>
+                ))}
+                {monthlySpendInsights.spendingMore.length === 0 && (
+                  <li className="text-sm text-muted-foreground italic">No categories spending more than average</li>
+                )}
+              </ul>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <h3 className="font-semibold text-sm">Spending less:</h3>
+              </div>
+              <ul className="space-y-1.5">
+                {monthlySpendInsights.spendingLess.map((item) => (
+                  <li key={item.category} className="text-sm">
+                    {item.category}{' '}
+                    <span className="font-semibold text-green-600">
+                      {formatCurrency(Math.abs(item.diff))}
+                    </span>{' '}
+                    less than on average
+                  </li>
+                ))}
+                {monthlySpendInsights.spendingLess.length === 0 && (
+                  <li className="text-sm text-muted-foreground italic">No categories spending less than average</li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
