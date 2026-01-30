@@ -17,8 +17,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   Cell,
   PieChart,
   Pie,
@@ -794,14 +792,14 @@ export function KeyInsights() {
         <CardContent className="pt-6 space-y-6">
           {/* Vs last year — prominent */}
           <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
-            <span className="text-sm font-medium text-muted-foreground">Vs last year</span>
+            <span className="text-sm font-semibold text-muted-foreground">Vs last year</span>
             {netWorthInsights.vsLastYear > 0 ? (
               <>
                 <TrendingUp className="h-8 w-8 text-green-600" />
                 <span className="text-2xl font-bold text-green-600">
                   +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
                 </span>
-                <span className="text-sm font-medium text-green-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
+                <span className="text-sm font-semibold text-green-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
               </>
             ) : (
               <>
@@ -809,7 +807,7 @@ export function KeyInsights() {
                 <span className="text-2xl font-bold text-red-600">
                   {formatCurrencyLarge(netWorthInsights.vsLastYear)}
                 </span>
-                <span className="text-sm font-medium text-red-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
+                <span className="text-sm font-semibold text-red-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
               </>
             )}
           </div>
@@ -823,8 +821,22 @@ export function KeyInsights() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                      <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                      <XAxis dataKey="label" tick={{ fontSize: 14, fontWeight: 600 }} />
+                      <YAxis
+                        tick={{ fontSize: 14, fontWeight: 400 }}
+                        tickFormatter={(v) => {
+                          if (v === 0) return '0'
+                          if (v >= 1e6) {
+                            const m = v / 1e6
+                            return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`
+                          }
+                          if (v >= 1000) {
+                            const k = v / 1000
+                            return k % 1 === 0 ? `${k}k` : `${k.toFixed(1)}k`
+                          }
+                          return String(v)
+                        }}
+                      />
                       <Tooltip formatter={(v: number) => [formatCurrencyLarge(v), 'Total']} labelFormatter={(l) => l} />
                       <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} dot={false} />
                     </LineChart>
@@ -867,21 +879,47 @@ export function KeyInsights() {
             </div>
           </div>
 
-          {/* Key Accounts — compact */}
+          {/* Top Holdings — same style as Annual Budget (custom horizontal bars) */}
           <div>
-            <h3 className="text-sm font-semibold mb-2 border-b pb-2">Key accounts</h3>
-            <ul className="space-y-1 text-sm">
-              {netWorthInsights.topAccounts.map((account) => (
-                <li key={`${account.institution}-${account.accountName}`}>
-                  {account.institution} — {account.accountName}: {formatCurrencyLarge(account.balance)}
-                </li>
-              ))}
-              {netWorthInsights.topAccounts.length === 0 && (
-                <li className="text-muted-foreground flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" /> No accounts found. Sync account data to see balances.
-                </li>
-              )}
-            </ul>
+            <h3 className="text-sm font-semibold mb-3 border-b pb-2">Top Holdings</h3>
+            {netWorthInsights.topAccounts.length > 0 ? (
+              (() => {
+                const accounts = netWorthInsights.topAccounts
+                const mid = Math.ceil(accounts.length / 2)
+                const leftAccounts = accounts.slice(0, mid)
+                const rightAccounts = accounts.slice(mid)
+                const maxValue = Math.max(...accounts.map((a) => Math.abs(a.balance)), 1)
+                const renderColumn = (list: typeof leftAccounts) => (
+                  <div className="space-y-3">
+                    {list.map((a) => {
+                      const pct = (Math.abs(a.balance) / maxValue) * 100
+                      return (
+                        <div key={`${a.institution}-${a.accountName}`} className="flex items-start gap-2">
+                          <span className="text-sm w-[200px] shrink-0 break-words leading-5">{a.accountName}</span>
+                          <div className="flex-1 min-w-0 h-5 rounded bg-muted overflow-hidden shrink">
+                            <div className="h-full bg-blue-500 rounded" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs font-medium w-16 text-right shrink-0 leading-5">{formatCurrencyLarge(a.balance)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+                if (rightAccounts.length === 0) {
+                  return <div>{renderColumn(leftAccounts)}</div>
+                }
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {renderColumn(leftAccounts)}
+                    {renderColumn(rightAccounts)}
+                  </div>
+                )
+              })()
+            ) : (
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" /> No accounts found. Sync account data to see balances.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -979,14 +1017,14 @@ export function KeyInsights() {
         <CardContent className="pt-6 space-y-6">
           {/* Vs 4-year average — prominent call-out */}
           <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
-            <span className="text-sm font-medium text-muted-foreground">Vs 4-year average</span>
+            <span className="text-sm font-semibold text-muted-foreground">Vs 4-year average</span>
             {annualSpendInsights.vsFourYearAvg > 0 ? (
               <>
                 <TrendingDown className="h-8 w-8 text-green-600" />
                 <span className="text-2xl font-bold text-green-600">
                   {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))} less
                 </span>
-                <span className="text-sm font-medium text-green-600">{formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}</span>
+                <span className="text-sm font-semibold text-green-600">{formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}</span>
               </>
             ) : (
               <>
@@ -994,57 +1032,59 @@ export function KeyInsights() {
                 <span className="text-2xl font-bold text-red-600">
                   {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))} more
                 </span>
-                <span className="text-sm font-medium text-red-600">{formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}</span>
+                <span className="text-sm font-semibold text-red-600">{formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}</span>
               </>
             )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Spending less — horizontal bar chart */}
+            {/* Spending less — same style as Annual Budget */}
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <h3 className="font-semibold text-sm">Spending less vs average</h3>
               </div>
               {annualSpendInsights.spendingLess.length > 0 ? (
-                <div className="h-[200px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={annualSpendInsights.spendingLess.map((i) => ({ category: i.category, value: Math.abs(i.vsFourYearAvg) }))}
-                      layout="vertical"
-                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
-                    >
-                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
-                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
-                      <Bar dataKey="value" fill="#22c55e" radius={[0, 4, 4, 0]} />
-                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'Less than avg']} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="space-y-3">
+                  {annualSpendInsights.spendingLess.map((item) => {
+                    const maxVal = Math.max(...annualSpendInsights.spendingLess.map((i) => Math.abs(i.vsFourYearAvg)), 1)
+                    const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
               )}
             </div>
-            {/* Spending more — horizontal bar chart */}
+            {/* Spending more — same style as Annual Budget */}
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                 <XCircle className="h-4 w-4 text-red-600" />
                 <h3 className="font-semibold text-sm">Spending more vs average</h3>
               </div>
               {annualSpendInsights.spendingMore.length > 0 ? (
-                <div className="h-[200px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={annualSpendInsights.spendingMore.map((i) => ({ category: i.category, value: Math.abs(i.vsFourYearAvg) }))}
-                      layout="vertical"
-                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
-                    >
-                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
-                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
-                      <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} />
-                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'More than avg']} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="space-y-3">
+                  {annualSpendInsights.spendingMore.map((item) => {
+                    const maxVal = Math.max(...annualSpendInsights.spendingMore.map((i) => Math.abs(i.vsFourYearAvg)), 1)
+                    const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
@@ -1065,14 +1105,14 @@ export function KeyInsights() {
         <CardContent className="pt-6 space-y-6">
           {/* Vs TTM — prominent */}
           <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
-            <span className="text-sm font-medium text-muted-foreground">Vs TTM average</span>
+            <span className="text-sm font-semibold text-muted-foreground">Vs TTM average</span>
             {monthlySpendInsights.vsTtmAvg > 0 ? (
               <>
                 <TrendingDown className="h-8 w-8 text-green-600" />
                 <span className="text-2xl font-bold text-green-600">
                   {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} less
                 </span>
-                <span className="text-sm font-medium text-green-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>
+                <span className="text-sm font-semibold text-green-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>
               </>
             ) : (
               <>
@@ -1080,12 +1120,12 @@ export function KeyInsights() {
                 <span className="text-2xl font-bold text-red-600">
                   {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} more
                 </span>
-                <span className="text-sm font-medium text-red-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>
+                <span className="text-sm font-semibold text-red-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>
               </>
             )}
           </div>
 
-          {/* Categories driving delta — horizontal bar charts */}
+          {/* Categories driving delta — same style as Annual Budget */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
@@ -1093,19 +1133,20 @@ export function KeyInsights() {
                 <h3 className="font-semibold text-sm">Spending more vs average</h3>
               </div>
               {monthlySpendInsights.spendingMore.length > 0 ? (
-                <div className="h-[200px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={monthlySpendInsights.spendingMore.map((i) => ({ category: i.category, value: Math.abs(i.diff) }))}
-                      layout="vertical"
-                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
-                    >
-                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
-                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
-                      <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} />
-                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'More than avg']} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="space-y-3">
+                  {monthlySpendInsights.spendingMore.map((item) => {
+                    const maxVal = Math.max(...monthlySpendInsights.spendingMore.map((i) => Math.abs(i.diff)), 1)
+                    const pct = (Math.abs(item.diff) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
@@ -1117,19 +1158,20 @@ export function KeyInsights() {
                 <h3 className="font-semibold text-sm">Spending less vs average</h3>
               </div>
               {monthlySpendInsights.spendingLess.length > 0 ? (
-                <div className="h-[200px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={monthlySpendInsights.spendingLess.map((i) => ({ category: i.category, value: Math.abs(i.diff) }))}
-                      layout="vertical"
-                      margin={{ top: 0, right: 60, left: 0, bottom: 0 }}
-                    >
-                      <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
-                      <YAxis type="category" dataKey="category" width={80} tick={{ fontSize: 10 }} />
-                      <Bar dataKey="value" fill="#22c55e" radius={[0, 4, 4, 0]} />
-                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'Less than avg']} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="space-y-3">
+                  {monthlySpendInsights.spendingLess.map((item) => {
+                    const maxVal = Math.max(...monthlySpendInsights.spendingLess.map((i) => Math.abs(i.diff)), 1)
+                    const pct = (Math.abs(item.diff) / maxVal) * 100
+                    return (
+                      <div key={item.category} className="flex items-center gap-2">
+                        <span className="text-sm w-24 truncate">{item.category}</span>
+                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
