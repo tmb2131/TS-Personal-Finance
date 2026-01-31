@@ -113,7 +113,9 @@ EXAMPLE QUERIES YOU CAN HANDLE:
 - "Show me my current GBP vs USD breakdown"
 - "What are the top 5 categories where I'm over budget?"
 - "Compare my Personal vs Trust balances"
-- "What was my total spending in Q4 2025?"`,
+- "What was my total spending in Q4 2025?"
+- "Why did my budget gap shrink since last week?"
+- "What drove the increase in my forecasted spend vs last month?"`,
       messages: modelMessages,
       // @ts-expect-error - maxSteps property exists at runtime but may not be in TypeScript types
       maxSteps: 5, // CRITICAL: Allow multiple steps so AI can call tool AND generate response
@@ -745,6 +747,151 @@ EXAMPLE QUERIES YOU CAN HANDLE:
             }
           } catch (err) {
             console.error('[chat] get_budget_vs_actual: Execution error', err)
+            return { error: err instanceof Error ? err.message : 'Unknown error' }
+          }
+        },
+      },
+      analyze_forecast_evolution: {
+        description: `Analyze how the forecasted annual spend and budget gap have changed over time. Use this when the user asks about changes, trends, or history of the forecast/gap (e.g., 'vs last week').`,
+        inputSchema: z.object({
+          startDate: z.string().describe('Start date for comparison (YYYY-MM-DD). Use CURRENT DATE CONTEXT for "last month", "last week", etc.'),
+          endDate: z.string().optional().describe('End date for comparison (YYYY-MM-DD). Defaults to today if omitted.'),
+          currency: z.enum(['GBP', 'USD']).optional().default('GBP').describe('Currency for summary display. All evolution data is in GBP; summary is converted if USD.'),
+        }),
+        execute: async ({ startDate, endDate, currency = 'GBP' }) => {
+          try {
+            const end = endDate || todayISO
+            console.log('[chat] analyze_forecast_evolution: Starting', { startDate, endDate: end, currency })
+
+            // Step A: Fetch start snapshot
+            const { data: startRows, error: startError } = await supabase
+              .from('budget_history')
+              .select('category, forecast_spend, annual_budget')
+              .eq('date', startDate)
+
+            if (startError) {
+              console.error('[chat] analyze_forecast_evolution: Start query error', startError)
+              return { error: startError.message }
+            }
+            if (!startRows || startRows.length === 0) {
+              return { error: `No historical data found for ${startDate}. Comparison not possible.` }
+            }
+
+            const startMap = new Map<string, number>()
+            startRows.forEach((row: { category: string; forecast_spend: number | null }) => {
+              const v = row.forecast_spend
+              startMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
+            })
+
+            // Step B: Fetch end snapshot (with fallback)
+            let endMap = new Map<string, number>()
+            let endDateUsed = end
+
+            const { data: endRowsExact, error: endExactError } = await supabase
+              .from('budget_history')
+              .select('category, forecast_spend, annual_budget')
+              .eq('date', end)
+
+            if (!endExactError && endRowsExact && endRowsExact.length > 0) {
+              endRowsExact.forEach((row: { category: string; forecast_spend: number | null }) => {
+                const v = row.forecast_spend
+                endMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
+              })
+            } else {
+              const { data: endRowsLatest, error: endLatestError } = await supabase
+                .from('budget_history')
+                .select('date, category, forecast_spend, annual_budget')
+                .lte('date', end)
+                .order('date', { ascending: false })
+                .limit(500)
+
+              if (!endLatestError && endRowsLatest && endRowsLatest.length > 0) {
+                const latestDate = endRowsLatest[0].date
+                endDateUsed = latestDate
+                endRowsLatest
+                  .filter((r: { date: string }) => r.date === latestDate)
+                  .forEach((row: { category: string; forecast_spend: number | null }) => {
+                    const v = row.forecast_spend
+                    endMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
+                  })
+              } else {
+                const { data: targets, error: targetsError } = await supabase
+                  .from('budget_targets')
+                  .select('category, annual_budget_gbp, tracking_est_gbp, ytd_gbp')
+
+                if (targetsError || !targets?.length) {
+                  return { error: 'No end snapshot available (no budget_history and no budget_targets).' }
+                }
+                targets.forEach((row: { category: string; tracking_est_gbp: number | null }) => {
+                  const v = row.tracking_est_gbp
+                  endMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
+                })
+              }
+            }
+
+            // Step C: All unique categories, deltas (missing = 0)
+            const allCategories = new Set([...startMap.keys(), ...endMap.keys()])
+            const drivers: { category: string; change_gbp: number; impact: 'Positive' | 'Negative' | 'Neutral' }[] = []
+            let totalForecastChangeGBP = 0
+
+            for (const category of allCategories) {
+              const startForecast = startMap.get(category) ?? 0
+              const endForecast = endMap.get(category) ?? 0
+              const changeGbp = endForecast - startForecast
+              totalForecastChangeGBP += changeGbp
+              const impact: 'Positive' | 'Negative' | 'Neutral' =
+                changeGbp > 0 ? 'Negative' : changeGbp < 0 ? 'Positive' : 'Neutral'
+              drivers.push({ category, change_gbp: changeGbp, impact })
+            }
+
+            // Step D: Sort by absolute change (largest first)
+            drivers.sort((a, b) => Math.abs(b.change_gbp) - Math.abs(a.change_gbp))
+
+            const gapImpactDirection: 'Positive' | 'Negative' | 'Neutral' =
+              totalForecastChangeGBP > 0 ? 'Negative' : totalForecastChangeGBP < 0 ? 'Positive' : 'Neutral'
+
+            // Step E: Summary (GBP or USD)
+            let summary: string
+            const fmtGbp = (n: number) => `£${Math.round(n).toLocaleString('en-GB')}`
+            if (currency === 'USD') {
+              const { data: fxRow } = await supabase
+                .from('fx_rate_current')
+                .select('gbpusd_rate')
+                .order('date', { ascending: false })
+                .limit(1)
+                .single()
+              const fxRate = fxRow?.gbpusd_rate ?? 1.27
+              const totalUSD = totalForecastChangeGBP * fxRate
+              const fmtUsd = (n: number) => `$${Math.round(n * fxRate).toLocaleString('en-US')}`
+              const direction =
+                totalForecastChangeGBP > 0 ? 'increased' : totalForecastChangeGBP < 0 ? 'decreased' : 'stayed flat'
+              const topDrivers = drivers.slice(0, 5)
+              const driverParts = topDrivers
+                .filter((d) => d.change_gbp !== 0)
+                .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtUsd(d.change_gbp)})`)
+              summary = `Your forecasted annual spend ${direction} by ${fmtUsd(Math.abs(totalForecastChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+            } else {
+              const direction =
+                totalForecastChangeGBP > 0 ? 'increased' : totalForecastChangeGBP < 0 ? 'decreased' : 'stayed flat'
+              const topDrivers = drivers.slice(0, 5)
+              const driverParts = topDrivers
+                .filter((d) => d.change_gbp !== 0)
+                .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtGbp(d.change_gbp)})`)
+              summary = `Your forecasted annual spend ${direction} by ${fmtGbp(Math.abs(totalForecastChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+            }
+
+            return {
+              evolution: {
+                startDate,
+                endDate: endDateUsed,
+                total_forecast_change: totalForecastChangeGBP,
+                gap_impact_direction: gapImpactDirection,
+                drivers,
+              },
+              summary,
+            }
+          } catch (err) {
+            console.error('[chat] analyze_forecast_evolution: Execution error', err)
             return { error: err instanceof Error ? err.message : 'Unknown error' }
           }
         },
