@@ -1,4 +1,5 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
+import { snapshotBudgetHistory } from '@/lib/snapshot-budget-history'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -17,7 +18,11 @@ export async function POST() {
     console.log('Sync API: Starting sync for user:', user.email)
     const result = await syncGoogleSheet()
     console.log('Sync API: Sync completed', { success: result.success, resultsCount: result.results?.length })
-    
+
+    const today = new Date().toISOString().split('T')[0]
+    await snapshotBudgetHistory(today)
+    console.log('Sync API: budget_history snapshot for', today, 'completed')
+
     // Ensure consistent response format
     return NextResponse.json({
       success: result.success,

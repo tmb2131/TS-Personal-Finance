@@ -7,6 +7,7 @@ import { CumulativeSpendChart } from '@/components/analysis/cumulative-spend-cha
 import { AnnualCumulativeSpendChart } from '@/components/analysis/annual-cumulative-spend-chart'
 import { CashRunwayCards } from '@/components/analysis/cash-runway-cards'
 import { AnalysisNavigation } from '@/components/analysis/analysis-navigation'
+import { ForecastEvolutionSection } from '@/components/analysis/forecast-evolution-section'
 
 export default async function AnalysisPage() {
   const supabase = await createClient()
@@ -32,6 +33,9 @@ export default async function AnalysisPage() {
       </div>
       <div id="transaction-analysis" className="scroll-mt-24">
         <TransactionAnalysis />
+      </div>
+      <div id="forecast-evolution" className="scroll-mt-24">
+        <ForecastEvolutionSection />
       </div>
       <div id="ytd-spend" className="scroll-mt-24">
         <CumulativeSpendChart />

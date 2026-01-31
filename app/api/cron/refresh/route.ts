@@ -1,8 +1,9 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
+import { snapshotBudgetHistory } from '@/lib/snapshot-budget-history'
 import { NextResponse } from 'next/server'
 
 /**
- * Cron endpoint: run data sync (e.g. daily at 6am).
+ * Cron endpoint: run data sync (e.g. daily at 6am) and snapshot budget into budget_history.
  * Secured by CRON_SECRET – only requests with Authorization: Bearer <CRON_SECRET> are accepted.
  */
 export async function GET(request: Request) {
@@ -14,6 +15,8 @@ export async function GET(request: Request) {
 
   try {
     const result = await syncGoogleSheet()
+    const today = new Date().toISOString().split('T')[0]
+    await snapshotBudgetHistory(today)
     return NextResponse.json({
       success: result.success,
       results: result.results ?? [],
