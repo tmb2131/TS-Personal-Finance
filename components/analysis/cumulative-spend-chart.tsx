@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
@@ -23,6 +24,7 @@ const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
 export function CumulativeSpendChart() {
   const { currency, fxRate } = useCurrency()
+  const isMobile = useIsMobile()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('Total Expenses')
@@ -286,13 +288,14 @@ export function CumulativeSpendChart() {
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis
                 dataKey="dateLabel"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: isMobile ? 9 : 11 }}
                 stroke="#6b7280"
                 angle={-45}
                 textAnchor="end"
-                height={80}
+                height={isMobile ? 60 : 80}
                 interval="preserveStartEnd"
-                minTickGap={30}
+                minTickGap={isMobile ? 40 : 30}
+                tickCount={isMobile ? 5 : undefined}
               />
               <YAxis
                 yAxisId="left"
@@ -301,10 +304,12 @@ export function CumulativeSpendChart() {
                     style: 'currency',
                     currency: currency,
                     notation: 'compact',
+                    maximumFractionDigits: 0,
                   }).format(value)
                 }
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: isMobile ? 10 : 12 }}
                 stroke="#6b7280"
+                width={isMobile ? 48 : 60}
               />
               <YAxis
                 yAxisId="right"
@@ -314,10 +319,12 @@ export function CumulativeSpendChart() {
                     style: 'currency',
                     currency: currency,
                     notation: 'compact',
+                    maximumFractionDigits: 0,
                   }).format(value)
                 }
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: isMobile ? 10 : 12 }}
                 stroke="#82ca9d"
+                width={isMobile ? 48 : 60}
               />
               <Tooltip
                 formatter={(value: number, name: string) => [

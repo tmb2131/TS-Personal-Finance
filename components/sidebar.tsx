@@ -97,7 +97,8 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Mobile Bottom Navigation - 4 items: Key Insights, Dashboard, Accounts, More (sheet) */}
+      {/* Mobile Bottom Navigation - hidden on login page */}
+      {pathname !== '/login' && (
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
@@ -168,6 +169,7 @@ export function Sidebar() {
           </Dialog>
         </div>
       </nav>
+      )}
     </>
   )
 }

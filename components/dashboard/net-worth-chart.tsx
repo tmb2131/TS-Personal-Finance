@@ -240,8 +240,8 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
         <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
       </CardHeader>
       <CardContent className="pt-8">
-        {/* Category Filters */}
-        <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
+        {/* Category Filters — hidden on mobile to free space for chart */}
+        <div className="hidden sm:flex flex-wrap gap-4 mb-6 pb-4 border-b">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="filter-personal"
@@ -277,10 +277,12 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
         <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <ComposedChart data={filteredData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis 
+            <XAxis
               dataKey="year"
               tick={{ fontSize: isMobile ? 10 : 12 }}
               stroke="#6b7280"
+              tickCount={isMobile ? 5 : undefined}
+              interval={isMobile ? 'preserveStartEnd' : undefined}
             />
             <YAxis
               tickFormatter={(value) =>
@@ -288,6 +290,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
                   style: 'currency',
                   currency: currency,
                   notation: 'compact',
+                  maximumFractionDigits: 0,
                 }).format(value)
               }
               tick={{ fontSize: isMobile ? 10 : 12 }}

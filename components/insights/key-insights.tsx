@@ -6,6 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle } from 'lucide-react'
@@ -25,6 +27,7 @@ import {
 
 export function KeyInsights() {
   const { currency, convertAmount, fxRate } = useCurrency()
+  const isMobile = useIsMobile()
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
@@ -618,9 +621,15 @@ export function KeyInsights() {
           <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance</p>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className={isMobile
+            ? 'flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
+            : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
+          }>
             {/* Net Worth Summary */}
-            <div className="space-y-3 p-4 rounded-lg border bg-card">
+            <div className={cn(
+              'space-y-3 p-4 rounded-lg border bg-card shrink-0',
+              isMobile && 'min-w-[85%] max-w-[85%] snap-center'
+            )}>
               <div className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-blue-600" />
                 <h3 className="font-semibold text-sm uppercase tracking-wide">Net Worth</h3>
@@ -659,7 +668,10 @@ export function KeyInsights() {
             </div>
 
             {/* Annual Budget Summary */}
-            <div className="space-y-3 p-4 rounded-lg border bg-card">
+            <div className={cn(
+              'space-y-3 p-4 rounded-lg border bg-card',
+              isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+            )}>
               <div className="flex items-center gap-2">
                 <Target className="h-5 w-5 text-purple-600" />
                 <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Budget</h3>
@@ -699,7 +711,10 @@ export function KeyInsights() {
             </div>
 
             {/* Annual Spend Summary */}
-            <div className="space-y-3 p-4 rounded-lg border bg-card">
+            <div className={cn(
+              'space-y-3 p-4 rounded-lg border bg-card',
+              isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+            )}>
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-orange-600" />
                 <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Spend</h3>
@@ -739,7 +754,10 @@ export function KeyInsights() {
             </div>
 
             {/* Monthly Spend Summary */}
-            <div className="space-y-3 p-4 rounded-lg border bg-card">
+            <div className={cn(
+              'space-y-3 p-4 rounded-lg border bg-card',
+              isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+            )}>
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-indigo-600" />
                 <h3 className="font-semibold text-sm uppercase tracking-wide">Monthly Spend</h3>
@@ -821,9 +839,14 @@ export function KeyInsights() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="label" tick={{ fontSize: 14, fontWeight: 600 }} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: isMobile ? 10 : 14, fontWeight: 600 }}
+                        tickCount={isMobile ? 5 : undefined}
+                        interval={isMobile ? 'preserveStartEnd' : undefined}
+                      />
                       <YAxis
-                        tick={{ fontSize: 14, fontWeight: 400 }}
+                        tick={{ fontSize: isMobile ? 10 : 14, fontWeight: 400 }}
                         tickFormatter={(v) => {
                           if (v === 0) return '0'
                           if (v >= 1e6) {

@@ -266,8 +266,34 @@ export function KidsAccountsOverview() {
           <div key={childName} className="space-y-4">
             <h2 className="text-xl font-bold">{childName}'s Accounts</h2>
 
-            {/* Account Type Summary Table */}
-            <Card>
+            {/* Account Type Summary — Mobile cards */}
+            <Card className="md:hidden">
+              <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+                <CardTitle className="text-base">Account Type Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="rounded-lg border bg-muted/30 p-3 min-h-[44px]">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-xs font-medium text-muted-foreground uppercase">Total</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(grandTotal)}</span>
+                  </div>
+                </div>
+                {accountTypeSummary.map((item) => (
+                  <div key={item.accountType} className="rounded-lg border p-3 min-h-[44px]">
+                    <div className="flex justify-between items-baseline gap-2">
+                      <span className="font-medium text-sm truncate">{item.accountType}</span>
+                      <span className="font-semibold tabular-nums text-sm shrink-0">{formatCurrency(item.total)}</span>
+                    </div>
+                    <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                      Updated {formatDate(item.accounts.length > 0 ? item.accounts[0].date_updated : null)}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Account Type Summary Table — Desktop */}
+            <Card className="hidden md:block">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
                 <CardTitle className="text-base">Account Type Summary</CardTitle>
               </CardHeader>
@@ -333,8 +359,50 @@ export function KidsAccountsOverview() {
               </CardContent>
             </Card>
 
-            {/* Detailed Accounts Table */}
-            <Card>
+            {/* Account Details — Mobile cards */}
+            <Card className="md:hidden">
+              <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+                <CardTitle className="text-base">Account Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {groupedByAccountType.map((group) => (
+                  <div key={String(group.accountType)}>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-0.5">
+                      {group.accountType}
+                    </div>
+                    <div className="space-y-2">
+                      {group.accounts.map((account) => {
+                        const convertedBalance = convertAmount(Number(account.balance_usd) || 0, 'USD', fxRate)
+                        return (
+                          <div
+                            key={account.id ?? `${account.account_type}-${account.date_updated}-${account.notes ?? ''}`}
+                            className="rounded-lg border p-3 min-h-[44px]"
+                          >
+                            <div className="flex justify-between items-baseline gap-2">
+                              <span className="font-medium text-sm truncate">{account.account_type ?? '–'}</span>
+                              <span className="font-semibold tabular-nums text-sm shrink-0">{formatCurrency(convertedBalance)}</span>
+                            </div>
+                            <div className="mt-2 pt-2 border-t text-xs text-muted-foreground space-y-0.5">
+                              <div>Updated {formatDate(account.date_updated ?? null)}</div>
+                              {(account.purpose ?? account.notes) && (
+                                <div className="truncate">{[account.purpose, account.notes].filter(Boolean).join(' · ')}</div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex justify-between items-center min-h-[44px]">
+                        <span className="text-sm font-semibold">{group.accountType} Subtotal</span>
+                        <span className="font-semibold tabular-nums text-sm">{formatCurrency(group.subtotal)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Detailed Accounts Table — Desktop */}
+            <Card className="hidden md:block">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
                 <CardTitle className="text-base">Account Details</CardTitle>
               </CardHeader>

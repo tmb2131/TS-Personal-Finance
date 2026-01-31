@@ -191,7 +191,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
       </CardHeader>
       <CardContent className="pt-8">
         <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
-          <div className="flex items-center space-x-2">
+          <div className="hidden sm:flex items-center space-x-2">
             <Checkbox
               id="filter-investment-income"
               checked={includeInvestmentIncome}
@@ -214,6 +214,8 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
               dataKey="name"
               tick={{ fontSize: isMobile ? 10 : 12 }}
               stroke="#6b7280"
+              tickCount={isMobile ? 5 : undefined}
+              interval={isMobile ? 'preserveStartEnd' : undefined}
             />
             <YAxis
               tickFormatter={(value) =>
@@ -221,6 +223,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
                   style: 'currency',
                   currency: currency,
                   notation: 'compact',
+                  maximumFractionDigits: 0,
                 }).format(value)
               }
               tick={{ fontSize: isMobile ? 10 : 12 }}

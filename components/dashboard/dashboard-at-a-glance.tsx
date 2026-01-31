@@ -90,11 +90,11 @@ export function DashboardAtAGlance() {
   return (
     <div className="md:hidden mb-4">
       <p className="text-xs text-muted-foreground mb-2 font-medium">At a glance</p>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory -mx-1 px-1">
         <button
           type="button"
           onClick={() => scrollToSection('net-worth-chart')}
-          className="flex flex-col items-start gap-1 rounded-lg border-2 border-border bg-card p-3 text-left transition-colors hover:bg-muted/50 active:scale-[0.98]"
+          className="flex flex-col items-start gap-1 rounded-lg border-2 border-border bg-card p-3 text-left transition-colors hover:bg-muted/50 active:scale-[0.98] min-h-[52px] min-w-[40%] shrink-0 snap-center"
         >
           <LineChart className="h-4 w-4 text-muted-foreground" />
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Net Worth</span>
@@ -109,7 +109,7 @@ export function DashboardAtAGlance() {
         <button
           type="button"
           onClick={() => scrollToSection('budget-table')}
-          className="flex flex-col items-start gap-1 rounded-lg border-2 border-border bg-card p-3 text-left transition-colors hover:bg-muted/50 active:scale-[0.98]"
+          className="flex flex-col items-start gap-1 rounded-lg border-2 border-border bg-card p-3 text-left transition-colors hover:bg-muted/50 active:scale-[0.98] min-h-[52px] min-w-[40%] shrink-0 snap-center"
         >
           <Receipt className="h-4 w-4 text-muted-foreground" />
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Budget</span>
@@ -126,7 +126,7 @@ export function DashboardAtAGlance() {
         <button
           type="button"
           onClick={() => scrollToSection('net-worth-chart')}
-          className="flex flex-col items-start gap-1 rounded-lg border-2 border-border bg-card p-3 text-left transition-colors hover:bg-muted/50 active:scale-[0.98]"
+          className="flex flex-col items-start gap-1 rounded-lg border-2 border-border bg-card p-3 text-left transition-colors hover:bg-muted/50 active:scale-[0.98] min-h-[52px] min-w-[40%] shrink-0 snap-center"
         >
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Income vs Exp</span>

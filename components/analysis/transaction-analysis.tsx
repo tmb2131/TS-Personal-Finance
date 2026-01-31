@@ -384,9 +384,40 @@ export function TransactionAnalysis() {
           </div>
         )}
 
-        {/* Transactions Table */}
+        {/* Transactions — Mobile cards */}
         {transactionsWithCumulative.length > 0 ? (
-          <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
+          <>
+            <div className="md:hidden space-y-3">
+              {transactionsWithCumulative.map((tx, index) => {
+                const percentage = (Math.abs(tx.amount) / totalSpend) * 100
+                const cumulativePercentage = (tx.cumulative / totalSpend) * 100
+                return (
+                  <div
+                    key={`${tx.counterpartyKey}-${index}`}
+                    className={cn(
+                      'rounded-lg border p-3 min-h-[44px]',
+                      tx.isTop80Percent && 'bg-yellow-50 dark:bg-yellow-950/20'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm truncate">{tx.counterparty}</div>
+                        {tx.isTop80Percent && (
+                          <span className="text-xs text-yellow-600 dark:text-yellow-400 font-semibold">Top 80%</span>
+                        )}
+                      </div>
+                      <span className="font-semibold tabular-nums text-sm shrink-0">{formatCurrency(tx.amount)}</span>
+                    </div>
+                    <div className="mt-2 pt-2 border-t text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0">
+                      <span>{tx.transactionCount} txns</span>
+                      <span>Cumulative: {formatCurrency(tx.cumulative)}</span>
+                      <span>{cumulativePercentage.toFixed(1)}% of total</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
             <table className="w-full caption-bottom text-sm">
               <TableHeader>
                 <TableRow className="border-b bg-muted">
@@ -435,6 +466,7 @@ export function TransactionAnalysis() {
               </TableBody>
             </table>
           </div>
+          </>
         ) : (
           <EmptyState
             icon={Receipt}

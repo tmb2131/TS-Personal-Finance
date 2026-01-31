@@ -4,14 +4,21 @@ import { useRouter } from 'next/navigation'
 import { CurrencyToggle } from './currency-toggle'
 import { Button } from './ui/button'
 import { RefreshCw, LogOut } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { cn } from '@/utils/cn'
+
+const SCROLL_THRESHOLD = 8
 
 export function Header() {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [syncing, setSyncing] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [headerVisible, setHeaderVisible] = useState(true)
+  const lastScrollTop = useRef(0)
   const [lastRefreshDate, setLastRefreshDate] = useState<string | null>(null)
   const [latestTransactionDate, setLatestTransactionDate] = useState<string | null>(null)
   const [maxAccountDate, setMaxAccountDate] = useState<string | null>(null)
@@ -26,6 +33,26 @@ export function Header() {
     // Fetch latest dates from database
     fetchLatestDates()
   }, [])
+
+  // Hide header on scroll down, show on scroll up (mobile only)
+  useEffect(() => {
+    if (!isMobile) return
+    const el = document.querySelector('.main-content')
+    if (!el) return
+    const onScroll = () => {
+      const scrollTop = (el as HTMLElement).scrollTop
+      if (scrollTop <= 0) {
+        setHeaderVisible(true)
+      } else if (scrollTop > lastScrollTop.current && scrollTop > SCROLL_THRESHOLD) {
+        setHeaderVisible(false)
+      } else if (scrollTop < lastScrollTop.current) {
+        setHeaderVisible(true)
+      }
+      lastScrollTop.current = scrollTop
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [isMobile])
 
   const fetchLatestDates = async () => {
     try {
@@ -156,7 +183,12 @@ export function Header() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b px-4 md:px-6">
+    <header
+      className={cn(
+        'flex h-16 items-center justify-between border-b px-4 md:px-6 bg-background z-40 transition-transform duration-200 ease-out',
+        isMobile && !headerVisible && '-translate-y-full -mt-16'
+      )}
+    >
       <div className="flex items-center gap-2 md:gap-4 flex-wrap">
         <Button
           variant="outline"

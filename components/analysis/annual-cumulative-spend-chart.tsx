@@ -4,7 +4,10 @@ import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog, BudgetTarget, AnnualTrend } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
@@ -24,11 +27,17 @@ const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
 export function AnnualCumulativeSpendChart() {
   const { currency, fxRate } = useCurrency()
+  const isMobile = useIsMobile()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // On mobile, default to only Current Year + Budget; on desktop show all years
+  const [showHistoricalYears, setShowHistoricalYears] = useState(false)
+  useEffect(() => {
+    setShowHistoricalYears(!isMobile)
+  }, [isMobile])
 
   // Fetch transactions, budget data, and annual_trends (authoritative year totals)
   useEffect(() => {
@@ -586,7 +595,19 @@ export function AnnualCumulativeSpendChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Annual Cumulative Spend</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <CardTitle>Annual Cumulative Spend</CardTitle>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="show-historical-years"
+              checked={showHistoricalYears}
+              onCheckedChange={(checked) => setShowHistoricalYears(checked === true)}
+            />
+            <Label htmlFor="show-historical-years" className="text-sm font-normal cursor-pointer whitespace-nowrap">
+              Show historical years (2022–{currentYear - 1})
+            </Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {chartData.length === 0 ? (
@@ -613,8 +634,9 @@ export function AnnualCumulativeSpendChart() {
               />
               <YAxis
                 tickFormatter={(value) => formatCurrencyCompact(value)}
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: isMobile ? 10 : 12 }}
                 stroke="#6b7280"
+                width={isMobile ? 48 : 60}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend
@@ -632,8 +654,8 @@ export function AnnualCumulativeSpendChart() {
                 iconType="line"
                 iconSize={12}
               />
-              {/* Background years (2022, 2023, 2024) */}
-              {years.slice(0, 3).map((year) => (
+              {/* Background years (2022, 2023, 2024) — hidden on mobile by default */}
+              {showHistoricalYears && years.slice(0, 3).map((year) => (
                 <Line
                   key={year}
                   type="monotone"
@@ -644,8 +666,8 @@ export function AnnualCumulativeSpendChart() {
                   name={`year${year}`}
                 />
               ))}
-              {/* Last year (2025) */}
-              {years.length > 3 && (
+              {/* Last year (e.g. 2025) — hidden on mobile by default */}
+              {showHistoricalYears && years.length > 3 && (
                 <Line
                   type="monotone"
                   dataKey={`year${years[3]}`}

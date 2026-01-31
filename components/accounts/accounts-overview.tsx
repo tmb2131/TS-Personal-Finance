@@ -262,10 +262,16 @@ export function AccountsOverview() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        <KPICard title="Total Net Worth" value={totalNetWorth} />
-        <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" />
-        <KPICard title="Illiquid Assets" value={illiquidAssets} />
+      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
+        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-auto md:min-w-0 md:shrink">
+          <KPICard title="Total Net Worth" value={totalNetWorth} />
+        </div>
+        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-auto md:min-w-0 md:shrink">
+          <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" />
+        </div>
+        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-auto md:min-w-0 md:shrink">
+          <KPICard title="Illiquid Assets" value={illiquidAssets} />
+        </div>
       </div>
 
       {/* Category Summary — Mobile card layout */}
@@ -418,7 +424,7 @@ export function AccountsOverview() {
                   return (
                     <div
                       key={`${account.institution}-${account.account_name}`}
-                      className="rounded-lg border p-3"
+                      className="rounded-lg border p-3 min-h-[44px]"
                     >
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div className="min-w-0 flex-1">
@@ -430,10 +436,10 @@ export function AccountsOverview() {
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground block">
                           Updated {formatDate(account.date_updated)}
                         </span>
-                        <span className="font-semibold tabular-nums text-sm">
+                        <span className="font-semibold tabular-nums text-sm shrink-0">
                           {formatCurrency(convertedBalance)}
                         </span>
                       </div>

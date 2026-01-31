@@ -551,8 +551,37 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               </div>
             </div>
           </div>
-          {/* Compact expenses table: two side-by-side columns to avoid scrolling */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Expenses — Mobile cards (when expanded) */}
+          <div className="md:hidden space-y-3">
+            {expenseData.map((row) => {
+              const gap = row.tracking - row.annualBudget
+              const isPositive = gap >= 0
+              return (
+                <div
+                  key={row.category}
+                  className="rounded-lg border p-3 min-h-[44px]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-medium text-sm truncate">{row.category}</div>
+                    <span
+                      className={cn(
+                        'font-semibold tabular-nums text-sm shrink-0',
+                        isPositive ? 'text-green-600' : 'text-red-600'
+                      )}
+                    >
+                      {gap === 0 ? '–' : formatCurrencyCompact(gap)}
+                    </span>
+                  </div>
+                  <div className="mt-2 pt-2 border-t text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0">
+                    <span>Budget: {formatCurrencyCompact(Math.abs(row.annualBudget))}</span>
+                    <span>Tracking: {formatCurrencyCompact(Math.abs(row.tracking))}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {/* Compact expenses table: two side-by-side columns (desktop) */}
+          <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-3">
             <div className="border rounded-md overflow-hidden min-w-0">
               <Table className={expenseCompactClass}>
                 <TableHeader>

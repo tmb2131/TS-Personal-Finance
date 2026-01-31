@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
 import { Wallet, AlertCircle } from 'lucide-react'
@@ -25,6 +26,7 @@ const YEAR_END = 'Year End'
 
 export function NetWorthStartEndChart() {
   const { currency } = useCurrency()
+  const isMobile = useIsMobile()
   const [data, setData] = useState<YoYNetWorth[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -169,13 +171,23 @@ export function NetWorthStartEndChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: isMobile ? 10 : 12 }}
               stroke="#6b7280"
+              tickCount={isMobile ? 5 : undefined}
+              interval={isMobile ? 'preserveStartEnd' : undefined}
             />
             <YAxis
-              tickFormatter={formatCurrency}
-              tick={{ fontSize: 12 }}
+              tickFormatter={(v) =>
+                new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency,
+                  notation: 'compact',
+                  maximumFractionDigits: 0,
+                }).format(v)
+              }
+              tick={{ fontSize: isMobile ? 10 : 12 }}
               stroke="#6b7280"
+              width={isMobile ? 48 : 60}
             />
             <Tooltip
               formatter={(value: number) => formatCurrencyFull(value)}
