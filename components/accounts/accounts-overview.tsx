@@ -268,15 +268,73 @@ export function AccountsOverview() {
         <KPICard title="Illiquid Assets" value={illiquidAssets} />
       </div>
 
-      {/* Category Summary Table */}
-      <Card>
+      {/* Category Summary — Mobile card layout */}
+      <Card className="md:hidden">
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+          <CardTitle className="text-base">Account Category Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0 space-y-3">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Grand Total</div>
+            <div className="flex justify-between items-baseline gap-2 mb-1">
+              <span className="text-sm">Personal</span>
+              <span className="font-medium tabular-nums">{formatCurrency(grandTotals.personal)}</span>
+            </div>
+            <div className="flex justify-between items-baseline gap-2 mb-1">
+              <span className="text-sm">Family</span>
+              <span className="font-medium tabular-nums">{formatCurrency(grandTotals.family)}</span>
+            </div>
+            <div className="flex justify-between items-baseline gap-2 pt-2 border-t">
+              <span className="text-sm font-semibold">Total</span>
+              <span className="font-semibold tabular-nums">{formatCurrency(grandTotals.total)}</span>
+            </div>
+            <div className="relative h-2 w-full mt-2 rounded bg-muted overflow-hidden">
+              <div
+                className="absolute h-full bg-blue-900 left-0 top-0 rounded"
+                style={{
+                  width: `${Math.min((Math.abs(grandTotals.total) / maxSummaryBalance) * 100, 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+          {categorySummary.map((item) => (
+            <div key={item.category} className="rounded-lg border p-3">
+              <div className="text-sm font-medium mb-2">
+                {CATEGORY_DISPLAY_NAMES[item.category] || item.category}
+              </div>
+              <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
+                <span className="text-muted-foreground">Personal</span>
+                <span className="tabular-nums">{item.personal === 0 ? '–' : formatCurrency(item.personal)}</span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
+                <span className="text-muted-foreground">Family</span>
+                <span className="tabular-nums">{item.family === 0 ? '–' : formatCurrency(item.family)}</span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2 text-sm pt-2 border-t mt-1">
+                <span className="font-medium">Balance</span>
+                <span className="font-medium tabular-nums">{formatCurrency(item.total)}</span>
+              </div>
+              <div className="relative h-1.5 w-full mt-2 rounded bg-muted overflow-hidden">
+                <div
+                  className="absolute h-full bg-blue-900 left-0 top-0 rounded"
+                  style={{
+                    width: `${Math.min((Math.abs(item.total) / maxSummaryBalance) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Category Summary Table — Desktop */}
+      <Card className="hidden md:block">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Account Category Summary</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <Table className={compactTable}>
             <TableHeader>
-              {/* Grand Totals Row */}
               <TableRow className="bg-muted">
                 <TableHead className="font-bold text-black">Total</TableHead>
                 <TableHead className="text-right font-bold text-black">
@@ -299,7 +357,6 @@ export function AccountsOverview() {
                   </div>
                 </TableHead>
               </TableRow>
-              {/* Column Headers */}
               <TableRow className="bg-muted">
                 <TableHead>Account Category</TableHead>
                 <TableHead className="text-right">Personal</TableHead>
@@ -340,7 +397,69 @@ export function AccountsOverview() {
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Accounts — Mobile card layout */}
+      <Card className="md:hidden">
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+          <CardTitle className="text-base">Accounts</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0 space-y-4">
+          {groupedByCategory.map((group) => (
+            <div key={group.category}>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-0.5">
+                {CATEGORY_DISPLAY_NAMES[group.category] || group.category}
+              </div>
+              <div className="space-y-2">
+                {group.accounts.map((account) => {
+                  const convertedBalance = convertAmount(
+                    account.balance_total_local,
+                    account.currency,
+                    fxRate
+                  )
+                  return (
+                    <div
+                      key={`${account.institution}-${account.account_name}`}
+                      className="rounded-lg border p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm truncate">{account.account_name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{account.institution}</div>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0">
+                          {account.currency}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                        <span className="text-xs text-muted-foreground">
+                          Updated {formatDate(account.date_updated)}
+                        </span>
+                        <span className="font-semibold tabular-nums text-sm">
+                          {formatCurrency(convertedBalance)}
+                        </span>
+                      </div>
+                      <div className="relative h-1.5 w-full mt-1.5 rounded bg-muted overflow-hidden">
+                        <div
+                          className="absolute h-full bg-blue-900 left-0 top-0 rounded"
+                          style={{
+                            width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex justify-between items-center">
+                  <span className="text-sm font-semibold">{group.category} Subtotal</span>
+                  <span className="font-semibold tabular-nums text-sm">{formatCurrency(group.subtotal)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Accounts Table — Desktop */}
+      <Card className="hidden md:block">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Accounts</CardTitle>
         </CardHeader>
