@@ -345,7 +345,7 @@ export function AccountsOverview() {
           <CardTitle className="text-base">Accounts</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className={`hidden md:block relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}>
+          <div className={`relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}>
             <table className="w-full caption-bottom text-sm">
               <TableHeader>
                 <TableRow className="border-b bg-muted">

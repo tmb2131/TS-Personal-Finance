@@ -339,7 +339,7 @@ export function KidsAccountsOverview() {
                 <CardTitle className="text-base">Account Details</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
+                <div className="relative max-h-[600px] overflow-auto border rounded-md">
                   <table className="w-full caption-bottom text-sm">
                     <TableHeader>
                       <TableRow className="border-b bg-muted">

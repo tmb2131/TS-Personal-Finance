@@ -71,7 +71,7 @@ export function YoYNetWorthWaterfall() {
       'Other Income',
       'Gift Money',
       'Expenses',
-      'Taconic/Other YTD',
+      'Investment Return YTD',
       'Transfer to Kiran',
       'Transfer to HMRC',
       'Year End',

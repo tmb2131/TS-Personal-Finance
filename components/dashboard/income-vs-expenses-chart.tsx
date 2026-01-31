@@ -45,15 +45,21 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   const [budgets, setBudgets] = useState<BudgetTarget[]>(initialData?.budgets ?? [])
   const [investmentReturns, setInvestmentReturns] = useState<InvestmentReturn[]>(initialData?.investmentReturns ?? [])
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [includeInvestmentIncome, setIncludeInvestmentIncome] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  }, [mounted])
 
   useEffect(() => {
     if (hasInitial && initialData) {
@@ -151,6 +157,27 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
         </CardHeader>
         <CardContent>
           <EmptyState icon={AlertCircle} title="Error loading data" description={error} />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Defer chart render until after mount to avoid hydration mismatch (isMobile / Recharts differ server vs client)
+  if (!mounted) {
+    return (
+      <Card>
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">Current year (tracking)</p>
+        </CardHeader>
+        <CardContent className="pt-8">
+          <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 rounded border border-input" />
+              <span className="text-sm">Include Investment Income</span>
+            </div>
+          </div>
+          <Skeleton className="h-[320px] w-full" />
         </CardContent>
       </Card>
     )

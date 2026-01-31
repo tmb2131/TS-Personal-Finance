@@ -35,15 +35,19 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   const [showFamily, setShowFamily] = useState(true)
   const [showTrust, setShowTrust] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  }, [mounted])
 
   // Process data function - use useCallback to memoize with currency dependency
   const processData = useCallback((netWorthData: HistoricalNetWorth[]) => {
@@ -197,6 +201,34 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
             title="No net worth data available"
             description="Historical net worth data has not been synced yet. Please refresh the data to load this information."
           />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Defer chart render until after mount to avoid hydration mismatch (isMobile / Recharts differ server vs client)
+  if (!mounted) {
+    return (
+      <Card>
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-8">
+          <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 rounded border border-input" />
+              <span className="text-sm">Personal</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 rounded border border-input" />
+              <span className="text-sm">Family</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 rounded border border-input" />
+              <span className="text-sm">Trust</span>
+            </div>
+          </div>
+          <Skeleton className="h-[320px] w-full" />
         </CardContent>
       </Card>
     )
