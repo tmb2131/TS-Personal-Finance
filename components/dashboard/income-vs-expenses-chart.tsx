@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
@@ -48,6 +50,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   const [mounted, setMounted] = useState(false)
   const [includeInvestmentIncome, setIncludeInvestmentIncome] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
+  const fontSizes = getChartFontSizes(isMobile)
 
   useEffect(() => {
     setMounted(true)
@@ -212,7 +215,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
@@ -226,7 +229,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
                   maximumFractionDigits: 0,
                 }).format(value)
               }
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               width={isMobile ? 60 : 80}
             />
@@ -242,19 +245,19 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
-                fontSize: isMobile ? '12px' : '14px',
+                fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
             <Legend
               wrapperStyle={{
                 width: '100%',
                 paddingTop: isMobile ? '10px' : '20px',
-                fontSize: isMobile ? '10px' : '12px',
+                fontSize: fontSizes.legend,
               }}
               iconType="square"
-              iconSize={isMobile ? 10 : 12}
+              iconSize={fontSizes.iconSize}
               formatter={(value) => (
-                <span style={{ fontSize: isMobile ? '10px' : '12px', marginRight: isMobile ? '16px' : '24px' }}>
+                <span style={{ fontSize: fontSizes.legend, marginRight: isMobile ? '16px' : '24px' }}>
                   {value}
                 </span>
               )}

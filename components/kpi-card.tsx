@@ -32,7 +32,7 @@ export function KPICard({ title, value, subtitle, trend }: KPICardProps) {
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{formatValue(value)}</div>
+        <div className="text-2xl font-bold tabular-nums">{formatValue(value)}</div>
         {subtitle && (
           <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         )}

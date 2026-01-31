@@ -5,10 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { createClient } from '@/lib/supabase/client'
-import { AccountBalance, TransactionLog } from '@/lib/types'
+import { AccountBalance } from '@/lib/types'
 import { AlertCircle, Wallet } from 'lucide-react'
 
-const EXCLUDED_CATEGORIES = ['Excluded', 'Income', 'Gift Money', 'Other Income']
 const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
 
 interface CashRunwayData {
@@ -63,67 +62,18 @@ export function CashRunwayCards() {
           }
         })
 
-        // Calculate last 3 full months (excluding current partial month)
-        const today = new Date()
-        const currentMonth = today.getMonth()
-        const currentYear = today.getFullYear()
-
-        // Start from 3 months ago (full month)
-        const startMonth = currentMonth - 3
-        const startYear = startMonth < 0 ? currentYear - 1 : currentYear
-        const adjustedStartMonth = startMonth < 0 ? startMonth + 12 : startMonth
-
-        // End at the last day of last month (full month)
-        const endMonth = currentMonth - 1
-        const endYear = endMonth < 0 ? currentYear - 1 : currentYear
-        const adjustedEndMonth = endMonth < 0 ? endMonth + 12 : endMonth
-
-        const startDate = new Date(startYear, adjustedStartMonth, 1)
-        const endDate = new Date(endYear, adjustedEndMonth + 1, 0) // Last day of end month
-        endDate.setHours(23, 59, 59, 999)
-
-        const startDateStr = startDate.toISOString().split('T')[0]
-        const endDateStr = endDate.toISOString().split('T')[0]
-
-        // Fetch transactions for the last 3 full months
-        const transactionsResult = await supabase
-          .from('transaction_log')
-          .select('*')
-          .gte('date', startDateStr)
-          .lte('date', endDateStr)
-          .order('date', { ascending: true })
-
-        if (transactionsResult.error) {
-          throw new Error(`Failed to fetch transactions: ${transactionsResult.error.message}`)
+        // Net burn from API (last 3 full calendar months UTC; aggregated in DB — no row limit; same filters as SQL).
+        const burnRes = await fetch('/api/cash-runway')
+        if (!burnRes.ok) {
+          throw new Error(`Failed to fetch burn: ${burnRes.status}`)
         }
+        const burnJson = await burnRes.json()
+        const gbpNet = Number(burnJson.gbpNet ?? 0)
+        const usdNet = Number(burnJson.usdNet ?? 0)
 
-        // Filter transactions: exclude categories, only expenses (negative values)
-        const expenseTransactions = (transactionsResult.data || []).filter((tx: TransactionLog) => {
-          if (EXCLUDED_CATEGORIES.includes(tx.category || '')) return false
-          // Only include expenses (negative amounts)
-          return (tx.amount_gbp && tx.amount_gbp < 0) || (tx.amount_usd && tx.amount_usd < 0)
-        })
-
-        // Calculate monthly spend by currency
-        const monthlySpendByCurrency = { GBP: 0, USD: 0 }
-
-        expenseTransactions.forEach((tx: TransactionLog) => {
-          if (!tx.date) return
-
-          // Process GBP transactions
-          if (tx.amount_gbp && tx.amount_gbp < 0) {
-            monthlySpendByCurrency.GBP += Math.abs(tx.amount_gbp)
-          }
-
-          // Process USD transactions
-          if (tx.amount_usd && tx.amount_usd < 0) {
-            monthlySpendByCurrency.USD += Math.abs(tx.amount_usd)
-          }
-        })
-
-        // Calculate average monthly burn (total spend over last 3 full months / 3)
-        const gbpAvgBurn = monthlySpendByCurrency.GBP / 3
-        const usdAvgBurn = monthlySpendByCurrency.USD / 3
+        // Net spend is negative when expenses > refunds. Burn = max(0, -net) / 3 so refunds offset expenses.
+        const gbpAvgBurn = Math.max(0, -gbpNet) / 3
+        const usdAvgBurn = Math.max(0, -usdNet) / 3
 
         // Calculate months on hand (if no burn, set to Infinity or a large number)
         const gbpMonthsOnHand = gbpAvgBurn > 0 ? cashByCurrency.GBP / gbpAvgBurn : (cashByCurrency.GBP > 0 ? Infinity : 0)
@@ -228,7 +178,7 @@ export function CashRunwayCards() {
               <div className="space-y-2">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Months on Hand</p>
-                  <p className="text-2xl font-bold">{formatMonths(gbpData.monthsOnHand)}</p>
+                  <p className="text-2xl font-bold tabular-nums">{formatMonths(gbpData.monthsOnHand)}</p>
                 </div>
                 <div className="space-y-1 pt-2 border-t">
                   <p className="text-sm">
@@ -254,7 +204,7 @@ export function CashRunwayCards() {
               <div className="space-y-2">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Months on Hand</p>
-                  <p className="text-2xl font-bold">{formatMonths(usdData.monthsOnHand)}</p>
+                  <p className="text-2xl font-bold tabular-nums">{formatMonths(usdData.monthsOnHand)}</p>
                 </div>
                 <div className="space-y-1 pt-2 border-t">
                   <p className="text-sm">

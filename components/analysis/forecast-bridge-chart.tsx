@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { AlertCircle, TrendingUp } from 'lucide-react'
 import {
   BarChart,
@@ -215,6 +216,8 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     )
   }
 
+  const fontSizes = getChartFontSizes(isMobile)
+
   return (
     <Card>
       <CardHeader className="bg-muted/50">
@@ -289,7 +292,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
                       dy={16}
                       textAnchor="end"
                       fill="#6b7280"
-                      fontSize={12}
+                      fontSize={fontSizes.axisTick}
                       transform="rotate(-45)"
                     >
                       {payload.value}
@@ -301,7 +304,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
             <YAxis
               domain={yDomain}
               tickFormatter={formatCurrency}
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               width={isMobile ? 48 : 60}
             />
@@ -361,7 +364,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
                   const labelY = isNegative ? y + height + 14 : y - 14
                   return (
                     <g transform={`translate(${x + width / 2},${labelY})`}>
-                      <text textAnchor="middle" dy={0} fill="#374151" fontSize={11}>
+                      <text textAnchor="middle" dy={0} fill="#374151" fontSize={fontSizes.axisTick}>
                         {text}
                       </text>
                     </g>

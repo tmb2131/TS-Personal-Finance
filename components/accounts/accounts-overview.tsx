@@ -258,7 +258,7 @@ export function AccountsOverview() {
     )
   }
 
-  const compactTable = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1'
+  const compactTable = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
 
   return (
     <div className="space-y-4">
@@ -431,7 +431,7 @@ export function AccountsOverview() {
                           <div className="font-medium text-sm truncate">{account.account_name}</div>
                           <div className="text-xs text-muted-foreground truncate">{account.institution}</div>
                         </div>
-                        <Badge variant="outline" className="shrink-0 text-[10px] px-1.5 py-0">
+                        <Badge variant="outline" className="shrink-0 text-[11px] px-1.5 py-0">
                           {account.currency}
                         </Badge>
                       </div>

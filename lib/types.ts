@@ -17,6 +17,8 @@ export interface TransactionLog {
   counterparty: string | null
   amount_usd: number | null
   amount_gbp: number | null
+  /** Original transaction currency from sheet column F: 'USD' | 'GBP'. Used for per-currency burn. */
+  currency?: string | null
 }
 
 export interface BudgetTarget {

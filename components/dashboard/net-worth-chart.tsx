@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { HistoricalNetWorth } from '@/lib/types'
 import { TrendingUp, AlertCircle } from 'lucide-react'
@@ -36,6 +37,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   const [showTrust, setShowTrust] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const fontSizes = getChartFontSizes(isMobile)
 
   useEffect(() => {
     setMounted(true)
@@ -279,7 +281,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="year"
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
@@ -293,7 +295,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
                   maximumFractionDigits: 0,
                 }).format(value)
               }
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               width={isMobile ? 60 : 80}
             />
@@ -309,17 +311,17 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
-                fontSize: isMobile ? '12px' : '14px',
+                fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
             <Legend 
               wrapperStyle={{ 
                 paddingTop: isMobile ? '10px' : '20px', 
-                fontSize: isMobile ? '10px' : '12px'
+                fontSize: fontSizes.legend,
               }}
               iconType="square"
-              iconSize={isMobile ? 10 : 12}
-              formatter={(value) => <span style={{ fontSize: isMobile ? '10px' : '12px', marginRight: isMobile ? '16px' : '24px' }}>{value}</span>}
+              iconSize={fontSizes.iconSize}
+              formatter={(value) => <span style={{ fontSize: fontSizes.legend, marginRight: isMobile ? '16px' : '24px' }}>{value}</span>}
             />
             {showPersonal && <Bar dataKey="Personal" fill="#8884d8" radius={[4, 4, 0, 0]} />}
             {showFamily && <Bar dataKey="Family" fill="#82ca9d" radius={[4, 4, 0, 0]} />}

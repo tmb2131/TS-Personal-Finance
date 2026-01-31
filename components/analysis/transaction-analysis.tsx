@@ -418,7 +418,7 @@ export function TransactionAnalysis() {
               })}
             </div>
             <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
-            <table className="w-full caption-bottom text-sm">
+            <table className="w-full caption-bottom text-[13px] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium">
               <TableHeader>
                 <TableRow className="border-b bg-muted">
                   <TableHead className="sticky top-0 z-20 bg-muted">Counterparty</TableHead>
@@ -448,16 +448,16 @@ export function TransactionAnalysis() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-medium tabular-nums">
                         {formatCurrency(tx.amount)}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right text-muted-foreground tabular-nums">
                         {tx.transactionCount}
                       </TableCell>
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="text-right font-semibold tabular-nums">
                         {formatCurrency(tx.cumulative)}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right text-muted-foreground tabular-nums">
                         {cumulativePercentage.toFixed(1)}%
                       </TableCell>
                     </TableRow>

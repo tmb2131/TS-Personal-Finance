@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog, BudgetTarget, AnnualTrend } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
@@ -622,19 +623,19 @@ export function AnnualCumulativeSpendChart() {
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis
                 dataKey="dayOfYear"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
                 stroke="#6b7280"
                 ticks={getMonthStartDays()}
                 tickFormatter={(value) => {
-                  // Get the month for this day of year
                   const month = dayOfYearToMonth(value)
                   return new Date(currentYear, month, 1).toLocaleDateString('en-GB', { month: 'short' })
                 }}
-                label={{ value: 'Month', position: 'insideBottom', offset: -5, style: { textAnchor: 'middle', fill: '#6b7280' } }}
-              />
+                interval={isMobile ? 1 : 0}
+                tickCount={isMobile ? 6 : undefined}
+                />
               <YAxis
                 tickFormatter={(value) => formatCurrencyCompact(value)}
-                tick={{ fontSize: isMobile ? 10 : 12 }}
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
                 stroke="#6b7280"
                 width={isMobile ? 48 : 60}
               />
@@ -650,9 +651,9 @@ export function AnnualCumulativeSpendChart() {
                   }
                   return value
                 }}
-                wrapperStyle={{ paddingTop: '20px' }}
+                wrapperStyle={{ paddingTop: '20px', fontSize: getChartFontSizes(isMobile).legend }}
                 iconType="line"
-                iconSize={12}
+                iconSize={getChartFontSizes(isMobile).iconSize}
               />
               {/* Background years (2022, 2023, 2024) — hidden on mobile by default */}
               {showHistoricalYears && years.slice(0, 3).map((year) => (

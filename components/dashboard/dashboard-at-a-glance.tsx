@@ -107,14 +107,14 @@ export function DashboardAtAGlance() {
   const getCardContent = (sectionId: string) => {
     if (sectionId === 'net-worth-chart') {
       if (loading) return <Skeleton className="h-6 w-20" />
-      if (data.netWorth != null) return <span className="text-lg font-bold">{symbol}{formatCompact(data.netWorth)}</span>
+      if (data.netWorth != null) return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(data.netWorth)}</span>
       return <span className="text-sm text-muted-foreground">—</span>
     }
     if (sectionId === 'budget-table') {
       if (loading) return <Skeleton className="h-6 w-24" />
       if (data.budgetStatus) {
         return (
-          <span className={cn('text-lg font-bold', data.budgetStatus === 'under' ? 'text-green-600' : 'text-red-600')}>
+          <span className={cn('text-2xl font-bold tabular-nums', data.budgetStatus === 'under' ? 'text-green-600' : 'text-red-600')}>
             {data.budgetStatus === 'under' ? 'Under' : 'Over'}
             {data.budgetGap != null && ` ${symbol}${formatCompact(Math.abs(data.budgetGap))}`}
           </span>

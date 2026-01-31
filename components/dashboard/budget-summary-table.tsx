@@ -150,7 +150,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     )
   }
 
-  const compactTableClass = '[&_th]:h-5 [&_th]:px-1 [&_th]:py-0 [&_th]:text-[11px] [&_td]:h-5 [&_td]:px-1 [&_td]:py-0 [&_td]:text-[11px]'
+  const compactTableClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
 
   const isAllGood = totals.netIncome.gap >= 0 && totals.savings.tracking >= 0
   

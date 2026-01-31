@@ -216,7 +216,7 @@ export function KidsAccountsOverview() {
             <CardContent className="space-y-2">
               <div>
                 <p className="text-sm text-muted-foreground">Total Net Worth</p>
-                <p className="text-2xl font-bold">{formatCurrency(summary.totalNetWorth)}</p>
+                <p className="text-2xl font-bold tabular-nums">{formatCurrency(summary.totalNetWorth)}</p>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                 <div>

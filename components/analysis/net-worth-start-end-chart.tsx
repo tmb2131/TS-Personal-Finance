@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
 import { Wallet, AlertCircle } from 'lucide-react'
@@ -88,21 +89,12 @@ export function NetWorthStartEndChart() {
     return rows
   }, [data, currency])
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(value)
-  }
-
-  const formatCurrencyFull = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      maximumFractionDigits: 0,
-    }).format(value)
+  const symbol = currency === 'USD' ? '$' : '£'
+  const formatAsMillions = (value: number) => {
+    const abs = Math.abs(value)
+    const m = abs / 1_000_000
+    const s = value < 0 ? '-' : ''
+    return `${s}${symbol}${m.toFixed(1)}M`
   }
 
   if (loading) {
@@ -153,6 +145,7 @@ export function NetWorthStartEndChart() {
   }
 
   const barColors = ['#6366f1', '#1d4ed8'] // Start = indigo, End = darker blue (factual, not "good")
+  const fontSizes = getChartFontSizes(isMobile)
 
   return (
     <Card>
@@ -171,32 +164,26 @@ export function NetWorthStartEndChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
             />
             <YAxis
-              tickFormatter={(v) =>
-                new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency,
-                  notation: 'compact',
-                  maximumFractionDigits: 0,
-                }).format(v)
-              }
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tickFormatter={formatAsMillions}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               width={isMobile ? 48 : 60}
             />
             <Tooltip
-              formatter={(value: number) => formatCurrencyFull(value)}
+              formatter={(value: number) => formatAsMillions(value)}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
               contentStyle={{
                 backgroundColor: 'white',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 padding: '8px 12px',
+                fontSize: fontSizes.tooltipMin,
               }}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} minPointSize={8}>
@@ -206,8 +193,8 @@ export function NetWorthStartEndChart() {
               <LabelList
                 dataKey="value"
                 position="top"
-                formatter={(v: number) => formatCurrency(v)}
-                style={{ fontSize: 12, fill: '#374151' }}
+                formatter={(v: number) => formatAsMillions(v)}
+                style={{ fontSize: fontSizes.axisTick, fill: '#374151' }}
               />
             </Bar>
           </BarChart>

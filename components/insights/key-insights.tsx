@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
@@ -661,8 +662,8 @@ export function KeyInsights() {
               </div>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Current Value <span className="text-[10px]">(Trust excluded)</span></p>
-                  <p className="text-2xl font-bold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</p>
+                  <p className="text-xs text-muted-foreground mb-1">Current Value <span className="text-[11px]">(Trust excluded)</span></p>
+                  <p className="text-2xl font-bold tabular-nums">{formatCurrencyLarge(netWorthInsights.currentTotal)}</p>
                 </div>
                 <div className="space-y-1 pt-2 border-t">
                   <div className="flex items-center gap-2">
@@ -866,7 +867,7 @@ export function KeyInsights() {
             {netWorthInsights.vsLastYear > 0 ? (
               <>
                 <TrendingUp className="h-8 w-8 text-green-600" />
-                <span className="text-2xl font-bold text-green-600">
+                <span className="text-2xl font-bold tabular-nums text-green-600">
                   +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
                 </span>
                 <span className="text-sm font-semibold text-green-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
@@ -874,7 +875,7 @@ export function KeyInsights() {
             ) : (
               <>
                 <TrendingDown className="h-8 w-8 text-red-600" />
-                <span className="text-2xl font-bold text-red-600">
+                <span className="text-2xl font-bold tabular-nums text-red-600">
                   {formatCurrencyLarge(netWorthInsights.vsLastYear)}
                 </span>
                 <span className="text-sm font-semibold text-red-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
@@ -893,12 +894,12 @@ export function KeyInsights() {
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis
                         dataKey="label"
-                        tick={{ fontSize: isMobile ? 10 : 14, fontWeight: 600 }}
+                        tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fontWeight: 600 }}
                         tickCount={isMobile ? 5 : undefined}
                         interval={isMobile ? 'preserveStartEnd' : undefined}
                       />
                       <YAxis
-                        tick={{ fontSize: isMobile ? 10 : 14, fontWeight: 400 }}
+                        tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fontWeight: 400 }}
                         tickFormatter={(v) => {
                           if (v === 0) return '0'
                           if (v >= 1e6) {
@@ -1096,7 +1097,7 @@ export function KeyInsights() {
             {annualSpendInsights.vsFourYearAvg > 0 ? (
               <>
                 <TrendingDown className="h-8 w-8 text-green-600" />
-                <span className="text-2xl font-bold text-green-600">
+                <span className="text-2xl font-bold tabular-nums text-green-600">
                   {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))} less
                 </span>
                 <span className="text-sm font-semibold text-green-600">{formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}</span>
@@ -1184,7 +1185,7 @@ export function KeyInsights() {
             {monthlySpendInsights.vsTtmAvg > 0 ? (
               <>
                 <TrendingDown className="h-8 w-8 text-green-600" />
-                <span className="text-2xl font-bold text-green-600">
+                <span className="text-2xl font-bold tabular-nums text-green-600">
                   {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} less
                 </span>
                 <span className="text-sm font-semibold text-green-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>
@@ -1192,7 +1193,7 @@ export function KeyInsights() {
             ) : (
               <>
                 <TrendingUp className="h-8 w-8 text-red-600" />
-                <span className="text-2xl font-bold text-red-600">
+                <span className="text-2xl font-bold tabular-nums text-red-600">
                   {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))} more
                 </span>
                 <span className="text-sm font-semibold text-red-600">{formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}</span>

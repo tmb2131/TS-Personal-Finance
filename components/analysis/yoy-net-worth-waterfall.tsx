@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
 import { TrendingUp, AlertCircle } from 'lucide-react'
@@ -24,6 +25,7 @@ import {
 export function YoYNetWorthWaterfall() {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
+  const fontSizes = getChartFontSizes(isMobile)
   const [data, setData] = useState<YoYNetWorth[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -156,32 +158,20 @@ export function YoYNetWorthWaterfall() {
     return waterfall
   }, [data, currency, summaryValues])
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(value)
-  }
-
-  const formatCurrencyFull = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      maximumFractionDigits: 0,
-    }).format(value)
-  }
-
+  // Intelligent large-number format: £0.0M when |value| >= 1M, else £0.0k (for YoY change chart)
   const formatCurrencyLarge = (value: number | null) => {
     if (value === null || value === undefined) return '-'
-    const valueInM = Math.abs(value) / 1000000
+    const abs = Math.abs(value)
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    if (valueInM >= 1) {
-      return `${currencySymbol}${valueInM.toFixed(1)}M`
+    if (abs >= 1_000_000) {
+      return `${currencySymbol}${(abs / 1_000_000).toFixed(1)}M`
     }
-    const valueInK = Math.abs(value) / 1000
-    return `${currencySymbol}${valueInK.toFixed(1)}k`
+    return `${currencySymbol}${(abs / 1_000).toFixed(1)}k`
+  }
+
+  const formatSignedLarge = (value: number) => {
+    const sign = value >= 0 ? '+' : '-'
+    return `${sign}${formatCurrencyLarge(Math.abs(value))}`
   }
 
   // Waterfall bar colors: green/red for increases/decreases, darker for net change
@@ -299,7 +289,7 @@ export function YoYNetWorthWaterfall() {
                       dy={16}
                       textAnchor="end"
                       fill={isNetChange ? '#000' : '#6b7280'}
-                      fontSize={isNetChange ? 13 : 12}
+                      fontSize={fontSizes.axisTick}
                       fontWeight={isNetChange ? 'bold' : 'normal'}
                       transform="rotate(-45)"
                     >
@@ -311,8 +301,8 @@ export function YoYNetWorthWaterfall() {
             />
             <YAxis
               domain={yDomain}
-              tickFormatter={formatCurrency}
-              tick={{ fontSize: isMobile ? 10 : 12 }}
+              tickFormatter={(v) => (v < 0 ? '-' : '') + formatCurrencyLarge(Math.abs(v))}
+              tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
               width={isMobile ? 48 : 60}
             />
@@ -321,14 +311,14 @@ export function YoYNetWorthWaterfall() {
                 const payload = props?.payload
                 if (!payload || name === 'min') return null
                 const raw = payload.value as number
-                const sign = raw >= 0 ? '+' : ''
-                return [`${sign}${formatCurrencyFull(raw)}`, payload.name]
+                return [formatSignedLarge(raw), payload.name]
               }}
               contentStyle={{
                 backgroundColor: 'white',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
                 padding: '8px 12px',
+                fontSize: fontSizes.tooltipMin,
               }}
             />
             {/* Series A: transparent spacer (pedestal) so visible bar starts at running total */}
@@ -350,8 +340,7 @@ export function YoYNetWorthWaterfall() {
                   const payload = props.payload
                   const value = payload?.value
                   if (value == null || value === undefined) return null
-                  const sign = value >= 0 ? '+' : ''
-                  const text = `${sign}${formatCurrencyFull(value)}`
+                  const text = formatSignedLarge(value)
                   const isNetChange = payload?.name === 'Net Change'
                   const isNegative = value < 0
                   const labelY = isNegative ? y + height + 14 : y - 14
@@ -361,7 +350,7 @@ export function YoYNetWorthWaterfall() {
                         textAnchor="middle"
                         dy={0}
                         fill="#374151"
-                        fontSize={11}
+                        fontSize={fontSizes.axisTick}
                         style={{ fontWeight: isNetChange ? 700 : 400 }}
                       >
                         {text}

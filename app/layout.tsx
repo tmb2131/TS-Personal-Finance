@@ -5,7 +5,10 @@ import { CurrencyProvider } from '@/lib/contexts/currency-context'
 import { AuthTimeoutProvider } from '@/lib/contexts/auth-timeout-provider'
 import { AppShell } from '@/components/app-shell'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'TS Personal Finance - Personal Finance Dashboard',

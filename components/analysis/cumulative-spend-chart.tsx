@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
@@ -288,7 +289,7 @@ export function CumulativeSpendChart() {
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis
                 dataKey="dateLabel"
-                tick={{ fontSize: isMobile ? 9 : 11 }}
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
                 stroke="#6b7280"
                 angle={-45}
                 textAnchor="end"
@@ -307,7 +308,7 @@ export function CumulativeSpendChart() {
                     maximumFractionDigits: 0,
                   }).format(value)
                 }
-                tick={{ fontSize: isMobile ? 10 : 12 }}
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
                 stroke="#6b7280"
                 width={isMobile ? 48 : 60}
               />
@@ -322,7 +323,7 @@ export function CumulativeSpendChart() {
                     maximumFractionDigits: 0,
                   }).format(value)
                 }
-                tick={{ fontSize: isMobile ? 10 : 12 }}
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
                 stroke="#82ca9d"
                 width={isMobile ? 48 : 60}
               />
@@ -344,12 +345,15 @@ export function CumulativeSpendChart() {
                   border: '1px solid #e5e7eb',
                   borderRadius: '6px',
                   padding: '8px 12px',
+                  fontSize: getChartFontSizes(isMobile).tooltipMin,
                 }}
               />
               <Legend
                 formatter={(value) =>
                   value === 'ytdSpend' ? 'YTD Spend' : 'Implied Annual Spend'
                 }
+                wrapperStyle={{ fontSize: getChartFontSizes(isMobile).legend }}
+                iconSize={getChartFontSizes(isMobile).iconSize}
               />
               <Line
                 yAxisId="left"

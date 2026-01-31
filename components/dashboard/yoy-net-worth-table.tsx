@@ -174,7 +174,7 @@ export function YoYNetWorthTable() {
         <CardTitle className="text-base">Year-over-Year Net Worth Change</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
+        <Table className="[&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:text-[13px] [&_td]:tabular-nums">
           <TableHeader>
             <TableRow className="bg-muted">
               <TableHead
@@ -210,7 +210,7 @@ export function YoYNetWorthTable() {
                   </TableCell>
                   <TableCell
                     className={cn(
-                      'text-right',
+                      'text-right tabular-nums',
                       isTotal && 'font-semibold',
                       isNegative ? 'text-red-600' : amount !== null && amount > 0 ? 'text-green-600' : ''
                     )}

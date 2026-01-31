@@ -61,10 +61,14 @@ const SHEET_CONFIGS: SheetConfig[] = [
   },
   {
     name: 'Transaction Log',
-    range: 'A:E',
+    range: 'A:F',
     table: 'transaction_log',
     transform: (row) => {
       const counterparty = row[2] || null;
+      // Column F may be missing in sparse rows; accept any value that starts with USD/GBP (case-insensitive)
+      const raw = row.length > 5 && row[5] != null ? String(row[5]).trim() : '';
+      const u = raw.toUpperCase();
+      const currency = u.startsWith('USD') ? 'USD' : u.startsWith('GBP') ? 'GBP' : null;
       return {
         date: new Date(row[0]),
         category: row[1] || '',
@@ -72,6 +76,7 @@ const SHEET_CONFIGS: SheetConfig[] = [
         counterparty_dedup: (counterparty ?? '').toString(),
         amount_usd: row[3] ? parseFloat(row[3]) : null,
         amount_gbp: row[4] ? parseFloat(row[4]) : null,
+        currency: currency || null,
       };
     },
   },
@@ -470,29 +475,35 @@ export async function syncGoogleSheet() {
             });
           upsertResult = { data, error };
         } else if (config.table === 'transaction_log') {
-          const transactionMap = new Map<string, any>();
-          transformedData.forEach((item: any) => {
-            const dateStr = item.date instanceof Date
-              ? item.date.toISOString().split('T')[0]
-              : item.date;
-            const key = `${dateStr}|${item.category || ''}|${item.counterparty_dedup ?? ''}|${item.amount_usd ?? ''}|${item.amount_gbp ?? ''}`;
-            if (!transactionMap.has(key)) {
-              transactionMap.set(key, item);
+          // Replace-all: delete existing rows, then insert all source data (no dedup).
+          const PAGE_SIZE = 1000;
+          let totalDeleted = 0;
+          while (true) {
+            const { data: page } = await supabase
+              .from(config.table)
+              .select('id')
+              .range(0, PAGE_SIZE - 1);
+            if (!page || page.length === 0) break;
+            const ids = page.map((r: { id: string }) => r.id);
+            const deleteChunks = chunkArray(ids, 500);
+            for (const idChunk of deleteChunks) {
+              const { error: delErr } = await supabase.from(config.table).delete().in('id', idChunk);
+              if (delErr) {
+                console.warn('Transaction Log: delete batch error', delErr);
+              } else {
+                totalDeleted += idChunk.length;
+              }
             }
-          });
-          const deduplicatedTransactions = Array.from(transactionMap.values());
-          console.log(`Transaction Log: Processing ${transformedData.length} rows, ${deduplicatedTransactions.length} unique transactions`);
-          if (transformedData.length !== deduplicatedTransactions.length) {
-            console.warn(`Transaction Log: Found ${transformedData.length - deduplicatedTransactions.length} duplicate transactions in source data`);
+            if (page.length < PAGE_SIZE) break;
           }
-          const chunks = chunkArray(deduplicatedTransactions, BATCH_SIZE);
+          if (totalDeleted > 0) {
+            console.log(`Transaction Log: Deleted ${totalDeleted} existing rows (replace-all sync)`);
+          }
+
+          const chunks = chunkArray(transformedData, BATCH_SIZE);
           let lastError: any = null;
           for (const chunk of chunks) {
-            const { error } = await supabase
-              .from(config.table)
-              .upsert(chunk, {
-                onConflict: 'date,category,counterparty_dedup,amount_usd,amount_gbp',
-              });
+            const { error } = await supabase.from(config.table).insert(chunk);
             if (error) lastError = error;
           }
           upsertResult = { data: null, error: lastError };

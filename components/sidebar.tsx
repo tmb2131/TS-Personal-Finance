@@ -119,7 +119,7 @@ export function Sidebar() {
                 )}
               >
                 <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'scale-110')} />
-                <span className="text-[10px] font-medium text-center leading-tight">{item.name}</span>
+                <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
               </Link>
             )
           })}
@@ -135,7 +135,7 @@ export function Sidebar() {
                 )}
               >
                 <MoreHorizontal className="h-5 w-5 flex-shrink-0" />
-                <span className="text-[10px] font-medium text-center leading-tight">More</span>
+                <span className="text-xs font-medium text-center leading-tight">More</span>
               </button>
             </DialogTrigger>
             <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-50 max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg">
