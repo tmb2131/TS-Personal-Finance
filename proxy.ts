@@ -42,6 +42,16 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const allowedEmails = getAllowedEmails()
 
+  // Allow cron refresh (no user session; secured by CRON_SECRET)
+  if (pathname.startsWith('/api/cron/')) {
+    const authHeader = request.headers.get('authorization')
+    const cronSecret = process.env.CRON_SECRET
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+      return response
+    }
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   // Allow login page (redirect to insights if already allowed user)
   if (pathname === '/login') {
     if (user && allowedEmails.includes(user.email || '')) {

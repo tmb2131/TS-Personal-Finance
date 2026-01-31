@@ -174,8 +174,14 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
       </CardHeader>
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Mobile: list of summary cards (sm and below) */}
+          {/* Mobile: total card first (Net Income = main total), then list of summary cards (sm and below) */}
           <div className="md:hidden space-y-3">
+            <div className="rounded-lg border border-dashed bg-muted/30 p-3 min-h-[44px] flex items-center justify-between">
+              <span className="font-semibold text-sm">Net Income</span>
+              <span className={cn('font-semibold tabular-nums text-sm shrink-0', totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
+                {formatCurrency(totals.netIncome.gap)}
+              </span>
+            </div>
             <div className="rounded-lg border p-3 min-h-[44px]">
               <div className="flex items-start justify-between gap-2">
                 <span className="font-medium text-sm">Total Income</span>
@@ -196,17 +202,6 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               </div>
               <div className="mt-1.5 pt-1.5 border-t text-xs text-muted-foreground">
                 Tracking ({formatCurrency(Math.abs(totals.expenses.tracking))}) vs Budget ({formatCurrency(Math.abs(totals.expenses.annualBudget))})
-              </div>
-            </div>
-            <div className="rounded-lg border p-3 min-h-[44px] bg-muted/30">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-semibold text-sm">Net Income</span>
-                <span className={cn('font-semibold tabular-nums text-sm shrink-0', totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
-                  {formatCurrency(totals.netIncome.gap)}
-                </span>
-              </div>
-              <div className="mt-1.5 pt-1.5 border-t text-xs text-muted-foreground">
-                Tracking {formatCurrency(totals.netIncome.tracking)} vs Budget {formatCurrency(totals.netIncome.annualBudget)}
               </div>
             </div>
             <div className="rounded-lg border p-3 min-h-[44px]">

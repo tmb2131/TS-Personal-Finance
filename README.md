@@ -10,7 +10,7 @@ A modern personal finance dashboard built with Next.js 14, Supabase, and Google 
 - 🏦 **Accounts Overview**: Detailed view of all account balances grouped by category
 - 📉 **Annual Analysis**: Year-over-year spending trends and waterfall charts
 - 💱 **Multi-Currency Support**: Toggle between GBP and USD across the entire dashboard
-- 🔄 **Google Sheets Sync**: One-click sync from Google Sheets (source of truth)
+- 🔄 **Google Sheets Sync**: One-click sync from Google Sheets (source of truth); optional daily auto-refresh at 6am UTC via cron
 
 ## Tech Stack
 
@@ -40,6 +40,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=your_service_account_private_key
+
+# Optional: for daily 6am UTC data refresh cron (set in Vercel / hosting env)
+CRON_SECRET=your_random_secret_string
 ```
 
 ### 3. Database Setup
@@ -113,6 +116,15 @@ findash/
 │   └── migrations/      # Database migrations
 └── utils/               # Utility functions
 ```
+
+## Scheduled refresh (6am daily)
+
+Data can be refreshed automatically every morning at **6:00 UTC**:
+
+1. **Vercel**: Add `CRON_SECRET` to your project env (e.g. a long random string). The `vercel.json` cron will call `/api/cron/refresh` at 6am UTC; Vercel sends `Authorization: Bearer <CRON_SECRET>`.
+2. **Other hosting**: Use a cron service (e.g. cron-job.org) to send a GET to `https://your-domain.com/api/cron/refresh` with header `Authorization: Bearer <your CRON_SECRET>` at 6am (or your preferred time).
+
+Without `CRON_SECRET` set, the cron endpoint returns 401. The schedule in `vercel.json` is `0 6 * * *` (6am UTC); change it if you want a different time.
 
 ## Deployment
 

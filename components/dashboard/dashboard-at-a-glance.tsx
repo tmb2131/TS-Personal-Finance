@@ -53,19 +53,25 @@ export function DashboardAtAGlance() {
       }
       let incomeTotal = 0
       let expensesTotal = 0
+      let incomeBudget = 0
+      let expensesBudget = 0
       if (budgetRes.data?.length) {
-        budgetRes.data.forEach((row: { category: string; tracking_est_gbp: number }) => {
+        budgetRes.data.forEach((row: { category: string; annual_budget_gbp: number; tracking_est_gbp: number }) => {
           const tracking = currency === 'USD' ? convertAmount(row.tracking_est_gbp, 'GBP', fxRate) : row.tracking_est_gbp
+          const budget = currency === 'USD' ? convertAmount(row.annual_budget_gbp, 'GBP', fxRate) : row.annual_budget_gbp
           if (row.category === 'Income' || row.category === 'Gift Money') {
             incomeTotal += Math.abs(tracking)
+            incomeBudget += Math.abs(budget)
           } else {
             expensesTotal += Math.abs(tracking)
+            expensesBudget += Math.abs(budget)
           }
         })
       }
-      const netIncome = incomeTotal - expensesTotal
-      const budgetStatus = netIncome >= 0 ? 'under' : 'over'
-      const budgetGap = netIncome
+      const netIncomeTracking = incomeTotal - expensesTotal
+      const netIncomeBudget = incomeBudget - expensesBudget
+      const budgetGap = netIncomeTracking - netIncomeBudget
+      const budgetStatus = budgetGap >= 0 ? 'under' : 'over'
       setData({
         netWorth,
         budgetStatus,

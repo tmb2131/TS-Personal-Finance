@@ -1,0 +1,35 @@
+import { syncGoogleSheet } from '@/lib/sync-google-sheet'
+import { NextResponse } from 'next/server'
+
+/**
+ * Cron endpoint: run data sync (e.g. daily at 6am).
+ * Secured by CRON_SECRET – only requests with Authorization: Bearer <CRON_SECRET> are accepted.
+ */
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization')
+  const expected = process.env.CRON_SECRET
+  if (!expected || authHeader !== `Bearer ${expected}`) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const result = await syncGoogleSheet()
+    return NextResponse.json({
+      success: result.success,
+      results: result.results ?? [],
+      error: result.error ?? null,
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to sync data'
+    console.error('Cron refresh error:', error)
+    return NextResponse.json(
+      { success: false, error: message, results: [] },
+      { status: 500 }
+    )
+  }
+}
+
+/** Allow POST for cron services that send POST. */
+export async function POST(request: Request) {
+  return GET(request)
+}
