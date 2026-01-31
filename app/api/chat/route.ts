@@ -752,7 +752,7 @@ EXAMPLE QUERIES YOU CAN HANDLE:
         },
       },
       analyze_forecast_evolution: {
-        description: `Analyze how the forecasted annual spend and budget gap have changed over time. Use this when the user asks about changes, trends, or history of the forecast/gap (e.g., 'vs last week').`,
+        description: `Analyze how the expenses gap to budget (budget minus tracking) has changed over time. Use when the user asks about changes in the forecast/gap (e.g., 'vs last week'). Uses expense categories only (excludes Income, Gift Money, Other Income, Excluded).`,
         inputSchema: z.object({
           startDate: z.string().describe('Start date for comparison (YYYY-MM-DD). Use CURRENT DATE CONTEXT for "last month", "last week", etc.'),
           endDate: z.string().optional().describe('End date for comparison (YYYY-MM-DD). Defaults to today if omitted.'),
@@ -762,6 +762,10 @@ EXAMPLE QUERIES YOU CAN HANDLE:
           try {
             const end = endDate || todayISO
             console.log('[chat] analyze_forecast_evolution: Starting', { startDate, endDate: end, currency })
+
+            const EXCLUDED = ['Income', 'Gift Money', 'Other Income', 'Excluded']
+            const toNum = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0)
+            const isExpense = (c: string) => !EXCLUDED.includes(c)
 
             // Step A: Fetch start snapshot
             const { data: startRows, error: startError } = await supabase
@@ -777,14 +781,16 @@ EXAMPLE QUERIES YOU CAN HANDLE:
               return { error: `No historical data found for ${startDate}. Comparison not possible.` }
             }
 
-            const startMap = new Map<string, number>()
-            startRows.forEach((row: { category: string; forecast_spend: number | null }) => {
-              const v = row.forecast_spend
-              startMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
-            })
+            const startGapMap = new Map<string, number>()
+            startRows
+              .filter((r: { category: string }) => isExpense(r.category))
+              .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
+                const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
+                startGapMap.set(row.category, gap)
+              })
 
             // Step B: Fetch end snapshot (with fallback)
-            let endMap = new Map<string, number>()
+            const endGapMap = new Map<string, number>()
             let endDateUsed = end
 
             const { data: endRowsExact, error: endExactError } = await supabase
@@ -793,10 +799,12 @@ EXAMPLE QUERIES YOU CAN HANDLE:
               .eq('date', end)
 
             if (!endExactError && endRowsExact && endRowsExact.length > 0) {
-              endRowsExact.forEach((row: { category: string; forecast_spend: number | null }) => {
-                const v = row.forecast_spend
-                endMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
-              })
+              endRowsExact
+                .filter((r: { category: string }) => isExpense(r.category))
+                .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
+                  const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
+                  endGapMap.set(row.category, gap)
+                })
             } else {
               const { data: endRowsLatest, error: endLatestError } = await supabase
                 .from('budget_history')
@@ -810,9 +818,10 @@ EXAMPLE QUERIES YOU CAN HANDLE:
                 endDateUsed = latestDate
                 endRowsLatest
                   .filter((r: { date: string }) => r.date === latestDate)
-                  .forEach((row: { category: string; forecast_spend: number | null }) => {
-                    const v = row.forecast_spend
-                    endMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
+                  .filter((r: { category: string }) => isExpense(r.category))
+                  .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
+                    const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
+                    endGapMap.set(row.category, gap)
                   })
               } else {
                 const { data: targets, error: targetsError } = await supabase
@@ -822,35 +831,35 @@ EXAMPLE QUERIES YOU CAN HANDLE:
                 if (targetsError || !targets?.length) {
                   return { error: 'No end snapshot available (no budget_history and no budget_targets).' }
                 }
-                targets.forEach((row: { category: string; tracking_est_gbp: number | null }) => {
-                  const v = row.tracking_est_gbp
-                  endMap.set(row.category, typeof v === 'number' ? v : Number(v) || 0)
-                })
+                targets
+                  .filter((r: { category: string }) => isExpense(r.category))
+                  .forEach((row: { category: string; annual_budget_gbp: unknown; tracking_est_gbp: unknown }) => {
+                    const gap = toNum(row.annual_budget_gbp) - toNum(row.tracking_est_gbp)
+                    endGapMap.set(row.category, gap)
+                  })
               }
             }
 
-            // Step C: All unique categories, deltas (missing = 0)
-            const allCategories = new Set([...startMap.keys(), ...endMap.keys()])
+            // Step C: Gap deltas (positive = gap improved)
+            const allCategories = new Set([...startGapMap.keys(), ...endGapMap.keys()])
             const drivers: { category: string; change_gbp: number; impact: 'Positive' | 'Negative' | 'Neutral' }[] = []
-            let totalForecastChangeGBP = 0
+            let totalGapChangeGBP = 0
 
             for (const category of allCategories) {
-              const startForecast = startMap.get(category) ?? 0
-              const endForecast = endMap.get(category) ?? 0
-              const changeGbp = endForecast - startForecast
-              totalForecastChangeGBP += changeGbp
+              const startGap = startGapMap.get(category) ?? 0
+              const endGap = endGapMap.get(category) ?? 0
+              const changeGbp = endGap - startGap
+              totalGapChangeGBP += changeGbp
               const impact: 'Positive' | 'Negative' | 'Neutral' =
-                changeGbp > 0 ? 'Negative' : changeGbp < 0 ? 'Positive' : 'Neutral'
+                changeGbp > 0 ? 'Positive' : changeGbp < 0 ? 'Negative' : 'Neutral'
               drivers.push({ category, change_gbp: changeGbp, impact })
             }
 
-            // Step D: Sort by absolute change (largest first)
             drivers.sort((a, b) => Math.abs(b.change_gbp) - Math.abs(a.change_gbp))
 
             const gapImpactDirection: 'Positive' | 'Negative' | 'Neutral' =
-              totalForecastChangeGBP > 0 ? 'Negative' : totalForecastChangeGBP < 0 ? 'Positive' : 'Neutral'
+              totalGapChangeGBP > 0 ? 'Positive' : totalGapChangeGBP < 0 ? 'Negative' : 'Neutral'
 
-            // Step E: Summary (GBP or USD)
             let summary: string
             const fmtGbp = (n: number) => `£${Math.round(n).toLocaleString('en-GB')}`
             if (currency === 'USD') {
@@ -861,30 +870,29 @@ EXAMPLE QUERIES YOU CAN HANDLE:
                 .limit(1)
                 .single()
               const fxRate = fxRow?.gbpusd_rate ?? 1.27
-              const totalUSD = totalForecastChangeGBP * fxRate
               const fmtUsd = (n: number) => `$${Math.round(n * fxRate).toLocaleString('en-US')}`
               const direction =
-                totalForecastChangeGBP > 0 ? 'increased' : totalForecastChangeGBP < 0 ? 'decreased' : 'stayed flat'
+                totalGapChangeGBP > 0 ? 'improved' : totalGapChangeGBP < 0 ? 'worsened' : 'stayed flat'
               const topDrivers = drivers.slice(0, 5)
               const driverParts = topDrivers
                 .filter((d) => d.change_gbp !== 0)
                 .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtUsd(d.change_gbp)})`)
-              summary = `Your forecasted annual spend ${direction} by ${fmtUsd(Math.abs(totalForecastChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              summary = `The expenses gap to budget ${direction} by ${fmtUsd(Math.abs(totalGapChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
             } else {
               const direction =
-                totalForecastChangeGBP > 0 ? 'increased' : totalForecastChangeGBP < 0 ? 'decreased' : 'stayed flat'
+                totalGapChangeGBP > 0 ? 'improved' : totalGapChangeGBP < 0 ? 'worsened' : 'stayed flat'
               const topDrivers = drivers.slice(0, 5)
               const driverParts = topDrivers
                 .filter((d) => d.change_gbp !== 0)
                 .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtGbp(d.change_gbp)})`)
-              summary = `Your forecasted annual spend ${direction} by ${fmtGbp(Math.abs(totalForecastChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              summary = `The expenses gap to budget ${direction} by ${fmtGbp(Math.abs(totalGapChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
             }
 
             return {
               evolution: {
                 startDate,
                 endDate: endDateUsed,
-                total_forecast_change: totalForecastChangeGBP,
+                total_gap_change: totalGapChangeGBP,
                 gap_impact_direction: gapImpactDirection,
                 drivers,
               },

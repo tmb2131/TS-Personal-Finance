@@ -58,57 +58,53 @@ function LoginForm() {
   }
 
   return (
-    <div className="fixed inset-0 z-10 flex items-center justify-center bg-background">
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader>
-          <CardTitle>TS Personal Finance</CardTitle>
-          <CardDescription>
-            Sign in with your allowed Google account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <Button
-              type="button"
-              className="w-full bg-[#6389FF] hover:bg-[#5275e8] text-white border-0"
-              disabled={loading}
-              onClick={handleGoogleSignIn}
-            >
-              {loading ? 'Redirecting...' : 'Sign in with Google'}
-            </Button>
-            {message && (
-              <p className="text-sm text-red-600">
-                {message}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="w-full max-w-md shadow-lg">
+      <CardHeader>
+        <CardTitle>Sign in</CardTitle>
+        <CardDescription>
+          Sign in with your allowed Google account
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <Button
+            type="button"
+            className="w-full bg-[#6389FF] hover:bg-[#5275e8] text-white border-0"
+            disabled={loading}
+            onClick={handleGoogleSignIn}
+          >
+            {loading ? 'Redirecting...' : 'Sign in with Google'}
+          </Button>
+          {message && (
+            <p className="text-sm text-red-600">
+              {message}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
 function LoginFallback() {
   return (
-    <div className="fixed inset-0 z-10 flex items-center justify-center bg-background">
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader>
-          <CardTitle>TS Personal Finance</CardTitle>
-          <CardDescription>
-            Sign in with your allowed Google account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            type="button"
-            disabled
-            className="w-full bg-[#6389FF] text-white border-0"
-          >
-            Sign in with Google
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="w-full max-w-md shadow-lg">
+      <CardHeader>
+        <CardTitle>Sign in</CardTitle>
+        <CardDescription>
+          Sign in with your allowed Google account
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button
+          type="button"
+          disabled
+          className="w-full bg-[#6389FF] text-white border-0"
+        >
+          Sign in with Google
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
 

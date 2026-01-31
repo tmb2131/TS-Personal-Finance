@@ -29,6 +29,10 @@ export type ForecastBridgeDriver = {
 export type ForecastBridgeData = {
   startDate: string
   endDate: string
+  expensesBudgetStart: number
+  expensesForecastStart: number
+  expensesBudgetEnd: number
+  expensesForecastEnd: number
   totalStart: number
   totalEnd: number
   drivers: ForecastBridgeDriver[]
@@ -39,7 +43,7 @@ type WaterfallBar = {
   min: number
   delta: number
   value: number
-  type: 'start' | 'end' | 'positive' | 'negative'
+  type: 'start' | 'end' | 'end_improved' | 'end_worsened' | 'positive' | 'negative'
 }
 
 type ForecastBridgeChartProps = {
@@ -105,12 +109,14 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
       })
     }
 
+    const endImproved = data.totalEnd < data.totalStart
+    const endWorsened = data.totalEnd > data.totalStart
     bars.push({
       name: 'End',
       min: 0,
       delta: data.totalEnd,
       value: data.totalEnd,
-      type: 'end',
+      type: endImproved ? 'end_improved' : endWorsened ? 'end_worsened' : 'end',
     })
 
     return bars
@@ -133,11 +139,16 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     }).format(value)
   }
 
+  // Gap: negative = under budget (good), positive = over budget (bad). Bar = change in gap: negative delta = green, positive = red. End bar = darker shade by improvement/worsening.
   const getBarColor = (type: string) => {
     switch (type) {
       case 'start':
       case 'end':
         return '#6b7280'
+      case 'end_improved':
+        return '#15803d'
+      case 'end_worsened':
+        return '#b91c1c'
       case 'negative':
         return '#22c55e'
       case 'positive':
@@ -207,10 +218,50 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
   return (
     <Card>
       <CardHeader className="bg-muted/50">
-        <CardTitle className="text-xl">Forecast Evolution</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Why did my annual forecast change? Start: {data.startDate} → End: {data.endDate}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <CardTitle className="text-xl">Forecast Evolution</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Gap change {data.startDate} → {data.endDate}.
+              <br />
+              Green = improved, red = worsened.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-md border border-border bg-background px-3 py-2 shrink-0 self-start sm:mt-0">
+            <table className="w-auto text-sm border-collapse">
+              <thead>
+                <tr className="text-muted-foreground text-xs">
+                  <th className="text-left font-medium text-foreground py-0.5 pr-3"></th>
+                  <th className="text-left py-0.5 pr-3">Budget</th>
+                  <th className="text-left py-0.5 pr-3">Tracking</th>
+                  <th className="text-left py-0.5">Gap</th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr>
+                  <td className="font-medium text-foreground py-0.5 pr-3">{data.startDate}</td>
+                  <td className="text-left tabular-nums py-0.5 pr-3">
+                    {formatCurrencyFull(data.expensesBudgetStart)}
+                  </td>
+                  <td className="text-left tabular-nums py-0.5 pr-3">
+                    {formatCurrencyFull(data.expensesForecastStart)}
+                  </td>
+                  <td className="text-left tabular-nums py-0.5">{formatCurrencyFull(data.totalStart)}</td>
+                </tr>
+                <tr>
+                  <td className="font-medium text-foreground py-0.5 pr-3">{data.endDate}</td>
+                  <td className="text-left tabular-nums py-0.5 pr-3">
+                    {formatCurrencyFull(data.expensesBudgetEnd)}
+                  </td>
+                  <td className="text-left tabular-nums py-0.5 pr-3">
+                    {formatCurrencyFull(data.expensesForecastEnd)}
+                  </td>
+                  <td className="text-left tabular-nums py-0.5">{formatCurrencyFull(data.totalEnd)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={360}>
@@ -302,7 +353,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
                   const payload = props.payload
                   const value = payload?.value
                   if (value == null) return null
-                  const isStartEnd = payload?.type === 'start' || payload?.type === 'end'
+                  const isStartEnd = payload?.type === 'start' || payload?.type === 'end' || payload?.type === 'end_improved' || payload?.type === 'end_worsened'
                   const text = isStartEnd
                     ? formatCurrencyFull(value)
                     : `${value >= 0 ? '+' : ''}${formatCurrencyFull(value)}`

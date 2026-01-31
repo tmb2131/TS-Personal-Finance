@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { KeyInsights } from '@/components/insights/key-insights'
-import { InsightsNavigation } from '@/components/insights/insights-navigation'
 
 export default async function InsightsPage() {
   const supabase = await createClient()
@@ -21,7 +20,6 @@ export default async function InsightsPage() {
           Quick overview of your financial performance and trends
         </p>
       </div>
-      <InsightsNavigation />
       <KeyInsights />
     </div>
   )

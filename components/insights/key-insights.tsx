@@ -10,7 +10,7 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
-import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, ChevronRight } from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -333,6 +333,22 @@ export function KeyInsights() {
     return `${absValue.toFixed(1)}%`
   }
 
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id)
+    if (!element) return
+    const main = document.querySelector('main')
+    if (!main) {
+      const y = element.getBoundingClientRect().top + window.pageYOffset - 100
+      window.scrollTo({ top: y, behavior: 'smooth' })
+      return
+    }
+    const headerOffset = 100
+    const elRect = element.getBoundingClientRect()
+    const mainRect = main.getBoundingClientRect()
+    const relativeTop = elRect.top - mainRect.top + main.scrollTop
+    main.scrollTo({ top: relativeTop - headerOffset, behavior: 'smooth' })
+  }
+
   // Annual Budget Insights — always use GBP from data; convert to USD with current FX when currency is USD
   const annualBudgetInsights = useMemo(() => {
     const expenses = budgetData.filter((b) => !expenseCategories.includes(b.category))
@@ -618,21 +634,30 @@ export function KeyInsights() {
       <Card id="executive-summary" className="border-2 scroll-mt-24">
         <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
           <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance</p>
+          <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance — click a card to jump to the section</p>
         </CardHeader>
         <CardContent className="pt-6">
           <div className={isMobile
             ? 'flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
             : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
           }>
-            {/* Net Worth Summary */}
-            <div className={cn(
-              'space-y-3 p-4 rounded-lg border bg-card shrink-0',
-              isMobile && 'min-w-[85%] max-w-[85%] snap-center'
-            )}>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-blue-600" />
-                <h3 className="font-semibold text-sm uppercase tracking-wide">Net Worth</h3>
+            {/* Net Worth Summary — clickable to scroll to section */}
+            <button
+              type="button"
+              onClick={() => scrollToSection('net-worth')}
+              className={cn(
+                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                isMobile && 'min-w-[85%] max-w-[85%] snap-center'
+              )}
+              aria-label="Net worth summary, jump to Net Worth section"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-sm uppercase tracking-wide">Net Worth</h3>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
               </div>
               <div className="space-y-2">
                 <div>
@@ -665,16 +690,25 @@ export function KeyInsights() {
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
 
-            {/* Annual Budget Summary */}
-            <div className={cn(
-              'space-y-3 p-4 rounded-lg border bg-card',
-              isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
-            )}>
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-purple-600" />
-                <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Budget</h3>
+            {/* Annual Budget Summary — clickable to scroll to section */}
+            <button
+              type="button"
+              onClick={() => scrollToSection('annual-budget')}
+              className={cn(
+                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+              )}
+              aria-label="Annual budget summary, jump to Annual Budget section"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-purple-600" />
+                  <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Budget</h3>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
               </div>
               <div className="space-y-2">
                 <div>
@@ -708,16 +742,25 @@ export function KeyInsights() {
                   </p>
                 </div>
               </div>
-            </div>
+            </button>
 
-            {/* Annual Spend Summary */}
-            <div className={cn(
-              'space-y-3 p-4 rounded-lg border bg-card',
-              isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
-            )}>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-orange-600" />
-                <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Spend</h3>
+            {/* Annual Spend Summary — clickable to scroll to section */}
+            <button
+              type="button"
+              onClick={() => scrollToSection('annual-spend')}
+              className={cn(
+                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+              )}
+              aria-label="Annual spend summary, jump to Annual Spend section"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-orange-600" />
+                  <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Spend</h3>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
               </div>
               <div className="space-y-2">
                 <div>
@@ -751,16 +794,25 @@ export function KeyInsights() {
                   </p>
                 </div>
               </div>
-            </div>
+            </button>
 
-            {/* Monthly Spend Summary */}
-            <div className={cn(
-              'space-y-3 p-4 rounded-lg border bg-card',
-              isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
-            )}>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-indigo-600" />
-                <h3 className="font-semibold text-sm uppercase tracking-wide">Monthly Spend</h3>
+            {/* Monthly Spend Summary — clickable to scroll to section */}
+            <button
+              type="button"
+              onClick={() => scrollToSection('monthly-spend')}
+              className={cn(
+                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+              )}
+              aria-label="Monthly spend summary, jump to Monthly Spend section"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-indigo-600" />
+                  <h3 className="font-semibold text-sm uppercase tracking-wide">Monthly Spend</h3>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
               </div>
               <div className="space-y-2">
                 <div>
@@ -794,13 +846,13 @@ export function KeyInsights() {
                   </p>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </CardContent>
       </Card>
 
       {/* Net Worth Section */}
-      <Card>
+      <Card id="net-worth" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Net Worth</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
@@ -1030,7 +1082,7 @@ export function KeyInsights() {
       </Card>
 
       {/* Annual Spend Section */}
-      <Card>
+      <Card id="annual-spend" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Annual Spend</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">

@@ -262,14 +262,14 @@ export function AccountsOverview() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-auto md:min-w-0 md:shrink">
+      <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:pb-0 md:items-stretch">
+        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
           <KPICard title="Total Net Worth" value={totalNetWorth} />
         </div>
-        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-auto md:min-w-0 md:shrink">
+        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
           <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" />
         </div>
-        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-auto md:min-w-0 md:shrink">
+        <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
           <KPICard title="Illiquid Assets" value={illiquidAssets} />
         </div>
       </div>

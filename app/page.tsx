@@ -6,7 +6,6 @@ import { IncomeVsExpensesChart } from '@/components/dashboard/income-vs-expenses
 import { BudgetTableWrapper } from '@/components/dashboard/budget-table-wrapper'
 import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-table-wrapper'
 import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
-import { DashboardNavigation } from '@/components/dashboard/dashboard-navigation'
 import { DashboardAtAGlance } from '@/components/dashboard/dashboard-at-a-glance'
 import { DashboardBackToTop } from '@/components/dashboard/dashboard-back-to-top'
 import {
@@ -38,8 +37,6 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardAtAGlance />
-
-      <DashboardNavigation />
 
       {/* Section 1: Net Worth + Income vs Expenses */}
       <section id="net-worth-chart" className="scroll-mt-24">
@@ -74,9 +71,8 @@ export default async function DashboardPage() {
         </Suspense>
       </section>
 
-      {/* Footer: repeat nav + back to top */}
-      <footer className="pt-3 md:pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
-        <DashboardNavigation />
+      {/* Footer: back to top */}
+      <footer className="pt-3 md:pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-end gap-3">
         <DashboardBackToTop />
       </footer>
     </div>
