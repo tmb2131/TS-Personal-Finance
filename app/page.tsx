@@ -7,6 +7,7 @@ import { BudgetTableWrapper } from '@/components/dashboard/budget-table-wrapper'
 import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-table-wrapper'
 import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
 import { DashboardNavigation } from '@/components/dashboard/dashboard-navigation'
+import { DashboardAtAGlance } from '@/components/dashboard/dashboard-at-a-glance'
 import { DashboardBackToTop } from '@/components/dashboard/dashboard-back-to-top'
 import {
   NetWorthChartSkeleton,
@@ -35,6 +36,8 @@ export default async function DashboardPage() {
           Overview of your financial position and trends
         </p>
       </div>
+
+      <DashboardAtAGlance />
 
       <DashboardNavigation />
 

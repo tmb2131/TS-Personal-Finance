@@ -57,3 +57,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile: extra bottom padding so content clears bottom nav + safe area (notch/home indicator) */
+@media (max-width: 767px) {
+  .main-content {
+    padding-bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
+  }
+}

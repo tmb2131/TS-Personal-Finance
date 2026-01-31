@@ -4,8 +4,15 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 const navigation = [
   { name: 'Key Insights', href: '/insights', icon: Lightbulb },
@@ -16,9 +23,13 @@ const navigation = [
   { name: 'Recurring', href: '/recurring', icon: Repeat },
 ]
 
+const mobilePrimaryNav = navigation.slice(0, 3)
+const mobileMoreNav = navigation.slice(3)
+
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   // Load collapsed state from localStorage on mount
   useEffect(() => {
@@ -86,30 +97,75 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Mobile Bottom Navigation - Card style, spaced for easy tapping */}
+      {/* Mobile Bottom Navigation - 4 items: Key Insights, Dashboard, Accounts, More (sheet) */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
         suppressHydrationWarning
       >
-        <div className="grid grid-cols-3 gap-3 px-4 py-4">
-          {navigation.map((item) => {
+        <div className="grid grid-cols-4 gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4">
+          {mobilePrimaryNav.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-2 rounded-xl border py-4 px-3 min-h-[72px] transition-colors touch-manipulation',
+                  'flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 px-2 min-h-[64px] transition-colors touch-manipulation',
                   isActive
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
                 )}
               >
-                <item.icon className={cn('h-6 w-6 flex-shrink-0', isActive && 'scale-110')} />
-                <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
+                <item.icon className={cn('h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0', isActive && 'scale-110')} />
+                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">{item.name}</span>
               </Link>
             )
           })}
+          <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 px-2 min-h-[64px] transition-colors touch-manipulation',
+                  mobileMoreNav.some((item) => pathname === item.href)
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                )}
+              >
+                <MoreHorizontal className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
+                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">More</span>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-50 max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg">
+              <DialogHeader className="px-4 pt-4 pb-2">
+                <DialogTitle>More</DialogTitle>
+              </DialogHeader>
+              <div className="overflow-y-auto px-4 pb-6 pb-[env(safe-area-inset-bottom)]">
+                <div className="flex flex-col gap-1">
+                  {mobileMoreNav.map((item) => {
+                    const isActive = pathname === item.href
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setMoreOpen(false)}
+                        className={cn(
+                          'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary text-primary-foreground'
+                            : 'hover:bg-muted'
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        {item.name}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </nav>
     </>

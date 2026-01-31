@@ -16,7 +16,8 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget } from '@/lib/types'
 import { cn } from '@/utils/cn'
-import { ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Receipt, CheckCircle2, XCircle, TrendingUp, TrendingDown } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Receipt, CheckCircle2, XCircle, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { BudgetSummaryTable } from './budget-summary-table'
 import { BudgetIncomeTable } from './budget-income-table'
 
@@ -36,6 +37,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const [expenseSortDirection, setExpenseSortDirection] = useState<SortDirection>('desc')
   const [incomeSortField, setIncomeSortField] = useState<SortField>('category')
   const [incomeSortDirection, setIncomeSortDirection] = useState<SortDirection>('asc')
+  const [expensesExpanded, setExpensesExpanded] = useState(false)
 
   // Process data: always use GBP from data; convert to USD with current FX when currency is USD (matches Key Insights)
   const processData = useCallback(
@@ -389,12 +391,32 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
         onSort={handleIncomeSort}
       />
 
-      {/* Expenses Table */}
+      {/* Expenses Table - on mobile collapsed by default, expand with "Show expenses breakdown" */}
       <Card>
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-          <CardTitle className="text-base">Expenses</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base">Expenses</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden shrink-0"
+              onClick={() => setExpensesExpanded((v) => !v)}
+            >
+              {expensesExpanded ? (
+                <>
+                  <ChevronUp className="h-4 w-4 mr-1" />
+                  Hide
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4 mr-1" />
+                  Show breakdown
+                </>
+              )}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className={cn('pt-2', !expensesExpanded && 'hidden md:block')}>
           {/* Executive Summary Cards */}
           <div className="mb-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">

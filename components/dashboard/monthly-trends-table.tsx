@@ -763,6 +763,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
 
         </div>
 
+        <p className="md:hidden text-xs text-muted-foreground mt-2 mb-1">Full category table on larger screens.</p>
+
         {/* Table with sticky header and total row */}
         <div className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-5 [&_th]:px-1 [&_th]:py-0 [&_th]:text-[11px] [&_td]:h-5 [&_td]:px-1 [&_td]:py-0 [&_td]:text-[11px]">
             <table className="w-full caption-bottom text-sm">

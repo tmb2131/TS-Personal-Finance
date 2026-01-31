@@ -14,14 +14,15 @@ const navButtonClass = cn(
 interface NavigationItem {
   id: string
   label: string
+  labelShort?: string
   icon: React.ComponentType<{ className?: string }>
 }
 
 const navigationItems: NavigationItem[] = [
-  { id: 'net-worth-chart', label: 'Net Worth Chart', icon: LineChart },
-  { id: 'budget-table', label: 'Budget Table', icon: Table },
-  { id: 'annual-trends', label: 'Annual Trends', icon: Calendar },
-  { id: 'monthly-trends', label: 'Monthly Trends', icon: CalendarDays },
+  { id: 'net-worth-chart', label: 'Net Worth Chart', icon: LineChart, labelShort: 'Net Worth' },
+  { id: 'budget-table', label: 'Budget Table', icon: Table, labelShort: 'Budget' },
+  { id: 'annual-trends', label: 'Annual Trends', icon: Calendar, labelShort: 'Annual' },
+  { id: 'monthly-trends', label: 'Monthly Trends', icon: CalendarDays, labelShort: 'Monthly' },
 ]
 
 function scrollToSection(id: string, e?: React.MouseEvent) {
@@ -56,8 +57,11 @@ export function DashboardNavigation() {
             onClick={(e) => scrollToSection(item.id, e)}
             className={navButtonClass}
           >
-            <Icon className="h-6 w-6 text-slate-200" />
-            <span className="text-sm font-medium">{item.label}</span>
+            <Icon className="h-5 w-5 md:h-6 md:w-6 text-slate-200" />
+            <span className="text-xs md:text-sm font-medium text-center leading-tight">
+              <span className="hidden md:inline">{item.label}</span>
+              <span className="md:hidden">{item.labelShort ?? item.label}</span>
+            </span>
           </button>
         )
       })}

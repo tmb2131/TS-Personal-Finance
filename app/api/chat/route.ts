@@ -56,12 +56,31 @@ export async function POST(req: Request) {
   console.log('[chat] Starting streamText with', modelMessages.length, 'messages')
   console.log('[chat] Model messages:', JSON.stringify(modelMessages.map(m => ({ role: m.role, contentLength: m.content.length, contentPreview: m.content.substring(0, 100) })), null, 2))
 
+  // Compute current date context so the AI resolves relative dates ("last month", "this year") correctly
+  const now = new Date()
+  const todayISO = now.toISOString().split('T')[0]
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth()
+  const lastMonthStart = new Date(currentYear, currentMonth - 1, 1)
+  const lastMonthEnd = new Date(currentYear, currentMonth, 0)
+  const lastMonthStartISO = lastMonthStart.toISOString().split('T')[0]
+  const lastMonthEndISO = lastMonthEnd.toISOString().split('T')[0]
+  const dateContext = `CURRENT DATE CONTEXT (use this for ALL relative date resolution):
+- Today's date: ${todayISO} (YYYY-MM-DD)
+- Current year: ${currentYear}
+- "Last month" = ${lastMonthStartISO} to ${lastMonthEndISO} (the calendar month immediately before the current month)
+- "This year" = ${currentYear}-01-01 to ${todayISO}
+- "This month" = first day of current month to ${todayISO}
+When the user says "last month", "this year", "this month", or similar, you MUST pass the corresponding startDate and endDate (YYYY-MM-DD) to the tool using this context. Do not guess or use a different date.`
+
   let result
   try {
     // @ts-ignore - maxSteps property exists at runtime but may not be in TypeScript types
     result = streamText({
       model: google('gemini-2.5-flash'),
       system: `You are a Senior Financial Analyst AI Assistant with deep expertise in personal finance analysis. You have access to comprehensive financial data including account balances, transaction history, budget targets, and historical net worth trends.
+
+${dateContext}
 
 YOUR CAPABILITIES:
 1. **Financial Snapshots**: Answer questions about current and historical net worth, account balances grouped by currency (GBP/USD/EUR), category, or entity (Personal/Family/Trust). You can provide snapshots for any date in the past or current balances.
@@ -83,7 +102,7 @@ CRITICAL INSTRUCTIONS:
 3. **Multi-step analysis** - You can call multiple tools in sequence to answer complex questions. For example, use get_financial_snapshot for balances, then analyze_spending for spending patterns, then get_budget_vs_actual for budget context.
 4. **Currency handling** - Always format currency appropriately: £ for GBP, $ for USD, € for EUR. When comparing amounts, convert to a single currency or show both.
 5. **Entity distinction** - Clearly distinguish between Personal, Family, and Trust entities when relevant. Personal balances are in balance_personal_local, Family in balance_family_local.
-6. **Date intelligence** - For historical queries, use get_financial_snapshot with asOfDate. For current data, omit asOfDate or use 'current'.
+6. **Date intelligence** - Use the CURRENT DATE CONTEXT above for ALL relative date phrases ("last month", "this year", "this month", "last week"). When calling analyze_spending for "last month", pass startDate and endDate from that context (the exact YYYY-MM-DD range given). For historical queries use get_financial_snapshot with asOfDate. For current data, omit asOfDate or use 'current'.
 7. **Never output raw JSON** - Always format results in natural language with proper context and insights.
 8. **Be analytical** - Provide insights, trends, and context. Don't just report numbers - explain what they mean.
 
@@ -385,10 +404,10 @@ EXAMPLE QUERIES YOU CAN HANDLE:
         - Income vs expenses
         - Specific merchant spending (e.g., "Uber", "Amazon")
         - Spending trends over date ranges
-        Automatically excludes 'Excluded', 'Income', 'Gift Money', and 'Other Income' categories unless explicitly requested.`,
+        For relative dates ("last month", "this year") use the exact startDate and endDate (YYYY-MM-DD) from the system message's CURRENT DATE CONTEXT. Do not guess. Automatically excludes 'Excluded', 'Income', 'Gift Money', and 'Other Income' categories unless explicitly requested.`,
         inputSchema: z.object({
-          startDate: z.string().optional().describe('Start date for analysis (YYYY-MM-DD). Defaults to beginning of current year if not specified.'),
-          endDate: z.string().optional().describe('End date for analysis (YYYY-MM-DD). Defaults to today if not specified.'),
+          startDate: z.string().optional().describe('Start date for analysis (YYYY-MM-DD). For "last month" use the range from CURRENT DATE CONTEXT. Defaults to start of current year if not specified.'),
+          endDate: z.string().optional().describe('End date for analysis (YYYY-MM-DD). For "last month" use the range from CURRENT DATE CONTEXT. Defaults to today if not specified.'),
           merchant: z.string().optional().describe('Search for specific merchant/counterparty (fuzzy search, case-insensitive)'),
           category: z.string().optional().describe('Filter by specific category'),
           transactionType: z.enum(['expenses', 'income', 'all']).optional().default('expenses').describe('Filter by transaction type: expenses (negative amounts), income (positive amounts), or all'),
