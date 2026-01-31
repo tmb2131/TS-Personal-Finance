@@ -241,7 +241,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
                 <p className="text-xs">
                   <span className="font-semibold">{formatCurrency(Math.abs(totals.netIncome.gap))}</span>
                   <span className="text-muted-foreground ml-1">
-                    {totals.netIncome.gap >= 0 ? 'under' : 'over'} target
+                    {totals.netIncome.gap >= 0 ? 'under' : 'over'} budget
                   </span>
                 </p>
                 <p className="text-xs">

@@ -214,7 +214,7 @@ export function BudgetIncomeTable({
                     {formatCurrency(Math.abs(totals.gap))}
                   </span>
                   <span className="text-muted-foreground ml-1">
-                    {totals.gap >= 0 ? 'above' : 'below'} target
+                    {totals.gap >= 0 ? 'above' : 'below'} budget
                   </span>
                 </p>
                 <p className="text-xs">

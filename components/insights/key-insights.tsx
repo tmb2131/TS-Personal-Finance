@@ -729,7 +729,7 @@ export function KeyInsights() {
                   <p className="text-sm">
                     <span className="font-semibold">{formatCurrency(Math.abs(annualBudgetInsights.overallGap))}</span>
                     <span className="text-xs text-muted-foreground ml-1">
-                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} target
+                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
                     </span>
                   </p>
                   <p className="text-xs">
@@ -1004,7 +1004,7 @@ export function KeyInsights() {
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Annual Budget</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))} vs {new Date().getFullYear()} target.
+            {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))} vs {new Date().getFullYear()} budget.
           </p>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">

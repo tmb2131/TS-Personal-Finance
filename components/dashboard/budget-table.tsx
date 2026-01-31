@@ -447,7 +447,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         {formatCurrencyCompact(Math.abs(expenseTotals.gap))}
                       </span>
                       <span className="text-xs text-muted-foreground ml-1">
-                        {expenseTotals.gap >= 0 ? 'under' : 'over'} target
+                        {expenseTotals.gap >= 0 ? 'under' : 'over'} budget
                       </span>
                     </p>
                     <p className="text-xs">
