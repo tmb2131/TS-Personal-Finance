@@ -151,6 +151,42 @@ export function BudgetIncomeTable({
       </CardHeader>
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          {/* Mobile: list of summary cards (sm and below) */}
+          <div className="md:hidden space-y-3">
+            {sortedData.map((row) => {
+              const gap = row.tracking - row.annualBudget
+              const isPositive = gap >= 0
+              return (
+                <div key={row.category} className="rounded-lg border p-3 min-h-[44px]">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-sm truncate">{row.category}</span>
+                    <span
+                      className={cn(
+                        'font-semibold tabular-nums text-sm shrink-0',
+                        isPositive ? 'text-green-600' : 'text-red-600'
+                      )}
+                    >
+                      {gap === 0 ? '–' : formatCurrency(gap)}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 pt-1.5 border-t text-xs text-muted-foreground">
+                    Tracking {formatCurrency(row.tracking)} vs Budget {formatCurrency(row.annualBudget)}
+                  </div>
+                </div>
+              )
+            })}
+            <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex items-center justify-between">
+              <span className="font-semibold text-sm">Total Income</span>
+              <span
+                className={cn(
+                  'font-semibold tabular-nums text-sm',
+                  totals.gap >= 0 ? 'text-green-600' : 'text-red-600'
+                )}
+              >
+                {formatCurrency(totals.gap)}
+              </span>
+            </div>
+          </div>
           {/* Summary card - left */}
           <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0">
             <div className="flex items-center gap-1.5">
@@ -200,8 +236,8 @@ export function BudgetIncomeTable({
               </div>
             </div>
           </div>
-          {/* Table - right */}
-          <div className="border rounded-md overflow-hidden min-w-0">
+          {/* Table - right (desktop) */}
+          <div className="hidden md:block border rounded-md overflow-hidden min-w-0">
         <Table className={compactTableClass}>
           <TableHeader>
             <TableRow className="bg-muted">

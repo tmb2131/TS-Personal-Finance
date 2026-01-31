@@ -11,6 +11,7 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { cn } from '@/utils/cn'
 
 const SCROLL_THRESHOLD = 8
+const BOTTOM_BOUNDARY_PX = 100
 
 export function Header() {
   const router = useRouter()
@@ -34,13 +35,19 @@ export function Header() {
     fetchLatestDates()
   }, [])
 
-  // Hide header on scroll down, show on scroll up (mobile only)
+  // Hide header on scroll down, show on scroll up (mobile only). Disable toggle near bottom to prevent rubber-band flicker.
   useEffect(() => {
     if (!isMobile) return
-    const el = document.querySelector('.main-content')
+    const el = document.querySelector('.main-content') as HTMLElement | null
     if (!el) return
     const onScroll = () => {
-      const scrollTop = (el as HTMLElement).scrollTop
+      const { scrollTop, scrollHeight, clientHeight } = el
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+      if (distanceFromBottom < BOTTOM_BOUNDARY_PX) {
+        setHeaderVisible(true)
+        lastScrollTop.current = scrollTop
+        return
+      }
       if (scrollTop <= 0) {
         setHeaderVisible(true)
       } else if (scrollTop > lastScrollTop.current && scrollTop > SCROLL_THRESHOLD) {

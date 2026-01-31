@@ -3,15 +3,16 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getAllowedEmails } from '@/lib/allowed-emails'
 
+const POST_LOGIN_REDIRECT = '/insights'
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
 
   if (code) {
     const cookieStore = await cookies()
 
-    const response = NextResponse.redirect(`${origin}${next}`)
+    const response = NextResponse.redirect(`${origin}${POST_LOGIN_REDIRECT}`)
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

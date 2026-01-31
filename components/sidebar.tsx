@@ -104,7 +104,7 @@ export function Sidebar() {
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
         suppressHydrationWarning
       >
-        <div className="grid grid-cols-4 gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-2 px-2 sm:px-3 py-2">
           {mobilePrimaryNav.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -112,14 +112,14 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 px-2 min-h-[64px] transition-colors touch-manipulation',
+                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] transition-colors touch-manipulation',
                   isActive
-                    ? 'bg-primary text-primary-foreground border-primary'
+                    ? 'bg-primary text-primary-foreground border-primary font-semibold'
                     : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
                 )}
               >
-                <item.icon className={cn('h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0', isActive && 'scale-110')} />
-                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">{item.name}</span>
+                <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'scale-110')} />
+                <span className="text-[10px] font-medium text-center leading-tight">{item.name}</span>
               </Link>
             )
           })}
@@ -128,14 +128,14 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1.5 rounded-xl border py-3 px-2 min-h-[64px] transition-colors touch-manipulation',
+                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] transition-colors touch-manipulation',
                   mobileMoreNav.some((item) => pathname === item.href)
-                    ? 'bg-primary text-primary-foreground border-primary'
+                    ? 'bg-primary text-primary-foreground border-primary font-semibold'
                     : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
                 )}
               >
-                <MoreHorizontal className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
-                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">More</span>
+                <MoreHorizontal className="h-5 w-5 flex-shrink-0" />
+                <span className="text-[10px] font-medium text-center leading-tight">More</span>
               </button>
             </DialogTrigger>
             <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-50 max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg">
