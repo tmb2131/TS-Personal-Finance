@@ -418,7 +418,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
 
     return (
       <div 
-        className="w-20 h-8 flex items-center justify-center"
+        className="w-14 h-5 flex items-center justify-center"
         title={tooltipText}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -460,7 +460,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
               : formatCurrencyWithParens(-value)}
         </span>
         {value !== 0 && (
-          <div className="relative h-4 w-16">
+          <div className="relative h-2.5 w-10">
             <div
               className={cn(
                 'absolute h-full',
@@ -618,34 +618,34 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50">
-        <CardTitle>Monthly Trends</CardTitle>
+      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardTitle className="text-base">Monthly Trends</CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-2">
         {/* Key Insights Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
           {/* Total Variance */}
-          <div className="space-y-3 p-4 rounded-lg border-2 border-gray-700 bg-card">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              <h3 className="font-semibold text-sm uppercase tracking-wide">Total Variance</h3>
+          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-indigo-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">Total Variance</h3>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">{getComparisonText(topMovers.deltaForCards)}</p>
+                <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                 {topMovers.totalVariance < 0 ? (
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-red-600" />
-                    <p className="text-lg font-bold text-red-600">Spending More</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-red-600" />
+                    <p className="text-base font-bold text-red-600">Spending More</p>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5 text-green-600" />
-                    <p className="text-lg font-bold text-green-600">Spending Less</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingDown className="h-4 w-4 text-green-600" />
+                    <p className="text-base font-bold text-green-600">Spending Less</p>
                   </div>
                 )}
               </div>
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-0.5 pt-1.5 border-t">
                 <p className="text-sm">
                   <span className={cn('font-semibold', topMovers.totalVariance < 0 ? 'text-red-600' : 'text-green-600')}>
                     {formatCurrency(Math.abs(topMovers.totalVariance))}
@@ -662,7 +662,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {topMovers.totalVariance < 0 ? 'more' : 'less'} than {getComparisonPeriodLabel(topMovers.deltaForCards)}
                   </span>
                 </p>
-                <div className="pt-1 mt-1 border-t">
+                <div className="pt-0.5 mt-0.5 border-t">
                   <p className="text-xs text-muted-foreground">
                     {getMonthName(0)} Est: <span className="font-medium">{formatCurrencyLarge(Math.abs(totals.cur_month_est))}</span>
                   </p>
@@ -682,35 +682,35 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           </div>
 
           {/* MoM Increases in Spend */}
-          <div className="space-y-3 p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-red-600" />
-              <h3 className="font-semibold text-sm uppercase tracking-wide">MoM Increases in Spend</h3>
+          <div className="space-y-2 p-3 rounded-lg border bg-card">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-red-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Increases in Spend</h3>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">{getComparisonText(topMovers.deltaForCards)}</p>
+                <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                 {topMovers.topIncreases.length > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-red-600" />
-                    <p className="text-lg font-bold text-red-600">Top Categories Spending More</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-red-600" />
+                    <p className="text-base font-bold text-red-600">Top Categories Spending More</p>
                   </div>
                 ) : (
-                  <p className="text-lg font-bold text-muted-foreground">No Increases</p>
+                  <p className="text-base font-bold text-muted-foreground">No Increases</p>
                 )}
               </div>
-              <div className="space-y-3 pt-2 border-t">
+              <div className="space-y-2 pt-1.5 border-t">
                 {topMovers.topIncreases.length > 0 ? (
                   topMovers.topIncreases.map((item) => {
                     const maxVal = Math.max(...topMovers.topIncreases.map((i) => Math.abs(i.change)), 1)
                     const pct = (Math.abs(item.change) / maxVal) * 100
                     return (
-                      <div key={item.category} className="flex items-center gap-2">
-                        <span className="text-sm w-24 truncate">{item.category}</span>
-                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                      <div key={item.category} className="flex items-center gap-1.5">
+                        <span className="text-xs w-20 truncate">{item.category}</span>
+                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
                           <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                        <span className="text-xs font-medium text-red-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
                     )
                   })
@@ -722,35 +722,35 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           </div>
 
           {/* MoM Decreases in Spend */}
-          <div className="space-y-3 p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-green-600" />
-              <h3 className="font-semibold text-sm uppercase tracking-wide">MoM Decreases in Spend</h3>
+          <div className="space-y-2 p-3 rounded-lg border bg-card">
+            <div className="flex items-center gap-1.5">
+              <TrendingDown className="h-4 w-4 text-green-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Decreases in Spend</h3>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">{getComparisonText(topMovers.deltaForCards)}</p>
+                <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                 {topMovers.topDecreases.length > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5 text-green-600" />
-                    <p className="text-lg font-bold text-green-600">Top Categories Spending Less</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingDown className="h-4 w-4 text-green-600" />
+                    <p className="text-base font-bold text-green-600">Top Categories Spending Less</p>
                   </div>
                 ) : (
-                  <p className="text-lg font-bold text-muted-foreground">No Decreases</p>
+                  <p className="text-base font-bold text-muted-foreground">No Decreases</p>
                 )}
               </div>
-              <div className="space-y-3 pt-2 border-t">
+              <div className="space-y-2 pt-1.5 border-t">
                 {topMovers.topDecreases.length > 0 ? (
                   topMovers.topDecreases.map((item) => {
                     const maxVal = Math.max(...topMovers.topDecreases.map((i) => Math.abs(i.change)), 1)
                     const pct = (Math.abs(item.change) / maxVal) * 100
                     return (
-                      <div key={item.category} className="flex items-center gap-2">
-                        <span className="text-sm w-24 truncate">{item.category}</span>
-                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                      <div key={item.category} className="flex items-center gap-1.5">
+                        <span className="text-xs w-20 truncate">{item.category}</span>
+                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
                           <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                        <span className="text-xs font-medium text-green-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
                     )
                   })
@@ -764,96 +764,96 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         </div>
 
         {/* Table with sticky header and total row */}
-        <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
+        <div className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-5 [&_th]:px-1 [&_th]:py-0 [&_th]:text-[11px] [&_td]:h-5 [&_td]:px-1 [&_td]:py-0 [&_td]:text-[11px]">
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
-              <TableRow className="border-b">
-              <TableHead className="sticky top-0 z-20 bg-muted">
+              <TableRow className="border-b bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted', sortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('category')}
-                  className="flex items-center hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold')}
                 >
                   Expense Categories
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_month_minus_3' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_3')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_3' && 'font-semibold')}
                 >
                   {getMonthName(3)}
                   <SortIcon field="cur_month_minus_3" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_month_minus_2' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_2')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_2' && 'font-semibold')}
                 >
                   {getMonthName(2)}
                   <SortIcon field="cur_month_minus_2" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_month_minus_1' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_1')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_1' && 'font-semibold')}
                 >
                   {getMonthName(1)}
                   <SortIcon field="cur_month_minus_1" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right border-l-2 border-r-2 border-gray-700 bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-gray-700 bg-muted', sortField === 'cur_month_est' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_month_est')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_est' && 'font-semibold')}
                 >
                   {getMonthName(0)} Est.
                   <SortIcon field="cur_month_est" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right w-24 bg-muted">Trend</TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className="sticky top-0 z-20 w-14 bg-muted">Trend</TableHead>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'ttm_avg' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('ttm_avg')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'ttm_avg' && 'font-semibold')}
                 >
                   TTM Avg
                   <SortIcon field="ttm_avg" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'z_score' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('z_score')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'z_score' && 'font-semibold')}
                 >
                   Z-Score
                   <SortIcon field="z_score" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'delta_last_month' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('delta_last_month')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_last_month' && 'font-semibold')}
                 >
                   Delta vs Last Mo
                   <SortIcon field="delta_last_month" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'delta_l3m' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('delta_l3m')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l3m' && 'font-semibold')}
                 >
                   Delta vs. L3M Avg
                   <SortIcon field="delta_l3m" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'delta_l12m' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('delta_l12m')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l12m' && 'font-semibold')}
                 >
                   Delta vs. L12M Avg
                   <SortIcon field="delta_l12m" />
@@ -862,20 +862,20 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             </TableRow>
             {/* Total Row */}
             <TableRow className="bg-muted/50 border-b-2 border-gray-700">
-              <TableCell className="font-semibold bg-muted/50">Total</TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_3)}>
+              <TableCell className="font-semibold w-28 min-w-[7rem] bg-muted/50">Total</TableCell>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_3)}>
                 {formatCurrencyWithParens(-totals.cur_month_minus_3)}
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_2)}>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_2)}>
                 {formatCurrencyWithParens(-totals.cur_month_minus_2)}
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_1)}>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_1)}>
                 {formatCurrencyWithParens(-totals.cur_month_minus_1)}
               </TableCell>
-              <TableCell className="text-right font-semibold border-l-2 border-r-2 border-gray-700 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_est)}>
+              <TableCell className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_est)}>
                 {formatCurrencyWithParens(-totals.cur_month_est)}
               </TableCell>
-              <TableCell className="text-right bg-muted/50">
+              <TableCell className="text-right w-14 bg-muted/50">
                 {/* Sparkline for total */}
                 <Sparkline row={{
                   category: 'Total',
@@ -890,17 +890,17 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   delta_vs_l12m_avg: totals.delta_vs_l12m_avg,
                 } as typeof processedData[0]} />
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getMonthlyBgStyle(totals.ttm_avg)}>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.ttm_avg)}>
                 {formatCurrencyWithParens(-totals.ttm_avg)}
               </TableCell>
-              <TableCell className="bg-muted/50"></TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50">
+              <TableCell className="text-right w-20 bg-muted/50"></TableCell>
+              <TableCell className="text-right font-semibold w-20 bg-muted/50">
                 <DeltaCell value={totals.delta_vs_last_month} maxValue={maxValues.deltaVsLastMonth} />
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50">
+              <TableCell className="text-right font-semibold w-20 bg-muted/50">
                 <DeltaCell value={totals.delta_vs_l3m} maxValue={maxValues.delta} />
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50">
+              <TableCell className="text-right font-semibold w-20 bg-muted/50">
                 <DeltaCell value={totals.delta_vs_l12m_avg} maxValue={maxValues.delta} />
               </TableCell>
             </TableRow>
@@ -909,45 +909,45 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             {sortedData.map((row) => {
               return (
                 <TableRow key={row.category}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium w-28 min-w-[7rem]">
                     {row.category}
                   </TableCell>
                   
                   {/* Monthly columns with color-coded backgrounds */}
-                  <TableCell className="text-right" style={getMonthlyBgStyle(row.cur_month_minus_3)}>
+                  <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.cur_month_minus_3)}>
                     {row.cur_month_minus_3 === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_minus_3)}
                   </TableCell>
-                  <TableCell className="text-right" style={getMonthlyBgStyle(row.cur_month_minus_2)}>
+                  <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.cur_month_minus_2)}>
                     {row.cur_month_minus_2 === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_minus_2)}
                   </TableCell>
-                  <TableCell className="text-right" style={getMonthlyBgStyle(row.cur_month_minus_1)}>
+                  <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.cur_month_minus_1)}>
                     {row.cur_month_minus_1 === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_minus_1)}
                   </TableCell>
-                  <TableCell className="text-right border-l-2 border-r-2 border-gray-700" style={getMonthlyBgStyle(row.cur_month_est)}>
+                  <TableCell className="text-right w-16 border-l-2 border-r-2 border-gray-700" style={getMonthlyBgStyle(row.cur_month_est)}>
                     {row.cur_month_est === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_est)}
                   </TableCell>
                   
                   {/* Sparkline Trend */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-14">
                     <Sparkline row={row} />
                   </TableCell>
                   
-                  <TableCell className="text-right" style={getMonthlyBgStyle(row.ttm_avg)}>
+                  <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.ttm_avg)}>
                     {row.ttm_avg === 0 ? '-' : formatCurrencyWithParens(-row.ttm_avg)}
                   </TableCell>
                   
                   {/* Z-Score with mini bar chart */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-20">
                     <div className="flex items-center justify-end gap-2">
                       <span className="font-medium min-w-[3rem] text-right">{row.z_score.toFixed(1)}</span>
-                      <div className="relative h-4 w-20 border border-gray-300 rounded bg-white">
+                      <div className="relative h-2.5 w-14 border border-gray-300 rounded bg-white">
                         {/* Zero line (center) */}
                         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-400 border-dashed -translate-x-1/2"></div>
                         {/* Bar representation - purple bars for negative, green for positive */}
                         {row.z_score !== 0 && (
                           <div
                             className={cn(
-                              'absolute h-2 top-1 rounded-sm',
+                              'absolute h-1 top-0.5 rounded-sm',
                               row.z_score >= 0 ? 'bg-green-500' : 'bg-purple-500'
                             )}
                             style={{
@@ -961,17 +961,17 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   </TableCell>
                   
                   {/* Delta vs Last Month */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-20">
                     <DeltaCell value={row.delta_vs_last_month} maxValue={maxValues.deltaVsLastMonth} />
                   </TableCell>
                   
                   {/* Delta vs L3M */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-20">
                     <DeltaCell value={row.delta_vs_l3m} maxValue={maxValues.delta} />
                   </TableCell>
                   
                   {/* Delta vs L12M Avg */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-20">
                     <DeltaCell value={row.delta_vs_l12m_avg} maxValue={maxValues.delta} />
                   </TableCell>
                 </TableRow>

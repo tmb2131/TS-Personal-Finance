@@ -17,7 +17,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  ReferenceLine,
+  LabelList,
 } from 'recharts'
 
 export function YoYNetWorthWaterfall() {
@@ -84,56 +84,69 @@ export function YoYNetWorthWaterfall() {
 
     if (orderedData.length === 0) return []
 
-    // Get Year Start value for calculating running total
-    const yearStartItem = orderedData.find((item) => item.category === 'Year Start')
-    let runningTotal = yearStartItem 
-      ? (currency === 'USD' ? yearStartItem.amount_usd : yearStartItem.amount_gbp) || 0
-      : 0
+    // Year start for y-axis normalization and running total
+    const yearStart = summaryValues.yearStart ?? 0
 
-    // Build waterfall data (excluding Year Start and Year End)
-    const waterfall: any[] = []
+    // Collect change items (excluding Year Start and Year End), then sort by actual value descending; Net Change stays last.
+    const changes: { name: string; value: number; type: string }[] = []
 
     orderedData.forEach((item) => {
       const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
       const isStart = item.category === 'Year Start'
       const isEnd = item.category === 'Year End'
 
-      // Skip Year Start and Year End from chart
-      if (isStart || isEnd) {
-        return
-      }
+      if (isStart || isEnd) return
 
       const change = amount || 0
-      
-      // Skip zero values
-      if (change === 0) {
-        return
-      }
-      
-      const start = runningTotal
-      runningTotal += change
-      const end = runningTotal
+      if (change === 0) return
 
-      waterfall.push({
+      changes.push({
         name: item.category,
         value: change,
-        start,
-        end,
         type: change >= 0 ? 'positive' : 'negative',
       })
     })
 
-    // Sort in descending order by actual value (not absolute)
-    waterfall.sort((a, b) => b.value - a.value)
+    // Sort by actual value descending (largest positive first, then smaller positives, then negatives, smallest/most negative last)
+    changes.sort((a, b) => b.value - a.value)
 
-    // Add Net Change bar at the end
+    // Build waterfall with running total in this order; values relative to year start for y-axis.
+    const waterfall: any[] = []
+    let runningTotal = yearStart
+
+    changes.forEach((item) => {
+      const start = runningTotal
+      const end = start + item.value
+      runningTotal = end
+      const minAbs = Math.min(start, end)
+      const delta = Math.abs(item.value)
+      const min = minAbs - yearStart
+      waterfall.push({
+        name: item.name,
+        value: item.value,
+        start,
+        end,
+        min,
+        delta,
+        type: item.type,
+      })
+    })
+
+    // Net Change bar always last
     if (summaryValues.yearStart !== null && summaryValues.yearEnd !== null) {
       const netChange = summaryValues.yearEnd - summaryValues.yearStart
+      const start = summaryValues.yearStart
+      const end = summaryValues.yearEnd
+      const minAbs = Math.min(start, end)
+      const delta = Math.abs(netChange)
+      const min = minAbs - yearStart
       waterfall.push({
         name: 'Net Change',
         value: netChange,
-        start: summaryValues.yearStart,
-        end: summaryValues.yearEnd,
+        start,
+        end,
+        min,
+        delta,
         type: netChange >= 0 ? 'net-positive' : 'net-negative',
       })
     }
@@ -169,23 +182,34 @@ export function YoYNetWorthWaterfall() {
     return `${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
+  // Waterfall bar colors: green/red for increases/decreases, darker for net change
   const getBarColor = (type: string) => {
     switch (type) {
-      case 'start':
-      case 'end':
-        return '#8884d8' // Purple for start/end
       case 'positive':
-        return '#82ca9d' // Green for positive
+        return '#22c55e' // Green for increase
       case 'negative':
-        return '#ff7c7c' // Red for negative
+        return '#ef4444' // Red for decrease
       case 'net-positive':
-        return '#22c55e' // Darker green for net positive
+        return '#16a34a' // Darker green for net positive
       case 'net-negative':
-        return '#ef4444' // Darker red for net negative
+        return '#dc2626' // Darker red for net negative
       default:
-        return '#8884d8'
+        return '#6b7280'
     }
   }
+
+  const yDomain = useMemo(() => {
+    if (waterfallData.length === 0) return [0, 0]
+    let lo = Infinity
+    let hi = -Infinity
+    waterfallData.forEach((d) => {
+      lo = Math.min(lo, d.min)
+      hi = Math.max(hi, d.min + d.delta)
+    })
+    const range = hi - lo
+    const padding = range > 0 ? range * 0.08 : Math.abs(lo) * 0.08 || 1
+    return [lo - padding, hi + padding]
+  }, [waterfallData])
 
   if (loading) {
     return (
@@ -247,38 +271,11 @@ export function YoYNetWorthWaterfall() {
         <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Summary bullets */}
-        {(summaryValues.yearStart !== null || summaryValues.yearEnd !== null) && (
-          <div className="mb-6 space-y-2 pt-2 pb-6 border-b">
-            {summaryValues.yearStart !== null && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Year Start:</span>
-                <span className="text-sm font-semibold">{formatCurrencyLarge(summaryValues.yearStart)}</span>
-              </div>
-            )}
-            {summaryValues.yearEnd !== null && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Year End:</span>
-                <span className="text-sm font-semibold">{formatCurrencyLarge(summaryValues.yearEnd)}</span>
-              </div>
-            )}
-            {summaryValues.yearStart !== null && summaryValues.yearEnd !== null && (
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-sm font-medium text-muted-foreground">Net Change:</span>
-                <span className={`text-sm font-semibold ${
-                  (summaryValues.yearEnd - summaryValues.yearStart) >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {(summaryValues.yearEnd - summaryValues.yearStart) >= 0 ? '+' : ''}
-                  {formatCurrencyLarge(summaryValues.yearEnd - summaryValues.yearStart)}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-        <ResponsiveContainer width="100%" height={500}>
+        <ResponsiveContainer width="100%" height={360}>
           <BarChart
             data={waterfallData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+            margin={{ top: 44, right: 30, left: 20, bottom: 72 }}
+            barCategoryGap="20%"
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
@@ -309,17 +306,18 @@ export function YoYNetWorthWaterfall() {
               }}
             />
             <YAxis
+              domain={yDomain}
               tickFormatter={formatCurrency}
               tick={{ fontSize: 12 }}
               stroke="#6b7280"
             />
             <Tooltip
               formatter={(value: number, name: string, props: any) => {
-                if (props.payload.type === 'start' || props.payload.type === 'end') {
-                  return formatCurrencyFull(value)
-                }
-                const sign = value >= 0 ? '+' : ''
-                return `${sign}${formatCurrencyFull(value)}`
+                const payload = props?.payload
+                if (!payload || name === 'min') return null
+                const raw = payload.value as number
+                const sign = raw >= 0 ? '+' : ''
+                return [`${sign}${formatCurrencyFull(raw)}`, payload.name]
               }}
               contentStyle={{
                 backgroundColor: 'white',
@@ -328,13 +326,45 @@ export function YoYNetWorthWaterfall() {
                 padding: '8px 12px',
               }}
             />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1}>
+            {/* Series A: transparent spacer (pedestal) so visible bar starts at running total */}
+            <Bar dataKey="min" stackId="waterfall" fill="transparent" stroke="none" />
+            {/* Series B: visible delta bar, colored by increase/decrease */}
+            <Bar dataKey="delta" stackId="waterfall" radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} minPointSize={2}>
               {waterfallData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={getBarColor(entry.type)}
-                />
+                <Cell key={`cell-${index}`} fill={getBarColor(entry.type)} />
               ))}
+              <LabelList
+                dataKey="value"
+                position="top"
+                offset={12}
+                content={(props: any) => {
+                  const x = Number(props.x) ?? 0
+                  const y = Number(props.y) ?? 0
+                  const width = Number(props.width) ?? 0
+                  const height = Number(props.height) ?? 0
+                  const payload = props.payload
+                  const value = payload?.value
+                  if (value == null || value === undefined) return null
+                  const sign = value >= 0 ? '+' : ''
+                  const text = `${sign}${formatCurrencyFull(value)}`
+                  const isNetChange = payload?.name === 'Net Change'
+                  const isNegative = value < 0
+                  const labelY = isNegative ? y + height + 14 : y - 14
+                  return (
+                    <g transform={`translate(${x + width / 2},${labelY})`}>
+                      <text
+                        textAnchor="middle"
+                        dy={0}
+                        fill="#374151"
+                        fontSize={11}
+                        style={{ fontWeight: isNetChange ? 700 : 400 }}
+                      >
+                        {text}
+                      </text>
+                    </g>
+                  )
+                }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>

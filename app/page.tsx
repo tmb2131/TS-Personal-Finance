@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div className="w-full max-w-7xl mx-auto space-y-2 md:space-y-3">
       {/* Header - Renders immediately */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
 
       {/* Section 1: Net Worth + Income vs Expenses */}
       <section id="net-worth-chart" className="scroll-mt-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
           <Suspense fallback={<NetWorthChartSkeleton />}>
             <NetWorthChartWrapper />
           </Suspense>
@@ -51,28 +51,28 @@ export default async function DashboardPage() {
       </section>
 
       {/* Section 2: Budget Table */}
-      <section id="budget-table" className="scroll-mt-24 pt-8 md:pt-10 border-t border-border">
+      <section id="budget-table" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border">
         <Suspense fallback={<BudgetTableSkeleton />}>
           <BudgetTableWrapper />
         </Suspense>
       </section>
 
       {/* Section 3: Annual Trends */}
-      <section id="annual-trends" className="scroll-mt-24 pt-8 md:pt-10 border-t border-border">
+      <section id="annual-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border">
         <Suspense fallback={<TrendsTableSkeleton />}>
           <AnnualTrendsTableWrapper />
         </Suspense>
       </section>
 
       {/* Section 4: Monthly Trends */}
-      <section id="monthly-trends" className="scroll-mt-24 pt-8 md:pt-10 border-t border-border">
+      <section id="monthly-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border">
         <Suspense fallback={<TrendsTableSkeleton />}>
           <MonthlyTrendsTableWrapper />
         </Suspense>
       </section>
 
       {/* Footer: repeat nav + back to top */}
-      <footer className="pt-8 md:pt-10 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-6">
+      <footer className="pt-3 md:pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
         <DashboardNavigation />
         <DashboardBackToTop />
       </footer>

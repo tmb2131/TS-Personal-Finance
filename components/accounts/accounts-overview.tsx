@@ -258,9 +258,11 @@ export function AccountsOverview() {
     )
   }
 
+  const compactTable = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1'
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-3">
         <KPICard title="Total Net Worth" value={totalNetWorth} />
         <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" />
         <KPICard title="Illiquid Assets" value={illiquidAssets} />
@@ -268,14 +270,14 @@ export function AccountsOverview() {
 
       {/* Category Summary Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Account Category Summary</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Account Category Summary</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
+        <CardContent className="p-4 pt-0">
+          <Table className={compactTable}>
             <TableHeader>
               {/* Grand Totals Row */}
-              <TableRow className="bg-muted/50">
+              <TableRow className="bg-muted">
                 <TableHead className="font-bold text-black">Total</TableHead>
                 <TableHead className="text-right font-bold text-black">
                   {formatCurrency(grandTotals.personal)}
@@ -287,7 +289,7 @@ export function AccountsOverview() {
                   {formatCurrency(grandTotals.total)}
                 </TableHead>
                 <TableHead>
-                  <div className="relative h-4 w-20">
+                  <div className="relative h-3 w-16">
                     <div
                       className="absolute h-full bg-blue-900 right-0"
                       style={{
@@ -296,16 +298,14 @@ export function AccountsOverview() {
                     />
                   </div>
                 </TableHead>
-                <TableHead></TableHead>
               </TableRow>
               {/* Column Headers */}
-              <TableRow>
+              <TableRow className="bg-muted">
                 <TableHead>Account Category</TableHead>
                 <TableHead className="text-right">Personal</TableHead>
                 <TableHead className="text-right">Family</TableHead>
                 <TableHead className="text-right">Balance</TableHead>
-                <TableHead className="w-24"></TableHead>
-                <TableHead>Last Updated</TableHead>
+                <TableHead className="w-16"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -324,7 +324,7 @@ export function AccountsOverview() {
                     {formatCurrency(item.total)}
                   </TableCell>
                   <TableCell>
-                    <div className="relative h-4 w-20">
+                    <div className="relative h-3 w-16">
                       <div
                         className="absolute h-full bg-blue-900 right-0"
                         style={{
@@ -333,7 +333,6 @@ export function AccountsOverview() {
                       />
                     </div>
                   </TableCell>
-                  <TableCell></TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -342,21 +341,21 @@ export function AccountsOverview() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Accounts</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Accounts</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
+        <CardContent className="p-4 pt-0">
+          <div className={`hidden md:block relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}>
             <table className="w-full caption-bottom text-sm">
               <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="sticky top-0 z-20 bg-background">Category</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-background">Institution</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-background">Account Name</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-background">Currency</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">Balance</TableHead>
-                  <TableHead className="sticky top-0 z-20 w-24 bg-background"></TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-background">Last Updated</TableHead>
+                <TableRow className="border-b bg-muted">
+                  <TableHead className="sticky top-0 z-20 bg-muted">Category</TableHead>
+                  <TableHead className="sticky top-0 z-20 bg-muted">Institution</TableHead>
+                  <TableHead className="sticky top-0 z-20 bg-muted">Account Name</TableHead>
+                  <TableHead className="sticky top-0 z-20 bg-muted">Currency</TableHead>
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Balance</TableHead>
+                  <TableHead className="sticky top-0 z-20 w-16 bg-muted"></TableHead>
+                  <TableHead className="sticky top-0 z-20 bg-muted">Last Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -380,7 +379,7 @@ export function AccountsOverview() {
                             {formatCurrency(convertedBalance)}
                           </TableCell>
                           <TableCell>
-                            <div className="relative h-4 w-20">
+                            <div className="relative h-3 w-16">
                               <div
                                 className="absolute h-full bg-blue-900 right-0"
                                 style={{
@@ -401,7 +400,7 @@ export function AccountsOverview() {
                         {formatCurrency(group.subtotal)}
                       </TableCell>
                       <TableCell>
-                        <div className="relative h-4 w-20">
+                        <div className="relative h-3 w-16">
                           <div
                             className="absolute h-full bg-blue-900 right-0"
                             style={{

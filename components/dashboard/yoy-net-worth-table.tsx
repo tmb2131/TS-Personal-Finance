@@ -154,8 +154,8 @@ export function YoYNetWorthTable() {
   if (error) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Year-over-Year Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -170,27 +170,27 @@ export function YoYNetWorthTable() {
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50">
-        <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardTitle className="text-base">Year-over-Year Net Worth Change</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-muted">
               <TableHead
-                className="cursor-pointer hover:bg-muted/50"
+                className={cn('cursor-pointer hover:bg-muted/80 bg-muted', sortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}
                 onClick={() => handleSort('category')}
               >
-                <div className="flex items-center gap-2">
+                <div className={cn('flex items-center gap-2', sortField === 'category' && 'font-semibold')}>
                   Category
                   <ArrowUpDown className="h-4 w-4" />
                 </div>
               </TableHead>
               <TableHead
-                className="cursor-pointer hover:bg-muted/50 text-right"
+                className={cn('cursor-pointer hover:bg-muted/80 bg-muted text-right', sortField === 'amount' && 'bg-gray-200 dark:bg-gray-700')}
                 onClick={() => handleSort('amount')}
               >
-                <div className="flex items-center justify-end gap-2">
+                <div className={cn('flex items-center justify-end gap-2', sortField === 'amount' && 'font-semibold')}>
                   Amount ({currency})
                   <ArrowUpDown className="h-4 w-4" />
                 </div>

@@ -179,6 +179,12 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     return Math.max(...gaps, Math.abs(expenseTotals.gap))
   }, [expenseData, expenseTotals.gap])
 
+  // Split expense rows for two-column compact table (no scroll)
+  const expenseMid = Math.ceil(expenseData.length / 2)
+  const expenseLeftRows = expenseData.slice(0, expenseMid)
+  const expenseRightRows = expenseData.slice(expenseMid)
+  const expenseCompactClass = '[&_th]:h-5 [&_th]:px-1 [&_th]:py-0 [&_th]:text-[11px] [&_td]:h-5 [&_td]:px-1 [&_td]:py-0 [&_td]:text-[11px]'
+
   // Calculate top categories above/below budget
   const topCategories = useMemo(() => {
     const categoriesWithGaps = expenseData.map((row) => {
@@ -371,7 +377,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Summary Table */}
       <BudgetSummaryTable incomeData={incomeData} expenseData={expenseData} />
 
@@ -385,35 +391,35 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
 
       {/* Expenses Table */}
       <Card>
-        <CardHeader className="bg-muted/50">
-          <CardTitle>Expenses</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Expenses</CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-2">
           {/* Executive Summary Cards */}
-          <div className="mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mb-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {/* Expenses Status */}
-              <div className="space-y-3 p-4 rounded-lg border-2 border-gray-700 bg-card">
-                <div className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-orange-600" />
-                  <h3 className="font-semibold text-sm uppercase tracking-wide">Expenses Status</h3>
+              <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card">
+                <div className="flex items-center gap-1.5">
+                  <Receipt className="h-4 w-4 text-orange-600" />
+                  <h3 className="font-semibold text-xs uppercase tracking-wide">Expenses Status</h3>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">vs Budget</p>
                     {expenseTotals.gap >= 0 ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        <p className="text-lg font-bold text-green-600">Under Budget</p>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <p className="text-base font-bold text-green-600">Under Budget</p>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <XCircle className="h-5 w-5 text-red-600" />
-                        <p className="text-lg font-bold text-red-600">Over Budget</p>
+                      <div className="flex items-center gap-1.5">
+                        <XCircle className="h-4 w-4 text-red-600" />
+                        <p className="text-base font-bold text-red-600">Over Budget</p>
                       </div>
                     )}
                   </div>
-                  <div className="space-y-1 pt-2 border-t">
+                  <div className="space-y-0.5 pt-1.5 border-t">
                     <p className="text-sm">
                       <span className={cn('font-semibold', expenseTotals.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
                         {formatCurrencyCompact(Math.abs(expenseTotals.gap))}
@@ -430,7 +436,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         {expenseTotals.gap >= 0 ? 'under' : 'over'} budget
                       </span>
                     </p>
-                    <div className="pt-1 mt-1 border-t">
+                    <div className="pt-0.5 mt-0.5 border-t">
                       <p className="text-xs text-muted-foreground">
                         Expenses Tracking: <span className="font-medium">{formatCurrencyLarge(expenseTotals.tracking)}</span>
                       </p>
@@ -443,32 +449,32 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               </div>
 
               {/* Top Categories Above Budget */}
-              <div className="space-y-3 p-4 rounded-lg border bg-card">
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="h-5 w-5 text-green-600" />
-                  <h3 className="font-semibold text-sm uppercase tracking-wide">Top Categories Above Budget</h3>
+              <div className="space-y-2 p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-1.5">
+                  <TrendingDown className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Spending Less Than Budgeted</p>
+                    <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
                     {topCategories.aboveBudget.length > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        <p className="text-lg font-bold text-green-600">Under Budget</p>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <p className="text-base font-bold text-green-600">Under Budget</p>
                       </div>
                     ) : (
-                      <p className="text-lg font-bold text-muted-foreground">None</p>
+                      <p className="text-base font-bold text-muted-foreground">None</p>
                     )}
                   </div>
-                  <div className="space-y-3 pt-2 border-t">
+                  <div className="space-y-2 pt-1.5 border-t">
                     {topCategories.aboveBudget.length > 0 ? (
                       topCategories.aboveBudget.map((item) => {
                         const maxGap = Math.max(...topCategories.aboveBudget.map((i) => Math.abs(i.gap)), 1)
                         const pct = (Math.abs(item.gap) / maxGap) * 100
                         return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div key={item.category} className="flex items-center gap-1.5">
+                            <span className="text-xs w-20 truncate">{item.category}</span>
+                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
                               <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
                             </div>
                             <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
@@ -483,32 +489,32 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               </div>
 
               {/* Top Categories Below Budget */}
-              <div className="space-y-3 p-4 rounded-lg border bg-card">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-red-600" />
-                  <h3 className="font-semibold text-sm uppercase tracking-wide">Top Categories Below Budget</h3>
+              <div className="space-y-2 p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Spending More Than Budgeted</p>
+                    <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
                     {topCategories.belowBudget.length > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <XCircle className="h-5 w-5 text-red-600" />
-                        <p className="text-lg font-bold text-red-600">Over Budget</p>
+                      <div className="flex items-center gap-1.5">
+                        <XCircle className="h-4 w-4 text-red-600" />
+                        <p className="text-base font-bold text-red-600">Over Budget</p>
                       </div>
                     ) : (
-                      <p className="text-lg font-bold text-muted-foreground">None</p>
+                      <p className="text-base font-bold text-muted-foreground">None</p>
                     )}
                   </div>
-                  <div className="space-y-3 pt-2 border-t">
+                  <div className="space-y-2 pt-1.5 border-t">
                     {topCategories.belowBudget.length > 0 ? (
                       topCategories.belowBudget.map((item) => {
                         const maxGap = Math.max(...topCategories.belowBudget.map((i) => Math.abs(i.gap)), 1)
                         const pct = (Math.abs(item.gap) / maxGap) * 100
                         return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                          <div key={item.category} className="flex items-center gap-1.5">
+                            <span className="text-xs w-20 truncate">{item.category}</span>
+                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
                               <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
                             </div>
                             <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
@@ -523,147 +529,144 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               </div>
             </div>
           </div>
-          {/* Table with sticky header (same structure as Annual Trends table) */}
-          <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
-            <table className="w-full caption-bottom text-sm">
-            <TableHeader>
-                <TableRow className="border-b bg-muted">
-                  <TableHead className="sticky top-0 z-20 bg-muted">
-                    <button
-                      onClick={() => handleExpenseSort('category')}
-                      className="flex items-center hover:opacity-70 transition-opacity"
-                    >
-                      Expenses
-                      <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
-                    <button
-                      onClick={() => handleExpenseSort('annualBudget')}
-                      className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
-                    >
-                      Budget
-                      <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
-                    <button
-                      onClick={() => handleExpenseSort('tracking')}
-                      className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
-                    >
-                      Tracking
-                      <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
-                    <button
-                      onClick={() => handleExpenseSort('ytd')}
-                      className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
-                    >
-                      YTD
-                      <SortIcon field="ytd" currentField={expenseSortField} direction={expenseSortDirection} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">
-                    <button
-                      onClick={() => handleExpenseSort('gap')}
-                      className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
-                    >
-                      Gap
-                      <SortIcon field="gap" currentField={expenseSortField} direction={expenseSortDirection} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="sticky top-0 z-20 w-32 bg-muted"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-              {expenseData.map((row) => {
-                // Recalculate gap to ensure it's correct: Gap = Tracking - Budget
-                // Note: For expenses, if stored as negative, this will give the correct sign
-                const gap = row.tracking - row.annualBudget
-                const gapPercent = (Math.abs(gap) / maxGap) * 100
-                // For expenses: positive gap (tracking > budget) means spending less than budgeted = good (green)
-                // Negative gap (tracking < budget) means spending more than budgeted = bad (red)
-                const isPositive = gap >= 0
-
-                return (
-                  <TableRow key={row.category}>
-                    <TableCell className="font-medium">{row.category}</TableCell>
-                    <TableCell className="text-right">
-                      ({formatCurrencyCompact(Math.abs(row.annualBudget))})
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ({formatCurrencyCompact(Math.abs(row.tracking))})
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {row.ytd === 0 ? '-' : `(${formatCurrencyCompact(Math.abs(row.ytd))})`}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        'text-right font-medium',
-                        isPositive ? 'text-green-600' : 'text-red-600'
-                      )}
-                    >
-                      {gap === 0 ? '-' : formatCurrencyCompact(gap)}
-                    </TableCell>
-                    <TableCell className="w-32">
-                      <div className="relative h-6 w-full">
-                        {gap !== 0 && (
-                          <div
-                            className={cn(
-                              'absolute h-full',
-                              isPositive
-                                ? 'bg-green-500 right-0'
-                                : 'bg-red-500 left-0'
-                            )}
-                            style={{
-                              width: `${gapPercent}%`,
-                            }}
-                          />
-                        )}
-                      </div>
-                    </TableCell>
+          {/* Compact expenses table: two side-by-side columns to avoid scrolling */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="border rounded-md overflow-hidden min-w-0">
+              <Table className={expenseCompactClass}>
+                <TableHeader>
+                  <TableRow className="border-b bg-muted">
+                    <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
+                      <button
+                        onClick={() => handleExpenseSort('category')}
+                        className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
+                      >
+                        Expenses
+                        <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
+                      </button>
+                    </TableHead>
+                    <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-gray-200 dark:bg-gray-700')}>
+                      <button
+                        onClick={() => handleExpenseSort('annualBudget')}
+                        className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
+                      >
+                        Budget
+                        <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
+                      </button>
+                    </TableHead>
+                    <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-gray-200 dark:bg-gray-700')}>
+                      <button
+                        onClick={() => handleExpenseSort('tracking')}
+                        className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
+                      >
+                        Tracking
+                        <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
+                      </button>
+                    </TableHead>
+                    <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
+                      <button
+                        onClick={() => handleExpenseSort('gap')}
+                        className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
+                      >
+                        Gap
+                        <SortIcon field="gap" currentField={expenseSortField} direction={expenseSortDirection} />
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-16 bg-muted"></TableHead>
                   </TableRow>
-                )
-              })}
-              {/* Totals Row */}
-              <TableRow className="bg-muted/50 border-t-2">
-                <TableCell className="font-semibold">Expenses</TableCell>
-                <TableCell className="text-right font-semibold">
-                  ({formatCurrencyCompact(expenseTotals.annualBudget)})
-                </TableCell>
-                <TableCell className="text-right font-semibold">
-                  ({formatCurrencyCompact(expenseTotals.tracking)})
-                </TableCell>
-                <TableCell className="text-right font-semibold">
-                  ({formatCurrencyCompact(expenseTotals.ytd)})
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    'text-right font-semibold',
-                    expenseTotals.gap >= 0 ? 'text-green-600' : 'text-red-600'
-                  )}
-                >
-                  {formatCurrencyCompact(expenseTotals.gap)}
-                </TableCell>
-                <TableCell className="w-32">
-                  <div className="relative h-6 w-full">
-                    {expenseTotals.gap !== 0 && (
-                      <div
-                        className={cn(
-                          'absolute h-full',
-                          expenseTotals.gap >= 0 ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
-                        )}
-                        style={{
-                          width: `${(Math.abs(expenseTotals.gap) / maxGap) * 100}%`,
-                        }}
-                      />
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-              </TableBody>
-            </table>
+                </TableHeader>
+                <TableBody>
+                  {expenseLeftRows.map((row) => {
+                    const gap = row.tracking - row.annualBudget
+                    const gapPercent = (Math.abs(gap) / maxGap) * 100
+                    const isPositive = gap >= 0
+                    return (
+                      <TableRow key={row.category}>
+                        <TableCell className="font-medium">{row.category}</TableCell>
+                        <TableCell className="text-right">
+                          ({formatCurrencyCompact(Math.abs(row.annualBudget))})
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ({formatCurrencyCompact(Math.abs(row.tracking))})
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            'text-right font-medium',
+                            isPositive ? 'text-green-600' : 'text-red-600'
+                          )}
+                        >
+                          {gap === 0 ? '-' : formatCurrencyCompact(gap)}
+                        </TableCell>
+                        <TableCell className="w-16">
+                          <div className="relative h-2 w-10">
+                            {gap !== 0 && (
+                              <div
+                                className={cn(
+                                  'absolute h-full',
+                                  isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                )}
+                                style={{ width: `${gapPercent}%` }}
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="border rounded-md overflow-hidden min-w-0">
+              <Table className={expenseCompactClass}>
+                <TableHeader>
+                  <TableRow className="border-b bg-muted">
+                    <TableHead className="bg-muted">Expenses</TableHead>
+                    <TableHead className="text-right bg-muted">Budget</TableHead>
+                    <TableHead className="text-right bg-muted">Tracking</TableHead>
+                    <TableHead className="text-right bg-muted">Gap</TableHead>
+                    <TableHead className="w-16 bg-muted"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {expenseRightRows.map((row) => {
+                    const gap = row.tracking - row.annualBudget
+                    const gapPercent = (Math.abs(gap) / maxGap) * 100
+                    const isPositive = gap >= 0
+                    return (
+                      <TableRow key={row.category}>
+                        <TableCell className="font-medium">{row.category}</TableCell>
+                        <TableCell className="text-right">
+                          ({formatCurrencyCompact(Math.abs(row.annualBudget))})
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ({formatCurrencyCompact(Math.abs(row.tracking))})
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            'text-right font-medium',
+                            isPositive ? 'text-green-600' : 'text-red-600'
+                          )}
+                        >
+                          {gap === 0 ? '-' : formatCurrencyCompact(gap)}
+                        </TableCell>
+                        <TableCell className="w-16">
+                          <div className="relative h-2 w-10">
+                            {gap !== 0 && (
+                              <div
+                                className={cn(
+                                  'absolute h-full',
+                                  isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                )}
+                                style={{ width: `${gapPercent}%` }}
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

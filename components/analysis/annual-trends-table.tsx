@@ -317,7 +317,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
 
     return (
       <div 
-        className="w-20 h-8 flex items-center justify-center"
+        className="w-14 h-5 flex items-center justify-center"
         title={tooltipText}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -359,7 +359,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
               : formatCurrencyWithParens(-value)}
         </span>
         {value !== 0 && (
-          <div className="relative h-4 w-16">
+          <div className="relative h-2.5 w-10">
             <div
               className={cn(
                 'absolute h-full',
@@ -456,34 +456,34 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50">
-        <CardTitle>Annual Trends</CardTitle>
+      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardTitle className="text-base">Annual Trends</CardTitle>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-2">
         {/* Top Movers Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
           {/* Total Variance */}
-          <div className="space-y-3 p-4 rounded-lg border-2 border-gray-700 bg-card">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-orange-600" />
-              <h3 className="font-semibold text-sm uppercase tracking-wide">Total Variance</h3>
+          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-orange-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">Total Variance</h3>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">vs {currentYear - 1}</p>
+                <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
                 {topMovers.totalVariance < 0 ? (
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-red-600" />
-                    <p className="text-lg font-bold text-red-600">Spending More</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-red-600" />
+                    <p className="text-base font-bold text-red-600">Spending More</p>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5 text-green-600" />
-                    <p className="text-lg font-bold text-green-600">Spending Less</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingDown className="h-4 w-4 text-green-600" />
+                    <p className="text-base font-bold text-green-600">Spending Less</p>
                   </div>
                 )}
               </div>
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-0.5 pt-1.5 border-t">
                 <p className="text-sm">
                   <span className={cn('font-semibold', topMovers.totalVariance < 0 ? 'text-red-600' : 'text-green-600')}>
                     {formatCurrency(Math.abs(topMovers.totalVariance))}
@@ -500,7 +500,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                     {topMovers.totalVariance < 0 ? 'more' : 'less'} than last year
                   </span>
                 </p>
-                <div className="pt-1 mt-1 border-t">
+                <div className="pt-0.5 mt-0.5 border-t">
                   <p className="text-xs text-muted-foreground">
                     {currentYear} Est: <span className="font-medium">{formatCurrencyLarge(Math.abs(totals.cur_yr_est))}</span>
                   </p>
@@ -513,35 +513,35 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
           </div>
 
           {/* YoY Increases in Spend */}
-          <div className="space-y-3 p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-red-600" />
-              <h3 className="font-semibold text-sm uppercase tracking-wide">YoY Increases in Spend</h3>
+          <div className="space-y-2 p-3 rounded-lg border bg-card">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-red-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Increases in Spend</h3>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">vs {currentYear - 1}</p>
+                <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
                 {topMovers.topIncreases.length > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-red-600" />
-                    <p className="text-lg font-bold text-red-600">Top Categories Spending More</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-red-600" />
+                    <p className="text-base font-bold text-red-600">Top Categories Spending More</p>
                   </div>
                 ) : (
-                  <p className="text-lg font-bold text-muted-foreground">No Increases</p>
+                  <p className="text-base font-bold text-muted-foreground">No Increases</p>
                 )}
               </div>
-              <div className="space-y-3 pt-2 border-t">
+              <div className="space-y-2 pt-1.5 border-t">
                 {topMovers.topIncreases.length > 0 ? (
                   topMovers.topIncreases.map((item) => {
                     const maxVal = Math.max(...topMovers.topIncreases.map((i) => Math.abs(i.change)), 1)
                     const pct = (Math.abs(item.change) / maxVal) * 100
                     return (
-                      <div key={item.category} className="flex items-center gap-2">
-                        <span className="text-sm w-24 truncate">{item.category}</span>
-                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                      <div key={item.category} className="flex items-center gap-1.5">
+                        <span className="text-xs w-20 truncate">{item.category}</span>
+                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
                           <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                        <span className="text-xs font-medium text-red-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
                     )
                   })
@@ -553,35 +553,35 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
           </div>
 
           {/* YoY Decreases in Spend */}
-          <div className="space-y-3 p-4 rounded-lg border bg-card">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-green-600" />
-              <h3 className="font-semibold text-sm uppercase tracking-wide">YoY Decreases in Spend</h3>
+          <div className="space-y-2 p-3 rounded-lg border bg-card">
+            <div className="flex items-center gap-1.5">
+              <TrendingDown className="h-4 w-4 text-green-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Decreases in Spend</h3>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">vs {currentYear - 1}</p>
+                <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
                 {topMovers.topDecreases.length > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5 text-green-600" />
-                    <p className="text-lg font-bold text-green-600">Top Categories Spending Less</p>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingDown className="h-4 w-4 text-green-600" />
+                    <p className="text-base font-bold text-green-600">Top Categories Spending Less</p>
                   </div>
                 ) : (
-                  <p className="text-lg font-bold text-muted-foreground">No Decreases</p>
+                  <p className="text-base font-bold text-muted-foreground">No Decreases</p>
                 )}
               </div>
-              <div className="space-y-3 pt-2 border-t">
+              <div className="space-y-2 pt-1.5 border-t">
                 {topMovers.topDecreases.length > 0 ? (
                   topMovers.topDecreases.map((item) => {
                     const maxVal = Math.max(...topMovers.topDecreases.map((i) => Math.abs(i.change)), 1)
                     const pct = (Math.abs(item.change) / maxVal) * 100
                     return (
-                      <div key={item.category} className="flex items-center gap-2">
-                        <span className="text-sm w-24 truncate">{item.category}</span>
-                        <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                      <div key={item.category} className="flex items-center gap-1.5">
+                        <span className="text-xs w-20 truncate">{item.category}</span>
+                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
                           <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                        <span className="text-xs font-medium text-green-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                       </div>
                     )
                   })
@@ -595,80 +595,80 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
         </div>
 
         {/* Table with sticky header and total row */}
-        <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
+        <div className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-5 [&_th]:px-1 [&_th]:py-0 [&_th]:text-[11px] [&_td]:h-5 [&_td]:px-1 [&_td]:py-0 [&_td]:text-[11px]">
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
               <TableRow className="border-b bg-muted">
-              <TableHead className="sticky top-0 z-20 bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted', sortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('category')}
-                  className="flex items-center hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold')}
                 >
                   Expense Categories
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_4' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_4')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_4' && 'font-semibold')}
                 >
                   {currentYear - 4}
                   <SortIcon field="cur_yr_minus_4" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_3' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_3')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_3' && 'font-semibold')}
                 >
                   {currentYear - 3}
                   <SortIcon field="cur_yr_minus_3" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_2' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_2')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_2' && 'font-semibold')}
                 >
                   {currentYear - 2}
                   <SortIcon field="cur_yr_minus_2" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_1' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_1')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_1' && 'font-semibold')}
                 >
                   {currentYear - 1}
                   <SortIcon field="cur_yr_minus_1" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right border-l-2 border-r-2 border-gray-700 bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-gray-700 bg-muted', sortField === 'cur_yr_est' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_yr_est')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est' && 'font-semibold')}
                 >
                   {currentYear} Est.
                   <SortIcon field="cur_yr_est" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right w-24 bg-muted">
+              <TableHead className="sticky top-0 z-20 w-14 bg-muted">
                 Trend
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'cur_yr_est_vs_last_yr' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_yr_est_vs_last_yr')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est_vs_last_yr' && 'font-semibold')}
                 >
                   Delta vs Last Yr
                   <SortIcon field="cur_yr_est_vs_last_yr" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 text-right bg-muted">
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'cur_yr_est_vs_4yr_avg' && 'bg-gray-200 dark:bg-gray-700')}>
                 <button
                   onClick={() => handleSort('cur_yr_est_vs_4yr_avg')}
-                  className="flex items-center justify-end ml-auto hover:opacity-70 transition-opacity"
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est_vs_4yr_avg' && 'font-semibold')}
                 >
                   Delta vs 4Yr Avg
                   <SortIcon field="cur_yr_est_vs_4yr_avg" />
@@ -677,23 +677,23 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
             </TableRow>
             {/* Total Row */}
             <TableRow className="bg-muted/50 border-b-2 border-gray-700">
-              <TableCell className="font-semibold bg-muted/50">Total</TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_4)}>
+              <TableCell className="font-semibold w-28 min-w-[7rem] bg-muted/50">Total</TableCell>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_4)}>
                 {formatCurrencyWithParens(-totals.cur_yr_minus_4)}
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_3)}>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_3)}>
                 {formatCurrencyWithParens(-totals.cur_yr_minus_3)}
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_2)}>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_2)}>
                 {formatCurrencyWithParens(-totals.cur_yr_minus_2)}
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_1)}>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_1)}>
                 {formatCurrencyWithParens(-totals.cur_yr_minus_1)}
               </TableCell>
-              <TableCell className="text-right font-semibold border-l-2 border-r-2 border-gray-700 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_est)}>
+              <TableCell className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_est)}>
                 {formatCurrencyWithParens(-totals.cur_yr_est)}
               </TableCell>
-              <TableCell className="text-right bg-muted/50">
+              <TableCell className="text-right w-14 bg-muted/50">
                 {/* Sparkline for total with tooltip */}
                 <Sparkline row={{
                   category: 'Total',
@@ -705,10 +705,10 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   cur_yr_est_vs_4yr_avg: totals.cur_yr_est_vs_4yr_avg,
                 } as typeof processedData[0]} />
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50">
+              <TableCell className="text-right font-semibold w-20 bg-muted/50">
                 <DeltaCell value={totals.cur_yr_est_vs_last_yr} maxValue={maxValues.deltaVsLastYear} />
               </TableCell>
-              <TableCell className="text-right font-semibold bg-muted/50">
+              <TableCell className="text-right font-semibold w-20 bg-muted/50">
                 <DeltaCell value={totals.cur_yr_est_vs_4yr_avg} maxValue={maxValues.delta} />
               </TableCell>
             </TableRow>
@@ -717,32 +717,32 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
             {processedData.map((row) => {
               return (
                 <TableRow key={row.category}>
-                  <TableCell className="font-medium">{row.category}</TableCell>
+                  <TableCell className="font-medium w-28 min-w-[7rem]">{row.category}</TableCell>
                   
                   {/* Annual columns with color-coded backgrounds */}
-                  <TableCell className="text-right" style={getAnnualBgStyle(row.cur_yr_minus_4)}>
+                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_4)}>
                     {row.cur_yr_minus_4 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_4)}
                   </TableCell>
-                  <TableCell className="text-right" style={getAnnualBgStyle(row.cur_yr_minus_3)}>
+                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_3)}>
                     {row.cur_yr_minus_3 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_3)}
                   </TableCell>
-                  <TableCell className="text-right" style={getAnnualBgStyle(row.cur_yr_minus_2)}>
+                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_2)}>
                     {row.cur_yr_minus_2 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_2)}
                   </TableCell>
-                  <TableCell className="text-right" style={getAnnualBgStyle(row.cur_yr_minus_1)}>
+                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_1)}>
                     {row.cur_yr_minus_1 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_1)}
                   </TableCell>
-                  <TableCell className="text-right border-l-2 border-r-2 border-gray-700" style={getAnnualBgStyle(row.cur_yr_est)}>
+                  <TableCell className="text-right w-16 border-l-2 border-r-2 border-gray-700" style={getAnnualBgStyle(row.cur_yr_est)}>
                     {row.cur_yr_est === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_est)}
                   </TableCell>
                   
                   {/* Sparkline Trend */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-14">
                     <Sparkline row={row} />
                   </TableCell>
                   
                   {/* Delta vs Last Year */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-20">
                     <DeltaCell 
                       value={row.cur_yr_est - row.cur_yr_minus_1} 
                       maxValue={maxValues.deltaVsLastYear} 
@@ -750,7 +750,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   </TableCell>
                   
                   {/* Delta vs 4Yr Avg */}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right w-20">
                     <DeltaCell 
                       value={row.cur_yr_est_vs_4yr_avg} 
                       maxValue={maxValues.delta} 

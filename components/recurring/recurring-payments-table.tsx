@@ -183,8 +183,8 @@ export function RecurringPaymentsTable() {
   if (loading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Recurring Payments (Google Sheet)</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -200,8 +200,8 @@ export function RecurringPaymentsTable() {
   if (error) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Recurring Payments (Google Sheet)</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState icon={AlertCircle} title="Error loading data" description={error} />
@@ -212,8 +212,8 @@ export function RecurringPaymentsTable() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Recurring Payments (Google Sheet)</CardTitle>
+      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
         <p className="text-sm text-muted-foreground">
           Manually tracked recurring payments from Google Sheet
         </p>
@@ -223,10 +223,10 @@ export function RecurringPaymentsTable() {
           <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
             <table className="w-full caption-bottom text-sm">
               <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="sticky top-0 z-20 bg-background">Name</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">Annualized Amount</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-background text-center">Actions</TableHead>
+                <TableRow className="border-b bg-muted">
+                  <TableHead className="sticky top-0 z-20 bg-muted">Name</TableHead>
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Annualized Amount</TableHead>
+                  <TableHead className="sticky top-0 z-20 bg-muted text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

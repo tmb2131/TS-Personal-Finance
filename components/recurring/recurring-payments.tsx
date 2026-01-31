@@ -249,8 +249,8 @@ export function RecurringPayments() {
     return (
       <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Monthly Subscriptions</CardTitle>
+          <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+            <CardTitle className="text-base">Monthly Subscriptions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -261,8 +261,8 @@ export function RecurringPayments() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Annual Commitments</CardTitle>
+          <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+            <CardTitle className="text-base">Annual Commitments</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -279,8 +279,8 @@ export function RecurringPayments() {
   if (error) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Recurring Payments</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Recurring Payments</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState icon={AlertCircle} title="Error loading data" description={error} />
@@ -293,8 +293,8 @@ export function RecurringPayments() {
     <div className="space-y-6">
       {/* Monthly Subscriptions */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             Monthly Subscriptions
           </CardTitle>
@@ -321,8 +321,8 @@ export function RecurringPayments() {
 
       {/* Annual Commitments */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
             <Calendar className="h-5 w-5" />
             Annual Commitments
           </CardTitle>

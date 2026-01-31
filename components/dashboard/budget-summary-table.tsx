@@ -136,7 +136,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     const isPositive = gap > 0
 
     return (
-      <div className="relative h-6 w-full">
+      <div className="relative h-2 w-16">
         <div
           className={cn(
             'absolute h-full',
@@ -150,6 +150,8 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     )
   }
 
+  const compactTableClass = '[&_th]:h-5 [&_th]:px-1 [&_th]:py-0 [&_th]:text-[11px] [&_td]:h-5 [&_td]:px-1 [&_td]:py-0 [&_td]:text-[11px]'
+
   const isAllGood = totals.netIncome.gap >= 0 && totals.savings.tracking >= 0
   
   // Calculate gap percentage for net income
@@ -159,80 +161,79 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50">
+      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle>Budget Tracker</CardTitle>
+          <CardTitle className="text-base">Budget Tracker</CardTitle>
           {isAllGood && (
             <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="text-sm font-medium">All Good</span>
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="text-xs font-medium">All Good</span>
             </div>
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
-        {/* Executive Summary Card */}
-        <div className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-3 p-4 rounded-lg border-2 border-gray-700 bg-card">
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-purple-600" />
-                <h3 className="font-semibold text-sm uppercase tracking-wide">Budget Status</h3>
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Net Income vs Budget</p>
-                  {totals.netIncome.gap >= 0 ? (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <p className="text-lg font-bold text-green-600">Under Budget</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <p className="text-lg font-bold text-red-600">Over Budget</p>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1 pt-2 border-t">
-                  <p className="text-sm">
-                    <span className="font-semibold">{formatCurrency(Math.abs(totals.netIncome.gap))}</span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      {totals.netIncome.gap >= 0 ? 'under' : 'over'} target
-                    </span>
-                  </p>
-                  <p className="text-xs">
-                    <span className={`font-medium ${totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatPercentAbs(netIncomeGapPercent)}
-                    </span>
-                    <span className="text-muted-foreground ml-1">
-                      {totals.netIncome.gap >= 0 ? 'under' : 'over'} budget
-                    </span>
-                  </p>
-                  <div className="pt-1 mt-1 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      Net Income Tracking: <span className="font-medium">{totals.netIncome.tracking < 0 ? '(' : ''}{formatCurrencyLarge(Math.abs(totals.netIncome.tracking))}{totals.netIncome.tracking < 0 ? ')' : ''}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Net Income Budget: <span className="font-medium">{totals.netIncome.annualBudget < 0 ? '(' : ''}{formatCurrencyLarge(Math.abs(totals.netIncome.annualBudget))}{totals.netIncome.annualBudget < 0 ? ')' : ''}</span>
-                    </p>
+      <CardContent className="pt-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          {/* Summary card - left */}
+          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0">
+            <div className="flex items-center gap-1.5">
+              <Target className="h-4 w-4 text-purple-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">Budget Status</h3>
+            </div>
+            <div className="space-y-1">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Net Income vs Budget</p>
+                {totals.netIncome.gap >= 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <p className="text-base font-bold text-green-600">Under Budget</p>
                   </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <XCircle className="h-4 w-4 text-red-600" />
+                    <p className="text-base font-bold text-red-600">Over Budget</p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-0.5 pt-1.5 border-t">
+                <p className="text-xs">
+                  <span className="font-semibold">{formatCurrency(Math.abs(totals.netIncome.gap))}</span>
+                  <span className="text-muted-foreground ml-1">
+                    {totals.netIncome.gap >= 0 ? 'under' : 'over'} target
+                  </span>
+                </p>
+                <p className="text-xs">
+                  <span className={`font-medium ${totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatPercentAbs(netIncomeGapPercent)}
+                  </span>
+                  <span className="text-muted-foreground ml-1">
+                    {totals.netIncome.gap >= 0 ? 'under' : 'over'} budget
+                  </span>
+                </p>
+                <div className="pt-0.5 mt-0.5 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Net Income Tracking: <span className="font-medium">{totals.netIncome.tracking < 0 ? '(' : ''}{formatCurrencyLarge(Math.abs(totals.netIncome.tracking))}{totals.netIncome.tracking < 0 ? ')' : ''}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Net Income Budget: <span className="font-medium">{totals.netIncome.annualBudget < 0 ? '(' : ''}{formatCurrencyLarge(Math.abs(totals.netIncome.annualBudget))}{totals.netIncome.annualBudget < 0 ? ')' : ''}</span>
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted">
-              <TableHead className="bg-muted"></TableHead>
-              <TableHead className="text-right bg-muted">Budget</TableHead>
-              <TableHead className="text-right bg-muted">Tracking</TableHead>
-              <TableHead className="text-right bg-muted">YTD</TableHead>
-              <TableHead className="text-right bg-muted">Gap</TableHead>
-              <TableHead className="w-32 bg-muted"></TableHead>
-            </TableRow>
-          </TableHeader>
+          {/* Table - right */}
+          <div className="border rounded-md overflow-hidden min-w-0">
+            <Table className={compactTableClass}>
+              <TableHeader>
+                <TableRow className="bg-muted">
+                  <TableHead className="bg-muted"></TableHead>
+                  <TableHead className="text-right bg-muted">Budget</TableHead>
+                  <TableHead className="text-right bg-muted">Tracking</TableHead>
+                  <TableHead className="text-right bg-muted">YTD</TableHead>
+                  <TableHead className="text-right bg-muted">Gap</TableHead>
+                  <TableHead className="w-16 bg-muted"></TableHead>
+                </TableRow>
+              </TableHeader>
           <TableBody>
             {/* Total Income */}
             <TableRow>
@@ -248,7 +249,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               >
                 {formatCurrency(totals.income.gap)}
               </TableCell>
-              <TableCell className="w-32">
+              <TableCell className="w-16">
                 {getGapBar(totals.income.gap, maxGap)}
               </TableCell>
             </TableRow>
@@ -273,7 +274,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               >
                 {formatCurrency(totals.expenses.gap)}
               </TableCell>
-              <TableCell className="w-32">
+              <TableCell className="w-16">
                 {getGapBar(totals.expenses.gap, maxGap)}
               </TableCell>
             </TableRow>
@@ -302,7 +303,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               >
                 {formatCurrency(totals.netIncome.gap)}
               </TableCell>
-              <TableCell className="w-32">
+              <TableCell className="w-16">
                 {getGapBar(totals.netIncome.gap, maxGap)}
               </TableCell>
             </TableRow>
@@ -335,10 +336,12 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
                 {formatPercentage(totals.savings.ytd)}
               </TableCell>
               <TableCell></TableCell>
-              <TableCell></TableCell>
+              <TableCell className="w-16"></TableCell>
             </TableRow>
           </TableBody>
-        </Table>
+            </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )

@@ -178,30 +178,14 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
         <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <BarChart
             data={chartData}
-            margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
-            barCategoryGap="25%"
-            barGap={8}
+            margin={{ top: 36, right: 30, left: 20, bottom: 24 }}
+            barCategoryGap="10%"
+            barGap={4}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="name"
-              tick={({ x, y, payload, index, width }) => {
-                const numCategories = 2
-                const bandWidth = (width ?? 0) / numCategories
-                const centerX = bandWidth > 0 ? (index + 0.5) * bandWidth : x
-                return (
-                  <g transform={`translate(${centerX}, ${y})`}>
-                    <text
-                      textAnchor="middle"
-                      fill="#6b7280"
-                      fontSize={isMobile ? 10 : 12}
-                      dy="0.71em"
-                    >
-                      {payload.value}
-                    </text>
-                  </g>
-                )
-              }}
+              tick={{ fontSize: isMobile ? 10 : 12 }}
               stroke="#6b7280"
             />
             <YAxis
@@ -251,11 +235,13 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
                 stackId="income"
                 fill={INCOME_INVESTMENT_FILL}
                 radius={[4, 4, 0, 0]}
+                stroke="#fff"
+                strokeWidth={1}
               />
             )}
-            <Bar dataKey="Income" stackId="income" fill={INCOME_FILL} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Gift Money" stackId="income" fill={GIFT_MONEY_FILL} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Expenses" fill={EXPENSES_FILL} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Income" stackId="income" fill={INCOME_FILL} radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} />
+            <Bar dataKey="Gift Money" stackId="income" fill={GIFT_MONEY_FILL} radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} />
+            <Bar dataKey="Expenses" stackId="income" fill={EXPENSES_FILL} radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

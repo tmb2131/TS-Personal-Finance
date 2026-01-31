@@ -292,8 +292,8 @@ export function TransactionAnalysis() {
   if (error) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50">
-          <CardTitle>Transaction Analysis</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Transaction Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -308,8 +308,8 @@ export function TransactionAnalysis() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Transaction Analysis</CardTitle>
+      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardTitle className="text-base">Transaction Analysis</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Filters */}
@@ -389,12 +389,12 @@ export function TransactionAnalysis() {
           <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
             <table className="w-full caption-bottom text-sm">
               <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="sticky top-0 z-20 bg-background">Counterparty</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">Amount</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">Transactions</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">Cumulative</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-background">% of Total</TableHead>
+                <TableRow className="border-b bg-muted">
+                  <TableHead className="sticky top-0 z-20 bg-muted">Counterparty</TableHead>
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Amount</TableHead>
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Transactions</TableHead>
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Cumulative</TableHead>
+                  <TableHead className="sticky top-0 z-20 text-right bg-muted">% of Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -173,8 +173,8 @@ export function KidsAccountsOverview() {
   if (error) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Kids Accounts</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Kids Accounts</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -190,8 +190,8 @@ export function KidsAccountsOverview() {
   if (accounts.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Kids Accounts</CardTitle>
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+          <CardTitle className="text-base">Kids Accounts</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -268,14 +268,14 @@ export function KidsAccountsOverview() {
 
             {/* Account Type Summary Table */}
             <Card>
-              <CardHeader>
-                <CardTitle>Account Type Summary</CardTitle>
+              <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+                <CardTitle className="text-base">Account Type Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     {/* Grand Totals Row */}
-                    <TableRow className="bg-muted/50">
+                    <TableRow className="bg-muted">
                       <TableHead className="font-bold text-black">Total</TableHead>
                       <TableHead className="text-right font-bold text-black">
                         {formatCurrency(grandTotal)}
@@ -293,7 +293,7 @@ export function KidsAccountsOverview() {
                       <TableHead></TableHead>
                     </TableRow>
                     {/* Column Headers */}
-                    <TableRow>
+                    <TableRow className="bg-muted">
                       <TableHead>Account Type</TableHead>
                       <TableHead className="text-right">Balance ({currency})</TableHead>
                       <TableHead className="w-24"></TableHead>
@@ -335,20 +335,20 @@ export function KidsAccountsOverview() {
 
             {/* Detailed Accounts Table */}
             <Card>
-              <CardHeader>
-                <CardTitle>Account Details</CardTitle>
+              <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+                <CardTitle className="text-base">Account Details</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
                   <table className="w-full caption-bottom text-sm">
                     <TableHeader>
-                      <TableRow className="border-b">
-                        <TableHead className="sticky top-0 z-20 bg-background">Account Type</TableHead>
-                        <TableHead className="sticky top-0 z-20 text-right bg-background">Balance ({currency})</TableHead>
-                        <TableHead className="sticky top-0 z-20 w-24 bg-background"></TableHead>
-                        <TableHead className="sticky top-0 z-20 bg-background">As of Date</TableHead>
-                        <TableHead className="sticky top-0 z-20 bg-background">Purpose</TableHead>
-                        <TableHead className="sticky top-0 z-20 bg-background">Notes</TableHead>
+                      <TableRow className="border-b bg-muted">
+                        <TableHead className="sticky top-0 z-20 bg-muted">Account Type</TableHead>
+                        <TableHead className="sticky top-0 z-20 text-right bg-muted">Balance ({currency})</TableHead>
+                        <TableHead className="sticky top-0 z-20 w-24 bg-muted"></TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-muted">As of Date</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-muted">Purpose</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-muted">Notes</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

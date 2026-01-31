@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
-import { TransactionLog, BudgetTarget } from '@/lib/types'
+import { TransactionLog, BudgetTarget, AnnualTrend } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
 import {
   LineChart,
@@ -26,23 +26,23 @@ export function AnnualCumulativeSpendChart() {
   const { currency, fxRate } = useCurrency()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
+  const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch transactions for past 5 years and budget data
+  // Fetch transactions, budget data, and annual_trends (authoritative year totals)
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
       const supabase = createClient()
       
       const currentYear = new Date().getFullYear()
-      // Fetch all transactions (database has data from 2020-2026)
-      // We'll filter to show past 4 years + current year (2022-2026) in the chart
       
-      // Fetch budget data
-      const budgetsResult = await supabase
-        .from('budget_targets')
-        .select('*')
+      // Fetch budget data and annual_trends in parallel with transactions
+      const [budgetsResult, annualTrendsResult] = await Promise.all([
+        supabase.from('budget_targets').select('*'),
+        supabase.from('annual_trends').select('*').order('category'),
+      ])
       
       // Fetch all transactions with pagination
       let allTransactions: TransactionLog[] = []
@@ -87,6 +87,10 @@ export function AnnualCumulativeSpendChart() {
         setError('Failed to load budget data. Please try refreshing the page.')
         setLoading(false)
         return
+      }
+
+      if (!annualTrendsResult.error && annualTrendsResult.data) {
+        setAnnualTrends(annualTrendsResult.data as AnnualTrend[])
       }
 
       setError(null)
@@ -185,18 +189,24 @@ export function AnnualCumulativeSpendChart() {
     })
 
     // Process transactions and calculate cumulative spend by day of year
+    // Deduplicate by (date, category, amount in GBP) so each logical transaction is counted once.
+    // Source data can have the same expense as two rows (one amount_gbp, one amount_usd) with different DB keys; both round to the same GBP amount.
     const transactionMap = new Map<string, TransactionLog>()
-    
-    // Deduplicate transactions
     transactions.forEach((tx) => {
       if (!tx.date) return
       if (EXCLUDED_CATEGORIES.includes(tx.category || '')) return
-      
+      const amountGbp =
+        tx.amount_gbp != null && tx.amount_gbp < 0
+          ? Math.abs(tx.amount_gbp)
+          : tx.amount_usd != null && tx.amount_usd < 0
+            ? Math.abs(tx.amount_usd) / fxRate
+            : 0
+      if (amountGbp <= 0) return
       const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
-      const uniqueKey = `${dateStr}|${tx.category}|${tx.amount_gbp ?? ''}|${tx.amount_usd ?? ''}`
-      
-      if (!transactionMap.has(uniqueKey)) {
-        transactionMap.set(uniqueKey, tx)
+      const amountKey = Math.round(amountGbp * 100) // pence for stability
+      const logicalKey = `${dateStr}|${tx.category ?? ''}|${amountKey}`
+      if (!transactionMap.has(logicalKey)) {
+        transactionMap.set(logicalKey, tx)
       }
     })
 
@@ -277,6 +287,33 @@ export function AnnualCumulativeSpendChart() {
         console.log(`Year ${year}: ${transactionCount} days with transactions, total spend: ${totalSpend}`)
       }
     })
+
+    // Scale historical years to match annual_trends (authoritative source) so year-end totals are correct
+    if (annualTrends.length > 0) {
+      const yearToColumn: Record<number, keyof AnnualTrend> = {
+        [currentYear - 4]: 'cur_yr_minus_4',
+        [currentYear - 3]: 'cur_yr_minus_3',
+        [currentYear - 2]: 'cur_yr_minus_2',
+        [currentYear - 1]: 'cur_yr_minus_1',
+      }
+      years.forEach((year) => {
+        if (year === currentYear) return
+        const col = yearToColumn[year]
+        if (!col) return
+        const authoritativeTotal = annualTrends
+          .filter((row) => !EXCLUDED_CATEGORIES.includes(row.category))
+          .reduce((sum, row) => sum + Math.abs((row[col] as number) ?? 0), 0)
+        const inDisplayCurrency = currency === 'USD' ? authoritativeTotal * fxRate : authoritativeTotal
+        const yearMap = yearData.get(year)!
+        const transactionTotal = Array.from(yearMap.values()).reduce((s, v) => s + v, 0)
+        if (transactionTotal > 0 && inDisplayCurrency >= 0) {
+          const scale = inDisplayCurrency / transactionTotal
+          yearMap.forEach((value, day) => {
+            yearMap.set(day, value * scale)
+          })
+        }
+      })
+    }
 
     // Create data points for each day of year (0-365)
     const isLeapYear = (year: number) => {
@@ -408,7 +445,7 @@ export function AnnualCumulativeSpendChart() {
     })
 
     return chartDataPoints
-  }, [transactions, budgetData, currency, fxRate])
+  }, [transactions, budgetData, annualTrends, currency, fxRate])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
