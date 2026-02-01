@@ -25,7 +25,7 @@ export type ForecastBridgeResponse = {
 /**
  * GET /api/forecast-bridge?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
  * Fetches budget_history for start and end dates (expense categories only).
- * Computes gap = annual_budget - forecast_spend per category; returns top 5 drivers + Other.
+ * Computes gap = annual_budget - forecast_spend per category; returns top 6 drivers by absolute change + Other.
  * endDate defaults to today.
  */
 export async function GET(request: Request) {
@@ -112,18 +112,26 @@ export async function GET(request: Request) {
     })
   }
 
-  // Ascending: most negative first (key drivers = biggest move toward under budget), then offsets (positive deltas)
-  deltas.sort((a, b) => a.delta - b.delta)
+  // 1. Select top 6 by absolute value (biggest movers by magnitude)
+  deltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+  const top6ByAbs = deltas.slice(0, 6)
+  const rest = deltas.slice(6)
 
-  const top5 = deltas.slice(0, 5)
-  const rest = deltas.slice(5)
+  // 2. Sort those 6 by nominal value for display: ascending if net improved, descending if net worsened
+  const netChange = totalEnd - totalStart
+  if (netChange < 0) {
+    top6ByAbs.sort((a, b) => a.delta - b.delta) // ascending: most negative first
+  } else {
+    top6ByAbs.sort((a, b) => b.delta - a.delta) // descending: most positive first
+  }
+
   const other: ForecastBridgeDriver = {
     category: 'Other',
     startForecast: rest.reduce((s, d) => s + d.startForecast, 0),
     endForecast: rest.reduce((s, d) => s + d.endForecast, 0),
     delta: rest.reduce((s, d) => s + d.delta, 0),
   }
-  const drivers = other.delta === 0 && rest.length === 0 ? top5 : [...top5, other]
+  const drivers = other.delta === 0 && rest.length === 0 ? top6ByAbs : [...top6ByAbs, other]
 
   const body: ForecastBridgeResponse = {
     startDate,

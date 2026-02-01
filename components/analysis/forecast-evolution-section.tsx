@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { ForecastBridgeChart } from './forecast-bridge-chart'
+import { ForecastGapOverTimeChart } from './forecast-gap-over-time-chart'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/utils/cn'
 
@@ -51,7 +52,10 @@ export function ForecastEvolutionSection() {
           ))}
         </select>
       </div>
-      <ForecastBridgeChart startDate={startDate} endDate={endDate} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ForecastGapOverTimeChart startDate={startDate} endDate={endDate} />
+        <ForecastBridgeChart startDate={startDate} endDate={endDate} />
+      </div>
     </div>
   )
 }

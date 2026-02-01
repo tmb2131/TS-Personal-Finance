@@ -87,15 +87,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     if (!data) return []
 
     const bars: WaterfallBar[] = []
-    bars.push({
-      name: 'Start',
-      min: 0,
-      delta: data.totalStart,
-      value: data.totalStart,
-      type: 'start',
-    })
-
-    let running = data.totalStart
+    let running = 0
     for (const d of data.drivers) {
       const start = running
       const end = running + d.delta
@@ -109,17 +101,6 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
         type: d.delta < 0 ? 'negative' : 'positive',
       })
     }
-
-    const endImproved = data.totalEnd < data.totalStart
-    const endWorsened = data.totalEnd > data.totalStart
-    bars.push({
-      name: 'End',
-      min: 0,
-      delta: data.totalEnd,
-      value: data.totalEnd,
-      type: endImproved ? 'end_improved' : endWorsened ? 'end_worsened' : 'end',
-    })
-
     return bars
   }, [data])
 
@@ -160,14 +141,22 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
   }
 
   const yDomain = useMemo(() => {
-    if (waterfallData.length === 0) return [0, 0]
-    let hi = 0
-    waterfallData.forEach((d) => {
-      hi = Math.max(hi, d.min + d.delta)
-    })
-    const padding = hi * 0.08 || 1
-    return [0, hi + padding]
-  }, [waterfallData])
+    if (waterfallData.length === 0 || !data) return [0, 0]
+    const netChange = data.totalEnd - data.totalStart
+    const allY = waterfallData.flatMap((d) => [d.min, d.min + d.delta])
+    const dataLo = Math.min(0, ...allY)
+    const dataHi = Math.max(0, ...allY)
+    const range = Math.abs(dataHi - dataLo) || 1
+    const padding = range * 0.08
+    const step =
+      range <= 100 ? 20 : range <= 500 ? 100 : range <= 2500 ? 500 : range <= 10000 ? 1000 : 2000
+    const niceLo = dataLo <= 0 ? Math.floor((dataLo - padding) / step) * step : 0
+    const niceHi = dataHi >= 0 ? Math.ceil((dataHi + padding) / step) * step : 0
+    if (netChange >= 0) {
+      return [0, Math.max(niceHi, dataHi + padding)]
+    }
+    return [Math.min(niceLo, dataLo - padding), 0]
+  }, [waterfallData, data])
 
   if (loading) {
     return (
@@ -225,9 +214,17 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
           <div>
             <CardTitle className="text-xl">Forecast Evolution</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Gap change {data.startDate} → {data.endDate}.
-              <br />
-              Green = improved, red = worsened.
+              {(() => {
+                const netChange = data.totalEnd - data.totalStart
+                const absAmount = formatCurrencyFull(Math.abs(netChange))
+                if (netChange < 0) {
+                  return <>For the selected period ({data.startDate} → {data.endDate}), the gap to budget improved by {absAmount}. Drivers are below.</>
+                }
+                if (netChange > 0) {
+                  return <>For the selected period ({data.startDate} → {data.endDate}), the gap to budget worsened by {absAmount}. Drivers are below.</>
+                }
+                return <>For the selected period ({data.startDate} → {data.endDate}), the gap to budget was unchanged. Drivers are below.</>
+              })()}
             </p>
           </div>
           <div className="overflow-x-auto rounded-md border border-border bg-background px-3 py-2 shrink-0 self-start sm:mt-0">
@@ -303,6 +300,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
             />
             <YAxis
               domain={yDomain}
+              reversed={!!(data && data.totalEnd - data.totalStart < 0)}
               tickFormatter={formatCurrency}
               tick={{ fontSize: fontSizes.axisTick }}
               stroke="#6b7280"
