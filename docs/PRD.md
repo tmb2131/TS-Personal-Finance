@@ -85,9 +85,9 @@ Core entities are defined in `supabase/migrations/`. Below is a concise referenc
 - **At a glance:** Executive summary (e.g. net worth, budget gap, key KPIs); mobile uses horizontal scroll carousel.
 - **Net worth chart:** Line chart of historical net worth (with optional entity filters: Personal/Family/Trust); mobile: reduced ticks and compact Y-axis.
 - **Income vs expenses chart:** Budget vs tracking vs YTD; optional investment return; mobile: toggles can be hidden.
-- **Budget table:** Categories with annual budget, tracking (forecast), YTD actual; variance and over/under budget.
-- **Annual trends table:** Current year vs prior years by category (GBP/USD via FX).
-- **Monthly trends table:** Current month vs prior months, TTM avg, z-score, delta vs last 3 months.
+- **Budget table:** Categories with annual budget, tracking (forecast), YTD actual; variance and over/under budget. Optional **Full table view** toggle on Expenses: opens the expense tables in a full-screen overlay scaled to fit. See `docs/COMPACT-DATA-GRID.md`.
+- **Annual trends table:** Current year vs prior years by category (GBP/USD via FX). Optional **Full table view** toggle: opens the table in a full-screen overlay scaled to fit (no scrolling).
+- **Monthly trends table:** Current month vs prior months, TTM avg, z-score, delta vs last 3 months. Optional **Full table view** toggle (same behavior as Annual).
 - **Navigation:** In-page anchors (Net Worth, Budget Table, Annual Trends, Monthly Trends) and “Back to top.”
 
 ### 4.2 Key Insights (`/insights`)

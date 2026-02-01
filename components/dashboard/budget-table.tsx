@@ -16,6 +16,8 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget } from '@/lib/types'
 import { cn } from '@/utils/cn'
+import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
+import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Receipt, CheckCircle2, XCircle, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BudgetSummaryTable } from './budget-summary-table'
@@ -38,6 +40,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const [incomeSortField, setIncomeSortField] = useState<SortField>('category')
   const [incomeSortDirection, setIncomeSortDirection] = useState<SortDirection>('asc')
   const [expensesExpanded, setExpensesExpanded] = useState(false)
+  const [expenseFullView, setExpenseFullView] = useState(false)
 
   // Process data: always use GBP from data; convert to USD with current FX when currency is USD (matches Key Insights)
   const processData = useCallback(
@@ -401,26 +404,33 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       {/* Expenses Table - on mobile collapsed by default, expand with "Show expenses breakdown" */}
       <Card>
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <CardTitle className="text-base">Expenses</CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden shrink-0"
-              onClick={() => setExpensesExpanded((v) => !v)}
-            >
-              {expensesExpanded ? (
-                <>
-                  <ChevronUp className="h-4 w-4 mr-1" />
-                  Hide
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="h-4 w-4 mr-1" />
-                  Show breakdown
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <FullTableViewToggle
+                fullView={expenseFullView}
+                onToggle={() => setExpenseFullView((v) => !v)}
+                aria-label="Toggle full table view for Expenses"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="md:hidden shrink-0"
+                onClick={() => setExpensesExpanded((v) => !v)}
+              >
+                {expensesExpanded ? (
+                  <>
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                    Hide
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    Show breakdown
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-2">
@@ -668,8 +678,13 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               )
             })}
           </div>
-          {/* Compact expenses table: two side-by-side columns (desktop) */}
-          <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Expenses table: two side-by-side columns (desktop); optional full-screen view */}
+          <FullTableViewWrapper
+            fullView={expenseFullView}
+            onClose={() => setExpenseFullView(false)}
+            className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-3"
+          >
+            <>
             <div className="border rounded-md overflow-hidden min-w-0">
               <Table className={expenseCompactClass}>
                 <TableHeader>
@@ -806,7 +821,8 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                 </TableBody>
               </Table>
             </div>
-          </div>
+            </>
+          </FullTableViewWrapper>
         </CardContent>
       </Card>
     </div>

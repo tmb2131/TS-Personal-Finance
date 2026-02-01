@@ -18,6 +18,8 @@ import { createClient } from '@/lib/supabase/client'
 import { MonthlyTrend } from '@/lib/types'
 import { endOfMonth, type RatesByMonthOffset } from '@/lib/utils/fx-rates'
 import { buildTransactionAnalysisUrl } from '@/lib/analysis-url'
+import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
+import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { cn } from '@/utils/cn'
 import { AlertCircle, TrendingUp, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
@@ -39,6 +41,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
   const [error, setError] = useState<string | null>(null)
   const [sortField, setSortField] = useState<SortField>('delta_last_month')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [fullView, setFullView] = useState(false)
 
   useEffect(() => {
     if (initialData) {
@@ -387,9 +390,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
   const getMonthlyBgStyle = (value: number) => {
     if (value === 0) return {}
     const intensity = Math.min(Math.abs(value) / maxValues.monthly, 1)
-    const opacity = 0.05 + intensity * 0.1 // Range from 0.05 to 0.15 (much more subtle)
+    const opacity = 0.1 + intensity * 0.3 // Range 0.1–0.4 so largest values stand out
     return {
-      backgroundColor: `rgba(239, 68, 68, ${opacity})`, // red-500 with low opacity
+      backgroundColor: `rgba(239, 68, 68, ${opacity})`, // red-500
     }
   }
 
@@ -447,10 +450,10 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
   }
 
   // Delta component (reusable for all delta columns)
-  const DeltaCell = ({ 
-    value, 
-    maxValue 
-  }: { 
+  const DeltaCell = ({
+    value,
+    maxValue,
+  }: {
     value: number
     maxValue: number
   }) => {
@@ -462,9 +465,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             value >= 0 ? 'text-green-600' : 'text-red-600'
           )}
         >
-          {value === 0 
-            ? '-' 
-            : value > 0 
+          {value === 0
+            ? '-'
+            : value > 0
               ? formatCurrency(value)
               : formatCurrencyWithParens(-value)}
         </span>
@@ -662,7 +665,14 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
   return (
     <Card>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-        <CardTitle className="text-base">Monthly Trends</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">Monthly Trends</CardTitle>
+          <FullTableViewToggle
+            fullView={fullView}
+            onToggle={() => setFullView((v) => !v)}
+            aria-label="Toggle full table view for Monthly Trends"
+          />
+        </div>
       </CardHeader>
       <CardContent className="pt-2">
         {/* Key Insights Cards */}
@@ -890,7 +900,11 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         <p className="md:hidden text-xs text-muted-foreground mt-2 mb-1">Full category table on larger screens.</p>
 
         {/* Table with sticky header and total row */}
-        <div className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums">
+        <FullTableViewWrapper
+          fullView={fullView}
+          onClose={() => setFullView(false)}
+          className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums"
+        >
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
               <TableRow className="border-b bg-muted">
@@ -986,37 +1000,25 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 </button>
               </TableHead>
             </TableRow>
-            {/* Total Row */}
+            {/* Total Row — fixed neutral style so category rows' relative sizes are more apparent */}
             <TableRow className="bg-muted/50 border-b-2 border-gray-700">
               <TableCell className="font-semibold w-28 min-w-[7rem] bg-muted/50">Total</TableCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(3).year, month: getYearMonth(3).month })} style={getMonthlyBgStyle(totals.cur_month_minus_3)} className="text-right font-semibold w-16 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(3).year, month: getYearMonth(3).month })} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_minus_3)}
               </ClickableTrendCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(2).year, month: getYearMonth(2).month })} style={getMonthlyBgStyle(totals.cur_month_minus_2)} className="text-right font-semibold w-16 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(2).year, month: getYearMonth(2).month })} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_minus_2)}
               </ClickableTrendCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(1).year, month: getYearMonth(1).month })} style={getMonthlyBgStyle(totals.cur_month_minus_1)} className="text-right font-semibold w-16 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(1).year, month: getYearMonth(1).month })} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_minus_1)}
               </ClickableTrendCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month })} style={getMonthlyBgStyle(totals.cur_month_est)} className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month })} className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_est)}
               </ClickableTrendCell>
               <TableCell className="text-right w-14 bg-muted/50">
-                {/* Sparkline for total */}
-                <Sparkline row={{
-                  category: 'Total',
-                  cur_month_minus_3: totals.cur_month_minus_3,
-                  cur_month_minus_2: totals.cur_month_minus_2,
-                  cur_month_minus_1: totals.cur_month_minus_1,
-                  cur_month_est: totals.cur_month_est,
-                  ttm_avg: totals.ttm_avg,
-                  z_score: 0,
-                  delta_vs_l3m: totals.delta_vs_l3m,
-                  delta_vs_last_month: totals.delta_vs_last_month,
-                  delta_vs_l12m_avg: totals.delta_vs_l12m_avg,
-                } as typeof processedData[0]} />
+                <Sparkline row={{ category: 'Total', cur_month_minus_3: totals.cur_month_minus_3, cur_month_minus_2: totals.cur_month_minus_2, cur_month_minus_1: totals.cur_month_minus_1, cur_month_est: totals.cur_month_est, ttm_avg: totals.ttm_avg, z_score: 0, delta_vs_l3m: totals.delta_vs_l3m, delta_vs_last_month: totals.delta_vs_last_month, delta_vs_l12m_avg: totals.delta_vs_l12m_avg } as typeof processedData[0]} />
               </TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.ttm_avg)}>
+              <TableCell className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.ttm_avg)}
               </TableCell>
               <TableCell className="text-right w-20 bg-muted/50"></TableCell>
@@ -1057,45 +1059,32 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <TableCell className="text-right w-14">
                     <Sparkline row={row} />
                   </TableCell>
-                  
                   <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.ttm_avg)}>
                     {row.ttm_avg === 0 ? '-' : formatCurrencyWithParens(-row.ttm_avg)}
                   </TableCell>
-                  
                   {/* Z-Score with mini bar chart */}
                   <TableCell className="text-right w-20">
                     <div className="flex items-center justify-end gap-2">
                       <span className="font-medium min-w-[3rem] text-right">{row.z_score.toFixed(1)}</span>
                       <div className="relative h-2.5 w-14 border border-gray-300 rounded bg-white">
-                        {/* Zero line (center) */}
                         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-400 border-dashed -translate-x-1/2"></div>
-                        {/* Bar representation - purple bars for negative, green for positive */}
                         {row.z_score !== 0 && (
                           <div
-                            className={cn(
-                              'absolute h-1 top-0.5 rounded-sm',
-                              row.z_score >= 0 ? 'bg-green-500' : 'bg-purple-500'
-                            )}
-                            style={{
-                              left: row.z_score >= 0 ? '50%' : `${Math.max(2, 50 - Math.min(Math.abs(row.z_score) * 8, 48))}%`,
-                              width: `${Math.min(Math.abs(row.z_score) * 8, 48)}%`,
-                            }}
+                            className={cn('absolute h-1 top-0.5 rounded-sm', row.z_score >= 0 ? 'bg-green-500' : 'bg-purple-500')}
+                            style={{ left: row.z_score >= 0 ? '50%' : `${Math.max(2, 50 - Math.min(Math.abs(row.z_score) * 8, 48))}%`, width: `${Math.min(Math.abs(row.z_score) * 8, 48)}%` }}
                           />
                         )}
                       </div>
                     </div>
                   </TableCell>
-                  
                   {/* Delta vs Last Month */}
                   <TableCell className="text-right w-20">
                     <DeltaCell value={row.delta_vs_last_month} maxValue={maxValues.deltaVsLastMonth} />
                   </TableCell>
-                  
                   {/* Delta vs L3M */}
                   <TableCell className="text-right w-20">
                     <DeltaCell value={row.delta_vs_l3m} maxValue={maxValues.delta} />
                   </TableCell>
-                  
                   {/* Delta vs L12M Avg */}
                   <TableCell className="text-right w-20">
                     <DeltaCell value={row.delta_vs_l12m_avg} maxValue={maxValues.delta} />
@@ -1105,7 +1094,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             })}
           </TableBody>
             </table>
-        </div>
+        </FullTableViewWrapper>
       </CardContent>
     </Card>
   )

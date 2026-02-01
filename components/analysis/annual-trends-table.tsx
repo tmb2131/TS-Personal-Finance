@@ -18,6 +18,8 @@ import { createClient } from '@/lib/supabase/client'
 import { AnnualTrend } from '@/lib/types'
 import { endOfYear, type RatesByYear } from '@/lib/utils/fx-rates'
 import { buildTransactionAnalysisUrl } from '@/lib/analysis-url'
+import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
+import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { cn } from '@/utils/cn'
 import { AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
@@ -41,6 +43,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
   const [error, setError] = useState<string | null>(null)
   const [sortField, setSortField] = useState<SortField>('cur_yr_est_vs_4yr_avg')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [fullView, setFullView] = useState(false)
 
   useEffect(() => {
     if (initialData) {
@@ -234,9 +237,9 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
   const getAnnualBgStyle = (value: number) => {
     if (value === 0) return {}
     const intensity = Math.min(Math.abs(value) / maxValues.annual, 1)
-    const opacity = 0.05 + intensity * 0.1 // Range from 0.05 to 0.15 (much more subtle)
+    const opacity = 0.1 + intensity * 0.3 // Range 0.1–0.4 so largest values stand out
     return {
-      backgroundColor: `rgba(239, 68, 68, ${opacity})`, // red-500 with low opacity
+      backgroundColor: `rgba(239, 68, 68, ${opacity})`, // red-500
     }
   }
 
@@ -346,10 +349,10 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
   }
 
   // Delta component (reusable for both Delta vs Last Yr and Delta vs 4yr Avg)
-  const DeltaCell = ({ 
-    value, 
-    maxValue 
-  }: { 
+  const DeltaCell = ({
+    value,
+    maxValue,
+  }: {
     value: number
     maxValue: number
   }) => {
@@ -361,9 +364,9 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
             value >= 0 ? 'text-green-600' : 'text-red-600'
           )}
         >
-          {value === 0 
-            ? '-' 
-            : value > 0 
+          {value === 0
+            ? '-'
+            : value > 0
               ? formatCurrency(value)
               : formatCurrencyWithParens(-value)}
         </span>
@@ -488,7 +491,14 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
   return (
     <Card>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-        <CardTitle className="text-base">Annual Trends</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">Annual Trends</CardTitle>
+          <FullTableViewToggle
+            fullView={fullView}
+            onToggle={() => setFullView((v) => !v)}
+            aria-label="Toggle full table view for Annual Trends"
+          />
+        </div>
       </CardHeader>
       <CardContent className="pt-2">
         {/* Top Movers Cards (shared scale across both category cards) */}
@@ -709,7 +719,11 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
         <p className="md:hidden text-xs text-muted-foreground mt-2 mb-1">Full category table on larger screens.</p>
 
         {/* Table with sticky header and total row */}
-        <div className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums">
+        <FullTableViewWrapper
+          fullView={fullView}
+          onClose={() => setFullView(false)}
+          className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums"
+        >
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
               <TableRow className="border-b bg-muted">
@@ -789,35 +803,26 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                 </button>
               </TableHead>
             </TableRow>
-            {/* Total Row */}
+            {/* Total Row — fixed neutral style so category rows' relative sizes are more apparent */}
             <TableRow className="bg-muted/50 border-b-2 border-gray-700">
               <TableCell className="font-semibold w-28 min-w-[7rem] bg-muted/50">Total</TableCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 4 })} style={getAnnualBgStyle(totals.cur_yr_minus_4)} className="text-right font-semibold w-16 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 4 })} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_4)}
               </ClickableTrendCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 3 })} style={getAnnualBgStyle(totals.cur_yr_minus_3)} className="text-right font-semibold w-16 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 3 })} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_3)}
               </ClickableTrendCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 2 })} style={getAnnualBgStyle(totals.cur_yr_minus_2)} className="text-right font-semibold w-16 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 2 })} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_2)}
               </ClickableTrendCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 1 })} style={getAnnualBgStyle(totals.cur_yr_minus_1)} className="text-right font-semibold w-16 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 1 })} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_1)}
               </ClickableTrendCell>
-              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear })} style={getAnnualBgStyle(totals.cur_yr_est)} className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50">
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear })} className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_est)}
               </ClickableTrendCell>
               <TableCell className="text-right w-14 bg-muted/50">
-                {/* Sparkline for total with tooltip */}
-                <Sparkline row={{
-                  category: 'Total',
-                  cur_yr_minus_4: totals.cur_yr_minus_4,
-                  cur_yr_minus_3: totals.cur_yr_minus_3,
-                  cur_yr_minus_2: totals.cur_yr_minus_2,
-                  cur_yr_minus_1: totals.cur_yr_minus_1,
-                  cur_yr_est: totals.cur_yr_est,
-                  cur_yr_est_vs_4yr_avg: totals.cur_yr_est_vs_4yr_avg,
-                } as typeof processedData[0]} />
+                <Sparkline row={{ category: 'Total', cur_yr_minus_4: totals.cur_yr_minus_4, cur_yr_minus_3: totals.cur_yr_minus_3, cur_yr_minus_2: totals.cur_yr_minus_2, cur_yr_minus_1: totals.cur_yr_minus_1, cur_yr_est: totals.cur_yr_est, cur_yr_est_vs_4yr_avg: totals.cur_yr_est_vs_4yr_avg } as typeof processedData[0]} />
               </TableCell>
               <TableCell className="text-right font-semibold w-20 bg-muted/50">
                 <DeltaCell value={totals.cur_yr_est_vs_last_yr} maxValue={maxValues.deltaVsLastYear} />
@@ -854,28 +859,20 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                   <TableCell className="text-right w-14">
                     <Sparkline row={row} />
                   </TableCell>
-                  
                   {/* Delta vs Last Year */}
                   <TableCell className="text-right w-20">
-                    <DeltaCell 
-                      value={row.cur_yr_est - row.cur_yr_minus_1} 
-                      maxValue={maxValues.deltaVsLastYear} 
-                    />
+                    <DeltaCell value={row.cur_yr_est - row.cur_yr_minus_1} maxValue={maxValues.deltaVsLastYear} />
                   </TableCell>
-                  
                   {/* Delta vs 4Yr Avg */}
                   <TableCell className="text-right w-20">
-                    <DeltaCell 
-                      value={row.cur_yr_est_vs_4yr_avg} 
-                      maxValue={maxValues.delta} 
-                    />
+                    <DeltaCell value={row.cur_yr_est_vs_4yr_avg} maxValue={maxValues.delta} />
                   </TableCell>
                 </TableRow>
               )
             })}
           </TableBody>
             </table>
-        </div>
+        </FullTableViewWrapper>
       </CardContent>
     </Card>
   )
