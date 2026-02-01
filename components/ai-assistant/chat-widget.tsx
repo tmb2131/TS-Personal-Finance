@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { Button } from '@/components/ui/button'
@@ -39,16 +39,19 @@ export function ChatWidget() {
 
   // Use local state for input - this ensures it always works
   const [localInput, setLocalInput] = useState('')
+  // When suggested prompt buttons are clicked, we set this so handleSubmit uses it (same path as form submit)
+  const suggestedPromptRef = useRef<string | null>(null)
 
   // Handler for input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalInput(e.target.value)
   }
 
-  // Custom submit handler using sendMessage (v3 API)
+  // Custom submit handler using sendMessage (v3 API). Reads from suggestedPromptRef when set (by suggested buttons).
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const valueToSubmit = localInput.trim()
+    const valueToSubmit = (suggestedPromptRef.current ?? localInput).trim()
+    suggestedPromptRef.current = null
     if (!valueToSubmit || isLoading) return
 
     setLocalInput('') // Clear input immediately so it feels snappy
@@ -234,7 +237,8 @@ export function ChatWidget() {
                       className="text-xs"
                       disabled={isLoading}
                       onClick={() => {
-                        if (sendMessage) sendMessage({ text: 'Summarise my financial health' })
+                        suggestedPromptRef.current = 'Summarise my financial health'
+                        handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
                       }}
                     >
                       Summarise my financial health
@@ -246,7 +250,8 @@ export function ChatWidget() {
                       className="text-xs"
                       disabled={isLoading}
                       onClick={() => {
-                        if (sendMessage) sendMessage({ text: 'How am I doing vs budget and spending?' })
+                        suggestedPromptRef.current = 'How am I doing vs budget and spending?'
+                        handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
                       }}
                     >
                       How am I doing vs budget?
