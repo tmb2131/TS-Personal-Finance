@@ -112,13 +112,13 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] transition-colors touch-manipulation',
+                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
                   isActive
                     ? 'bg-primary text-primary-foreground border-primary font-semibold'
                     : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
                 )}
               >
-                <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'scale-110')} />
+                <item.icon className={cn('h-5 w-5 flex-shrink-0 transition-transform duration-100', isActive && 'scale-110')} />
                 <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
               </Link>
             )
@@ -128,7 +128,7 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] transition-colors touch-manipulation',
+                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
                   mobileMoreNav.some((item) => pathname === item.href)
                     ? 'bg-primary text-primary-foreground border-primary font-semibold'
                     : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
@@ -138,7 +138,7 @@ export function Sidebar() {
                 <span className="text-xs font-medium text-center leading-tight">More</span>
               </button>
             </DialogTrigger>
-            <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-50 max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg">
+            <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-50 max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg data-[state=open]:slide-in-from-right-96 data-[state=closed]:slide-out-to-right-96 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-top-0">
               <DialogHeader className="px-4 pt-4 pb-2">
                 <DialogTitle>More</DialogTitle>
               </DialogHeader>
@@ -152,7 +152,7 @@ export function Sidebar() {
                         href={item.href}
                         onClick={() => setMoreOpen(false)}
                         className={cn(
-                          'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
+                          'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-[transform,color,background-color] duration-100 ease-out active:scale-[0.98]',
                           isActive
                             ? 'bg-primary text-primary-foreground'
                             : 'hover:bg-muted'
