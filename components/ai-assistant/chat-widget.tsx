@@ -15,9 +15,22 @@ import { MessageCircle, X, Send, Loader2, Trash2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { createClient } from '@/lib/supabase/client'
+
+const EMAIL_TO_DISPLAY_NAME: Record<string, string> = {
+  'thomas.brosens@gmail.com': 'Tom',
+  'sriya.sundaresan@gmail.com': 'Sriya',
+  'frank.brosens@gmail.com': 'Frank',
+}
+
+function getDisplayNameForEmail(email: string | undefined): string | null {
+  if (!email) return null
+  return EMAIL_TO_DISPLAY_NAME[email.toLowerCase()] ?? null
+}
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const chatHelpers = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
   })
@@ -48,6 +61,15 @@ export function ChatWidget() {
   const handleClearChat = () => {
     setMessages([])
   }
+
+  // Resolve display name from current user email (for personalized welcome)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const name = getDisplayNameForEmail(session?.user?.email)
+      setDisplayName(name)
+    })
+  }, [])
 
   // On mobile: size/position dialog to visual viewport so it "lifts" above the keyboard (no zoom)
   const [mobileDialogStyle, setMobileDialogStyle] = useState<React.CSSProperties | null>(null)
@@ -187,10 +209,23 @@ export function ChatWidget() {
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4 min-h-full">
               {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-12">
-                  <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-base font-medium">Ask me about your finances!</p>
-                  <p className="text-sm mt-2">Try: &quot;What are my account balances?&quot;</p>
+                <div className="flex flex-col items-center justify-center h-full text-center py-12 px-4">
+                  <div className="rounded-full bg-primary/10 p-4 mb-5">
+                    <MessageCircle className="h-10 w-10 text-primary" aria-hidden />
+                  </div>
+                  <p className="text-lg font-semibold text-foreground mb-1">
+                    {displayName ? (
+                      <>Hi {displayName}, I&apos;m here to help.</>
+                    ) : (
+                      <>Hi, I&apos;m here to help.</>
+                    )}
+                  </p>
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Ask me anything about your finances—balances, spending, budget, or trends.
+                  </p>
+                  <p className="text-xs text-muted-foreground/80 mt-4">
+                    Try: &quot;What are my account balances?&quot;
+                  </p>
                 </div>
               )}
               {messages.map((message) => {
@@ -328,16 +363,22 @@ export function ChatWidget() {
           <form onSubmit={handleSubmit} className="border-t px-6 py-4 bg-background/50 backdrop-blur-sm touch-manipulation">
             <div className="flex gap-2">
               <Input
+                type="search"
+                autoComplete="off"
                 value={localInput}
                 onChange={handleInputChange}
                 placeholder="Ask about your finances..."
-                className="flex-1 text-base min-[768px]:text-sm"
+                className="flex-1 text-base min-[768px]:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
                 disabled={isLoading}
                 onFocus={(e) => {
-                  // Try to suppress iOS keyboard accessory bar (Previous/Next/Done) so it doesn’t duplicate our submit button
+                  // Try to reduce iOS keyboard accessory: set inputmode to none then restore so bar may not show
                   const el = e.currentTarget
                   el.setAttribute('inputmode', 'none')
-                  setTimeout(() => el.setAttribute('inputmode', 'text'), 100)
+                  requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                      el.setAttribute('inputmode', 'text')
+                    })
+                  })
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
