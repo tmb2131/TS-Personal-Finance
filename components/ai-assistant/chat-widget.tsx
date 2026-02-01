@@ -41,6 +41,24 @@ export function ChatWidget() {
   const [localInput, setLocalInput] = useState('')
   // When suggested prompt buttons are clicked, we set this so handleSubmit uses it (same path as form submit)
   const suggestedPromptRef = useRef<string | null>(null)
+  // Show "Thinking..." immediately on submit, before hook's isLoading updates (avoids lag)
+  const [showThinking, setShowThinking] = useState(false)
+
+  // Clear showThinking when loading finishes or when last message is assistant with text (response arrived)
+  useEffect(() => {
+    if (!isLoading) setShowThinking(false)
+  }, [isLoading])
+  useEffect(() => {
+    if (!messages.length || !showThinking) return
+    const last = messages[messages.length - 1]
+    if (last.role !== 'assistant') return
+    const parts = last.parts ?? []
+    const hasText = parts.some((p: { type?: string; text?: string }) => {
+      if (p.type === 'text' && typeof (p as { text?: string }).text === 'string') return (p as { text: string }).text.length > 0
+      return false
+    })
+    if (hasText) setShowThinking(false)
+  }, [messages, showThinking])
 
   // Handler for input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,6 +72,7 @@ export function ChatWidget() {
     suggestedPromptRef.current = null
     if (!valueToSubmit || isLoading) return
 
+    setShowThinking(true) // Show thinking immediately, before any async work
     setLocalInput('') // Clear input immediately so it feels snappy
     if (sendMessage) {
       await sendMessage({ text: valueToSubmit })
@@ -250,11 +269,11 @@ export function ChatWidget() {
                       className="text-xs"
                       disabled={isLoading}
                       onClick={() => {
-                        suggestedPromptRef.current = 'How am I doing vs budget and spending?'
+                        suggestedPromptRef.current = 'How much did I spend last month? Give a breakdown by category and compare to the previous 3 month average.'
                         handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
                       }}
                     >
-                      How am I doing vs budget?
+                      How much did I spend last month?
                     </Button>
                   </div>
                 </div>
@@ -337,16 +356,6 @@ export function ChatWidget() {
                       message.role === 'user' ? 'items-end' : 'items-start'
                     )}
                   >
-                    {message.role === 'assistant' && toolParts.length > 0 && !displayText && (
-                      <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                        {toolParts.map((tool, idx) => (
-                          <div key={idx} className="flex items-center gap-1 text-xs italic">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            <span>Using {toolName(tool)}...</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     {displayText && (
                       <div
                         className={cn(
@@ -359,31 +368,24 @@ export function ChatWidget() {
                         {message.role === 'assistant' ? renderMessageContent(displayText) : displayText}
                       </div>
                     )}
-                    {!displayText && message.role === 'assistant' && toolParts.length > 0 && (
-                      <div className="text-xs text-muted-foreground italic flex items-center gap-2">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span>Processing tool results...</span>
-                      </div>
-                    )}
-                    {!displayText && message.role === 'assistant' && toolParts.length === 0 && parts.length > 0 && (
-                      <div className="text-xs text-muted-foreground italic">
-                        (Message has {parts.length} parts but no text content)
+                    {!displayText && message.role === 'assistant' && parts.length > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin shrink-0" strokeWidth={2} />
+                        <span>Thinking...</span>
                       </div>
                     )}
                   </div>
                 )
               })}
               
-              {/* Thinking State - Show immediately after user message */}
-              {isLoading && messages.length > 0 && (
+              {/* Single loading indicator – shows immediately on submit (showThinking) and until response (isLoading) */}
+              {(showThinking || isLoading) && messages.length > 0 && (
                 <div className="flex items-start gap-2">
-                  <div className="bg-muted rounded-lg px-4 py-3 flex items-center gap-2 animate-pulse">
-                    <div className="flex gap-1">
-                      <div className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                    <span className="text-xs text-muted-foreground">AI is thinking...</span>
+                  <div
+                    className="flex items-center justify-center rounded-full border border-border/60 bg-muted/40 p-3 shadow-sm"
+                    aria-label="Loading"
+                  >
+                    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" strokeWidth={2} />
                   </div>
                 </div>
               )}
