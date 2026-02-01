@@ -174,8 +174,8 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
       </CardHeader>
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Mobile: total card first (Net Income = main total), then list of summary cards (sm and below) */}
-          <div className="md:hidden space-y-3">
+          {/* Mobile: Budget Status summary first (order-1), then Net Income + cards (order-2) */}
+          <div className="md:hidden space-y-3 max-md:order-2">
             <div className="rounded-lg border border-dashed bg-muted/30 p-3 min-h-[44px] flex items-center justify-between">
               <span className="font-semibold text-sm">Net Income</span>
               <span className={cn('font-semibold tabular-nums text-sm shrink-0', totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
@@ -216,8 +216,8 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               </div>
             </div>
           </div>
-          {/* Summary card - left */}
-          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0">
+          {/* Summary card - left; on mobile show first (order-1) */}
+          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0 max-md:order-1">
             <div className="flex items-center gap-1.5">
               <Target className="h-4 w-4 text-purple-600" />
               <h3 className="font-semibold text-xs uppercase tracking-wide">Budget Status</h3>

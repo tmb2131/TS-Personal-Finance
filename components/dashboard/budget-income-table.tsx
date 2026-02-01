@@ -151,8 +151,8 @@ export function BudgetIncomeTable({
       </CardHeader>
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Mobile: total card first, then list of summary cards (sm and below) */}
-          <div className="md:hidden space-y-3">
+          {/* Mobile: Income Status summary first (order-1), then Total + category cards (order-2) */}
+          <div className="md:hidden space-y-3 max-md:order-2">
             <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex items-center justify-between">
               <span className="font-semibold text-sm">Total Income</span>
               <span
@@ -187,8 +187,8 @@ export function BudgetIncomeTable({
               )
             })}
           </div>
-          {/* Summary card - left */}
-          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0">
+          {/* Summary card - left; on mobile show first (order-1) */}
+          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0 max-md:order-1">
             <div className="flex items-center gap-1.5">
               <DollarSign className="h-4 w-4 text-blue-600" />
               <h3 className="font-semibold text-xs uppercase tracking-wide">Income Status</h3>
