@@ -223,9 +223,33 @@ export function ChatWidget() {
                   <p className="text-sm text-muted-foreground max-w-xs">
                     Ask me anything about your finances—balances, spending, budget, or trends.
                   </p>
-                  <p className="text-xs text-muted-foreground/80 mt-4">
-                    Try: &quot;What are my account balances?&quot;
+                  <p className="text-xs text-muted-foreground/80 mt-4 mb-2">
+                    Try:
                   </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        setLocalInput('Summarise my financial health')
+                      }}
+                    >
+                      Summarise my financial health
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        setLocalInput('How am I doing vs budget and spending?')
+                      }}
+                    >
+                      How am I doing vs budget?
+                    </Button>
+                  </div>
                 </div>
               )}
               {messages.map((message) => {

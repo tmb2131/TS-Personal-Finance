@@ -83,11 +83,15 @@ When the user says "last month", "this year", "this month", or similar, you MUST
 ${dateContext}
 
 YOUR CAPABILITIES:
-1. **Financial Snapshots**: Answer questions about current and historical net worth, account balances grouped by currency (GBP/USD/EUR), category, or entity (Personal/Family/Trust). You can provide snapshots for any date in the past or current balances.
+1. **Financial health perspective**: Synthesise account values, allocation, budget status, and spending/income trends into a short narrative (e.g. "Here's where you stand and how things are trending"). Use get_financial_health_summary when the user asks for an overall picture of their financial health, a summary of where they stand, or how they're doing (accounts, allocation, budget, spending trends).
 
-2. **Spending Analysis**: Analyze spending patterns, income vs expenses, merchant-specific spending (e.g., "Uber", "Amazon"), and trends over any date range. You automatically exclude non-expense categories (Excluded, Income, Gift Money, Other Income) unless explicitly requested.
+2. **Financial Snapshots**: Answer questions about current and historical net worth, account balances grouped by currency (GBP/USD/EUR), category, or entity (Personal/Family/Trust). You can provide snapshots for any date in the past or current balances.
 
-3. **Budget Performance**: Compare budget targets vs actual spending, identify categories over/under budget, calculate variances, and highlight the biggest budget variances. You can analyze YTD (year-to-date) or annual budgets.
+3. **Spending Analysis**: Analyze spending patterns, income vs expenses, merchant-specific spending (e.g., "Uber", "Amazon"), and trends over any date range. You automatically exclude non-expense categories (Excluded, Income, Gift Money, Other Income) unless explicitly requested.
+
+4. **Budget Performance**: Compare budget targets vs actual spending, identify categories over/under budget, calculate variances, and highlight the biggest budget variances. You can analyze YTD (year-to-date) or annual budgets.
+
+5. **Net worth trends and cash runway**: Use get_net_worth_trend when the user asks how their net worth has changed over time or for a trend over a date range. Use get_cash_runway when the user asks about runway, burn, or how long their cash will last.
 
 DATA CONTEXT:
 - The user has accounts in multiple currencies (primarily GBP and USD)
@@ -107,6 +111,8 @@ CRITICAL INSTRUCTIONS:
 8. **Be analytical** - Provide insights, trends, and context. Don't just report numbers - explain what they mean.
 
 EXAMPLE QUERIES YOU CAN HANDLE:
+- "Summarise my financial health"
+- "How am I doing overall? Account values, budget, and spending trends"
 - "What's my net worth as of December 2024?"
 - "How much did I spend on Uber last month?"
 - "Am I over budget for Food this year?"
@@ -116,13 +122,20 @@ EXAMPLE QUERIES YOU CAN HANDLE:
 - "What was my total spending in Q4 2025?"
 - "Why did my budget gap shrink since last week?"
 - "What drove the increase in my forecasted spend vs last month?"
+- "How has my net worth changed over the last year?"
+- "What's my cash runway?"
+
+GUARDRAILS:
+- This is analysis of your data, not financial advice. Only describe and interpret; never suggest specific investments or actions.
 
 WHEN YOU CANNOT ANSWER:
 If the user asks something you cannot answer with the available data (e.g., "How much did Kiran spend yesterday?" — there is no data indicating who the owner of each transaction is; or questions about people, households, or attributes not in the data), respond in natural language explaining why you can't answer. Then follow up with a short list of types of questions you *can* answer, for example:
+- Financial health summary (e.g., "Summarise my financial health")
 - Spending by category, merchant, or date range (e.g., "How much did I spend on Uber last month?")
 - Net worth and account balances (current or historical, by currency or entity: Personal, Family, Trust)
 - Budget vs actual (over/under budget by category, YTD, annual)
-- Income vs expenses and trends`,
+- Income vs expenses and trends
+- Net worth over time and cash runway`,
       messages: modelMessages,
       // @ts-expect-error - maxSteps property exists at runtime but may not be in TypeScript types
       maxSteps: 5, // CRITICAL: Allow multiple steps so AI can call tool AND generate response
@@ -758,6 +771,145 @@ If the user asks something you cannot answer with the available data (e.g., "How
           }
         },
       },
+      get_financial_health_summary: {
+        description: `Get an overall financial health snapshot in one call: net worth, allocation, budget status (net income under/over), and top spending categories. Use when the user asks for an overall picture of their financial health, a summary of where they stand, or how they're doing (accounts, allocation, budget, spending trends).`,
+        inputSchema: z.object({
+          asOfDate: z.string().optional().describe('Specific date for snapshot (YYYY-MM-DD). Omit for current.'),
+          currency: z.enum(['GBP', 'USD']).optional().default('GBP').describe('Currency for summary display.'),
+        }),
+        execute: async ({ asOfDate, currency = 'GBP' }) => {
+          try {
+            console.log('[chat] get_financial_health_summary: Starting', { asOfDate, currency })
+
+            const isHistorical = asOfDate && asOfDate !== 'null'
+            const fxRes = await supabase.from('fx_rate_current').select('gbpusd_rate').order('date', { ascending: false }).limit(1).single()
+            const fxRate = fxRes.data?.gbpusd_rate ?? 1.27
+
+            // 1) Net worth
+            let totalGbp = 0
+            let totalUsd = 0
+            const allocationByCurrency: { currency: string; totalGbp: number; totalUsd: number }[] = []
+
+            if (isHistorical) {
+              const { data: histRows, error: histErr } = await supabase
+                .from('historical_net_worth')
+                .select('amount_gbp, amount_usd')
+                .eq('date', asOfDate)
+              if (!histErr && histRows?.length) {
+                histRows.forEach((r: { amount_gbp?: number | null; amount_usd?: number | null }) => {
+                  totalGbp += Number(r.amount_gbp ?? 0)
+                  totalUsd += Number(r.amount_usd ?? 0)
+                })
+                allocationByCurrency.push({ currency: 'GBP', totalGbp, totalUsd: totalGbp * fxRate })
+                allocationByCurrency.push({ currency: 'USD', totalGbp: totalUsd / fxRate, totalUsd })
+              }
+            } else {
+              const { data: balances, error: balErr } = await supabase.from('account_balances').select('*').order('date_updated', { ascending: false })
+              if (balErr) throw new Error(balErr.message)
+              const byAccount = new Map<string, { balance_total_local: number; currency: string; date_updated: string }>()
+              ;(balances || []).forEach((b: { institution: string; account_name: string; date_updated: string; balance_total_local?: number | null; currency?: string | null }) => {
+                const key = `${b.institution}-${b.account_name}`
+                const existing = byAccount.get(key)
+                if (!existing || new Date(b.date_updated) > new Date(existing.date_updated)) {
+                  byAccount.set(key, {
+                    balance_total_local: Number(b.balance_total_local ?? 0),
+                    currency: (b.currency || 'GBP').toUpperCase(),
+                    date_updated: b.date_updated,
+                  })
+                }
+              })
+              const byCurr: Record<string, { gbp: number; usd: number }> = {}
+              byAccount.forEach(({ balance_total_local, currency: curr }) => {
+                if (!byCurr[curr]) byCurr[curr] = { gbp: 0, usd: 0 }
+                if (curr === 'GBP') {
+                  byCurr[curr].gbp += balance_total_local
+                  totalGbp += balance_total_local
+                  totalUsd += balance_total_local * fxRate
+                } else {
+                  byCurr[curr].usd += balance_total_local
+                  totalUsd += balance_total_local
+                  totalGbp += balance_total_local / fxRate
+                }
+              })
+              Object.entries(byCurr).forEach(([curr, { gbp, usd }]) => {
+                allocationByCurrency.push({ currency: curr, totalGbp: gbp, totalUsd: usd })
+              })
+            }
+
+            const netWorthSummary = currency === 'USD'
+              ? `Net worth: $${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD`
+              : `Net worth: £${totalGbp.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} GBP`
+            const allocationSummary = allocationByCurrency.length
+              ? allocationByCurrency
+                  .map((a) =>
+                    a.currency === 'USD'
+                      ? `$${(a.totalUsd || a.totalGbp * fxRate).toLocaleString('en-US', { maximumFractionDigits: 0 })} USD`
+                      : `£${(a.totalGbp || a.totalUsd / fxRate).toLocaleString('en-GB', { maximumFractionDigits: 0 })} GBP`
+                  )
+                  .join(', ')
+              : 'No allocation data'
+
+            // 2) Budget (net income: income - expenses from budget_targets)
+            const EXCLUDED = ['Excluded', 'Income', 'Gift Money', 'Other Income']
+            const { data: budgetRows, error: budgetErr } = await supabase.from('budget_targets').select('category, annual_budget_gbp, tracking_est_gbp')
+            if (budgetErr) throw new Error(budgetErr.message)
+
+            let incomeBudget = 0
+            let incomeTracking = 0
+            let expensesBudget = 0
+            let expensesTracking = 0
+            const expenseCategories: { category: string; trackingGbp: number }[] = []
+
+            ;(budgetRows || []).forEach((row: { category: string; annual_budget_gbp?: number | null; tracking_est_gbp?: number | null }) => {
+              const budget = Math.abs(Number(row.annual_budget_gbp ?? 0))
+              const tracking = Math.abs(Number(row.tracking_est_gbp ?? 0))
+              if (row.category === 'Income' || row.category === 'Gift Money') {
+                incomeBudget += budget
+                incomeTracking += tracking
+              } else if (!EXCLUDED.includes(row.category)) {
+                expensesBudget += budget
+                expensesTracking += tracking
+                expenseCategories.push({ category: row.category, trackingGbp: tracking })
+              }
+            })
+
+            const netIncomeBudget = incomeBudget - expensesBudget
+            const netIncomeTracking = incomeTracking - expensesTracking
+            const budgetGap = netIncomeTracking - netIncomeBudget
+            const budgetStatus = budgetGap >= 0 ? 'under' : 'over'
+            const gapDisplay = currency === 'USD' ? Math.abs(budgetGap) * fxRate : Math.abs(budgetGap)
+            const budgetStatusSummary = budgetGap >= 0
+              ? `Net income budget: Under by ${currency === 'USD' ? '$' : '£'}${gapDisplay.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+              : `Net income budget: Over by ${currency === 'USD' ? '$' : '£'}${gapDisplay.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+
+            expenseCategories.sort((a, b) => b.trackingGbp - a.trackingGbp)
+            const topSpend = expenseCategories.slice(0, 5)
+            const topSpendCategories = topSpend.length
+              ? `Top spending categories (YTD tracking): ${topSpend.map((s) => `${s.category} (£${s.trackingGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })})`).join(', ')}`
+              : 'No expense categories'
+
+            const summary = `${netWorthSummary}. ${budgetStatusSummary}. ${topSpendCategories}.`
+
+            return {
+              health: {
+                netWorthSummary,
+                allocationSummary,
+                budgetStatusSummary,
+                topSpendCategories,
+                netWorthGbp: totalGbp,
+                netWorthUsd: totalUsd,
+                budgetGapGbp: budgetGap,
+                budgetStatus,
+                topCategories: topSpend.map((s) => ({ category: s.category, trackingGbp: s.trackingGbp })),
+              },
+              summary,
+            }
+          } catch (err) {
+            console.error('[chat] get_financial_health_summary: Execution error', err)
+            return { error: err instanceof Error ? err.message : 'Unknown error' }
+          }
+        },
+      },
       analyze_forecast_evolution: {
         description: `Analyze how the expenses gap to budget (budget minus tracking) has changed over time. Use when the user asks about changes in the forecast/gap (e.g., 'vs last week'). Uses expense categories only (excludes Income, Gift Money, Other Income, Excluded).`,
         inputSchema: z.object({
@@ -907,6 +1059,188 @@ If the user asks something you cannot answer with the available data (e.g., "How
             }
           } catch (err) {
             console.error('[chat] analyze_forecast_evolution: Execution error', err)
+            return { error: err instanceof Error ? err.message : 'Unknown error' }
+          }
+        },
+      },
+      get_net_worth_trend: {
+        description: `Get net worth over a date range (time series). Use when the user asks how their net worth has changed over time or for a trend over a date range. Use CURRENT DATE CONTEXT for relative dates.`,
+        inputSchema: z.object({
+          startDate: z.string().describe('Start date (YYYY-MM-DD). Use CURRENT DATE CONTEXT for "last year", "this year", etc.'),
+          endDate: z.string().optional().describe('End date (YYYY-MM-DD). Defaults to today if omitted.'),
+          groupBy: z.enum(['total', 'entity']).optional().default('total').describe('Return total only or breakdown by entity (category in historical_net_worth).'),
+        }),
+        execute: async ({ startDate, endDate, groupBy = 'total' }) => {
+          try {
+            const end = endDate || todayISO
+            console.log('[chat] get_net_worth_trend: Starting', { startDate, endDate: end, groupBy })
+
+            const { data: rows, error } = await supabase
+              .from('historical_net_worth')
+              .select('date, category, amount_gbp, amount_usd')
+              .gte('date', startDate)
+              .lte('date', end)
+              .order('date', { ascending: true })
+
+            if (error) {
+              console.error('[chat] get_net_worth_trend: Query error', error)
+              return { error: error.message }
+            }
+            if (!rows || rows.length === 0) {
+              return {
+                trend: null,
+                summary: `No net worth data found between ${startDate} and ${end}.`,
+              }
+            }
+
+            const fxRes = await supabase.from('fx_rate_current').select('gbpusd_rate').order('date', { ascending: false }).limit(1).single()
+            const fxRate = fxRes.data?.gbpusd_rate ?? 1.27
+
+            const byDate: Record<string, { totalGbp: number; totalUsd: number; byEntity?: Record<string, { gbp: number; usd: number }> }> = {}
+            rows.forEach((r: { date: string; category: string; amount_gbp?: number | null; amount_usd?: number | null }) => {
+              const gbp = Number(r.amount_gbp ?? 0)
+              const usd = Number(r.amount_usd ?? 0)
+              if (!byDate[r.date]) {
+                byDate[r.date] = { totalGbp: 0, totalUsd: 0, ...(groupBy === 'entity' ? { byEntity: {} } : {}) }
+              }
+              byDate[r.date].totalGbp += gbp
+              byDate[r.date].totalUsd += usd
+              if (groupBy === 'entity' && byDate[r.date].byEntity) {
+                const ent = r.category || 'Other'
+                if (!byDate[r.date].byEntity![ent]) byDate[r.date].byEntity![ent] = { gbp: 0, usd: 0 }
+                byDate[r.date].byEntity![ent].gbp += gbp
+                byDate[r.date].byEntity![ent].usd += usd
+              }
+            })
+
+            const sortedDates = Object.keys(byDate).sort()
+            const firstDate = sortedDates[0]
+            const lastDate = sortedDates[sortedDates.length - 1]
+            const startVal = byDate[firstDate]
+            const endVal = byDate[lastDate]
+            const startGbp = startVal?.totalGbp ?? 0
+            const endGbp = endVal?.totalGbp ?? 0
+            const startUsd = startVal?.totalUsd ?? 0
+            const endUsd = endVal?.totalUsd ?? 0
+            const changeGbp = endGbp - startGbp
+            const changeUsd = endUsd - startUsd
+
+            const summary =
+              changeGbp >= 0
+                ? `Net worth increased from £${startGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })} to £${endGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })} GBP between ${firstDate} and ${lastDate} (+£${Math.abs(changeGbp).toLocaleString('en-GB', { maximumFractionDigits: 0 })}).`
+                : `Net worth decreased from £${startGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })} to £${endGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })} GBP between ${firstDate} and ${lastDate} (-£${Math.abs(changeGbp).toLocaleString('en-GB', { maximumFractionDigits: 0 })}).`
+
+            return {
+              trend: {
+                startDate: firstDate,
+                endDate: lastDate,
+                startGbp,
+                endGbp,
+                startUsd,
+                endUsd,
+                changeGbp,
+                changeUsd,
+                series: sortedDates.map((d) => ({
+                  date: d,
+                  totalGbp: byDate[d].totalGbp,
+                  totalUsd: byDate[d].totalUsd,
+                  ...(groupBy === 'entity' && byDate[d].byEntity ? { byEntity: byDate[d].byEntity } : {}),
+                })),
+              },
+              summary,
+            }
+          } catch (err) {
+            console.error('[chat] get_net_worth_trend: Execution error', err)
+            return { error: err instanceof Error ? err.message : 'Unknown error' }
+          }
+        },
+      },
+      get_cash_runway: {
+        description: `Get cash runway: liquid cash (Cash/Checking/Savings accounts) and average monthly burn from the last 3 full calendar months. Use when the user asks about runway, burn, or how long their cash will last.`,
+        inputSchema: z.object({}),
+        execute: async () => {
+          try {
+            console.log('[chat] get_cash_runway: Starting')
+
+            const now = new Date()
+            const utcYear = now.getUTCFullYear()
+            const utcMonth = now.getUTCMonth()
+            const startMonth = utcMonth - 3
+            const startYear = startMonth < 0 ? utcYear - 1 : utcYear
+            const adjustedStartMonth = startMonth < 0 ? startMonth + 12 : startMonth
+            const endMonth = utcMonth - 1
+            const endYear = endMonth < 0 ? utcYear - 1 : utcYear
+            const adjustedEndMonth = endMonth < 0 ? endMonth + 12 : endMonth
+            const startDateStr = `${startYear}-${String(adjustedStartMonth + 1).padStart(2, '0')}-01`
+            const lastDay = new Date(Date.UTC(endYear, adjustedEndMonth + 1, 0))
+            const endDateStr = lastDay.toISOString().split('T')[0]
+
+            const { data: rpcData, error: rpcError } = await supabase.rpc('get_cash_runway_net_burn', {
+              p_start: startDateStr,
+              p_end: endDateStr,
+            })
+            if (rpcError) {
+              console.error('[chat] get_cash_runway: RPC error', rpcError)
+              return { error: rpcError.message }
+            }
+            const row = Array.isArray(rpcData) ? rpcData[0] : rpcData
+            const gbpNet = row?.gbp_net != null ? Number(row.gbp_net) : 0
+            const usdNet = row?.usd_net != null ? Number(row.usd_net) : 0
+            const gbpAvgBurn = Math.max(0, -gbpNet) / 3
+            const usdAvgBurn = Math.max(0, -usdNet) / 3
+
+            const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
+            const { data: balancesData, error: balErr } = await supabase
+              .from('account_balances')
+              .select('institution, account_name, date_updated, balance_total_local, currency, category')
+              .order('date_updated', { ascending: false })
+            if (balErr) return { error: balErr.message }
+            const byAccount = new Map<string, { balance_total_local: number; currency: string; category: string; date_updated: string }>()
+            ;(balancesData || []).forEach((b: { institution: string; account_name: string; date_updated: string; balance_total_local?: number | null; currency?: string | null; category?: string | null }) => {
+              const key = `${b.institution}-${b.account_name}`
+              const existing = byAccount.get(key)
+              if (!existing || new Date(b.date_updated) > new Date(existing.date_updated)) {
+                byAccount.set(key, {
+                  balance_total_local: Number(b.balance_total_local ?? 0),
+                  currency: (b.currency || 'GBP').toUpperCase(),
+                  category: b.category || '',
+                  date_updated: b.date_updated,
+                })
+              }
+            })
+            let cashGbp = 0
+            let cashUsd = 0
+            byAccount.forEach(({ balance_total_local, currency, category }) => {
+              if (CASH_CATEGORIES.includes(category)) {
+                if (currency === 'GBP') cashGbp += balance_total_local
+                else cashUsd += balance_total_local
+              }
+            })
+
+            const gbpMonths = gbpAvgBurn > 0 ? cashGbp / gbpAvgBurn : (cashGbp > 0 ? Number.POSITIVE_INFINITY : 0)
+            const usdMonths = usdAvgBurn > 0 ? cashUsd / usdAvgBurn : (cashUsd > 0 ? Number.POSITIVE_INFINITY : 0)
+
+            const summaryParts: string[] = []
+            if (cashGbp > 0) {
+              const monthsStr = gbpMonths === Infinity ? 'no burn' : `~${Math.round(gbpMonths)} months`
+              summaryParts.push(`GBP cash: £${cashGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })} (runway ${monthsStr} at £${Math.round(gbpAvgBurn).toLocaleString('en-GB')}/mo burn)`)
+            }
+            if (cashUsd > 0) {
+              const monthsStr = usdMonths === Infinity ? 'no burn' : `~${Math.round(usdMonths)} months`
+              summaryParts.push(`USD cash: $${cashUsd.toLocaleString('en-US', { maximumFractionDigits: 0 })} (runway ${monthsStr} at $${Math.round(usdAvgBurn).toLocaleString('en-US')}/mo burn)`)
+            }
+            const summary = summaryParts.length ? summaryParts.join('. ') : 'No cash accounts (Cash/Checking/Savings) found.'
+
+            return {
+              runway: {
+                gbp: { totalCash: cashGbp, avgMonthlyBurn: gbpAvgBurn, monthsOnHand: gbpMonths === Infinity ? null : gbpMonths },
+                usd: { totalCash: cashUsd, avgMonthlyBurn: usdAvgBurn, monthsOnHand: usdMonths === Infinity ? null : usdMonths },
+                period: { startDate: startDateStr, endDate: endDateStr },
+              },
+              summary,
+            }
+          } catch (err) {
+            console.error('[chat] get_cash_runway: Execution error', err)
             return { error: err instanceof Error ? err.message : 'Unknown error' }
           }
         },
