@@ -27,19 +27,21 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-2 md:space-y-3">
-      {/* Header - Renders immediately */}
-      <div>
+    <div className="w-full max-w-7xl mx-auto space-y-2 md:space-y-3 flex flex-col">
+      {/* Header - Renders immediately; on mobile Executive Summary is moved to top via order */}
+      <div className="max-md:order-2">
         <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
         <p className="text-sm md:text-base text-muted-foreground">
           Overview of your financial position and trends
         </p>
       </div>
 
-      <DashboardAtAGlance />
+      <div className="max-md:order-1">
+        <DashboardAtAGlance />
+      </div>
 
       {/* Section 1: Net Worth + Income vs Expenses */}
-      <section id="net-worth-chart" className="scroll-mt-24">
+      <section id="net-worth-chart" className="scroll-mt-24 max-md:order-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
           <Suspense fallback={<NetWorthChartSkeleton />}>
             <NetWorthChartWrapper />
@@ -51,28 +53,28 @@ export default async function DashboardPage() {
       </section>
 
       {/* Section 2: Budget Table */}
-      <section id="budget-table" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border">
+      <section id="budget-table" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border max-md:order-2">
         <Suspense fallback={<BudgetTableSkeleton />}>
           <BudgetTableWrapper />
         </Suspense>
       </section>
 
       {/* Section 3: Annual Trends */}
-      <section id="annual-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border">
+      <section id="annual-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border max-md:order-2">
         <Suspense fallback={<TrendsTableSkeleton />}>
           <AnnualTrendsTableWrapper />
         </Suspense>
       </section>
 
       {/* Section 4: Monthly Trends */}
-      <section id="monthly-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border">
+      <section id="monthly-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border max-md:order-2">
         <Suspense fallback={<TrendsTableSkeleton />}>
           <MonthlyTrendsTableWrapper />
         </Suspense>
       </section>
 
       {/* Footer: back to top */}
-      <footer className="pt-3 md:pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-end gap-3">
+      <footer className="pt-3 md:pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-end gap-3 max-md:order-2">
         <DashboardBackToTop />
       </footer>
     </div>

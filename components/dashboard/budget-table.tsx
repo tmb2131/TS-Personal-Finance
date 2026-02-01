@@ -416,8 +416,8 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className={cn('pt-2', !expensesExpanded && 'hidden md:block')}>
-          {/* Executive Summary Cards */}
+        <CardContent className="pt-2">
+          {/* Executive Summary Cards — always visible */}
           <div className="mb-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {/* Expenses Status */}
@@ -551,8 +551,8 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               </div>
             </div>
           </div>
-          {/* Expenses — Mobile cards (when expanded) */}
-          <div className="md:hidden space-y-3">
+          {/* Expenses — Mobile category cards (Hide/Show breakdown only toggles this block on mobile) */}
+          <div className={cn('md:hidden space-y-3', !expensesExpanded && 'max-md:hidden')}>
             {expenseData.map((row) => {
               const gap = row.tracking - row.annualBudget
               const isPositive = gap >= 0
