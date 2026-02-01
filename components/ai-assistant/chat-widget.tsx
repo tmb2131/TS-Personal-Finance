@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,36 @@ export function ChatWidget() {
   const handleClearChat = () => {
     setMessages([])
   }
+
+  // On mobile: size/position dialog to visual viewport so it "lifts" above the keyboard (no zoom)
+  const [mobileDialogStyle, setMobileDialogStyle] = useState<React.CSSProperties | null>(null)
+  useEffect(() => {
+    if (!isOpen) {
+      setMobileDialogStyle(null)
+      return
+    }
+    const isNarrow = typeof window !== 'undefined' && window.innerWidth < 768
+    if (!isNarrow || typeof window === 'undefined' || !window.visualViewport) {
+      return
+    }
+    const vv = window.visualViewport
+    const inset = 12
+    const update = () => {
+      setMobileDialogStyle({
+        top: vv.offsetTop + inset,
+        height: vv.height - inset * 2,
+        maxHeight: vv.height - inset * 2,
+      })
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      setMobileDialogStyle(null)
+    }
+  }, [isOpen])
 
   // Render markdown content with proper formatting
   const renderMessageContent = (text: string) => {
@@ -111,6 +141,7 @@ export function ChatWidget() {
       {/* Chat Modal */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
+          style={mobileDialogStyle ?? undefined}
           className={cn(
             'p-0 flex flex-col',
             'rounded-2xl backdrop-blur-md bg-background/95',
@@ -293,14 +324,14 @@ export function ChatWidget() {
             </div>
           </div>
 
-          {/* Input Area - Pinned to Bottom */}
-          <form onSubmit={handleSubmit} className="border-t px-6 py-4 bg-background/50 backdrop-blur-sm">
+          {/* Input Area - Pinned to Bottom. text-[16px] prevents iOS zoom on focus; touch-action avoids double-tap zoom */}
+          <form onSubmit={handleSubmit} className="border-t px-6 py-4 bg-background/50 backdrop-blur-sm touch-manipulation">
             <div className="flex gap-2">
               <Input
                 value={localInput}
                 onChange={handleInputChange}
                 placeholder="Ask about your finances..."
-                className="flex-1"
+                className="flex-1 text-base min-[768px]:text-sm"
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
