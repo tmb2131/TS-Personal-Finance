@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { getChartFontSizes } from '@/lib/chart-styles'
+import { cn } from '@/utils/cn'
 import { AlertCircle, TrendingUp } from 'lucide-react'
 import {
   BarChart,
@@ -19,6 +20,8 @@ import {
   Cell,
   LabelList,
 } from 'recharts'
+
+const DRIVER_MIN_SHARE = 0.05
 
 export type ForecastBridgeDriver = {
   category: string
@@ -207,59 +210,89 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
 
   const fontSizes = getChartFontSizes(isMobile)
 
+  const netChange = data.totalEnd - data.totalStart
+  const absAmount = formatCurrencyFull(Math.abs(netChange))
+  const shortDate = (s: string) => {
+    const d = new Date(s + 'T12:00:00')
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  }
+  const periodLabel = `${shortDate(data.startDate)} → ${shortDate(data.endDate)}`
+
+  const totalAbsoluteDelta = data.drivers.reduce((sum, d) => sum + Math.abs(d.delta), 0)
+  const worsened = data.drivers
+    .filter(
+      (d) =>
+        d.delta > 0 &&
+        (totalAbsoluteDelta === 0 || Math.abs(d.delta) >= DRIVER_MIN_SHARE * totalAbsoluteDelta)
+    )
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+  const improved = data.drivers
+    .filter(
+      (d) =>
+        d.delta < 0 &&
+        (totalAbsoluteDelta === 0 || Math.abs(d.delta) >= DRIVER_MIN_SHARE * totalAbsoluteDelta)
+    )
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+  const hasWorsened = worsened.length > 0
+  const hasImproved = improved.length > 0
+  const driverSubtext =
+    hasWorsened || hasImproved
+      ? [
+          hasWorsened && `Driven by ${worsened.map((d) => d.category).join(', ')}`,
+          hasImproved && `partially offset by ${improved.map((d) => d.category).join(', ')}`,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : null
+
   return (
     <Card>
       <CardHeader className="bg-muted/50">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex flex-col gap-3">
           <div>
             <CardTitle className="text-xl">Forecast Evolution</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {(() => {
-                const netChange = data.totalEnd - data.totalStart
-                const absAmount = formatCurrencyFull(Math.abs(netChange))
-                if (netChange < 0) {
-                  return <>For the selected period ({data.startDate} → {data.endDate}), the gap to budget improved by {absAmount}. Drivers are below.</>
-                }
-                if (netChange > 0) {
-                  return <>For the selected period ({data.startDate} → {data.endDate}), the gap to budget worsened by {absAmount}. Drivers are below.</>
-                }
-                return <>For the selected period ({data.startDate} → {data.endDate}), the gap to budget was unchanged. Drivers are below.</>
-              })()}
-            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">{periodLabel}</p>
           </div>
-          <div className="overflow-x-auto rounded-md border border-border bg-background px-3 py-2 shrink-0 self-start sm:mt-0">
-            <table className="w-auto text-sm border-collapse">
-              <thead>
-                <tr className="text-muted-foreground text-xs">
-                  <th className="text-left font-medium text-foreground py-0.5 pr-3"></th>
-                  <th className="text-left py-0.5 pr-3">Budget</th>
-                  <th className="text-left py-0.5 pr-3">Tracking</th>
-                  <th className="text-left py-0.5">Gap</th>
-                </tr>
-              </thead>
-              <tbody className="text-muted-foreground">
-                <tr>
-                  <td className="font-medium text-foreground py-0.5 pr-3">{data.startDate}</td>
-                  <td className="text-left tabular-nums py-0.5 pr-3">
-                    {formatCurrencyFull(data.expensesBudgetStart)}
-                  </td>
-                  <td className="text-left tabular-nums py-0.5 pr-3">
-                    {formatCurrencyFull(data.expensesForecastStart)}
-                  </td>
-                  <td className="text-left tabular-nums py-0.5">{formatCurrencyFull(data.totalStart)}</td>
-                </tr>
-                <tr>
-                  <td className="font-medium text-foreground py-0.5 pr-3">{data.endDate}</td>
-                  <td className="text-left tabular-nums py-0.5 pr-3">
-                    {formatCurrencyFull(data.expensesBudgetEnd)}
-                  </td>
-                  <td className="text-left tabular-nums py-0.5 pr-3">
-                    {formatCurrencyFull(data.expensesForecastEnd)}
-                  </td>
-                  <td className="text-left tabular-nums py-0.5">{formatCurrencyFull(data.totalEnd)}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="rounded-lg border border-border bg-background p-3 shadow-sm space-y-1">
+            <span
+              className={cn(
+                'text-sm font-medium tabular-nums',
+                netChange < 0 && 'text-green-600 dark:text-green-500',
+                netChange > 0 && 'text-red-600 dark:text-red-500',
+                netChange === 0 && 'text-muted-foreground'
+              )}
+            >
+              {netChange < 0 && `Gap to budget improved by ${absAmount}`}
+              {netChange > 0 && `Gap to budget worsened by ${absAmount}`}
+              {netChange === 0 && 'Gap to budget unchanged'}
+            </span>
+            {driverSubtext && (
+              <p className="text-xs text-muted-foreground">
+                {hasWorsened && (
+                  <>
+                    Driven by{' '}
+                    {worsened.map((d, i) => (
+                      <span key={d.category}>
+                        {i > 0 && ', '}
+                        <span className="font-semibold text-red-600 dark:text-red-500">{d.category}</span>
+                      </span>
+                    ))}
+                  </>
+                )}
+                {hasWorsened && hasImproved && ', '}
+                {hasImproved && (
+                  <>
+                    partially offset by{' '}
+                    {improved.map((d, i) => (
+                      <span key={d.category}>
+                        {i > 0 && ', '}
+                        <span className="font-semibold text-green-600 dark:text-green-500">{d.category}</span>
+                      </span>
+                    ))}
+                  </>
+                )}
+              </p>
+            )}
           </div>
         </div>
       </CardHeader>

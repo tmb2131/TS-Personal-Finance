@@ -112,10 +112,13 @@ export function ChatWidget() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
           className={cn(
-            'max-w-3xl h-[80vh] p-0 flex flex-col',
+            'p-0 flex flex-col',
             'rounded-2xl backdrop-blur-md bg-background/95',
             'border border-border/50 shadow-2xl',
-            '[&>button]:hidden' // Hide default close button since we have custom header
+            '[&>button]:hidden', // Hide default close button since we have custom header
+            // Mobile: nearly full screen with small inset so background remains visible as overlay
+            'fixed left-3 right-3 top-3 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)]',
+            'md:left-[50%] md:right-auto md:top-[50%] md:translate-x-[-50%] md:translate-y-[-50%] md:h-[80vh] md:max-h-[80vh] md:w-full md:max-w-3xl'
           )}
         >
           {/* Header */}
