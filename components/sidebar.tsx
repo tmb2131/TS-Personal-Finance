@@ -142,7 +142,7 @@ export function Sidebar() {
               <DialogHeader className="px-4 pt-4 pb-2">
                 <DialogTitle>More</DialogTitle>
               </DialogHeader>
-              <div className="overflow-y-auto px-4 pb-6 pb-[env(safe-area-inset-bottom)]">
+              <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
                 <div className="flex flex-col gap-1">
                   {mobileMoreNav.map((item) => {
                     const isActive = pathname === item.href

@@ -215,9 +215,9 @@ export function ChatWidget() {
                   </div>
                   <p className="text-lg font-semibold text-foreground mb-1">
                     {displayName ? (
-                      <>Hi {displayName}, I&apos;m here to help.</>
+                      <>Hi {displayName}, I&apos;m here to help!</>
                     ) : (
-                      <>Hi, I&apos;m here to help.</>
+                      <>Hi, I&apos;m here to help!</>
                     )}
                   </p>
                   <p className="text-sm text-muted-foreground max-w-xs">
