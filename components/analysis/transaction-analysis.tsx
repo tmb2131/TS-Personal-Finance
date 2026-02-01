@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -26,17 +26,48 @@ interface AggregatedTransaction {
   transactionCount: number
 }
 
-export function TransactionAnalysis() {
+interface TransactionAnalysisProps {
+  initialSection?: string
+  initialPeriod?: 'YTD' | 'MTD'
+  initialYear?: number
+  initialMonth?: number
+  initialCategory?: string
+}
+
+export function TransactionAnalysis({
+  initialSection,
+  initialPeriod,
+  initialYear,
+  initialMonth,
+  initialCategory,
+}: TransactionAnalysisProps = {}) {
   const { currency, convertAmount, fxRate } = useCurrency()
-  const [periodType, setPeriodType] = useState<'YTD' | 'MTD'>('YTD')
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const now = new Date()
+  const [periodType, setPeriodType] = useState<'YTD' | 'MTD'>(
+    initialPeriod ?? 'YTD'
+  )
+  const [selectedYear, setSelectedYear] = useState<number>(
+    initialYear ?? now.getFullYear()
+  )
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    initialMonth ?? now.getMonth() + 1
+  )
   const [categories, setCategories] = useState<string[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    initialCategory ?? ''
+  )
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [ratesByDate, setRatesByDate] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Scroll to Transaction Analysis section when opened via URL (e.g. from Dashboard trends)
+  useEffect(() => {
+    if (initialSection === 'transaction-analysis' && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [initialSection])
 
   // Get available years (last 5 years)
   const availableYears = useMemo(() => {
@@ -307,7 +338,7 @@ export function TransactionAnalysis() {
   }
 
   return (
-    <Card>
+    <Card ref={cardRef}>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <CardTitle className="text-base">Transaction Analysis</CardTitle>
       </CardHeader>

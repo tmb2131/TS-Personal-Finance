@@ -9,7 +9,13 @@ import { CashRunwayCards } from '@/components/analysis/cash-runway-cards'
 import { AnalysisNavigation } from '@/components/analysis/analysis-navigation'
 import { ForecastEvolutionSection } from '@/components/analysis/forecast-evolution-section'
 
-export default async function AnalysisPage() {
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
+
+export default async function AnalysisPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -18,6 +24,13 @@ export default async function AnalysisPage() {
   if (!user) {
     redirect('/login')
   }
+
+  const params = await searchParams
+  const section = typeof params?.section === 'string' ? params.section : undefined
+  const period = typeof params?.period === 'string' ? params.period : undefined
+  const yearParam = typeof params?.year === 'string' ? params.year : undefined
+  const monthParam = typeof params?.month === 'string' ? params.month : undefined
+  const category = typeof params?.category === 'string' ? params.category : undefined
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -32,7 +45,13 @@ export default async function AnalysisPage() {
         <CashRunwayCards />
       </div>
       <div id="transaction-analysis" className="scroll-mt-24">
-        <TransactionAnalysis />
+        <TransactionAnalysis
+          initialSection={section === 'transaction-analysis' ? section : undefined}
+          initialPeriod={period === 'YTD' || period === 'MTD' ? period : undefined}
+          initialYear={yearParam ? parseInt(yearParam, 10) : undefined}
+          initialMonth={monthParam ? parseInt(monthParam, 10) : undefined}
+          initialCategory={category || undefined}
+        />
       </div>
       <div id="forecast-evolution" className="scroll-mt-24">
         <ForecastEvolutionSection />

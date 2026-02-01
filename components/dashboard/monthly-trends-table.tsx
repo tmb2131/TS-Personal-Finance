@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -16,6 +17,7 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { MonthlyTrend } from '@/lib/types'
 import { endOfMonth, type RatesByMonthOffset } from '@/lib/utils/fx-rates'
+import { buildTransactionAnalysisUrl } from '@/lib/analysis-url'
 import { cn } from '@/utils/cn'
 import { AlertCircle, TrendingUp, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
@@ -543,6 +545,40 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
     return `${months[monthIndex]} '${shortYear}`
   }
 
+  // Get year and month (1-12) for a column offset (0 = current month, 1 = last month, etc.)
+  const getYearMonth = (offset: number) => {
+    const currentDate = new Date()
+    let monthIndex = currentDate.getMonth() - offset
+    let year = currentDate.getFullYear()
+    while (monthIndex < 0) {
+      monthIndex += 12
+      year--
+    }
+    return { year, month: monthIndex + 1 }
+  }
+
+  // Clickable number cell: navigates to Transaction Analysis with period + category (subtle hover, no link styling)
+  const ClickableTrendCell = ({
+    href,
+    children,
+    style,
+    className,
+  }: {
+    href: string
+    children: React.ReactNode
+    style?: React.CSSProperties
+    className?: string
+  }) => (
+    <TableCell style={style} className={className}>
+      <Link
+        href={href}
+        className="block w-full text-right rounded py-0.5 px-1 -mx-1 transition-opacity hover:opacity-75 cursor-pointer no-underline text-inherit"
+      >
+        {children}
+      </Link>
+    </TableCell>
+  )
+
   if (loading) {
     return (
       <Card>
@@ -953,18 +989,18 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             {/* Total Row */}
             <TableRow className="bg-muted/50 border-b-2 border-gray-700">
               <TableCell className="font-semibold w-28 min-w-[7rem] bg-muted/50">Total</TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_3)}>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(3).year, month: getYearMonth(3).month })} style={getMonthlyBgStyle(totals.cur_month_minus_3)} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_minus_3)}
-              </TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_2)}>
+              </ClickableTrendCell>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(2).year, month: getYearMonth(2).month })} style={getMonthlyBgStyle(totals.cur_month_minus_2)} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_minus_2)}
-              </TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_minus_1)}>
+              </ClickableTrendCell>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(1).year, month: getYearMonth(1).month })} style={getMonthlyBgStyle(totals.cur_month_minus_1)} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_minus_1)}
-              </TableCell>
-              <TableCell className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50" style={getMonthlyBgStyle(totals.cur_month_est)}>
+              </ClickableTrendCell>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month })} style={getMonthlyBgStyle(totals.cur_month_est)} className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_est)}
-              </TableCell>
+              </ClickableTrendCell>
               <TableCell className="text-right w-14 bg-muted/50">
                 {/* Sparkline for total */}
                 <Sparkline row={{
@@ -1003,19 +1039,19 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {row.category}
                   </TableCell>
                   
-                  {/* Monthly columns with color-coded backgrounds */}
-                  <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.cur_month_minus_3)}>
+                  {/* Monthly columns with color-coded backgrounds — clickable to Transaction Analysis */}
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(3).year, month: getYearMonth(3).month, category: row.category })} style={getMonthlyBgStyle(row.cur_month_minus_3)} className="text-right w-16">
                     {row.cur_month_minus_3 === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_minus_3)}
-                  </TableCell>
-                  <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.cur_month_minus_2)}>
+                  </ClickableTrendCell>
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(2).year, month: getYearMonth(2).month, category: row.category })} style={getMonthlyBgStyle(row.cur_month_minus_2)} className="text-right w-16">
                     {row.cur_month_minus_2 === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_minus_2)}
-                  </TableCell>
-                  <TableCell className="text-right w-16" style={getMonthlyBgStyle(row.cur_month_minus_1)}>
+                  </ClickableTrendCell>
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(1).year, month: getYearMonth(1).month, category: row.category })} style={getMonthlyBgStyle(row.cur_month_minus_1)} className="text-right w-16">
                     {row.cur_month_minus_1 === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_minus_1)}
-                  </TableCell>
-                  <TableCell className="text-right w-16 border-l-2 border-r-2 border-gray-700" style={getMonthlyBgStyle(row.cur_month_est)}>
+                  </ClickableTrendCell>
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month, category: row.category })} style={getMonthlyBgStyle(row.cur_month_est)} className="text-right w-16 border-l-2 border-r-2 border-gray-700">
                     {row.cur_month_est === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_est)}
-                  </TableCell>
+                  </ClickableTrendCell>
                   
                   {/* Sparkline Trend */}
                   <TableCell className="text-right w-14">

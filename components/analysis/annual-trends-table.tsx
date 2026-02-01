@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -16,6 +17,7 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { AnnualTrend } from '@/lib/types'
 import { endOfYear, type RatesByYear } from '@/lib/utils/fx-rates'
+import { buildTransactionAnalysisUrl } from '@/lib/analysis-url'
 import { cn } from '@/utils/cn'
 import { AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
@@ -381,6 +383,28 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
       </div>
     )
   }
+
+  // Clickable number cell: navigates to Transaction Analysis with period + category (subtle hover, no link styling)
+  const ClickableTrendCell = ({
+    href,
+    children,
+    style,
+    className,
+  }: {
+    href: string
+    children: React.ReactNode
+    style?: React.CSSProperties
+    className?: string
+  }) => (
+    <TableCell style={style} className={className}>
+      <Link
+        href={href}
+        className="block w-full text-right rounded py-0.5 px-1 -mx-1 transition-opacity hover:opacity-75 cursor-pointer no-underline text-inherit"
+      >
+        {children}
+      </Link>
+    </TableCell>
+  )
 
   // Handle sort
   const handleSort = (field: SortField) => {
@@ -768,21 +792,21 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
             {/* Total Row */}
             <TableRow className="bg-muted/50 border-b-2 border-gray-700">
               <TableCell className="font-semibold w-28 min-w-[7rem] bg-muted/50">Total</TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_4)}>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 4 })} style={getAnnualBgStyle(totals.cur_yr_minus_4)} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_4)}
-              </TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_3)}>
+              </ClickableTrendCell>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 3 })} style={getAnnualBgStyle(totals.cur_yr_minus_3)} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_3)}
-              </TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_2)}>
+              </ClickableTrendCell>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 2 })} style={getAnnualBgStyle(totals.cur_yr_minus_2)} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_2)}
-              </TableCell>
-              <TableCell className="text-right font-semibold w-16 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_minus_1)}>
+              </ClickableTrendCell>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 1 })} style={getAnnualBgStyle(totals.cur_yr_minus_1)} className="text-right font-semibold w-16 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_minus_1)}
-              </TableCell>
-              <TableCell className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50" style={getAnnualBgStyle(totals.cur_yr_est)}>
+              </ClickableTrendCell>
+              <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear })} style={getAnnualBgStyle(totals.cur_yr_est)} className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_yr_est)}
-              </TableCell>
+              </ClickableTrendCell>
               <TableCell className="text-right w-14 bg-muted/50">
                 {/* Sparkline for total with tooltip */}
                 <Sparkline row={{
@@ -809,22 +833,22 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                 <TableRow key={row.category}>
                   <TableCell className="font-medium w-28 min-w-[7rem]">{row.category}</TableCell>
                   
-                  {/* Annual columns with color-coded backgrounds */}
-                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_4)}>
+                  {/* Annual columns with color-coded backgrounds — clickable to Transaction Analysis */}
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 4, category: row.category })} style={getAnnualBgStyle(row.cur_yr_minus_4)} className="text-right w-16">
                     {row.cur_yr_minus_4 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_4)}
-                  </TableCell>
-                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_3)}>
+                  </ClickableTrendCell>
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 3, category: row.category })} style={getAnnualBgStyle(row.cur_yr_minus_3)} className="text-right w-16">
                     {row.cur_yr_minus_3 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_3)}
-                  </TableCell>
-                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_2)}>
+                  </ClickableTrendCell>
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 2, category: row.category })} style={getAnnualBgStyle(row.cur_yr_minus_2)} className="text-right w-16">
                     {row.cur_yr_minus_2 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_2)}
-                  </TableCell>
-                  <TableCell className="text-right w-16" style={getAnnualBgStyle(row.cur_yr_minus_1)}>
+                  </ClickableTrendCell>
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear - 1, category: row.category })} style={getAnnualBgStyle(row.cur_yr_minus_1)} className="text-right w-16">
                     {row.cur_yr_minus_1 === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_minus_1)}
-                  </TableCell>
-                  <TableCell className="text-right w-16 border-l-2 border-r-2 border-gray-700" style={getAnnualBgStyle(row.cur_yr_est)}>
+                  </ClickableTrendCell>
+                  <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'YTD', year: currentYear, category: row.category })} style={getAnnualBgStyle(row.cur_yr_est)} className="text-right w-16 border-l-2 border-r-2 border-gray-700">
                     {row.cur_yr_est === 0 ? '-' : formatCurrencyWithParens(-row.cur_yr_est)}
-                  </TableCell>
+                  </ClickableTrendCell>
                   
                   {/* Sparkline Trend */}
                   <TableCell className="text-right w-14">
