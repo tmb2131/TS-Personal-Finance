@@ -238,8 +238,8 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
   const driverSubtext =
     hasWorsened || hasImproved
       ? [
-          hasWorsened && `Driven by ${worsened.map((d) => d.category).join(', ')}`,
-          hasImproved && `partially offset by ${improved.map((d) => d.category).join(', ')}`,
+          hasImproved && `Driven by ${improved.map((d) => d.category).join(', ')}`,
+          hasWorsened && `partially offset by ${worsened.map((d) => d.category).join(', ')}`,
         ]
           .filter(Boolean)
           .join(', ')
@@ -268,25 +268,25 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
             </span>
             {driverSubtext && (
               <p className="text-xs text-muted-foreground">
-                {hasWorsened && (
-                  <>
-                    Driven by{' '}
-                    {worsened.map((d, i) => (
-                      <span key={d.category}>
-                        {i > 0 && ', '}
-                        <span className="font-semibold text-red-600 dark:text-red-500">{d.category}</span>
-                      </span>
-                    ))}
-                  </>
-                )}
-                {hasWorsened && hasImproved && ', '}
                 {hasImproved && (
                   <>
-                    partially offset by{' '}
+                    Driven by{' '}
                     {improved.map((d, i) => (
                       <span key={d.category}>
                         {i > 0 && ', '}
                         <span className="font-semibold text-green-600 dark:text-green-500">{d.category}</span>
+                      </span>
+                    ))}
+                  </>
+                )}
+                {hasImproved && hasWorsened && ', '}
+                {hasWorsened && (
+                  <>
+                    partially offset by{' '}
+                    {worsened.map((d, i) => (
+                      <span key={d.category}>
+                        {i > 0 && ', '}
+                        <span className="font-semibold text-red-600 dark:text-red-500">{d.category}</span>
                       </span>
                     ))}
                   </>
