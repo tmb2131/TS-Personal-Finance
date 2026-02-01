@@ -425,13 +425,25 @@ export async function syncGoogleSheet() {
             });
           upsertResult = { data, error };
         } else if (config.table === 'fx_rate_current') {
-          // For current FX rate, use date as conflict
-          const { data, error } = await supabase
-            .from(config.table)
-            .upsert(transformedData, {
-              onConflict: 'date',
-            });
-          upsertResult = { data, error };
+          // Skip rows with invalid gbpusd_rate (NaN, null, or non-positive) to avoid NOT NULL constraint violation
+          const validData = transformedData.filter((row: any) => {
+            const rate = row.gbpusd_rate
+            return typeof rate === 'number' && Number.isFinite(rate) && rate > 0
+          })
+          if (validData.length < transformedData.length) {
+            console.warn(`FX Rate Current: Skipped ${transformedData.length - validData.length} row(s) with invalid gbpusd_rate`)
+          }
+          if (validData.length === 0) {
+            console.warn('FX Rate Current: No valid rows to upsert (all gbpusd_rate values invalid or missing)')
+            upsertResult = { data: null, error: null }
+          } else {
+            const { data, error } = await supabase
+              .from(config.table)
+              .upsert(validData, {
+                onConflict: 'date',
+              })
+            upsertResult = { data, error }
+          }
         } else if (config.table === 'yoy_net_worth') {
           // For YoY Net Worth, use category as conflict (unique constraint)
           const { data, error } = await supabase

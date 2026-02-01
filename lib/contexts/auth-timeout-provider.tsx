@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const INACTIVITY_MS = 5 * 60 * 1000 // 5 minutes
@@ -9,6 +9,7 @@ const HIDDEN_LOGOUT_MS = 5 * 60 * 1000 // treat tab hidden for 5+ min as "app cl
 
 export function AuthTimeoutProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hiddenAtRef = useRef<number | null>(null)
 
@@ -44,9 +45,16 @@ export function AuthTimeoutProvider({ children }: { children: React.ReactNode })
       }
     })
 
-    // Initial check: if already signed in, start timer
+    // Initial check: if already signed in, start timer. If refresh token is invalid, sign out to clear stale cookies.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) resetInactivityTimer()
+    }).catch(async (err: unknown) => {
+      const isRefreshTokenError =
+        err && typeof err === 'object' && 'code' in err && (err as { code?: string }).code === 'refresh_token_not_found'
+      if (isRefreshTokenError) {
+        await supabase.auth.signOut()
+        if (pathname !== '/login') router.replace('/login')
+      }
     })
 
     const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
@@ -76,7 +84,7 @@ export function AuthTimeoutProvider({ children }: { children: React.ReactNode })
       activityEvents.forEach((ev) => window.removeEventListener(ev, onActivity))
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [resetInactivityTimer, signOutAndRedirect])
+  }, [pathname, resetInactivityTimer, signOutAndRedirect])
 
   return <>{children}</>
 }
