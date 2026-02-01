@@ -25,8 +25,8 @@ function scrollToSection(id: string) {
 }
 
 const SECTIONS = [
-  { id: 'net-worth-chart', label: 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
-  { id: 'budget-table', label: 'Budget', labelShort: 'Budget', icon: Receipt },
+  { id: 'net-worth-chart', label: 'Net Worth (incl. Trust)', labelShort: 'Net Worth', icon: LineChart },
+  { id: 'budget-table', label: 'Budget (Net Income)', labelShort: 'Budget', icon: Receipt },
   { id: 'annual-trends', label: 'Annual Trends', labelShort: 'Annual', icon: Calendar },
   { id: 'monthly-trends', label: 'Monthly Trends', labelShort: 'Monthly', icon: CalendarDays },
 ] as const

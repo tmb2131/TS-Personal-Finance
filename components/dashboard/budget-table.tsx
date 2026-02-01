@@ -678,150 +678,237 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               )
             })}
           </div>
-          {/* Expenses table: two side-by-side columns (desktop); optional full-screen view */}
+          {/* Expenses table: two side-by-side columns (desktop); full view = single table so header doesn't repeat */}
           <FullTableViewWrapper
             fullView={expenseFullView}
             onClose={() => setExpenseFullView(false)}
             className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-3"
           >
-            <>
-            <div className="border rounded-md overflow-hidden min-w-0">
-              <Table className={expenseCompactClass}>
-                <TableHeader>
-                  <TableRow className="border-b bg-muted">
-                    <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
-                      <button
-                        onClick={() => handleExpenseSort('category')}
-                        className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
-                      >
-                        Expenses
-                        <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
-                      </button>
-                    </TableHead>
-                    <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-gray-200 dark:bg-gray-700')}>
-                      <button
-                        onClick={() => handleExpenseSort('annualBudget')}
-                        className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
-                      >
-                        Budget
-                        <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
-                      </button>
-                    </TableHead>
-                    <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-gray-200 dark:bg-gray-700')}>
-                      <button
-                        onClick={() => handleExpenseSort('tracking')}
-                        className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
-                      >
-                        Tracking
-                        <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
-                      </button>
-                    </TableHead>
-                    <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
-                      <button
-                        onClick={() => handleExpenseSort('gap')}
-                        className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
-                      >
-                        Gap
-                        <SortIcon field="gap" currentField={expenseSortField} direction={expenseSortDirection} />
-                      </button>
-                    </TableHead>
-                    <TableHead className="w-16 bg-muted"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenseLeftRows.map((row) => {
-                    const gap = row.tracking - row.annualBudget
-                    const gapPercent = (Math.abs(gap) / maxGap) * 100
-                    const isPositive = gap >= 0
-                    return (
-                      <TableRow key={row.category}>
-                        <TableCell className="font-medium">{row.category}</TableCell>
-                        <TableCell className="text-right">
-                          ({formatCurrencyCompact(Math.abs(row.annualBudget))})
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ({formatCurrencyCompact(Math.abs(row.tracking))})
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            'text-right font-medium',
-                            isPositive ? 'text-green-600' : 'text-red-600'
-                          )}
+            {expenseFullView ? (
+              <div className="border rounded-md overflow-hidden min-w-0">
+                <Table className={expenseCompactClass}>
+                  <TableHeader>
+                    <TableRow className="border-b bg-muted">
+                      <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <button
+                          onClick={() => handleExpenseSort('category')}
+                          className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
                         >
-                          {gap === 0 ? '-' : formatCurrencyCompact(gap)}
-                        </TableCell>
-                        <TableCell className="w-16">
-                          <div className="relative h-2 w-10">
-                            {gap !== 0 && (
-                              <div
-                                className={cn(
-                                  'absolute h-full',
-                                  isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
-                                )}
-                                style={{ width: `${gapPercent}%` }}
-                              />
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="border rounded-md overflow-hidden min-w-0">
-              <Table className={expenseCompactClass}>
-                <TableHeader>
-                  <TableRow className="border-b bg-muted">
-                    <TableHead className="bg-muted">Expenses</TableHead>
-                    <TableHead className="text-right bg-muted">Budget</TableHead>
-                    <TableHead className="text-right bg-muted">Tracking</TableHead>
-                    <TableHead className="text-right bg-muted">Gap</TableHead>
-                    <TableHead className="w-16 bg-muted"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenseRightRows.map((row) => {
-                    const gap = row.tracking - row.annualBudget
-                    const gapPercent = (Math.abs(gap) / maxGap) * 100
-                    const isPositive = gap >= 0
-                    return (
-                      <TableRow key={row.category}>
-                        <TableCell className="font-medium">{row.category}</TableCell>
-                        <TableCell className="text-right">
-                          ({formatCurrencyCompact(Math.abs(row.annualBudget))})
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ({formatCurrencyCompact(Math.abs(row.tracking))})
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            'text-right font-medium',
-                            isPositive ? 'text-green-600' : 'text-red-600'
-                          )}
+                          Expenses
+                          <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
+                        </button>
+                      </TableHead>
+                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <button
+                          onClick={() => handleExpenseSort('annualBudget')}
+                          className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
                         >
-                          {gap === 0 ? '-' : formatCurrencyCompact(gap)}
-                        </TableCell>
-                        <TableCell className="w-16">
-                          <div className="relative h-2 w-10">
-                            {gap !== 0 && (
-                              <div
-                                className={cn(
-                                  'absolute h-full',
-                                  isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
-                                )}
-                                style={{ width: `${gapPercent}%` }}
-                              />
+                          Budget
+                          <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
+                        </button>
+                      </TableHead>
+                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <button
+                          onClick={() => handleExpenseSort('tracking')}
+                          className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
+                        >
+                          Tracking
+                          <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
+                        </button>
+                      </TableHead>
+                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <button
+                          onClick={() => handleExpenseSort('gap')}
+                          className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
+                        >
+                          Gap
+                          <SortIcon field="gap" currentField={expenseSortField} direction={expenseSortDirection} />
+                        </button>
+                      </TableHead>
+                      <TableHead className="w-16 bg-muted"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expenseData.map((row) => {
+                      const gap = row.tracking - row.annualBudget
+                      const gapPercent = (Math.abs(gap) / maxGap) * 100
+                      const isPositive = gap >= 0
+                      return (
+                        <TableRow key={row.category}>
+                          <TableCell className="font-medium">{row.category}</TableCell>
+                          <TableCell className="text-right">
+                            ({formatCurrencyCompact(Math.abs(row.annualBudget))})
+                          </TableCell>
+                          <TableCell className="text-right">
+                            ({formatCurrencyCompact(Math.abs(row.tracking))})
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'text-right font-medium',
+                              isPositive ? 'text-green-600' : 'text-red-600'
                             )}
-                          </div>
-                        </TableCell>
+                          >
+                            {gap === 0 ? '-' : formatCurrencyCompact(gap)}
+                          </TableCell>
+                          <TableCell className="w-16">
+                            <div className="relative h-2 w-10">
+                              {gap !== 0 && (
+                                <div
+                                  className={cn(
+                                    'absolute h-full',
+                                    isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                  )}
+                                  style={{ width: `${gapPercent}%` }}
+                                />
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <>
+                <div className="border rounded-md overflow-hidden min-w-0">
+                  <Table className={expenseCompactClass}>
+                    <TableHeader>
+                      <TableRow className="border-b bg-muted">
+                        <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
+                          <button
+                            onClick={() => handleExpenseSort('category')}
+                            className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
+                          >
+                            Expenses
+                            <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
+                          </button>
+                        </TableHead>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-gray-200 dark:bg-gray-700')}>
+                          <button
+                            onClick={() => handleExpenseSort('annualBudget')}
+                            className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
+                          >
+                            Budget
+                            <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
+                          </button>
+                        </TableHead>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-gray-200 dark:bg-gray-700')}>
+                          <button
+                            onClick={() => handleExpenseSort('tracking')}
+                            className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
+                          >
+                            Tracking
+                            <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
+                          </button>
+                        </TableHead>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
+                          <button
+                            onClick={() => handleExpenseSort('gap')}
+                            className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
+                          >
+                            Gap
+                            <SortIcon field="gap" currentField={expenseSortField} direction={expenseSortDirection} />
+                          </button>
+                        </TableHead>
+                        <TableHead className="w-16 bg-muted"></TableHead>
                       </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-            </>
+                    </TableHeader>
+                    <TableBody>
+                      {expenseLeftRows.map((row) => {
+                        const gap = row.tracking - row.annualBudget
+                        const gapPercent = (Math.abs(gap) / maxGap) * 100
+                        const isPositive = gap >= 0
+                        return (
+                          <TableRow key={row.category}>
+                            <TableCell className="font-medium">{row.category}</TableCell>
+                            <TableCell className="text-right">
+                              ({formatCurrencyCompact(Math.abs(row.annualBudget))})
+                            </TableCell>
+                            <TableCell className="text-right">
+                              ({formatCurrencyCompact(Math.abs(row.tracking))})
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                'text-right font-medium',
+                                isPositive ? 'text-green-600' : 'text-red-600'
+                              )}
+                            >
+                              {gap === 0 ? '-' : formatCurrencyCompact(gap)}
+                            </TableCell>
+                            <TableCell className="w-16">
+                              <div className="relative h-2 w-10">
+                                {gap !== 0 && (
+                                  <div
+                                    className={cn(
+                                      'absolute h-full',
+                                      isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                    )}
+                                    style={{ width: `${gapPercent}%` }}
+                                  />
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="border rounded-md overflow-hidden min-w-0">
+                  <Table className={expenseCompactClass}>
+                    <TableHeader>
+                      <TableRow className="border-b bg-muted">
+                        <TableHead className="bg-muted">Expenses</TableHead>
+                        <TableHead className="text-right bg-muted">Budget</TableHead>
+                        <TableHead className="text-right bg-muted">Tracking</TableHead>
+                        <TableHead className="text-right bg-muted">Gap</TableHead>
+                        <TableHead className="w-16 bg-muted"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenseRightRows.map((row) => {
+                        const gap = row.tracking - row.annualBudget
+                        const gapPercent = (Math.abs(gap) / maxGap) * 100
+                        const isPositive = gap >= 0
+                        return (
+                          <TableRow key={row.category}>
+                            <TableCell className="font-medium">{row.category}</TableCell>
+                            <TableCell className="text-right">
+                              ({formatCurrencyCompact(Math.abs(row.annualBudget))})
+                            </TableCell>
+                            <TableCell className="text-right">
+                              ({formatCurrencyCompact(Math.abs(row.tracking))})
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                'text-right font-medium',
+                                isPositive ? 'text-green-600' : 'text-red-600'
+                              )}
+                            >
+                              {gap === 0 ? '-' : formatCurrencyCompact(gap)}
+                            </TableCell>
+                            <TableCell className="w-16">
+                              <div className="relative h-2 w-10">
+                                {gap !== 0 && (
+                                  <div
+                                    className={cn(
+                                      'absolute h-full',
+                                      isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                    )}
+                                    style={{ width: `${gapPercent}%` }}
+                                  />
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
           </FullTableViewWrapper>
         </CardContent>
       </Card>
