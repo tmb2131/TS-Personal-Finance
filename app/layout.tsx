@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
 import { AuthTimeoutProvider } from '@/lib/contexts/auth-timeout-provider'
@@ -34,6 +35,7 @@ export default function RootLayout({
             <AppShell>{children}</AppShell>
           </AuthTimeoutProvider>
         </CurrencyProvider>
+        <Analytics />
       </body>
     </html>
   )
