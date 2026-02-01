@@ -1,5 +1,7 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
 import { snapshotBudgetHistory } from '@/lib/snapshot-budget-history'
+import { recordLastSync } from '@/lib/sync-metadata'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 /**
@@ -17,6 +19,10 @@ export async function GET(request: Request) {
     const result = await syncGoogleSheet()
     const today = new Date().toISOString().split('T')[0]
     await snapshotBudgetHistory(today)
+    if (result.success) {
+      const admin = createAdminClient()
+      await recordLastSync(admin)
+    }
     return NextResponse.json({
       success: result.success,
       results: result.results ?? [],

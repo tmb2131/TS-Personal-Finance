@@ -26,12 +26,7 @@ export function Header() {
 
   useEffect(() => {
     setMounted(true)
-    // Load last refresh date from localStorage
-    const stored = localStorage.getItem('lastRefreshDate')
-    if (stored) {
-      setLastRefreshDate(stored)
-    }
-    // Fetch latest dates from database
+    // Fetch latest dates (including last sync) from database
     fetchLatestDates()
   }, [])
 
@@ -64,7 +59,17 @@ export function Header() {
   const fetchLatestDates = async () => {
     try {
       const supabase = createClient()
-      
+
+      // Fetch last sync time (manual or cron)
+      const { data: syncData } = await supabase
+        .from('sync_metadata')
+        .select('last_sync_at')
+        .eq('id', 1)
+        .single()
+      if (syncData?.last_sync_at) {
+        setLastRefreshDate(syncData.last_sync_at)
+      }
+
       // Fetch latest transaction date
       const { data: transactionData } = await supabase
         .from('transaction_log')
@@ -125,19 +130,12 @@ export function Header() {
       setSyncing(false)
       
       if (result.success) {
-        // Store last refresh date
-        const now = new Date().toISOString()
-        localStorage.setItem('lastRefreshDate', now)
-        setLastRefreshDate(now)
-        
         toast.success('Data Synced Successfully', {
           description: 'All sheets have been synchronized with the database.',
         })
-        
-        // Refresh latest dates after sync
+        // Refresh latest dates (including last_sync_at written by the server)
         await fetchLatestDates()
-        
-        // Refresh the page to show updated data
+        // Reload the page to show updated data
         setTimeout(() => {
           window.location.reload()
         }, 1000)
