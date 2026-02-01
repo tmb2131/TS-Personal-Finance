@@ -333,6 +333,12 @@ export function ChatWidget() {
                 placeholder="Ask about your finances..."
                 className="flex-1 text-base min-[768px]:text-sm"
                 disabled={isLoading}
+                onFocus={(e) => {
+                  // Try to suppress iOS keyboard accessory bar (Previous/Next/Done) so it doesn’t duplicate our submit button
+                  const el = e.currentTarget
+                  el.setAttribute('inputmode', 'none')
+                  setTimeout(() => el.setAttribute('inputmode', 'text'), 100)
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
