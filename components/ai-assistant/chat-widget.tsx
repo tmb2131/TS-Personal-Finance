@@ -363,23 +363,11 @@ export function ChatWidget() {
           <form onSubmit={handleSubmit} className="border-t px-6 py-4 bg-background/50 backdrop-blur-sm touch-manipulation">
             <div className="flex gap-2">
               <Input
-                type="search"
-                autoComplete="off"
                 value={localInput}
                 onChange={handleInputChange}
                 placeholder="Ask about your finances..."
-                className="flex-1 text-base min-[768px]:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+                className="flex-1 text-base min-[768px]:text-sm"
                 disabled={isLoading}
-                onFocus={(e) => {
-                  // Try to reduce iOS keyboard accessory: set inputmode to none then restore so bar may not show
-                  const el = e.currentTarget
-                  el.setAttribute('inputmode', 'none')
-                  requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                      el.setAttribute('inputmode', 'text')
-                    })
-                  })
-                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
