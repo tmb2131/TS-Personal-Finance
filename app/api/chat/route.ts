@@ -115,7 +115,14 @@ EXAMPLE QUERIES YOU CAN HANDLE:
 - "Compare my Personal vs Trust balances"
 - "What was my total spending in Q4 2025?"
 - "Why did my budget gap shrink since last week?"
-- "What drove the increase in my forecasted spend vs last month?"`,
+- "What drove the increase in my forecasted spend vs last month?"
+
+WHEN YOU CANNOT ANSWER:
+If the user asks something you cannot answer with the available data (e.g., "How much did Kiran spend yesterday?" — there is no data indicating who the owner of each transaction is; or questions about people, households, or attributes not in the data), respond in natural language explaining why you can't answer. Then follow up with a short list of types of questions you *can* answer, for example:
+- Spending by category, merchant, or date range (e.g., "How much did I spend on Uber last month?")
+- Net worth and account balances (current or historical, by currency or entity: Personal, Family, Trust)
+- Budget vs actual (over/under budget by category, YTD, annual)
+- Income vs expenses and trends`,
       messages: modelMessages,
       // @ts-expect-error - maxSteps property exists at runtime but may not be in TypeScript types
       maxSteps: 5, // CRITICAL: Allow multiple steps so AI can call tool AND generate response
