@@ -56,11 +56,13 @@ export default async function AnalysisPage({
       <div id="forecast-evolution" className="scroll-mt-24">
         <ForecastEvolutionSection />
       </div>
-      <div id="ytd-spend" className="scroll-mt-24">
-        <CumulativeSpendChart />
-      </div>
-      <div id="annual-cumulative" className="scroll-mt-24">
-        <AnnualCumulativeSpendChart />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div id="ytd-spend" className="scroll-mt-24 min-w-0">
+          <CumulativeSpendChart />
+        </div>
+        <div id="annual-cumulative" className="scroll-mt-24 min-w-0">
+          <AnnualCumulativeSpendChart />
+        </div>
       </div>
       <div id="yoy-net-worth" className="scroll-mt-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
