@@ -216,6 +216,13 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     }
   }, [expenseData])
 
+  // Shared scale for executive summary cards (above + below budget)
+  const maxGapCards = useMemo(() => {
+    const above = topCategories.aboveBudget.map((i) => Math.abs(i.gap))
+    const below = topCategories.belowBudget.map((i) => Math.abs(i.gap))
+    return Math.max(...above, ...below, 1)
+  }, [topCategories])
+
   const handleExpenseSort = (field: SortField) => {
     if (expenseSortField === field) {
       setExpenseSortDirection(expenseSortDirection === 'desc' ? 'asc' : 'desc')
@@ -470,85 +477,166 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                 </div>
               </div>
 
-              {/* Top Categories Above Budget */}
-              <div className="space-y-2 p-3 rounded-lg border bg-card">
-                <div className="flex items-center gap-1.5">
-                  <TrendingDown className="h-4 w-4 text-green-600" />
-                  <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
-                </div>
-                <div className="space-y-1">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
-                    {topCategories.aboveBudget.length > 0 ? (
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <p className="text-base font-bold text-green-600">Under Budget</p>
-                      </div>
-                    ) : (
-                      <p className="text-base font-bold text-muted-foreground">None</p>
-                    )}
-                  </div>
-                  <div className="space-y-2 pt-1.5 border-t">
-                    {topCategories.aboveBudget.length > 0 ? (
-                      topCategories.aboveBudget.map((item) => {
-                        const maxGap = Math.max(...topCategories.aboveBudget.map((i) => Math.abs(i.gap)), 1)
-                        const pct = (Math.abs(item.gap) / maxGap) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-1.5">
-                            <span className="text-xs w-20 truncate">{item.category}</span>
-                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
+              {/* Order: card to the right of Status explains the net change (Under → Above Budget first; Over → Below Budget first) */}
+              {expenseTotals.gap >= 0 ? (
+                <>
+                  {/* Top Categories Above Budget (Spending Less) */}
+                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingDown className="h-4 w-4 text-green-600" />
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
+                    </div>
+                    <div className="space-y-1">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
+                        {topCategories.aboveBudget.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <p className="text-base font-bold text-green-600">Under Budget</p>
                           </div>
-                        )
-                      })
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No categories above budget</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Top Categories Below Budget */}
-              <div className="space-y-2 p-3 rounded-lg border bg-card">
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4 text-red-600" />
-                  <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
-                </div>
-                <div className="space-y-1">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
-                    {topCategories.belowBudget.length > 0 ? (
-                      <div className="flex items-center gap-1.5">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        <p className="text-base font-bold text-red-600">Over Budget</p>
+                        ) : (
+                          <p className="text-base font-bold text-muted-foreground">None</p>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-base font-bold text-muted-foreground">None</p>
-                    )}
+                      <div className="space-y-2 pt-1.5 border-t">
+                        {topCategories.aboveBudget.length > 0 ? (
+                          topCategories.aboveBudget.map((item) => {
+                            const pct = (Math.abs(item.gap) / maxGapCards) * 100
+                            return (
+                              <div key={item.category} className="flex items-center gap-1.5">
+                                <span className="text-xs w-20 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                                  <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No categories above budget</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2 pt-1.5 border-t">
-                    {topCategories.belowBudget.length > 0 ? (
-                      topCategories.belowBudget.map((item) => {
-                        const maxGap = Math.max(...topCategories.belowBudget.map((i) => Math.abs(i.gap)), 1)
-                        const pct = (Math.abs(item.gap) / maxGap) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-1.5">
-                            <span className="text-xs w-20 truncate">{item.category}</span>
-                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
+                  {/* Top Categories Below Budget (Spending More) */}
+                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="h-4 w-4 text-red-600" />
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
+                    </div>
+                    <div className="space-y-1">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
+                        {topCategories.belowBudget.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            <XCircle className="h-4 w-4 text-red-600" />
+                            <p className="text-base font-bold text-red-600">Over Budget</p>
                           </div>
-                        )
-                      })
-                    ) : (
-                      <p className="text-xs text-muted-foreground">No categories below budget</p>
-                    )}
+                        ) : (
+                          <p className="text-base font-bold text-muted-foreground">None</p>
+                        )}
+                      </div>
+                      <div className="space-y-2 pt-1.5 border-t">
+                        {topCategories.belowBudget.length > 0 ? (
+                          topCategories.belowBudget.map((item) => {
+                            const pct = (Math.abs(item.gap) / maxGapCards) * 100
+                            return (
+                              <div key={item.category} className="flex items-center gap-1.5">
+                                <span className="text-xs w-20 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                                  <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No categories below budget</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </>
+              ) : (
+                <>
+                  {/* Top Categories Below Budget (Spending More) — first when Over Budget */}
+                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="h-4 w-4 text-red-600" />
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
+                    </div>
+                    <div className="space-y-1">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
+                        {topCategories.belowBudget.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            <XCircle className="h-4 w-4 text-red-600" />
+                            <p className="text-base font-bold text-red-600">Over Budget</p>
+                          </div>
+                        ) : (
+                          <p className="text-base font-bold text-muted-foreground">None</p>
+                        )}
+                      </div>
+                      <div className="space-y-2 pt-1.5 border-t">
+                        {topCategories.belowBudget.length > 0 ? (
+                          topCategories.belowBudget.map((item) => {
+                            const pct = (Math.abs(item.gap) / maxGapCards) * 100
+                            return (
+                              <div key={item.category} className="flex items-center gap-1.5">
+                                <span className="text-xs w-20 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                                  <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No categories below budget</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Top Categories Above Budget (Spending Less) */}
+                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingDown className="h-4 w-4 text-green-600" />
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
+                    </div>
+                    <div className="space-y-1">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
+                        {topCategories.aboveBudget.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <p className="text-base font-bold text-green-600">Under Budget</p>
+                          </div>
+                        ) : (
+                          <p className="text-base font-bold text-muted-foreground">None</p>
+                        )}
+                      </div>
+                      <div className="space-y-2 pt-1.5 border-t">
+                        {topCategories.aboveBudget.length > 0 ? (
+                          topCategories.aboveBudget.map((item) => {
+                            const pct = (Math.abs(item.gap) / maxGapCards) * 100
+                            return (
+                              <div key={item.category} className="flex items-center gap-1.5">
+                                <span className="text-xs w-20 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                                  <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No categories above budget</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           {/* Expenses — Mobile category cards (Hide/Show breakdown only toggles this block on mobile) */}

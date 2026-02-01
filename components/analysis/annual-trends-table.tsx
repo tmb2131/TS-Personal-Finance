@@ -282,6 +282,13 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
     }
   }, [processedData, totals])
 
+  // Shared scale for executive summary cards (increases + decreases)
+  const maxChangeCards = useMemo(() => {
+    const inc = topMovers.topIncreases.map((i) => Math.abs(i.change))
+    const dec = topMovers.topDecreases.map((i) => Math.abs(i.change))
+    return Math.max(...inc, ...dec, 1)
+  }, [topMovers])
+
   // Sparkline component with tooltip
   const Sparkline = ({ row }: { row: typeof processedData[0] }) => {
     const sparklineData = [
@@ -460,7 +467,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
         <CardTitle className="text-base">Annual Trends</CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
-        {/* Top Movers Cards */}
+        {/* Top Movers Cards (shared scale across both category cards) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
           {/* Total Variance */}
           <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card">
@@ -512,85 +519,166 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
             </div>
           </div>
 
-          {/* YoY Increases in Spend */}
-          <div className="space-y-2 p-3 rounded-lg border bg-card">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-red-600" />
-              <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Increases in Spend</h3>
-            </div>
-            <div className="space-y-1">
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
-                {topMovers.topIncreases.length > 0 ? (
-                  <div className="flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4 text-red-600" />
-                    <p className="text-base font-bold text-red-600">Top Categories Spending More</p>
-                  </div>
-                ) : (
-                  <p className="text-base font-bold text-muted-foreground">No Increases</p>
-                )}
-              </div>
-              <div className="space-y-2 pt-1.5 border-t">
-                {topMovers.topIncreases.length > 0 ? (
-                  topMovers.topIncreases.map((item) => {
-                    const maxVal = Math.max(...topMovers.topIncreases.map((i) => Math.abs(i.change)), 1)
-                    const pct = (Math.abs(item.change) / maxVal) * 100
-                    return (
-                      <div key={item.category} className="flex items-center gap-1.5">
-                        <span className="text-xs w-20 truncate">{item.category}</span>
-                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                          <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-xs font-medium text-red-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+          {/* Order: card to the right of Total Variance explains the net change (Spending More → Increases first; Spending Less → Decreases first) */}
+          {topMovers.totalVariance < 0 ? (
+            <>
+              {/* YoY Increases in Spend (Top Categories Spending More) */}
+              <div className="space-y-2 p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Increases in Spend</h3>
+                </div>
+                <div className="space-y-1">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
+                    {topMovers.topIncreases.length > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <TrendingUp className="h-4 w-4 text-red-600" />
+                        <p className="text-base font-bold text-red-600">Top Categories Spending More</p>
                       </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-xs text-muted-foreground">No categories with increased spending</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* YoY Decreases in Spend */}
-          <div className="space-y-2 p-3 rounded-lg border bg-card">
-            <div className="flex items-center gap-1.5">
-              <TrendingDown className="h-4 w-4 text-green-600" />
-              <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Decreases in Spend</h3>
-            </div>
-            <div className="space-y-1">
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
-                {topMovers.topDecreases.length > 0 ? (
-                  <div className="flex items-center gap-1.5">
-                    <TrendingDown className="h-4 w-4 text-green-600" />
-                    <p className="text-base font-bold text-green-600">Top Categories Spending Less</p>
+                    ) : (
+                      <p className="text-base font-bold text-muted-foreground">No Increases</p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-base font-bold text-muted-foreground">No Decreases</p>
-                )}
+                  <div className="space-y-2 pt-1.5 border-t">
+                    {topMovers.topIncreases.length > 0 ? (
+                      topMovers.topIncreases.map((item) => {
+                        const pct = (Math.abs(item.change) / maxChangeCards) * 100
+                        return (
+                          <div key={item.category} className="flex items-center gap-1.5">
+                            <span className="text-xs w-20 truncate">{item.category}</span>
+                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-medium text-red-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No categories with increased spending</p>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2 pt-1.5 border-t">
-                {topMovers.topDecreases.length > 0 ? (
-                  topMovers.topDecreases.map((item) => {
-                    const maxVal = Math.max(...topMovers.topDecreases.map((i) => Math.abs(i.change)), 1)
-                    const pct = (Math.abs(item.change) / maxVal) * 100
-                    return (
-                      <div key={item.category} className="flex items-center gap-1.5">
-                        <span className="text-xs w-20 truncate">{item.category}</span>
-                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                          <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-xs font-medium text-green-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+              {/* YoY Decreases in Spend (Top Categories Spending Less) */}
+              <div className="space-y-2 p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-1.5">
+                  <TrendingDown className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Decreases in Spend</h3>
+                </div>
+                <div className="space-y-1">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
+                    {topMovers.topDecreases.length > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <TrendingDown className="h-4 w-4 text-green-600" />
+                        <p className="text-base font-bold text-green-600">Top Categories Spending Less</p>
                       </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-xs text-muted-foreground">No categories with decreased spending</p>
-                )}
+                    ) : (
+                      <p className="text-base font-bold text-muted-foreground">No Decreases</p>
+                    )}
+                  </div>
+                  <div className="space-y-2 pt-1.5 border-t">
+                    {topMovers.topDecreases.length > 0 ? (
+                      topMovers.topDecreases.map((item) => {
+                        const pct = (Math.abs(item.change) / maxChangeCards) * 100
+                        return (
+                          <div key={item.category} className="flex items-center gap-1.5">
+                            <span className="text-xs w-20 truncate">{item.category}</span>
+                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-medium text-green-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No categories with decreased spending</p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          ) : (
+            <>
+              {/* YoY Decreases in Spend (Top Categories Spending Less) — first when Spending Less */}
+              <div className="space-y-2 p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-1.5">
+                  <TrendingDown className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Decreases in Spend</h3>
+                </div>
+                <div className="space-y-1">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
+                    {topMovers.topDecreases.length > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <TrendingDown className="h-4 w-4 text-green-600" />
+                        <p className="text-base font-bold text-green-600">Top Categories Spending Less</p>
+                      </div>
+                    ) : (
+                      <p className="text-base font-bold text-muted-foreground">No Decreases</p>
+                    )}
+                  </div>
+                  <div className="space-y-2 pt-1.5 border-t">
+                    {topMovers.topDecreases.length > 0 ? (
+                      topMovers.topDecreases.map((item) => {
+                        const pct = (Math.abs(item.change) / maxChangeCards) * 100
+                        return (
+                          <div key={item.category} className="flex items-center gap-1.5">
+                            <span className="text-xs w-20 truncate">{item.category}</span>
+                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-medium text-green-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No categories with decreased spending</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* YoY Increases in Spend (Top Categories Spending More) */}
+              <div className="space-y-2 p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-xs uppercase tracking-wide">YoY Increases in Spend</h3>
+                </div>
+                <div className="space-y-1">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">vs {currentYear - 1}</p>
+                    {topMovers.topIncreases.length > 0 ? (
+                      <div className="flex items-center gap-1.5">
+                        <TrendingUp className="h-4 w-4 text-red-600" />
+                        <p className="text-base font-bold text-red-600">Top Categories Spending More</p>
+                      </div>
+                    ) : (
+                      <p className="text-base font-bold text-muted-foreground">No Increases</p>
+                    )}
+                  </div>
+                  <div className="space-y-2 pt-1.5 border-t">
+                    {topMovers.topIncreases.length > 0 ? (
+                      topMovers.topIncreases.map((item) => {
+                        const pct = (Math.abs(item.change) / maxChangeCards) * 100
+                        return (
+                          <div key={item.category} className="flex items-center gap-1.5">
+                            <span className="text-xs w-20 truncate">{item.category}</span>
+                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
+                              <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs font-medium text-red-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No categories with increased spending</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
 
