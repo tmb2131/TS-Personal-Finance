@@ -106,9 +106,10 @@ CRITICAL INSTRUCTIONS:
 3. **Multi-step analysis** - You can call multiple tools in sequence to answer complex questions. For example, use get_financial_snapshot for balances, then analyze_spending for spending patterns, then get_budget_vs_actual for budget context.
 4. **Currency handling** - Always format currency appropriately: £ for GBP, $ for USD, € for EUR. When comparing amounts, convert to a single currency or show both.
 5. **Entity distinction** - Clearly distinguish between Personal, Family, and Trust entities when relevant. Personal balances are in balance_personal_local, Family in balance_family_local.
-6. **Date intelligence** - Use the CURRENT DATE CONTEXT above for ALL relative date phrases ("last month", "this year", "this month", "last week"). When calling analyze_spending for "last month", pass startDate and endDate from that context (the exact YYYY-MM-DD range given). For historical queries use get_financial_snapshot with asOfDate. For current data, omit asOfDate or use 'current'.
-7. **Never output raw JSON** - Always format results in natural language with proper context and insights.
-8. **Be analytical** - Provide insights, trends, and context. Don't just report numbers - explain what they mean.
+6. **Net worth default** - When describing net worth (e.g. from get_financial_health_summary), show the value excluding Trust as the main figure and, when different, add subtext for "Incl. Trust: £X" so the default view is excl. Trust.
+7. **Date intelligence** - Use the CURRENT DATE CONTEXT above for ALL relative date phrases ("last month", "this year", "this month", "last week"). When calling analyze_spending for "last month", pass startDate and endDate from that context (the exact YYYY-MM-DD range given). For historical queries use get_financial_snapshot with asOfDate. For current data, omit asOfDate or use 'current'.
+8. **Never output raw JSON** - Always format results in natural language with proper context and insights.
+9. **Be analytical** - Provide insights, trends, and context. Don't just report numbers - explain what they mean.
 
 EXAMPLE QUERIES YOU CAN HANDLE:
 - "Summarise my financial health"
@@ -790,24 +791,34 @@ If the user asks something you cannot answer with the available data (e.g., "How
             let totalUsd = 0
             const allocationByCurrency: { currency: string; totalGbp: number; totalUsd: number }[] = []
 
+            let totalGbpInclTrust = 0
+            let totalUsdInclTrust = 0
+
             if (isHistorical) {
               const { data: histRows, error: histErr } = await supabase
                 .from('historical_net_worth')
-                .select('amount_gbp, amount_usd')
+                .select('amount_gbp, amount_usd, category')
                 .eq('date', asOfDate)
               if (!histErr && histRows?.length) {
-                histRows.forEach((r: { amount_gbp?: number | null; amount_usd?: number | null }) => {
-                  totalGbp += Number(r.amount_gbp ?? 0)
-                  totalUsd += Number(r.amount_usd ?? 0)
+                histRows.forEach((r: { amount_gbp?: number | null; amount_usd?: number | null; category?: string | null }) => {
+                  const gbp = Number(r.amount_gbp ?? 0)
+                  const usd = Number(r.amount_usd ?? 0)
+                  totalGbpInclTrust += gbp
+                  totalUsdInclTrust += usd
+                  const isTrust = (r.category || '').toLowerCase().includes('trust')
+                  if (!isTrust) {
+                    totalGbp += gbp
+                    totalUsd += usd
+                  }
                 })
-                allocationByCurrency.push({ currency: 'GBP', totalGbp, totalUsd: totalGbp * fxRate })
-                allocationByCurrency.push({ currency: 'USD', totalGbp: totalUsd / fxRate, totalUsd })
+                allocationByCurrency.push({ currency: 'GBP', totalGbp: totalGbpInclTrust, totalUsd: totalGbpInclTrust * fxRate })
+                allocationByCurrency.push({ currency: 'USD', totalGbp: totalUsdInclTrust / fxRate, totalUsd: totalUsdInclTrust })
               }
             } else {
               const { data: balances, error: balErr } = await supabase.from('account_balances').select('*').order('date_updated', { ascending: false })
               if (balErr) throw new Error(balErr.message)
-              const byAccount = new Map<string, { balance_total_local: number; currency: string; date_updated: string }>()
-              ;(balances || []).forEach((b: { institution: string; account_name: string; date_updated: string; balance_total_local?: number | null; currency?: string | null }) => {
+              const byAccount = new Map<string, { balance_total_local: number; currency: string; date_updated: string; category: string }>()
+              ;(balances || []).forEach((b: { institution: string; account_name: string; date_updated: string; balance_total_local?: number | null; currency?: string | null; category?: string | null }) => {
                 const key = `${b.institution}-${b.account_name}`
                 const existing = byAccount.get(key)
                 if (!existing || new Date(b.date_updated) > new Date(existing.date_updated)) {
@@ -815,20 +826,30 @@ If the user asks something you cannot answer with the available data (e.g., "How
                     balance_total_local: Number(b.balance_total_local ?? 0),
                     currency: (b.currency || 'GBP').toUpperCase(),
                     date_updated: b.date_updated,
+                    category: b.category || '',
                   })
                 }
               })
               const byCurr: Record<string, { gbp: number; usd: number }> = {}
-              byAccount.forEach(({ balance_total_local, currency: curr }) => {
+              byAccount.forEach(({ balance_total_local, currency: curr, category: cat }) => {
+                const isTrust = (cat || '').toLowerCase().includes('trust')
                 if (!byCurr[curr]) byCurr[curr] = { gbp: 0, usd: 0 }
                 if (curr === 'GBP') {
                   byCurr[curr].gbp += balance_total_local
-                  totalGbp += balance_total_local
-                  totalUsd += balance_total_local * fxRate
+                  totalGbpInclTrust += balance_total_local
+                  totalUsdInclTrust += balance_total_local * fxRate
+                  if (!isTrust) {
+                    totalGbp += balance_total_local
+                    totalUsd += balance_total_local * fxRate
+                  }
                 } else {
                   byCurr[curr].usd += balance_total_local
-                  totalUsd += balance_total_local
-                  totalGbp += balance_total_local / fxRate
+                  totalUsdInclTrust += balance_total_local
+                  totalGbpInclTrust += balance_total_local / fxRate
+                  if (!isTrust) {
+                    totalUsd += balance_total_local
+                    totalGbp += balance_total_local / fxRate
+                  }
                 }
               })
               Object.entries(byCurr).forEach(([curr, { gbp, usd }]) => {
@@ -836,9 +857,16 @@ If the user asks something you cannot answer with the available data (e.g., "How
               })
             }
 
+            const fmtGbp = (n: number) => `£${n.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+            const fmtUsd = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
             const netWorthSummary = currency === 'USD'
-              ? `Net worth: $${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD`
-              : `Net worth: £${totalGbp.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} GBP`
+              ? `Net worth (excl. Trust): ${fmtUsd(totalUsd)} USD`
+              : `Net worth (excl. Trust): ${fmtGbp(totalGbp)} GBP`
+            const netWorthIncludingTrust = (totalGbpInclTrust !== totalGbp || totalUsdInclTrust !== totalUsd)
+              ? currency === 'USD'
+                ? `Incl. Trust: ${fmtUsd(totalUsdInclTrust)} USD`
+                : `Incl. Trust: ${fmtGbp(totalGbpInclTrust)} GBP`
+              : null
             const allocationSummary = allocationByCurrency.length
               ? allocationByCurrency
                   .map((a) =>
@@ -885,19 +913,24 @@ If the user asks something you cannot answer with the available data (e.g., "How
             expenseCategories.sort((a, b) => b.trackingGbp - a.trackingGbp)
             const topSpend = expenseCategories.slice(0, 5)
             const topSpendCategories = topSpend.length
-              ? `Top spending categories (YTD tracking): ${topSpend.map((s) => `${s.category} (£${s.trackingGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })})`).join(', ')}`
+              ? `Top spending categories (Estimated Full Year): ${topSpend.map((s) => `${s.category} (£${s.trackingGbp.toLocaleString('en-GB', { maximumFractionDigits: 0 })})`).join(', ')}`
               : 'No expense categories'
 
-            const summary = `${netWorthSummary}. ${budgetStatusSummary}. ${topSpendCategories}.`
+            const summary = netWorthIncludingTrust
+              ? `${netWorthSummary}. ${netWorthIncludingTrust}. ${budgetStatusSummary}. ${topSpendCategories}.`
+              : `${netWorthSummary}. ${budgetStatusSummary}. ${topSpendCategories}.`
 
             return {
               health: {
                 netWorthSummary,
+                netWorthIncludingTrust,
                 allocationSummary,
                 budgetStatusSummary,
                 topSpendCategories,
                 netWorthGbp: totalGbp,
                 netWorthUsd: totalUsd,
+                netWorthGbpInclTrust: totalGbpInclTrust,
+                netWorthUsdInclTrust: totalUsdInclTrust,
                 budgetGapGbp: budgetGap,
                 budgetStatus,
                 topCategories: topSpend.map((s) => ({ category: s.category, trackingGbp: s.trackingGbp })),

@@ -232,8 +232,9 @@ export function ChatWidget() {
                       variant="outline"
                       size="sm"
                       className="text-xs"
+                      disabled={isLoading}
                       onClick={() => {
-                        setLocalInput('Summarise my financial health')
+                        if (sendMessage) sendMessage({ text: 'Summarise my financial health' })
                       }}
                     >
                       Summarise my financial health
@@ -243,8 +244,9 @@ export function ChatWidget() {
                       variant="outline"
                       size="sm"
                       className="text-xs"
+                      disabled={isLoading}
                       onClick={() => {
-                        setLocalInput('How am I doing vs budget and spending?')
+                        if (sendMessage) sendMessage({ text: 'How am I doing vs budget and spending?' })
                       }}
                     >
                       How am I doing vs budget?
@@ -330,7 +332,7 @@ export function ChatWidget() {
                       message.role === 'user' ? 'items-end' : 'items-start'
                     )}
                   >
-                    {message.role === 'assistant' && toolParts.length > 0 && (
+                    {message.role === 'assistant' && toolParts.length > 0 && !displayText && (
                       <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
                         {toolParts.map((tool, idx) => (
                           <div key={idx} className="flex items-center gap-1 text-xs italic">
