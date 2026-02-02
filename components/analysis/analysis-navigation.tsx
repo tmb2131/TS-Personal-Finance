@@ -4,8 +4,8 @@ import { Wallet, Receipt, TrendingUp, BarChart3, Activity, GitCompare } from 'lu
 import { cn } from '@/utils/cn'
 
 const navButtonClass = cn(
-  'p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]',
-  'border-2 rounded-lg flex flex-col items-center gap-2 text-center',
+  'p-3 md:p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]',
+  'border-2 rounded-lg flex flex-col items-center gap-2 md:gap-3 text-center',
   'bg-slate-700 border-slate-600 text-slate-100',
   'hover:bg-slate-600 hover:border-slate-500',
   'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-background'
@@ -48,7 +48,7 @@ function scrollToSection(id: string, e?: React.MouseEvent) {
 
 export function AnalysisNavigation() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+    <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">
       {navigationItems.map((item) => {
         const Icon = item.icon
         return (
@@ -58,8 +58,8 @@ export function AnalysisNavigation() {
             onClick={(e) => scrollToSection(item.id, e)}
             className={navButtonClass}
           >
-            <Icon className="h-6 w-6 text-slate-200" />
-            <span className="text-sm font-medium">{item.label}</span>
+            <Icon className="h-5 w-5 md:h-6 md:w-6 text-slate-200" />
+            <span className="text-xs md:text-sm font-medium">{item.label}</span>
           </button>
         )
       })}

@@ -151,44 +151,8 @@ export function BudgetIncomeTable({
       </CardHeader>
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Mobile: Income Status summary first (order-1), then Total + category cards (order-2) */}
-          <div className="md:hidden space-y-3 max-md:order-2">
-            <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex items-center justify-between">
-              <span className="font-semibold text-sm">Total Income</span>
-              <span
-                className={cn(
-                  'font-semibold tabular-nums text-sm',
-                  totals.gap >= 0 ? 'text-green-600' : 'text-red-600'
-                )}
-              >
-                {formatCurrency(totals.gap)}
-              </span>
-            </div>
-            {sortedData.map((row) => {
-              const gap = row.tracking - row.annualBudget
-              const isPositive = gap >= 0
-              return (
-                <div key={row.category} className="rounded-lg border p-3 min-h-[44px]">
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="font-medium text-sm truncate">{row.category}</span>
-                    <span
-                      className={cn(
-                        'font-semibold tabular-nums text-sm shrink-0',
-                        isPositive ? 'text-green-600' : 'text-red-600'
-                      )}
-                    >
-                      {gap === 0 ? '–' : formatCurrency(gap)}
-                    </span>
-                  </div>
-                  <div className="mt-1.5 pt-1.5 border-t text-xs text-muted-foreground">
-                    Tracking {formatCurrency(row.tracking)} vs Budget {formatCurrency(row.annualBudget)}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
           {/* Summary card - left; on mobile show first (order-1) */}
-          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0 max-md:order-1">
+          <div className="space-y-2 p-3 rounded-lg border bg-card min-w-0 max-md:order-1">
             <div className="flex items-center gap-1.5">
               <DollarSign className="h-4 w-4 text-blue-600" />
               <h3 className="font-semibold text-xs uppercase tracking-wide">Income Status</h3>

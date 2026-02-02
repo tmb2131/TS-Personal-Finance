@@ -174,50 +174,8 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
       </CardHeader>
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          {/* Mobile: Budget Status summary first (order-1), then Net Income + cards (order-2) */}
-          <div className="md:hidden space-y-3 max-md:order-2">
-            <div className="rounded-lg border border-dashed bg-muted/30 p-3 min-h-[44px] flex items-center justify-between">
-              <span className="font-semibold text-sm">Net Income</span>
-              <span className={cn('font-semibold tabular-nums text-sm shrink-0', totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
-                {formatCurrency(totals.netIncome.gap)}
-              </span>
-            </div>
-            <div className="rounded-lg border p-3 min-h-[44px]">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-sm">Total Income</span>
-                <span className={cn('font-semibold tabular-nums text-sm shrink-0', totals.income.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
-                  {formatCurrency(totals.income.gap)}
-                </span>
-              </div>
-              <div className="mt-1.5 pt-1.5 border-t text-xs text-muted-foreground">
-                Tracking {formatCurrency(totals.income.tracking)} vs Budget {formatCurrency(totals.income.annualBudget)}
-              </div>
-            </div>
-            <div className="rounded-lg border p-3 min-h-[44px]">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-sm">Expenses</span>
-                <span className={cn('font-semibold tabular-nums text-sm shrink-0', totals.expenses.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
-                  {formatCurrency(totals.expenses.gap)}
-                </span>
-              </div>
-              <div className="mt-1.5 pt-1.5 border-t text-xs text-muted-foreground">
-                Tracking ({formatCurrency(Math.abs(totals.expenses.tracking))}) vs Budget ({formatCurrency(Math.abs(totals.expenses.annualBudget))})
-              </div>
-            </div>
-            <div className="rounded-lg border p-3 min-h-[44px]">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-sm italic text-muted-foreground">Savings</span>
-                <span className={cn('font-semibold tabular-nums text-sm shrink-0 italic', totals.savings.tracking >= 0 ? 'text-green-600' : 'text-red-600')}>
-                  {formatPercentage(totals.savings.tracking)}
-                </span>
-              </div>
-              <div className="mt-1.5 pt-1.5 border-t text-xs text-muted-foreground">
-                Tracking {formatPercentage(totals.savings.tracking)} vs Budget {formatPercentage(totals.savings.budget)}
-              </div>
-            </div>
-          </div>
           {/* Summary card - left; on mobile show first (order-1) */}
-          <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card min-w-0 max-md:order-1">
+          <div className="space-y-2 p-3 rounded-lg border bg-card min-w-0 max-md:order-1">
             <div className="flex items-center gap-1.5">
               <Target className="h-4 w-4 text-purple-600" />
               <h3 className="font-semibold text-xs uppercase tracking-wide">Budget Status</h3>

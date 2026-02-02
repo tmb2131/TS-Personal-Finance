@@ -438,7 +438,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
           <div className="mb-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {/* Expenses Status */}
-              <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card">
+              <div className="space-y-2 p-3 rounded-lg border bg-card">
                 <div className="flex items-center gap-1.5">
                   <Receipt className="h-4 w-4 text-orange-600" />
                   <h3 className="font-semibold text-xs uppercase tracking-wide">Expenses Status</h3>

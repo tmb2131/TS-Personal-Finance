@@ -29,6 +29,7 @@ import {
 export function KeyInsights() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
+  const previousYear = new Date().getFullYear() - 1
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
@@ -687,7 +688,7 @@ export function KeyInsights() {
                     <span className={`text-xs font-medium ${netWorthInsights.vsLastYear > 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatPercent(netWorthInsights.vsLastYearPercent)}
                     </span>
-                    <span className="text-xs text-muted-foreground">vs last year</span>
+                    <span className="text-xs text-muted-foreground">vs year-end {previousYear}</span>
                   </div>
                 </div>
               </div>
@@ -713,7 +714,7 @@ export function KeyInsights() {
               </div>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Status</p>
+                  <p className="text-xs text-muted-foreground mb-1">vs Estimated Annual Spend</p>
                   {annualBudgetInsights.overallGap < 0 ? (
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -863,7 +864,7 @@ export function KeyInsights() {
         <CardContent className="pt-6 space-y-6">
           {/* Vs last year — prominent */}
           <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
-            <span className="text-sm font-semibold text-muted-foreground">Vs last year</span>
+            <span className="text-sm font-semibold text-muted-foreground">Vs year-end {previousYear}</span>
             {netWorthInsights.vsLastYear > 0 ? (
               <>
                 <TrendingUp className="h-8 w-8 text-green-600" />
@@ -1012,7 +1013,7 @@ export function KeyInsights() {
           {/* Spend vs Budget — progress bar */}
           <div>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Spend vs budget</span>
+              <span className="text-muted-foreground">Estimated annual spend vs budget</span>
               <span>
                 {formatCurrency(annualBudgetInsights.totalTracking)} / {formatCurrency(annualBudgetInsights.totalBudget)}
               </span>

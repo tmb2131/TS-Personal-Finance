@@ -185,6 +185,9 @@ export function RecurringPaymentsTable() {
       <Card>
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -202,6 +205,9 @@ export function RecurringPaymentsTable() {
       <Card>
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
+          </p>
         </CardHeader>
         <CardContent>
           <EmptyState icon={AlertCircle} title="Error loading data" description={error} />
@@ -215,7 +221,7 @@ export function RecurringPaymentsTable() {
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Manually tracked recurring payments from Google Sheet
+          Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
         </p>
       </CardHeader>
       <CardContent>
@@ -242,7 +248,10 @@ export function RecurringPaymentsTable() {
                         )}
                       </div>
                     </div>
-                    <span className="font-semibold tabular-nums text-sm shrink-0">{formatCurrency(payment.annualizedAmount)}</span>
+                    <div className="flex flex-col items-end shrink-0">
+                      <span className="font-semibold tabular-nums text-sm">{formatCurrency(payment.annualizedAmount)}</span>
+                      <span className="text-xs text-muted-foreground">Annual</span>
+                    </div>
                   </div>
                   <div className="mt-2 pt-2 border-t">
                     <Button
