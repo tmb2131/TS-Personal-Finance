@@ -23,11 +23,29 @@ const EMAIL_TO_DISPLAY_NAME: Record<string, string> = {
   'thomas.brosens@gmail.com': 'Tom',
   'sriya.sundaresan@gmail.com': 'Sriya',
   'frank.brosens@gmail.com': 'Frank',
+  'deenie.brosens@gmail.com': 'Deenie',
+  'cbrosens2010@gmail.com': 'Charlie',
+  'jbrosens92@gmail.com': 'John',
+  'pbb2102@gmail.com': 'Pete',
 }
 
+/**
+ * Guess display name from email for welcome screen.
+ * Uses known mappings first; otherwise derives from local part (e.g. lindsay.casson@... → Lindsay).
+ */
 function getDisplayNameForEmail(email: string | undefined): string | null {
   if (!email) return null
-  return EMAIL_TO_DISPLAY_NAME[email.toLowerCase()] ?? null
+  const key = email.toLowerCase().trim()
+  const mapped = EMAIL_TO_DISPLAY_NAME[key]
+  if (mapped) return mapped
+  const local = key.split('@')[0]
+  if (!local) return null
+  // Use segment before first dot (e.g. lindsay.casson → Lindsay), or whole local part
+  const segment = local.includes('.') ? local.split('.')[0]! : local
+  // Capitalize: first letter upper, rest lower (strip trailing digits for cleaner fallback)
+  const name = segment.replace(/\d+$/, '').trim() || segment
+  if (!name) return null
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
 }
 
 // Tool name to display name mapping
