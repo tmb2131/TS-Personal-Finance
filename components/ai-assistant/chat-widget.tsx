@@ -909,7 +909,7 @@ export function ChatWidget() {
                     className={cn(
                       'flex flex-col gap-1.5 group animate-in fade-in slide-in-from-bottom-2 duration-300',
                       message.role === 'user' ? 'items-end' : 'items-start',
-                      'relative touch-none' // Prevent text selection during swipe
+                      'relative touch-pan-y' // Allow vertical scroll; we take over for horizontal swipe
                     )}
                     style={{
                       transform: isSwiping ? `translateX(${swipeOffset}px)` : undefined,
