@@ -714,7 +714,7 @@ export function KeyInsights() {
               </div>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">vs Estimated Annual Spend</p>
+                  <p className="text-xs text-muted-foreground mb-1">vs Annual Spend</p>
                   {annualBudgetInsights.overallGap < 0 ? (
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
