@@ -89,9 +89,16 @@ YOUR CAPABILITIES:
 
 3. **Spending Analysis**: Analyze spending patterns, income vs expenses, merchant-specific spending (e.g., "Uber", "Amazon"), and trends over any date range. You automatically exclude non-expense categories (Excluded, Income, Gift Money, Other Income) unless explicitly requested.
 
-4. **Budget Performance**: Compare budget targets vs actual spending, identify categories over/under budget, calculate variances, and highlight the biggest budget variances. You can analyze YTD (year-to-date) or annual budgets.
+4. **Budget Performance**: Compare budget targets vs actual spending, identify categories over/under budget, calculate variances, and highlight the biggest budget variances. You can analyze YTD (year-to-date) or annual budgets. When asked about "annual spend gap to budget" or similar queries, ALWAYS report the total gap amount (e.g., "£13k under budget") in addition to category counts. The get_budget_vs_actual tool provides totalGapGBP in the summary - use this value to report the overall gap.
 
-5. **Net worth trends and cash runway**: Use get_net_worth_trend when the user asks how their net worth has changed over time or for a trend over a date range. Use get_cash_runway when the user asks about runway, burn, or how long their cash will last.
+5. **Monthly Category Trends**: Analyze monthly spending trends for specific categories over the last 13 months. Use analyze_monthly_category_trends when the user asks about:
+   - Monthly spending patterns for a category (e.g., "How has my Bills spending changed month by month?")
+   - Category comparisons vs historical averages (3-month, 12-month, year-ago)
+   - Top counterparties/merchants driving category spending
+   - Monthly trend insights and comparisons
+   This tool provides detailed monthly breakdowns, identifies the top transaction counterparty, and compares current month spending to 3-month average, 12-month average, and same period last year.
+
+6. **Net worth trends and cash runway**: Use get_net_worth_trend when the user asks how their net worth has changed over time or for a trend over a date range. Use get_cash_runway when the user asks about runway, burn, or how long their cash will last.
 
 DATA CONTEXT:
 - The user has accounts in multiple currencies (primarily GBP and USD)
@@ -121,10 +128,15 @@ EXAMPLE QUERIES YOU CAN HANDLE:
 - "What are the top 5 categories where I'm over budget?"
 - "Compare my Personal vs Trust balances"
 - "What was my total spending in Q4 2025?"
-- "Why did my budget gap shrink since last week?"
+- "What is my current annual spend gap to budget?" (ALWAYS report the total gap amount, e.g., "£13k under budget")
+- "How has my annual spend gap changed over the past week?" (Use analyze_forecast_evolution tool)
 - "What drove the increase in my forecasted spend vs last month?"
 - "How has my net worth changed over the last year?"
 - "What's my cash runway?"
+- "How has my Bills spending changed month by month?"
+- "Show me monthly trends for Food category"
+- "What's the top merchant for my Transport spending?"
+- "Compare my current month Bills spending to last year"
 
 GUARDRAILS:
 - This is analysis of your data, not financial advice. Only describe and interpret; never suggest specific investments or actions.
@@ -607,15 +619,16 @@ If the user asks something you cannot answer with the available data (e.g., "How
         },
       },
       get_budget_vs_actual: {
-        description: `Compare budget targets vs actual spending. Use this for questions about:
+        description: `Compare budget targets vs actual spending (YTD) or forecasted annual spend (annual). Use this for questions about:
         - "Am I over budget?"
         - Budget variance by category
         - Categories with biggest overspend
-        - Budget performance for specific categories or time periods`,
+        - Budget performance for specific categories or time periods
+        Note: For annual period, compares annual budget vs forecasted annual spend (tracking_est), not actual YTD spending.`,
         inputSchema: z.object({
           category: z.string().optional().describe('Filter by specific category. Omit to analyze all categories.'),
           year: z.number().optional().describe('Year for budget comparison. Defaults to current year.'),
-          period: z.enum(['ytd', 'annual']).optional().default('ytd').describe('Compare YTD (year-to-date) or annual budget vs actual'),
+          period: z.enum(['ytd', 'annual']).optional().default('ytd').describe('Compare YTD (year-to-date) uses actual transactions; annual uses forecasted annual spend (tracking_est) vs annual budget'),
         }),
         execute: async ({ category, year, period = 'ytd' }) => {
           try {
@@ -663,47 +676,61 @@ If the user asks something you cannot answer with the available data (e.g., "How
             
             const EXCLUDED_CATEGORIES = ['Excluded', 'Income', 'Gift Money', 'Other Income']
             
-            // Get transactions for the period
-            let transactionQuery = supabase
-              .from('transaction_log')
-              .select('*')
-              .gte('date', startOfYear.toISOString().split('T')[0])
-              .lte('date', endDate.toISOString().split('T')[0])
+            // For annual period, use tracking_est_gbp (forecasted annual spend) instead of actual transactions
+            // This matches the UI calculation and provides a meaningful comparison
+            let actualByCategory: Record<string, { gbp: number; usd: number }> = {}
             
-            if (category) {
-              transactionQuery = transactionQuery.eq('category', category)
-            }
-            
-            const { data: transactions, error: txError } = await transactionQuery
-            
-            if (txError) {
-              console.error('[chat] get_budget_vs_actual: Transaction query error', txError)
-              return { error: txError.message }
-            }
-            
-            // Filter to expenses only and exclude excluded categories
-            const expenseTransactions = (transactions || []).filter((tx) => {
-              if (EXCLUDED_CATEGORIES.includes(tx.category || '')) return false
-              // Only negative amounts (expenses)
-              return (tx.amount_gbp && tx.amount_gbp < 0) || (tx.amount_usd && tx.amount_usd < 0)
-            })
-            
-            // Calculate actual spending by category
-            const actualByCategory: Record<string, { gbp: number; usd: number }> = {}
-            
-            expenseTransactions.forEach((tx) => {
-              const cat = tx.category || 'Unknown'
-              if (!actualByCategory[cat]) {
-                actualByCategory[cat] = { gbp: 0, usd: 0 }
+            if (period === 'annual') {
+              // Use forecasted annual spend (tracking_est_gbp) for annual comparisons
+              budgets.forEach((budget) => {
+                if (!EXCLUDED_CATEGORIES.includes(budget.category)) {
+                  const trackingGbp = Math.abs(budget.tracking_est_gbp || 0)
+                  const trackingUsd = trackingGbp * fxRate
+                  actualByCategory[budget.category] = { gbp: trackingGbp, usd: trackingUsd }
+                }
+              })
+            } else {
+              // For YTD period, use actual transactions
+              // Get transactions for the period
+              let transactionQuery = supabase
+                .from('transaction_log')
+                .select('*')
+                .gte('date', startOfYear.toISOString().split('T')[0])
+                .lte('date', endDate.toISOString().split('T')[0])
+              
+              if (category) {
+                transactionQuery = transactionQuery.eq('category', category)
               }
               
-              if (tx.amount_gbp) {
-                actualByCategory[cat].gbp += Math.abs(tx.amount_gbp)
+              const { data: transactions, error: txError } = await transactionQuery
+              
+              if (txError) {
+                console.error('[chat] get_budget_vs_actual: Transaction query error', txError)
+                return { error: txError.message }
               }
-              if (tx.amount_usd) {
-                actualByCategory[cat].usd += Math.abs(tx.amount_usd)
-              }
-            })
+              
+              // Filter to expenses only and exclude excluded categories
+              const expenseTransactions = (transactions || []).filter((tx) => {
+                if (EXCLUDED_CATEGORIES.includes(tx.category || '')) return false
+                // Only negative amounts (expenses)
+                return (tx.amount_gbp && tx.amount_gbp < 0) || (tx.amount_usd && tx.amount_usd < 0)
+              })
+              
+              // Calculate actual spending by category
+              expenseTransactions.forEach((tx) => {
+                const cat = tx.category || 'Unknown'
+                if (!actualByCategory[cat]) {
+                  actualByCategory[cat] = { gbp: 0, usd: 0 }
+                }
+                
+                if (tx.amount_gbp) {
+                  actualByCategory[cat].gbp += Math.abs(tx.amount_gbp)
+                }
+                if (tx.amount_usd) {
+                  actualByCategory[cat].usd += Math.abs(tx.amount_usd)
+                }
+              })
+            }
             
             // Calculate variance for each budget category. Use GBP as source of truth, convert to USD with current FX rate.
             const comparisons = budgets.map((budget) => {
@@ -712,10 +739,11 @@ If the user asks something you cannot answer with the available data (e.g., "How
               // Use YTD or annual budget based on period parameter
               const budgetGBP = period === 'ytd' 
                 ? (budget.ytd_gbp || 0) 
-                : (budget.annual_budget_gbp || 0)
-              const budgetUSD = (period === 'ytd' ? (budget.ytd_gbp ?? 0) : (budget.annual_budget_gbp ?? 0)) * fxRate
+                : Math.abs(budget.annual_budget_gbp || 0) // Annual budgets are stored as negative, convert to positive
+              const budgetUSD = (period === 'ytd' ? (budget.ytd_gbp ?? 0) : Math.abs(budget.annual_budget_gbp ?? 0)) * fxRate
               
               // Calculate variance (Budget - Actual, positive = under budget, negative = over budget)
+              // For annual period, this compares annual_budget vs tracking_est (forecasted annual spend)
               const varianceGBP = budgetGBP - actual.gbp
               const varianceUSD = budgetUSD - actual.usd
               
@@ -748,9 +776,18 @@ If the user asks something you cannot answer with the available data (e.g., "How
             const overBudget = comparisons.filter(c => c.isOverBudget)
             const underBudget = comparisons.filter(c => !c.isOverBudget)
             
+            // Calculate total gap across all expense categories (exclude income categories)
+            const expenseComparisons = comparisons.filter(c => !EXCLUDED_CATEGORIES.includes(c.category))
+            const totalGapGBP = expenseComparisons.reduce((sum, c) => sum + c.varianceGBP, 0)
+            const totalGapUSD = expenseComparisons.reduce((sum, c) => sum + c.varianceUSD, 0)
+            
+            // Calculate total budget and total actual/forecast for expense categories
+            const totalBudgetGBP = expenseComparisons.reduce((sum, c) => sum + c.budgetGBP, 0)
+            const totalActualGBP = expenseComparisons.reduce((sum, c) => sum + c.actualGBP, 0)
+            
             const summary = period === 'ytd'
-              ? `YTD Budget Analysis: ${overBudget.length} category${overBudget.length === 1 ? '' : 'ies'} over budget, ${underBudget.length} under budget.`
-              : `Annual Budget Analysis: ${overBudget.length} category${overBudget.length === 1 ? '' : 'ies'} over budget, ${underBudget.length} under budget.`
+              ? `YTD Budget Analysis (actual spending): ${overBudget.length} category${overBudget.length === 1 ? '' : 'ies'} over budget, ${underBudget.length} under budget. Total gap: £${Math.abs(totalGapGBP).toLocaleString('en-GB', { maximumFractionDigits: 0 })} ${totalGapGBP >= 0 ? 'under' : 'over'} budget.`
+              : `Annual Budget Analysis (forecasted annual spend vs annual budget): ${overBudget.length} category${overBudget.length === 1 ? '' : 'ies'} over budget, ${underBudget.length} under budget. Total annual spend gap: £${Math.abs(totalGapGBP).toLocaleString('en-GB', { maximumFractionDigits: 0 })} ${totalGapGBP >= 0 ? 'under' : 'over'} budget (forecasted spend: £${totalActualGBP.toLocaleString('en-GB', { maximumFractionDigits: 0 })}, budget: £${totalBudgetGBP.toLocaleString('en-GB', { maximumFractionDigits: 0 })}).`
             
             return {
               comparison: {
@@ -762,6 +799,10 @@ If the user asks something you cannot answer with the available data (e.g., "How
                   overBudget: overBudget.length,
                   underBudget: underBudget.length,
                   topOverspend: comparisons.slice(0, 5).filter(c => c.isOverBudget),
+                  totalGapGBP,
+                  totalGapUSD,
+                  totalBudgetGBP,
+                  totalActualGBP,
                 },
               },
               summary,
@@ -959,27 +1000,44 @@ If the user asks something you cannot answer with the available data (e.g., "How
             const toNum = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0)
             const isExpense = (c: string) => !EXCLUDED.includes(c)
 
-            // Step A: Fetch start snapshot
-            const { data: startRows, error: startError } = await supabase
+            // Step A: Fetch start snapshot (with fallback to closest available date)
+            let startRows: any[] | null = null
+            let startDateUsed = startDate
+            
+            const { data: startRowsExact, error: startExactError } = await supabase
               .from('budget_history')
               .select('category, forecast_spend, annual_budget')
               .eq('date', startDate)
 
-            if (startError) {
-              console.error('[chat] analyze_forecast_evolution: Start query error', startError)
-              return { error: startError.message }
-            }
-            if (!startRows || startRows.length === 0) {
-              return { error: `No historical data found for ${startDate}. Comparison not possible.` }
+            if (!startExactError && startRowsExact && startRowsExact.length > 0) {
+              startRows = startRowsExact
+            } else {
+              // Fallback: find closest date <= startDate
+              const { data: startRowsLatest, error: startLatestError } = await supabase
+                .from('budget_history')
+                .select('date, category, forecast_spend, annual_budget')
+                .lte('date', startDate)
+                .order('date', { ascending: false })
+                .limit(500)
+
+              if (!startLatestError && startRowsLatest && startRowsLatest.length > 0) {
+                const latestDate = startRowsLatest[0].date
+                startDateUsed = latestDate
+                startRows = startRowsLatest.filter((r: { date: string }) => r.date === latestDate)
+              } else {
+                return { error: `No historical data found for ${startDate} or earlier. Budget history snapshots may not exist for this date range.` }
+              }
             }
 
             const startGapMap = new Map<string, number>()
-            startRows
-              .filter((r: { category: string }) => isExpense(r.category))
-              .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
-                const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
-                startGapMap.set(row.category, gap)
-              })
+            if (startRows) {
+              startRows
+                .filter((r: { category: string }) => isExpense(r.category))
+                .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
+                  const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
+                  startGapMap.set(row.category, gap)
+                })
+            }
 
             // Step B: Fetch end snapshot (with fallback)
             const endGapMap = new Map<string, number>()
@@ -1069,7 +1127,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const driverParts = topDrivers
                 .filter((d) => d.change_gbp !== 0)
                 .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtUsd(d.change_gbp)})`)
-              summary = `The expenses gap to budget ${direction} by ${fmtUsd(Math.abs(totalGapChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              summary = `The expenses gap to budget ${direction} by ${fmtUsd(Math.abs(totalGapChangeGBP))} between ${startDateUsed}${startDateUsed !== startDate ? ` (closest available date to ${startDate})` : ''} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
             } else {
               const direction =
                 totalGapChangeGBP > 0 ? 'improved' : totalGapChangeGBP < 0 ? 'worsened' : 'stayed flat'
@@ -1077,12 +1135,12 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const driverParts = topDrivers
                 .filter((d) => d.change_gbp !== 0)
                 .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtGbp(d.change_gbp)})`)
-              summary = `The expenses gap to budget ${direction} by ${fmtGbp(Math.abs(totalGapChangeGBP))} between ${startDate} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              summary = `The expenses gap to budget ${direction} by ${fmtGbp(Math.abs(totalGapChangeGBP))} between ${startDateUsed}${startDateUsed !== startDate ? ` (closest available date to ${startDate})` : ''} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
             }
 
             return {
               evolution: {
-                startDate,
+                startDate: startDateUsed,
                 endDate: endDateUsed,
                 total_gap_change: totalGapChangeGBP,
                 gap_impact_direction: gapImpactDirection,
@@ -1184,6 +1242,356 @@ If the user asks something you cannot answer with the available data (e.g., "How
             }
           } catch (err) {
             console.error('[chat] get_net_worth_trend: Execution error', err)
+            return { error: err instanceof Error ? err.message : 'Unknown error' }
+          }
+        },
+      },
+      analyze_monthly_category_trends: {
+        description: `Analyze monthly spending trends for a specific category over the last 13 months. Use this for questions about:
+        - Monthly spending patterns for a category (e.g., "How has my Bills spending changed month by month?")
+        - Category comparisons vs historical averages (L3M, L12M, year-ago)
+        - Top counterparties/merchants driving category spending
+        - Monthly trend analysis and insights
+        Returns monthly breakdowns, comparisons to averages, and identifies the top transaction counterparty.`,
+        inputSchema: z.object({
+          category: z.string().describe('Category to analyze (e.g., "Bills", "Food", "Transport")'),
+          currency: z.enum(['GBP', 'USD']).optional().default('GBP').describe('Currency for display. Data is stored in both GBP and USD.'),
+        }),
+        execute: async ({ category, currency = 'GBP' }) => {
+          try {
+            console.log('[chat] analyze_monthly_category_trends: Starting', { category, currency })
+            
+            const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
+            if (EXCLUDED_CATEGORIES.includes(category)) {
+              return { error: `Category "${category}" is excluded from trend analysis. Please use an expense category.` }
+            }
+            
+            // Get date range: last 13 months starting from last full month
+            const today = new Date()
+            const lastFullMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+            const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
+            endDate.setHours(23, 59, 59, 999)
+            const startDate = new Date(lastFullMonth.getFullYear(), lastFullMonth.getMonth() - 12, 1)
+            startDate.setHours(0, 0, 0, 0)
+            
+            const formatDateStr = (date: Date): string => {
+              const year = date.getFullYear()
+              const month = String(date.getMonth() + 1).padStart(2, '0')
+              const day = String(date.getDate()).padStart(2, '0')
+              return `${year}-${month}-${day}`
+            }
+            
+            const startDateStr = formatDateStr(startDate)
+            const endDateStr = formatDateStr(endDate)
+            
+            // Fetch transactions with pagination
+            let allTransactions: any[] = []
+            let page = 0
+            const pageSize = 1000
+            let hasMore = true
+            
+            while (hasMore) {
+              const from = page * pageSize
+              const to = from + pageSize - 1
+              
+              const transactionsResult = await supabase
+                .from('transaction_log')
+                .select('*', { count: 'exact' })
+                .eq('category', category)
+                .gte('date', startDateStr)
+                .lte('date', endDateStr)
+                .order('date', { ascending: true })
+                .range(from, to)
+              
+              if (transactionsResult.error) {
+                console.error('[chat] analyze_monthly_category_trends: Query error', transactionsResult.error)
+                return { error: transactionsResult.error.message }
+              }
+              
+              const pageTransactions = transactionsResult.data || []
+              allTransactions = [...allTransactions, ...pageTransactions]
+              
+              hasMore = pageTransactions.length === pageSize
+              page++
+            }
+            
+            if (allTransactions.length === 0) {
+              return {
+                trends: null,
+                summary: `No transactions found for category "${category}" in the last 13 months.`,
+              }
+            }
+            
+            // Get FX rates for the date range
+            const { data: fxRates } = await supabase
+              .from('fx_rates')
+              .select('date, gbpusd_rate')
+              .lte('date', endDateStr)
+              .order('date', { ascending: false })
+              .limit(500)
+            
+            const ratesByDate = new Map<string, number>()
+            fxRates?.forEach((rate: { date: string; gbpusd_rate: number | null }) => {
+              if (rate.gbpusd_rate) {
+                ratesByDate.set(rate.date, rate.gbpusd_rate)
+              }
+            })
+            
+            // Get current FX rate as fallback
+            const { data: fxRateData } = await supabase
+              .from('fx_rate_current')
+              .select('gbpusd_rate')
+              .order('date', { ascending: false })
+              .limit(1)
+              .single()
+            
+            const currentFxRate = fxRateData?.gbpusd_rate || 1.27
+            
+            // Helper to get rate for a date
+            const getRateForDate = (dateStr: string): number => {
+              const dateKey = dateStr.split('T')[0]
+              return ratesByDate.get(dateKey) || currentFxRate
+            }
+            
+            // Generate all 13 months
+            const allMonths: string[] = []
+            const currentMonth = new Date(startDate)
+            for (let i = 0; i < 13; i++) {
+              const year = currentMonth.getFullYear()
+              const month = currentMonth.getMonth() + 1
+              const monthKey = `${year}-${String(month).padStart(2, '0')}`
+              allMonths.push(monthKey)
+              currentMonth.setMonth(currentMonth.getMonth() + 1)
+            }
+            
+            // Group transactions by month and find top counterparty across all months
+            const monthlyGroups = new Map<string, any[]>()
+            const allCounterpartyTotals = new Map<string, { total: number; fullName: string }>()
+            
+            allTransactions.forEach((tx) => {
+              if (!tx.date) return
+              
+              const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
+              const [yearStr, monthStr] = dateStr.split('-')
+              
+              if (!yearStr || !monthStr) return
+              
+              const year = parseInt(yearStr, 10)
+              const month = parseInt(monthStr, 10)
+              
+              if (isNaN(year) || isNaN(month)) return
+              
+              const monthKey = `${year}-${String(month).padStart(2, '0')}`
+              
+              if (!monthlyGroups.has(monthKey)) {
+                monthlyGroups.set(monthKey, [])
+              }
+              monthlyGroups.get(monthKey)!.push(tx)
+              
+              // Track counterparty totals for top transaction identification
+              const rate = getRateForDate(dateStr)
+              const amount = currency === 'USD'
+                ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
+                : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
+              
+              if (amount < 0) {
+                const absAmount = Math.abs(amount)
+                const counterparty = tx.counterparty || 'Unknown'
+                const counterpartyKey = counterparty.substring(0, 7).trim()
+                
+                if (allCounterpartyTotals.has(counterpartyKey)) {
+                  const existing = allCounterpartyTotals.get(counterpartyKey)!
+                  existing.total += absAmount
+                  if (counterparty.length > existing.fullName.length) {
+                    existing.fullName = counterparty
+                  }
+                } else {
+                  allCounterpartyTotals.set(counterpartyKey, {
+                    total: absAmount,
+                    fullName: counterparty,
+                  })
+                }
+              }
+            })
+            
+            // Find top counterparty
+            let topCounterpartyKey = ''
+            let topCounterpartyFullName = ''
+            let topTotalAmount = 0
+            
+            allCounterpartyTotals.forEach((data, key) => {
+              if (data.total > topTotalAmount) {
+                topTotalAmount = data.total
+                topCounterpartyKey = key
+                topCounterpartyFullName = data.fullName
+              }
+            })
+            
+            // Calculate monthly data
+            const monthlyData: Array<{
+              month: string
+              monthLabel: string
+              total: number
+              topTransactionAmount: number
+              otherAmount: number
+            }> = []
+            
+            allMonths.forEach((monthKey) => {
+              const monthTransactions = monthlyGroups.get(monthKey) || []
+              
+              let topTransactionAmount = 0
+              let totalAmount = 0
+              
+              monthTransactions.forEach((tx) => {
+                const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
+                const rate = getRateForDate(dateStr)
+                const amount = currency === 'USD'
+                  ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
+                  : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
+                
+                if (amount < 0) {
+                  const absAmount = Math.abs(amount)
+                  totalAmount += absAmount
+                  
+                  const counterparty = tx.counterparty || 'Unknown'
+                  const counterpartyKey = counterparty.substring(0, 7).trim()
+                  
+                  if (counterpartyKey === topCounterpartyKey) {
+                    topTransactionAmount += absAmount
+                  }
+                }
+              })
+              
+              const [year, month] = monthKey.split('-')
+              const monthLabel = `${year}-${parseInt(month)}`
+              
+              monthlyData.push({
+                month: monthKey,
+                monthLabel,
+                total: totalAmount,
+                topTransactionAmount,
+                otherAmount: totalAmount - topTransactionAmount,
+              })
+            })
+            
+            // Calculate comparisons for the most recent month
+            const mostRecentMonth = monthlyData[monthlyData.length - 1]
+            const currentMonthIndex = monthlyData.length - 1
+            
+            // Calculate averages
+            let l3mSum = 0
+            let l3mCount = 0
+            let l12mSum = 0
+            let l12mCount = 0
+            
+            for (let i = Math.max(0, currentMonthIndex - 3); i < currentMonthIndex; i++) {
+              if (monthlyData[i].total > 0) {
+                l3mSum += monthlyData[i].total
+                l3mCount++
+              }
+            }
+            
+            for (let i = 0; i < currentMonthIndex; i++) {
+              if (monthlyData[i].total > 0) {
+                l12mSum += monthlyData[i].total
+                l12mCount++
+              }
+            }
+            
+            const l3mAvg = l3mCount > 0 ? l3mSum / l3mCount : null
+            const l12mAvg = l12mCount > 0 ? l12mSum / l12mCount : null
+            
+            // Year-ago comparison
+            const [year, month] = mostRecentMonth.month.split('-')
+            const lastYearMonth = `${parseInt(year) - 1}-${month}`
+            const lyData = monthlyData.find(d => d.month === lastYearMonth)
+            
+            // Calculate comparisons
+            const vsL3M = l3mAvg !== null ? mostRecentMonth.total - l3mAvg : null
+            const vsL12M = l12mAvg !== null ? mostRecentMonth.total - l12mAvg : null
+            const vsLY = lyData ? mostRecentMonth.total - lyData.total : null
+            
+            const vsL3MPct = l3mAvg !== null && l3mAvg !== 0 
+              ? ((mostRecentMonth.total - l3mAvg) / l3mAvg) * 100 
+              : null
+            const vsL12MPct = l12mAvg !== null && l12mAvg !== 0 
+              ? ((mostRecentMonth.total - l12mAvg) / l12mAvg) * 100 
+              : null
+            const vsLYPct = lyData && lyData.total !== 0 
+              ? ((mostRecentMonth.total - lyData.total) / lyData.total) * 100 
+              : null
+            
+            const symbol = currency === 'USD' ? '$' : '£'
+            const formatAmount = (amount: number) => 
+              `${symbol}${Math.round(amount).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+            
+            const formatPercent = (pct: number | null) => {
+              if (pct === null) return 'N/A'
+              const sign = pct >= 0 ? '+' : ''
+              return `${sign}${Math.round(pct)}%`
+            }
+            
+            // Build summary
+            const monthLabel = mostRecentMonth.monthLabel
+            const summaryParts: string[] = []
+            
+            summaryParts.push(`${category} spending in ${monthLabel}: ${formatAmount(mostRecentMonth.total)}`)
+            
+            if (topCounterpartyFullName) {
+              summaryParts.push(`Top counterparty: ${topCounterpartyFullName} (${formatAmount(mostRecentMonth.topTransactionAmount)})`)
+            }
+            
+            const comparisons: string[] = []
+            if (vsL3M !== null) {
+              const direction = vsL3M < 0 ? 'below' : 'above'
+              comparisons.push(`${formatPercent(vsL3MPct)} ${direction} 3-month average`)
+            }
+            if (vsL12M !== null) {
+              const direction = vsL12M < 0 ? 'below' : 'above'
+              comparisons.push(`${formatPercent(vsL12MPct)} ${direction} 12-month average`)
+            }
+            if (vsLY !== null) {
+              const direction = vsLY < 0 ? 'below' : 'above'
+              comparisons.push(`${formatPercent(vsLYPct)} ${direction} same period last year`)
+            }
+            
+            if (comparisons.length > 0) {
+              summaryParts.push(`Comparisons: ${comparisons.join(', ')}`)
+            }
+            
+            return {
+              trends: {
+                category,
+                period: {
+                  startMonth: monthlyData[0].monthLabel,
+                  endMonth: mostRecentMonth.monthLabel,
+                  monthsAnalyzed: monthlyData.length,
+                },
+                currentMonth: {
+                  month: mostRecentMonth.monthLabel,
+                  total: mostRecentMonth.total,
+                  topTransaction: {
+                    counterparty: topCounterpartyFullName,
+                    amount: mostRecentMonth.topTransactionAmount,
+                  },
+                  otherAmount: mostRecentMonth.otherAmount,
+                },
+                comparisons: {
+                  vsL3M: vsL3M !== null ? { amount: vsL3M, percentage: vsL3MPct } : null,
+                  vsL12M: vsL12M !== null ? { amount: vsL12M, percentage: vsL12MPct } : null,
+                  vsLY: vsLY !== null ? { amount: vsLY, percentage: vsLYPct } : null,
+                },
+                monthlyBreakdown: monthlyData.map(d => ({
+                  month: d.monthLabel,
+                  total: d.total,
+                  topTransactionAmount: d.topTransactionAmount,
+                  otherAmount: d.otherAmount,
+                })),
+              },
+              summary: summaryParts.join('. '),
+            }
+          } catch (err) {
+            console.error('[chat] analyze_monthly_category_trends: Execution error', err)
             return { error: err instanceof Error ? err.message : 'Unknown error' }
           }
         },

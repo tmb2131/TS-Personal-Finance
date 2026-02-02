@@ -8,6 +8,7 @@ import { AnnualCumulativeSpendChart } from '@/components/analysis/annual-cumulat
 import { CashRunwayCards } from '@/components/analysis/cash-runway-cards'
 import { AnalysisNavigation } from '@/components/analysis/analysis-navigation'
 import { ForecastEvolutionSection } from '@/components/analysis/forecast-evolution-section'
+import { MonthlyCategoryTrendsSection } from '@/components/analysis/monthly-category-trends-section'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -69,6 +70,9 @@ export default async function AnalysisPage({
           <NetWorthStartEndChart />
           <YoYNetWorthWaterfall />
         </div>
+      </div>
+      <div id="monthly-category-trends" className="scroll-mt-24">
+        <MonthlyCategoryTrendsSection />
       </div>
     </div>
   )

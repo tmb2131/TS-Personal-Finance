@@ -139,6 +139,9 @@ Core entities are defined in `supabase/migrations/`. Below is a concise referenc
 - **YTD spend over time:** Cumulative spend chart (e.g. by category) over the year.
 - **Annual cumulative spend:** Multi-year cumulative spend vs budget (optional year toggles; mobile may show fewer lines by default).
 - **YoY net worth change:** Start/end chart and YoY net worth waterfall (income, expenses, transfers, etc.) from `yoy_net_worth`.
+- **Monthly category trends:** 
+  - **Monthly Category Summary:** Summary cards showing current month spending vs. L3M Avg, L12M Avg, and LY (Last Year) for the selected category, broken down by top transaction and other spending. Includes a category selector dropdown to choose which category to analyze.
+  - **Monthly Category Trends Chart:** Stacked bar chart showing monthly spending trends for the selected category. Each bar represents a month and is split into two segments: the top transaction (counterparty with highest spending) for that month, and the rest of the category ("Other"). Highlights the current month and the same month from the previous year. Data from `transaction_log`; shows last 13 months of trends. Category selection is controlled by the selector in the Monthly Category Summary section above.
 
 ### 4.7 Chat / AI Assistant
 

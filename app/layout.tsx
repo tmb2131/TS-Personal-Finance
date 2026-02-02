@@ -14,7 +14,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'TS Personal Finance - Personal Finance Dashboard',
   description: 'Personal finance dashboard with net worth tracking and budget analysis',
-  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     title: 'TS Personal Finance',
