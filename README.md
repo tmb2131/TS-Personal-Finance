@@ -96,7 +96,7 @@ The app expects a Google Sheet with the following tabs:
 2. You’ll land on **Key Insights**. If you don’t have a sheet connected yet, a **popup** will ask for a Google Spreadsheet ID. Paste the ID and click **Save and start**; the app will sync that sheet and refresh the page so you see data right away.
 3. **Dummy data:** To use the shared test sheet, paste this ID in the popup:  
    `1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY`
-4. After that, use **Dashboard**, **Key Insights**, **Accounts**, and **Analysis** to explore. The floating chat button opens the **Financial Assistant**—you can ask things like “What’s my net worth?” or “How’s my budget vs actual?”
+4. After that, use **Dashboard**, **Key Insights**, **Accounts**, and **Analysis** to explore. The floating chat button opens the **AI Financial Assistant**—you can ask things like “What’s my net worth?” or “How’s my budget vs actual?”
 5. Your data is isolated to your account; you can change or disconnect your sheet anytime in **Settings**.
 
 ## Authentication

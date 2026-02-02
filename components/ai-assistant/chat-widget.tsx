@@ -607,7 +607,7 @@ export function ChatWidget() {
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-6 md:bottom-4 h-14 w-14 rounded-full shadow-lg z-50 bg-primary hover:bg-primary/90"
         size="icon"
-        aria-label="Open AI Assistant"
+        aria-label="Open the AI Financial Assistant"
       >
         <MessageCircle className="h-6 w-6" />
       </Button>
@@ -648,7 +648,7 @@ export function ChatWidget() {
             )}
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
               <MessageCircle className="h-5 w-5 text-primary" />
-              Financial Assistant
+              The AI Financial Assistant
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Button
@@ -815,7 +815,7 @@ export function ChatWidget() {
                     <MessageCircle className="h-12 w-12 text-primary" aria-hidden />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">
-                    {displayName ? `Hello, ${displayName}!` : 'Welcome to Financial Assistant'}
+                    {displayName ? `Hello, ${displayName}!` : 'Welcome to the AI Financial Assistant'}
                   </h3>
                   <p className="text-sm text-muted-foreground mb-6 max-w-md">
                     Ask me anything about your finances. I can help with balances, spending analysis, budget tracking, and forecast insights.

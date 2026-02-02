@@ -23,7 +23,7 @@ The primary user is an individual or household (e.g. family/trust) who maintains
 
 ### Key libraries
 
-1. **AI SDK (`ai`, `@ai-sdk/react`, `@ai-sdk/google`)** – Streaming chat with tool use; model: Gemini 2.5 Flash. Powers the in-app “Financial Assistant” chat widget with tools for snapshots, spending, budget vs actual, and forecast evolution.
+1. **AI SDK (`ai`, `@ai-sdk/react`, `@ai-sdk/google`)** – Streaming chat with tool use; model: Gemini 2.5 Flash. Powers the in-app “The AI Financial Assistant” chat widget with tools for snapshots, spending, budget vs actual, and forecast evolution.
 2. **Recharts** – All charts: net worth over time, income vs expenses, cumulative spend, annual cumulative spend, YoY net worth waterfall, forecast evolution (bridge) waterfall, forecast gap over time (line).
 3. **googleapis** – Google Sheets API; used by `lib/sync-google-sheet.ts` to pull data into Supabase (account balances, transactions, budget targets, historical net worth, FX rates, trends, recurring payments, kids accounts, investment return, YoY net worth).
 4. **Supabase (`@supabase/supabase-js`, `@supabase/ssr`)** – Database client, auth, and cookie-based session handling in server and client components.
@@ -159,7 +159,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ### 4.8 Chat / AI Assistant
 
-- **Entry:** Floating chat button (mobile: above bottom nav); opens modal “Financial Assistant.” Auth timeout: `AuthTimeoutProvider` (inactivity 5 min or tab hidden 5 min) signs out and redirects to `/login`.
+- **Entry:** Floating chat button (mobile: above bottom nav); opens modal “The AI Financial Assistant.” Auth timeout: `AuthTimeoutProvider` (inactivity 5 min or tab hidden 5 min) signs out and redirects to `/login`.
 - **API:** `POST /api/chat` with AI SDK `streamText`, model Gemini 2.5 Flash; multi-step tool use (`maxSteps: 5`).
 - **Tools:**
   1. **get_financial_snapshot** – Current or historical (`asOfDate`) net worth/balances; optional groupBy (currency, category, entity) and entity filter (Personal/Family/Trust). Uses `historical_net_worth` or `account_balances`.
@@ -189,7 +189,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ### 5.3 Google AI (Gemini)
 
-- **Role:** Chat model for the Financial Assistant (`@ai-sdk/google`, `google('gemini-2.5-flash')`).
+- **Role:** Chat model for the AI Financial Assistant (`@ai-sdk/google`, `google('gemini-2.5-flash')`).
 - **Flow:** User message → `/api/chat` → `streamText` with tools → tool executions (Supabase reads) → model summarizes in natural language; response streamed to the client.
 
 ### 5.4 Vercel (or similar)
@@ -200,7 +200,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/chat` | POST | Financial Assistant; AI SDK `streamText`, tools, Gemini 2.5 Flash. |
+| `/api/chat` | POST | The AI Financial Assistant; AI SDK `streamText`, tools, Gemini 2.5 Flash. |
 | `/api/cron/refresh` | GET/POST | Cron-only; loops `user_profiles` with non-null `google_spreadsheet_id`, runs sync + snapshot + `recordLastSync` per user. Secured by `CRON_SECRET`. |
 | `/api/sync` | POST | Manual refresh; reads current user’s `google_spreadsheet_id` from `user_profiles`; if null returns 400. Otherwise runs sync, snapshot, `recordLastSync` for that user. Requires auth. |
 | `/api/forecast-bridge` | GET | Forecast evolution waterfall data; query params for start/end dates. |
