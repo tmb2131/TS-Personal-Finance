@@ -490,7 +490,7 @@ export function ChatWidget() {
       return
     }
     const vv = window.visualViewport
-    const inset = 12
+    const inset = 8
     const update = () => {
       setMobileDialogStyle({
         top: vv.offsetTop + inset,
@@ -581,8 +581,8 @@ export function ChatWidget() {
             'rounded-2xl backdrop-blur-md bg-background/95',
             'border border-border/50 shadow-2xl',
             '[&>button]:hidden', // Hide default close button since we have custom header
-            // Mobile: nearly full screen with small inset; reset base Dialog centering so box stays on-screen
-            'fixed left-3 right-3 top-3 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] translate-x-0 translate-y-0',
+            // Mobile: most of screen height with minimal inset; reset base Dialog centering so box stays on-screen
+            'fixed left-2 right-2 top-2 h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] translate-x-0 translate-y-0',
             'md:left-[50%] md:right-auto md:top-[50%] md:translate-x-[-50%] md:translate-y-[-50%] md:h-[80vh] md:max-h-[80vh] md:w-full md:max-w-3xl'
           )}
           onKeyDown={handleKeyDown}
