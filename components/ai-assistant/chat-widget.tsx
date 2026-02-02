@@ -275,6 +275,19 @@ export function ChatWidget() {
                     >
                       How much did I spend last month?
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      disabled={isLoading}
+                      onClick={() => {
+                        suggestedPromptRef.current = 'What is my current annual spend gap to budget? How has it changed over the past week, and what were the main drivers of that change?'
+                        handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                      }}
+                    >
+                      What's my annual spend gap to budget?
+                    </Button>
                   </div>
                 </div>
               )}
