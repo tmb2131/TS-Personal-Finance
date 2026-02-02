@@ -24,12 +24,19 @@ function scrollToSection(id: string) {
   }
 }
 
-const SECTIONS = [
+type Section = {
+  id: string
+  label: string
+  labelShort: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+const SECTIONS: Section[] = [
   { id: 'net-worth-chart', label: 'Net Worth (incl. Trust)', labelShort: 'Net Worth', icon: LineChart },
   { id: 'budget-table', label: 'Budget (Net Income)', labelShort: 'Budget', icon: Receipt },
   { id: 'annual-trends', label: 'Annual Trends', labelShort: 'Annual', icon: Calendar },
   { id: 'monthly-trends', label: 'Monthly Trends', labelShort: 'Monthly', icon: CalendarDays },
-] as const
+]
 
 export function DashboardAtAGlance() {
   const { currency, fxRate, convertAmount } = useCurrency()
@@ -159,12 +166,12 @@ export function DashboardAtAGlance() {
                     <div className="flex items-center gap-2">
                       <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
                       <span className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                        {section.labelShort || section.label.replace(/\s*\([^)]*\)\s*/g, '')}
+                        {section.labelShort || section.label.replace(/\s*\([^)]*\)\s*/g, '').trim()}
                       </span>
                     </div>
                     {section.label.includes('(') && (
                       <span className="text-[10px] text-muted-foreground/70 ml-7">
-                        {section.label.match(/\(([^)]+)\)/)?.[1]}
+                        {section.label.match(/\(([^)]+)\)/)?.[1] || ''}
                       </span>
                     )}
                   </div>
