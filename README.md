@@ -84,6 +84,21 @@ The app expects a Google Sheet with the following tabs:
 7. **Annual Trends**: Category, Historical years, Current year estimate
 8. **Monthly Trends**: Category, Last 3 months, Current month estimate, TTM avg, Z-score
 
+## Trying it out (for testers)
+
+**Findash** (in-app: **TS Personal Finance**) is a personal finance dashboard that pulls your data from a Google Sheet and shows net worth, budgets vs actuals, spending trends, cash runway, and an AI assistant for natural-language questions.
+
+*I built this over the past week while learning how AI can build real apps—not just answer questions or summarize data. So consider this a work-in-progress experiment as much as a tool.*
+
+**To try it:**
+
+1. **Sign in** with your Google account.
+2. You’ll land on **Key Insights**. If you don’t have a sheet connected yet, a **popup** will ask for a Google Spreadsheet ID. Paste the ID and click **Save and start**; the app will sync that sheet and refresh the page so you see data right away.
+3. **Dummy data:** To use the shared test sheet, paste this ID in the popup:  
+   `1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY`
+4. After that, use **Dashboard**, **Key Insights**, **Accounts**, and **Analysis** to explore. The floating chat button opens the **Financial Assistant**—you can ask things like “What’s my net worth?” or “How’s my budget vs actual?”
+5. Your data is isolated to your account; you can change or disconnect your sheet anytime in **Settings**.
+
 ## Authentication
 
 Access is restricted to:
