@@ -5,8 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 /**
- * Cron endpoint: run data sync (e.g. daily at 6am) and snapshot budget into budget_history.
- * Secured by CRON_SECRET – only requests with Authorization: Bearer <CRON_SECRET> are accepted.
+ * Cron endpoint: run data sync per user (each user's sheet) and snapshot budget_history.
+ * Secured by CRON_SECRET. Loops over user_profiles with non-null google_spreadsheet_id.
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -17,16 +17,40 @@ export async function GET(request: Request) {
 
   try {
     const admin = createAdminClient()
-    const result = await syncGoogleSheet(admin)
-    const today = new Date().toISOString().split('T')[0]
-    await snapshotBudgetHistory(today, admin)
-    if (result.success) {
-      await recordLastSync(admin)
+    const { data: profiles, error: listError } = await admin
+      .from('user_profiles')
+      .select('id, google_spreadsheet_id')
+      .not('google_spreadsheet_id', 'is', null)
+
+    if (listError) {
+      console.error('Cron: failed to list user_profiles', listError)
+      return NextResponse.json(
+        { success: false, error: listError.message, results: [] },
+        { status: 500 }
+      )
     }
+
+    const today = new Date().toISOString().split('T')[0]
+    const allResults: { sheet: string; success: boolean; error?: string; rowsProcessed: number }[] = []
+    let anySuccess = true
+
+    for (const profile of profiles ?? []) {
+      const result = await syncGoogleSheet(admin, {
+        spreadsheetId: profile.google_spreadsheet_id,
+        userId: profile.id,
+      })
+      allResults.push(...(result.results ?? []))
+      if (!result.success) anySuccess = false
+      await snapshotBudgetHistory(today, admin, profile.id)
+      if (result.success) {
+        await recordLastSync(admin, profile.id)
+      }
+    }
+
     return NextResponse.json({
-      success: result.success,
-      results: result.results ?? [],
-      error: result.error ?? null,
+      success: anySuccess,
+      results: allResults,
+      error: null,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to sync data'

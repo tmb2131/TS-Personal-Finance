@@ -2,7 +2,11 @@ import { google } from 'googleapis';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from './supabase/server';
 
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '';
+/** Tables that are global (no user_id): FX only. All others get user_id on sync. */
+const GLOBAL_TABLES = new Set(['fx_rates', 'fx_rate_current']);
+function isGlobalTable(table: string): boolean {
+  return GLOBAL_TABLES.has(table);
+}
 
 const BATCH_SIZE = 1000;
 
@@ -256,16 +260,28 @@ const SHEET_CONFIGS: SheetConfig[] = [
   },
 ];
 
+export interface SyncGoogleSheetOptions {
+  spreadsheetId: string;
+  userId: string;
+}
+
 /**
  * Sync Google Sheet data into Supabase.
  * @param supabase - Optional client. When provided (e.g. cron with admin), uses it and bypasses RLS.
  * When omitted (e.g. manual refresh), uses server client with authenticated user session.
+ * @param options - spreadsheetId and userId; every row (except FX tables) is written with this user_id.
  */
-export async function syncGoogleSheet(supabase?: SupabaseClient) {
+export async function syncGoogleSheet(
+  supabase: SupabaseClient | undefined,
+  options: SyncGoogleSheetOptions
+) {
+  const { spreadsheetId, userId } = options;
   try {
-    // Validate environment variables
-    if (!SPREADSHEET_ID) {
-      throw new Error('GOOGLE_SPREADSHEET_ID environment variable is not set')
+    if (!spreadsheetId) {
+      throw new Error('spreadsheetId is required')
+    }
+    if (!userId) {
+      throw new Error('userId is required')
     }
     if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
       throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is not set')
@@ -290,7 +306,7 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
     let availableSheets: string[] = [];
     try {
       const spreadsheetInfo = await sheets.spreadsheets.get({
-        spreadsheetId: SPREADSHEET_ID,
+        spreadsheetId,
       });
       availableSheets = (spreadsheetInfo.data.sheets || []).map(sheet => sheet.properties?.title || '');
       console.log('Available sheets in spreadsheet:', availableSheets);
@@ -315,7 +331,7 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
         const rangeString = `${quotedSheetName}!${config.range}`;
         
         const response = await sheets.spreadsheets.values.get({
-          spreadsheetId: SPREADSHEET_ID,
+          spreadsheetId,
           range: rangeString,
         });
 
@@ -345,7 +361,8 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
     const results: { sheet: string; success: boolean; error?: string; rowsProcessed: number }[] = [];
 
     const processOneSheet = async (
-      item: { config: SheetConfig; error: string | null; data: any[] | null }
+      item: { config: SheetConfig; error: string | null; data: any[] | null },
+      uid: string
     ): Promise<{ sheet: string; success: boolean; error?: string; rowsProcessed: number }> => {
       const { config, error: itemError, data } = item;
       if (itemError) {
@@ -356,6 +373,9 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
         return { sheet: config.name, success: true, rowsProcessed: 0 };
       }
       const transformedData = data;
+      const dataWithUser = isGlobalTable(config.table)
+        ? transformedData
+        : transformedData.map((row: any) => ({ ...row, user_id: uid }));
 
       try {
         let upsertResult: { data: any; error: any };
@@ -380,6 +400,7 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
                   const { error: deleteError } = await db
                     .from(config.table)
                     .delete()
+                    .eq('user_id', uid)
                     .eq('account_name', accountInfo.account_name)
                     .eq('category', accountInfo.category)
                     .neq('institution', accountInfo.institution);
@@ -394,40 +415,33 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
           console.log(`Completed bulk delete for ${accountList.length} account combinations`);
           const { data: d, error: e } = await db
             .from(config.table)
-            .upsert(transformedData, { onConflict: 'institution,account_name,date_updated' });
+            .upsert(dataWithUser, { onConflict: 'user_id,institution,account_name,date_updated' });
           upsertResult = { data: d, error: e };
         } else if (config.table === 'kids_accounts') {
-          // For kids_accounts, upsert based on child_name, account_type, date_updated, and notes
-          // This allows multiple accounts of the same type for the same child on the same date
-          // if they have different notes (e.g., different UTMA accounts)
-          // Normalize empty notes to null for consistent unique constraint handling
-          const normalizedData = transformedData.map((record: any) => ({
+          const normalizedData = dataWithUser.map((record: any) => ({
             ...record,
             notes: (record.notes && record.notes.trim()) || null,
             purpose: (record.purpose && record.purpose.trim()) || null,
           }));
-          
           console.log(`Kids Accounts: Processing ${normalizedData.length} rows`);
-          
           const { data, error } = await db
             .from(config.table)
             .upsert(normalizedData, {
-              onConflict: 'child_name,account_type,date_updated,notes',
+              onConflict: 'user_id,child_name,account_type,date_updated,notes',
             });
           upsertResult = { data, error };
         } else if (config.table === 'budget_targets' || config.table === 'annual_trends' || config.table === 'monthly_trends') {
-          // For tables with unique category constraint
           const { data, error } = await db
             .from(config.table)
-            .upsert(transformedData, {
-              onConflict: 'category',
+            .upsert(dataWithUser, {
+              onConflict: 'user_id,category',
             });
           upsertResult = { data, error };
         } else if (config.table === 'investment_return') {
           const { data, error } = await db
             .from(config.table)
-            .upsert(transformedData, {
-              onConflict: 'income_source',
+            .upsert(dataWithUser, {
+              onConflict: 'user_id,income_source',
             });
           upsertResult = { data, error };
         } else if (config.table === 'fx_rate_current') {
@@ -451,11 +465,10 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
             upsertResult = { data, error }
           }
         } else if (config.table === 'yoy_net_worth') {
-          // For YoY Net Worth, use category as conflict (unique constraint)
           const { data, error } = await db
             .from(config.table)
-            .upsert(transformedData, {
-              onConflict: 'category',
+            .upsert(dataWithUser, {
+              onConflict: 'user_id,category',
             });
           upsertResult = { data, error };
         } else if (config.table === 'fx_rates') {
@@ -485,21 +498,20 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
           }
           upsertResult = { data: null, error: fxLastError };
         } else if (config.table === 'historical_net_worth') {
-          // For historical net worth, use date and category as conflict
           const { data, error } = await db
             .from(config.table)
-            .upsert(transformedData, {
-              onConflict: 'date,category',
+            .upsert(dataWithUser, {
+              onConflict: 'user_id,date,category',
             });
           upsertResult = { data, error };
         } else if (config.table === 'transaction_log') {
-          // Replace-all: delete existing rows, then insert all source data (no dedup).
           const PAGE_SIZE = 1000;
           let totalDeleted = 0;
           while (true) {
             const { data: page } = await db
               .from(config.table)
               .select('id')
+              .eq('user_id', uid)
               .range(0, PAGE_SIZE - 1);
             if (!page || page.length === 0) break;
             const ids = page.map((r: { id: string }) => r.id);
@@ -518,7 +530,7 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
             console.log(`Transaction Log: Deleted ${totalDeleted} existing rows (replace-all sync)`);
           }
 
-          const chunks = chunkArray(transformedData, BATCH_SIZE);
+          const chunks = chunkArray(dataWithUser, BATCH_SIZE);
           let lastError: any = null;
           for (const chunk of chunks) {
             const { error } = await db.from(config.table).insert(chunk);
@@ -528,14 +540,15 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
         } else if (config.table === 'recurring_payments') {
           const { data: existingRecords } = await db
             .from(config.table)
-            .select('name, needs_review');
+            .select('name, needs_review')
+            .eq('user_id', uid);
           const reviewFlags = new Map<string, boolean>();
           if (existingRecords) {
             existingRecords.forEach((record: any) => {
               reviewFlags.set((record.name || '').toLowerCase().trim(), !!record.needs_review);
             });
           }
-          const withFlags = transformedData.map((item: any) => ({
+          const withFlags = dataWithUser.map((item: any) => ({
             ...item,
             needs_review: reviewFlags.get((item.name || '').toLowerCase().trim()) ?? false,
             updated_at: new Date().toISOString(),
@@ -564,21 +577,20 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
               existing.annualized_amount_usd = usd || null;
             }
           }
-          const mergedData = Array.from(byName.values());
+          const mergedData = Array.from(byName.values()).map((row) => ({ ...row, user_id: uid }));
           const chunks = chunkArray(mergedData, BATCH_SIZE);
           let lastError: any = null;
           for (const chunk of chunks) {
             const { error } = await db
               .from(config.table)
-              .upsert(chunk, { onConflict: 'name' });
+              .upsert(chunk, { onConflict: 'user_id,name' });
             if (error) lastError = error;
           }
           upsertResult = { data: null, error: lastError };
         } else {
-          // Default upsert
           const { data, error } = await db
             .from(config.table)
-            .insert(transformedData);
+            .insert(dataWithUser);
           upsertResult = { data, error };
         }
 
@@ -619,11 +631,11 @@ export async function syncGoogleSheet(supabase?: SupabaseClient) {
     const heavyItems = fetchedData.filter((item) => item.data && isHeavyTable(item.config.table));
     const noDataItems = fetchedData.filter((item) => !item.data && !item.error);
 
-    const lightResults = await Promise.all(lightItems.map((item) => processOneSheet(item)));
+    const lightResults = await Promise.all(lightItems.map((item) => processOneSheet(item, userId)));
     results.push(...lightResults);
 
     for (const item of heavyItems) {
-      results.push(await processOneSheet(item));
+      results.push(await processOneSheet(item, userId));
     }
 
     for (const item of noDataItems) {

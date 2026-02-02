@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,6 +21,7 @@ const navigation = [
   { name: 'Kids Accounts', href: '/kids', icon: Baby },
   { name: 'Analysis', href: '/analysis', icon: TrendingUp },
   { name: 'Recurring', href: '/recurring', icon: Repeat },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
 const mobilePrimaryNav = navigation.slice(0, 3)

@@ -16,16 +16,32 @@ export async function POST() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('google_spreadsheet_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.google_spreadsheet_id) {
+      return NextResponse.json(
+        { success: false, error: 'Connect your sheet first. Set your Google Spreadsheet ID in settings.' },
+        { status: 400 }
+      )
+    }
+
     console.log('Sync API: Starting sync for user:', user.email)
-    const result = await syncGoogleSheet()
+    const result = await syncGoogleSheet(supabase, {
+      spreadsheetId: profile.google_spreadsheet_id,
+      userId: user.id,
+    })
     console.log('Sync API: Sync completed', { success: result.success, resultsCount: result.results?.length })
 
     const today = new Date().toISOString().split('T')[0]
-    await snapshotBudgetHistory(today)
+    await snapshotBudgetHistory(today, supabase, user.id)
     console.log('Sync API: budget_history snapshot for', today, 'completed')
 
     if (result.success) {
-      await recordLastSync(supabase)
+      await recordLastSync(supabase, user.id)
     }
 
     // Ensure consistent response format

@@ -1,7 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { getAllowedEmails } from '@/lib/allowed-emails'
 
 const POST_LOGIN_REDIRECT = '/insights'
 
@@ -37,11 +36,12 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      const allowedEmails = getAllowedEmails()
-      if (!allowedEmails.includes(data.user.email ?? '')) {
-        await supabase.auth.signOut()
-        return NextResponse.redirect(`${origin}/login?error=not_allowed`)
-      }
+      await supabase
+        .from('user_profiles')
+        .upsert(
+          { id: data.user.id, email: data.user.email ?? null, updated_at: new Date().toISOString() },
+          { onConflict: 'id' }
+        )
       return response
     }
   }

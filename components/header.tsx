@@ -64,12 +64,11 @@ export function Header() {
     try {
       const supabase = createClient()
 
-      // Fetch last sync time (manual or cron)
+      // Fetch last sync time for current user (RLS scopes to auth.uid())
       const { data: syncData } = await supabase
         .from('sync_metadata')
         .select('last_sync_at')
-        .eq('id', 1)
-        .single()
+        .maybeSingle()
       if (syncData?.last_sync_at) {
         setLastRefreshDate(syncData.last_sync_at)
       }

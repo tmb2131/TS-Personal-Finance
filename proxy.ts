@@ -1,7 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { getAllowedEmails } from '@/lib/allowed-emails'
-
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -40,7 +38,6 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const allowedEmails = getAllowedEmails()
 
   // Allow cron refresh (no user session; secured by CRON_SECRET)
   if (pathname.startsWith('/api/cron/')) {
@@ -52,9 +49,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Allow login page (redirect to insights if already allowed user)
+  // Allow login page (redirect to insights if already signed in)
   if (pathname === '/login') {
-    if (user && allowedEmails.includes(user.email || '')) {
+    if (user) {
       return NextResponse.redirect(new URL('/insights', request.url))
     }
     return response
@@ -67,17 +64,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  // Restrict to allowed emails
-  if (!allowedEmails.includes(user.email || '')) {
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
       )
     }
     return NextResponse.redirect(new URL('/login', request.url))

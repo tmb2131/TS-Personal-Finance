@@ -18,15 +18,32 @@ interface CurrencyContextType {
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined)
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrency] = useState<Currency>('GBP')
+  const [currency, setCurrency] = useState<Currency>('USD')
   const [fxRate, setFxRate] = useState<number>(DEFAULT_FX_RATE)
 
-  // Load currency preference from localStorage
+  // Load currency: first from localStorage (session override), then from user profile (default_currency)
   useEffect(() => {
     const saved = localStorage.getItem('currency') as Currency
     if (saved === 'USD' || saved === 'GBP') {
       setCurrency(saved)
+      return
     }
+    const supabase = createClient()
+    void (async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setCurrency('USD')
+        return
+      }
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('default_currency')
+        .eq('id', user.id)
+        .single()
+      const preferred = profile?.default_currency === 'GBP' ? 'GBP' : 'USD'
+      setCurrency(preferred)
+      localStorage.setItem('currency', preferred)
+    })()
   }, [])
 
   // Fetch current FX rate once (single source for all components)
@@ -49,10 +66,19 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     })()
   }, [])
 
-  // Save currency preference to localStorage
+  // Save currency to localStorage and user profile (so next login uses this default)
   const handleSetCurrency = (newCurrency: Currency) => {
     setCurrency(newCurrency)
     localStorage.setItem('currency', newCurrency)
+    const supabase = createClient()
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        void supabase
+          .from('user_profiles')
+          .update({ default_currency: newCurrency, updated_at: new Date().toISOString() })
+          .eq('id', user.id)
+      }
+    })
   }
 
   // Convert amount based on current currency selection
