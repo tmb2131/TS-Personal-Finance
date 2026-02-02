@@ -62,7 +62,7 @@ function LoginForm() {
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
         <CardDescription>
-          Sign in with your allowed Google account
+          Sign in with your Google account
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -92,7 +92,7 @@ function LoginFallback() {
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
         <CardDescription>
-          Sign in with your allowed Google account
+          Sign in with your Google account
         </CardDescription>
       </CardHeader>
       <CardContent>
