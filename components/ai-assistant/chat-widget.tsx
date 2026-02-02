@@ -58,6 +58,8 @@ export function ChatWidget() {
   const lastUserMessageRef = useRef<string>('')
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const dialogTouchStartRef = useRef<{ y: number; scrollTop: number } | null>(null)
+  const activeSwipeMessageRef = useRef<string | null>(null)
+  const swipeDirectionLockedRef = useRef<boolean>(false)
   
   const chatHelpers = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
@@ -111,6 +113,8 @@ export function ChatWidget() {
       setSwipingMessageId(null)
       touchStartRef.current = null
       dialogTouchStartRef.current = null
+      activeSwipeMessageRef.current = null
+      swipeDirectionLockedRef.current = false
       // Also close help panel when dialog closes
       setShowHelp(false)
     }
@@ -328,46 +332,68 @@ export function ChatWidget() {
     }
   }
 
-  // Swipe gesture handlers for messages
+  // Swipe gesture handlers for messages (swipe left to delete)
   const handleMessageTouchStart = (e: React.TouchEvent, messageId: string) => {
     // Only enable swipe on touch devices
     if (!('ontouchstart' in window)) return
-    
+
     const touch = e.touches[0]
     touchStartRef.current = {
       x: touch.clientX,
       y: touch.clientY,
       time: Date.now(),
     }
+    activeSwipeMessageRef.current = messageId
+    swipeDirectionLockedRef.current = false
     setSwipingMessageId(messageId)
   }
 
   const handleMessageTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartRef.current || !swipingMessageId) return
+    if (!touchStartRef.current || !activeSwipeMessageRef.current) return
 
     const touch = e.touches[0]
     const deltaX = touch.clientX - touchStartRef.current.x
-    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y)
+    const deltaY = touch.clientY - touchStartRef.current.y
+    const absX = Math.abs(deltaX)
+    const absY = Math.abs(deltaY)
 
-    // Only allow horizontal swipe if:
-    // 1. Horizontal movement is greater than vertical (swipe, not scroll)
-    // 2. Vertical movement is minimal (to avoid interfering with scroll)
-    // 3. Swiping left (negative deltaX)
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaY) < 30 && deltaX < 0) {
-      const maxSwipe = -120 // Maximum swipe distance
+    // Once we've committed to horizontal (lock), follow finger for the rest of the gesture
+    // so vertical drift doesn't freeze or cancel the swipe.
+    if (swipeDirectionLockedRef.current) {
+      const offset = Math.max(-120, Math.min(deltaX, 0))
+      setSwipeOffset(offset)
+      e.preventDefault()
+      return
+    }
+
+    // Decide to lock: horizontal dominates and we've moved at least 20px horizontally
+    if (absX > 20 && absX > absY) {
+      swipeDirectionLockedRef.current = true
+      const offset = Math.max(-120, Math.min(deltaX, 0))
+      setSwipeOffset(offset)
+      e.preventDefault()
+      return
+    }
+
+    // Before lock: only treat as horizontal swipe if clearly horizontal and minimal vertical
+    if (absX > absY && absY < 40 && deltaX < 0) {
+      const maxSwipe = -120
       setSwipeOffset(Math.max(deltaX, maxSwipe))
-      e.preventDefault() // Prevent scrolling while swiping
+      e.preventDefault()
     } else if (deltaX > 0 && swipeOffset < 0) {
-      // Swipe right resets
+      // Swiping back right to cancel
       setSwipeOffset(Math.min(deltaX, 0))
+      e.preventDefault()
     }
   }
 
   const handleMessageTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStartRef.current || !swipingMessageId) {
-      // Reset if no swipe was in progress
+    const messageId = activeSwipeMessageRef.current
+    if (!touchStartRef.current || !messageId) {
       setSwipeOffset(0)
       setSwipingMessageId(null)
+      activeSwipeMessageRef.current = null
+      swipeDirectionLockedRef.current = false
       return
     }
 
@@ -375,27 +401,26 @@ export function ChatWidget() {
     const deltaX = touch.clientX - touchStartRef.current.x
     const deltaTime = Date.now() - touchStartRef.current.time
 
-    // If swiped left more than 80px or quickly swiped left, delete the message
     if (deltaX < -80 || (deltaX < -40 && deltaTime < 300)) {
-      const messageToDelete = messages.find((m) => m.id === swipingMessageId)
+      const messageToDelete = messages.find((m) => m.id === messageId)
       if (messageToDelete) {
-        const newMessages = messages.filter((m) => m.id !== swipingMessageId)
+        const newMessages = messages.filter((m) => m.id !== messageId)
         setMessages(newMessages)
-        // Also remove timestamp
         setMessageTimestamps((prev) => {
           const next = new Map(prev)
-          next.delete(swipingMessageId)
+          next.delete(messageId)
           return next
         })
         toast.success('Message deleted')
       }
     }
 
-    // Reset swipe state with animation
     setTimeout(() => {
       setSwipeOffset(0)
       setSwipingMessageId(null)
       touchStartRef.current = null
+      activeSwipeMessageRef.current = null
+      swipeDirectionLockedRef.current = false
     }, 200)
   }
 
@@ -450,8 +475,10 @@ export function ChatWidget() {
     const deltaY = touch.clientY - dialogTouchStartRef.current.y
     const deltaTime = Date.now() - (dialogTouchStartRef.current as any).time || 500
 
-    // If swiped down more than 100px or quickly swiped down, close dialog
-    if (deltaY > 100 || (deltaY > 50 && deltaTime < 300)) {
+    // Require a deliberate swipe to close (less sensitive on mobile):
+    // - Long swipe: at least 180px down, or
+    // - Quick flick: at least 120px down in under 250ms
+    if (deltaY > 180 || (deltaY > 120 && deltaTime < 250)) {
       setIsOpen(false)
     }
 
