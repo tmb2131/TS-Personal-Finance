@@ -189,7 +189,7 @@ export function BudgetIncomeTable({
                     {totals.gap >= 0 ? 'above' : 'below'} budget
                   </span>
                 </p>
-                <div className="pt-0.5 mt-0.5 border-t">
+                <div className="pt-1.5 mt-0.5 border-t">
                   <p className="text-xs text-muted-foreground">
                     Income Tracking: <span className="font-medium">{formatCurrencyLarge(totals.tracking)}</span>
                   </p>
@@ -262,14 +262,14 @@ export function BudgetIncomeTable({
               return (
                 <TableRow key={row.category}>
                   <TableCell className="font-medium">{row.category}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(row.annualBudget)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(row.tracking)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right tabular-nums">{formatCurrency(row.annualBudget)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatCurrency(row.tracking)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {row.ytd === 0 ? '-' : formatCurrency(row.ytd)}
                   </TableCell>
                   <TableCell
                     className={cn(
-                      'text-right font-medium',
+                      'text-right font-medium tabular-nums',
                       isPositive ? 'text-green-600' : 'text-red-600'
                     )}
                   >
@@ -284,18 +284,18 @@ export function BudgetIncomeTable({
             {/* Total Income Row */}
             <TableRow className="bg-muted/50">
               <TableCell className="font-semibold">Total Income</TableCell>
-              <TableCell className="text-right font-semibold">
+              <TableCell className="text-right font-semibold tabular-nums">
                 {formatCurrency(totals.annualBudget)}
               </TableCell>
-              <TableCell className="text-right font-semibold">
+              <TableCell className="text-right font-semibold tabular-nums">
                 {formatCurrency(totals.tracking)}
               </TableCell>
-              <TableCell className="text-right font-semibold">
+              <TableCell className="text-right font-semibold tabular-nums">
                 {formatCurrency(totals.ytd)}
               </TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-semibold',
+                  'text-right font-semibold tabular-nums',
                   totals.gap >= 0 ? 'text-green-600' : 'text-red-600'
                 )}
               >

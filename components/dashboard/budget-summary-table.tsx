@@ -108,6 +108,22 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     return `${currencySymbol}${valueInK.toFixed(1)}K`
   }
 
+  const renderCurrencyAligned = (value: number) => {
+    // Format currency with proper alignment for parentheses
+    // Use a fixed-width approach to ensure numbers align vertically
+    const formatted = formatCurrency(Math.abs(value))
+    const isNegative = value < 0
+    
+    if (isNegative) {
+      // Negative values: wrap in parentheses
+      return <span className="tabular-nums inline-block w-full text-right">({formatted})</span>
+    }
+    // For positive values, add invisible padding to match the width of parentheses
+    // Using a zero-width space followed by the value, then another space for closing paren
+    // This ensures the numbers align when right-aligned
+    return <span className="tabular-nums inline-block w-full text-right"><span className="invisible">(</span>{formatted}<span className="invisible">)</span></span>
+  }
+
   const formatPercentage = (value: number) => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(0)}%`
   }
@@ -210,7 +226,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
                     {totals.netIncome.gap >= 0 ? 'under' : 'over'} budget
                   </span>
                 </p>
-                <div className="pt-0.5 mt-0.5 border-t">
+                <div className="pt-1.5 mt-0.5 border-t">
                   <p className="text-xs text-muted-foreground">
                     Net Income Tracking: <span className="font-medium">{totals.netIncome.tracking < 0 ? '(' : ''}{formatCurrencyLarge(Math.abs(totals.netIncome.tracking))}{totals.netIncome.tracking < 0 ? ')' : ''}</span>
                   </p>
@@ -238,12 +254,12 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
             {/* Total Income */}
             <TableRow>
               <TableCell className="font-medium">Total Income</TableCell>
-              <TableCell className="text-right">{formatCurrency(totals.income.annualBudget)}</TableCell>
-              <TableCell className="text-right">{formatCurrency(totals.income.tracking)}</TableCell>
-              <TableCell className="text-right">{formatCurrency(totals.income.ytd)}</TableCell>
+              <TableCell className="text-right">{renderCurrencyAligned(totals.income.annualBudget)}</TableCell>
+              <TableCell className="text-right">{renderCurrencyAligned(totals.income.tracking)}</TableCell>
+              <TableCell className="text-right">{renderCurrencyAligned(totals.income.ytd)}</TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-medium',
+                  'text-right font-medium tabular-nums',
                   totals.income.gap >= 0 ? 'text-green-600' : 'text-red-600'
                 )}
               >
@@ -257,18 +273,12 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
             {/* Expenses */}
             <TableRow>
               <TableCell className="font-medium">Expenses</TableCell>
-              <TableCell className="text-right">
-                ({formatCurrency(totals.expenses.annualBudget)})
-              </TableCell>
-              <TableCell className="text-right">
-                ({formatCurrency(totals.expenses.tracking)})
-              </TableCell>
-              <TableCell className="text-right">
-                ({formatCurrency(totals.expenses.ytd)})
-              </TableCell>
+              <TableCell className="text-right">{renderCurrencyAligned(-totals.expenses.annualBudget)}</TableCell>
+              <TableCell className="text-right">{renderCurrencyAligned(-totals.expenses.tracking)}</TableCell>
+              <TableCell className="text-right">{renderCurrencyAligned(-totals.expenses.ytd)}</TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-medium',
+                  'text-right font-medium tabular-nums',
                   totals.expenses.gap >= 0 ? 'text-green-600' : 'text-red-600'
                 )}
               >
@@ -282,22 +292,12 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
             {/* Net Income */}
             <TableRow className="bg-muted/50">
               <TableCell className="font-semibold">Net Income</TableCell>
-              <TableCell className="text-right font-semibold">
-                {totals.netIncome.annualBudget < 0 ? '(' : ''}
-                {formatCurrency(Math.abs(totals.netIncome.annualBudget))}
-                {totals.netIncome.annualBudget < 0 ? ')' : ''}
-              </TableCell>
-              <TableCell className="text-right font-semibold">
-                {totals.netIncome.tracking < 0 ? '(' : ''}
-                {formatCurrency(Math.abs(totals.netIncome.tracking))}
-                {totals.netIncome.tracking < 0 ? ')' : ''}
-              </TableCell>
-              <TableCell className="text-right font-semibold">
-                {formatCurrency(totals.netIncome.ytd)}
-              </TableCell>
+              <TableCell className="text-right font-semibold">{renderCurrencyAligned(totals.netIncome.annualBudget)}</TableCell>
+              <TableCell className="text-right font-semibold">{renderCurrencyAligned(totals.netIncome.tracking)}</TableCell>
+              <TableCell className="text-right font-semibold">{renderCurrencyAligned(totals.netIncome.ytd)}</TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-semibold',
+                  'text-right font-semibold tabular-nums',
                   totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600'
                 )}
               >

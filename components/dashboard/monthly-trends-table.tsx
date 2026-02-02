@@ -715,7 +715,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {topMovers.totalVariance < 0 ? 'more' : 'less'} than {getComparisonPeriodLabel(topMovers.deltaForCards)}
                   </span>
                 </p>
-                <div className="pt-0.5 mt-0.5 border-t">
+                <div className="pt-1.5 mt-0.5 border-t">
                   <p className="text-xs text-muted-foreground">
                     {getMonthName(0)} Est: <span className="font-medium">{formatCurrencyLarge(Math.abs(totals.cur_month_est))}</span>
                   </p>

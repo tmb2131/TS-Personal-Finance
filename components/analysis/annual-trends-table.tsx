@@ -541,7 +541,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
                     {topMovers.totalVariance < 0 ? 'more' : 'less'} than last year
                   </span>
                 </p>
-                <div className="pt-0.5 mt-0.5 border-t">
+                <div className="pt-1.5 mt-0.5 border-t">
                   <p className="text-xs text-muted-foreground">
                     {currentYear} Est: <span className="font-medium">{formatCurrencyLarge(Math.abs(totals.cur_yr_est))}</span>
                   </p>
