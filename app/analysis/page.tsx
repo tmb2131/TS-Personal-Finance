@@ -7,6 +7,7 @@ import { CumulativeSpendChart } from '@/components/analysis/cumulative-spend-cha
 import { AnnualCumulativeSpendChart } from '@/components/analysis/annual-cumulative-spend-chart'
 import { CashRunwayCards } from '@/components/analysis/cash-runway-cards'
 import { AnalysisNavigation } from '@/components/analysis/analysis-navigation'
+import { AnalysisHashScroll } from '@/components/analysis/analysis-hash-scroll'
 import { ForecastEvolutionSection } from '@/components/analysis/forecast-evolution-section'
 import { MonthlyCategoryTrendsSection } from '@/components/analysis/monthly-category-trends-section'
 
@@ -35,6 +36,7 @@ export default async function AnalysisPage({
 
   return (
     <div className="space-y-4 md:space-y-6">
+      <AnalysisHashScroll />
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Analysis & Trends</h1>
         <p className="text-sm md:text-base text-muted-foreground">
