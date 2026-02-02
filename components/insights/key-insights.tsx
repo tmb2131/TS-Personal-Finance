@@ -1013,7 +1013,7 @@ export function KeyInsights() {
           {/* Spend vs Budget — progress bar */}
           <div>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Estimated annual spend vs budget</span>
+              <span className="text-muted-foreground">Annual spend vs budget</span>
               <span>
                 {formatCurrency(annualBudgetInsights.totalTracking)} / {formatCurrency(annualBudgetInsights.totalBudget)}
               </span>
