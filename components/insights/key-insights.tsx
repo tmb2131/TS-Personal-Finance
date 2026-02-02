@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -11,7 +12,7 @@ import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
-import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, ChevronRight } from 'lucide-react'
+import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -1081,9 +1082,22 @@ export function KeyInsights() {
       <Card id="annual-budget" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Annual Budget</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))} vs {new Date().getFullYear()} budget.
-          </p>
+          <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
+            <p className="text-sm text-muted-foreground">
+              {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))} vs {new Date().getFullYear()} budget.
+            </p>
+            <Link
+              href="/analysis#forecast-evolution"
+              className={cn(
+                'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
+                'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+              )}
+              aria-label="View Forecast Evolution"
+            >
+              Forecast Evolution
+              <GitCompare className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            </Link>
+          </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
           {/* Spend vs Budget — progress bar */}
@@ -1094,10 +1108,41 @@ export function KeyInsights() {
                 {formatCurrency(annualBudgetInsights.totalTracking)} / {formatCurrency(annualBudgetInsights.totalBudget)}
               </span>
             </div>
-            <Progress
-              value={Math.min(100, (annualBudgetInsights.totalBudget > 0 ? (annualBudgetInsights.totalTracking / annualBudgetInsights.totalBudget) * 100 : 0))}
-              className={annualBudgetInsights.overallGap > 0 ? '[&>div]:bg-red-500' : '[&>div]:bg-green-600'}
-            />
+            {annualBudgetInsights.overallGap > 0 &&
+            annualBudgetInsights.totalTracking > 0 &&
+            annualBudgetInsights.totalBudget > 0 ? (
+              (() => {
+                const budgetPct = (annualBudgetInsights.totalBudget / annualBudgetInsights.totalTracking) * 100
+                return (
+                  <div className="relative h-2 w-full rounded-full overflow-hidden">
+                    <div className="absolute inset-0 rounded-full bg-muted" aria-hidden />
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-l-full bg-muted"
+                      style={{ width: `${budgetPct}%` }}
+                      aria-hidden
+                    />
+                    <div
+                      className="absolute inset-y-0 rounded-r-full bg-red-500"
+                      style={{ left: `${budgetPct}%`, width: `${100 - budgetPct}%` }}
+                      aria-hidden
+                    />
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 min-w-[2px] bg-foreground/90 -translate-x-1/2 rounded z-10"
+                      style={{ left: `${budgetPct}%` }}
+                      title="Budget limit"
+                      aria-hidden
+                    />
+                  </div>
+                )
+              })()
+            ) : annualBudgetInsights.overallGap <= 0 ? (
+              <Progress
+                value={Math.min(100, (annualBudgetInsights.totalBudget > 0 ? (annualBudgetInsights.totalTracking / annualBudgetInsights.totalBudget) * 100 : 0))}
+                className="[&>div]:bg-green-600"
+              />
+            ) : (
+              <Progress value={100} className="[&>div]:bg-red-500" />
+            )}
             <p className="text-xs text-muted-foreground mt-1">
               {formatPercentAbs(annualBudgetInsights.gapPercent)} {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
             </p>

@@ -12,6 +12,8 @@ import { cn } from '@/utils/cn'
 
 const SCROLL_THRESHOLD = 8
 const BOTTOM_BOUNDARY_PX = 100
+// Only hide header when this far (or more) from bottom; avoids flicker when reaching bottom
+const HIDE_MIN_DISTANCE_FROM_BOTTOM_PX = 180
 
 export function Header() {
   const router = useRouter()
@@ -46,7 +48,9 @@ export function Header() {
       if (scrollTop <= 0) {
         setHeaderVisible(true)
       } else if (scrollTop > lastScrollTop.current && scrollTop > SCROLL_THRESHOLD) {
-        setHeaderVisible(false)
+        if (distanceFromBottom >= HIDE_MIN_DISTANCE_FROM_BOTTOM_PX) {
+          setHeaderVisible(false)
+        }
       } else if (scrollTop < lastScrollTop.current) {
         setHeaderVisible(true)
       }

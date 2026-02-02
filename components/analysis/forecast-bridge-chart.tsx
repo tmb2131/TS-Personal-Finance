@@ -235,11 +235,16 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
   const hasWorsened = worsened.length > 0
   const hasImproved = improved.length > 0
+  // When gap worsened, lead with worsening drivers; when improved, lead with improvement drivers
+  const driversFirst = netChange > 0 ? worsened : improved
+  const driversSecond = netChange > 0 ? improved : worsened
+  const hasFirst = netChange > 0 ? hasWorsened : hasImproved
+  const hasSecond = netChange > 0 ? hasImproved : hasWorsened
   const driverSubtext =
     hasWorsened || hasImproved
       ? [
-          hasImproved && `Driven by ${improved.map((d) => d.category).join(', ')}`,
-          hasWorsened && `partially offset by ${worsened.map((d) => d.category).join(', ')}`,
+          hasFirst && `Driven by ${driversFirst.map((d) => d.category).join(', ')}`,
+          hasSecond && `partially offset by ${driversSecond.map((d) => d.category).join(', ')}`,
         ]
           .filter(Boolean)
           .join(', ')
@@ -268,25 +273,39 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
             </span>
             {driverSubtext && (
               <p className="text-xs text-muted-foreground">
-                {hasImproved && (
+                {hasFirst && (
                   <>
                     Driven by{' '}
-                    {improved.map((d, i) => (
+                    {driversFirst.map((d, i) => (
                       <span key={d.category}>
                         {i > 0 && ', '}
-                        <span className="font-semibold text-green-600 dark:text-green-500">{d.category}</span>
+                        <span
+                          className={cn(
+                            'font-semibold',
+                            netChange > 0 ? 'text-red-600 dark:text-red-500' : 'text-green-600 dark:text-green-500'
+                          )}
+                        >
+                          {d.category}
+                        </span>
                       </span>
                     ))}
                   </>
                 )}
-                {hasImproved && hasWorsened && ', '}
-                {hasWorsened && (
+                {hasFirst && hasSecond && ', '}
+                {hasSecond && (
                   <>
                     partially offset by{' '}
-                    {worsened.map((d, i) => (
+                    {driversSecond.map((d, i) => (
                       <span key={d.category}>
                         {i > 0 && ', '}
-                        <span className="font-semibold text-red-600 dark:text-red-500">{d.category}</span>
+                        <span
+                          className={cn(
+                            'font-semibold',
+                            netChange > 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'
+                          )}
+                        >
+                          {d.category}
+                        </span>
                       </span>
                     ))}
                   </>
