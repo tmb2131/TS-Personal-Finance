@@ -155,11 +155,18 @@ export function DashboardAtAGlance() {
                 aria-label={`${section.label} summary, jump to ${section.label} section`}
               >
                 <div className="flex items-center justify-between gap-2 w-full">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <span className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                      {section.label}
-                    </span>
+                  <div className="flex flex-col items-start gap-0.5 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <span className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                        {section.labelShort || section.label.replace(/\s*\([^)]*\)\s*/g, '')}
+                      </span>
+                    </div>
+                    {section.label.includes('(') && (
+                      <span className="text-[10px] text-muted-foreground/70 ml-7">
+                        {section.label.match(/\(([^)]+)\)/)?.[1]}
+                      </span>
+                    )}
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                 </div>

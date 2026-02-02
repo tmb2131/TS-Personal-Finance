@@ -764,37 +764,31 @@ export function KeyInsights() {
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
               </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">vs 4-Year Average</p>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-3">
                   {annualSpendInsights.vsFourYearAvg > 0 ? (
-                    <div className="flex items-center gap-2">
+                    <>
                       <TrendingDown className="h-5 w-5 text-green-600" />
-                      <p className="text-lg font-bold text-green-600">Spending Less</p>
-                    </div>
+                      <span className="text-lg font-bold tabular-nums text-green-600">
+                        {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))}
+                      </span>
+                      <span className={`text-sm font-semibold text-green-600`}>
+                        {formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}
+                      </span>
+                    </>
                   ) : (
-                    <div className="flex items-center gap-2">
+                    <>
                       <TrendingUp className="h-5 w-5 text-red-600" />
-                      <p className="text-lg font-bold text-red-600">Spending More</p>
-                    </div>
+                      <span className="text-lg font-bold tabular-nums text-red-600">
+                        {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))}
+                      </span>
+                      <span className={`text-sm font-semibold text-red-600`}>
+                        {formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}
+                      </span>
+                    </>
                   )}
                 </div>
-                <div className="space-y-1 pt-2 border-t">
-                  <p className="text-sm">
-                    <span className="font-semibold">{formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))}</span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
-                    </span>
-                  </p>
-                  <p className="text-xs">
-                    <span className={`font-medium ${annualSpendInsights.vsFourYearAvg > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}
-                    </span>
-                    <span className="text-muted-foreground ml-1">
-                      {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
-                    </span>
-                  </p>
-                </div>
+                <span className="text-xs font-semibold text-muted-foreground">vs 4-Year Average</span>
               </div>
             </button>
 
@@ -816,37 +810,31 @@ export function KeyInsights() {
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
               </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">vs TTM Average</p>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-3">
                   {monthlySpendInsights.vsTtmAvg > 0 ? (
-                    <div className="flex items-center gap-2">
+                    <>
                       <TrendingDown className="h-5 w-5 text-green-600" />
-                      <p className="text-lg font-bold text-green-600">Spending Less</p>
-                    </div>
+                      <span className="text-lg font-bold tabular-nums text-green-600">
+                        {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))}
+                      </span>
+                      <span className={`text-sm font-semibold text-green-600`}>
+                        {formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}
+                      </span>
+                    </>
                   ) : (
-                    <div className="flex items-center gap-2">
+                    <>
                       <TrendingUp className="h-5 w-5 text-red-600" />
-                      <p className="text-lg font-bold text-red-600">Spending More</p>
-                    </div>
+                      <span className="text-lg font-bold tabular-nums text-red-600">
+                        {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))}
+                      </span>
+                      <span className={`text-sm font-semibold text-red-600`}>
+                        {formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}
+                      </span>
+                    </>
                   )}
                 </div>
-                <div className="space-y-1 pt-2 border-t">
-                  <p className="text-sm">
-                    <span className="font-semibold">{formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))}</span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
-                    </span>
-                  </p>
-                  <p className="text-xs">
-                    <span className={`font-medium ${monthlySpendInsights.vsTtmAvg > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}
-                    </span>
-                    <span className="text-muted-foreground ml-1">
-                      {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
-                    </span>
-                  </p>
-                </div>
+                <span className="text-xs font-semibold text-muted-foreground">vs TTM Average</span>
               </div>
             </button>
           </div>
@@ -863,25 +851,27 @@ export function KeyInsights() {
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
           {/* Vs last year — prominent */}
-          <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4">
+          <div className="flex flex-col items-center gap-2 rounded-lg border bg-card p-4">
+            <div className="flex items-center gap-4">
+              {netWorthInsights.vsLastYear > 0 ? (
+                <>
+                  <TrendingUp className="h-8 w-8 text-green-600" />
+                  <span className="text-2xl font-bold tabular-nums text-green-600">
+                    +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
+                  </span>
+                  <span className="text-sm font-semibold text-green-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
+                </>
+              ) : (
+                <>
+                  <TrendingDown className="h-8 w-8 text-red-600" />
+                  <span className="text-2xl font-bold tabular-nums text-red-600">
+                    {formatCurrencyLarge(netWorthInsights.vsLastYear)}
+                  </span>
+                  <span className="text-sm font-semibold text-red-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
+                </>
+              )}
+            </div>
             <span className="text-sm font-semibold text-muted-foreground">Vs year-end {previousYear}</span>
-            {netWorthInsights.vsLastYear > 0 ? (
-              <>
-                <TrendingUp className="h-8 w-8 text-green-600" />
-                <span className="text-2xl font-bold tabular-nums text-green-600">
-                  +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
-                </span>
-                <span className="text-sm font-semibold text-green-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
-              </>
-            ) : (
-              <>
-                <TrendingDown className="h-8 w-8 text-red-600" />
-                <span className="text-2xl font-bold tabular-nums text-red-600">
-                  {formatCurrencyLarge(netWorthInsights.vsLastYear)}
-                </span>
-                <span className="text-sm font-semibold text-red-600">{formatPercent(netWorthInsights.vsLastYearPercent)}</span>
-              </>
-            )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
