@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { MessageCircle, X, Send, Loader2, Trash2 } from 'lucide-react'
+import { MessageCircle, X, Send, Loader2, Trash2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -31,6 +31,7 @@ function getDisplayNameForEmail(email: string | undefined): string | null {
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
+  const [showHelp, setShowHelp] = useState(false)
   const chatHelpers = useChat({
     transport: new DefaultChatTransport({ api: '/api/chat' }),
   })
@@ -43,6 +44,13 @@ export function ChatWidget() {
   const suggestedPromptRef = useRef<string | null>(null)
   // Show "Thinking..." immediately on submit, before hook's isLoading updates (avoids lag)
   const [showThinking, setShowThinking] = useState(false)
+
+  // Show help by default when chat opens and there are no messages
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setShowHelp(true)
+    }
+  }, [isOpen, messages.length])
 
   // Clear showThinking when loading finishes or when last message is assistant with text (response arrived)
   useEffect(() => {
@@ -203,6 +211,16 @@ export function ChatWidget() {
               Financial Assistant
             </DialogTitle>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHelp(!showHelp)}
+                className="h-8 text-xs"
+                aria-label="Toggle help"
+              >
+                <HelpCircle className="h-4 w-4 mr-1" />
+                Help
+              </Button>
               {messages.length > 0 && (
                 <Button
                   variant="ghost"
@@ -226,6 +244,168 @@ export function ChatWidget() {
               </Button>
             </div>
           </DialogHeader>
+
+          {/* Help Panel */}
+          {showHelp && (
+            <div className="px-6 py-4 border-b bg-muted/30 max-h-[40vh] overflow-y-auto">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">What can I help you with?</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowHelp(false)}
+                    className="h-6 w-6"
+                    aria-label="Close help"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Financial Health</h4>
+                    <ul className="space-y-1.5">
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'Summarise my financial health'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • Summarise my financial health
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'How am I doing overall? Account values, budget, and spending trends'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • How am I doing overall?
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'Show me account values and trends'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • Show me account values and trends
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Spending Analysis</h4>
+                    <ul className="space-y-1.5">
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'How much did I spend last month? Give a breakdown by category'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • How much did I spend last month?
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'Show spending by category'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • Show spending by category
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'How has my Bills spending changed month by month?'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • Monthly trends for [category]
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Budget & Forecast</h4>
+                    <ul className="space-y-1.5">
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'What is my current annual spend gap to budget?'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • What's my annual spend gap to budget?
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'How has my annual spend gap changed over the past week?'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • How has my forecast changed vs last week?
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'What drove the increase in my forecasted spend vs last month?'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • What drove the forecast increase?
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Net Worth & Accounts</h4>
+                    <ul className="space-y-1.5">
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = "What's my net worth?"
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • What's my net worth?
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = 'Show me my current GBP vs USD breakdown'
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • Show my GBP vs USD breakdown
+                      </li>
+                      <li 
+                        className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        onClick={() => {
+                          suggestedPromptRef.current = "What's my cash runway?"
+                          setShowHelp(false)
+                          handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+                        }}
+                      >
+                        • What's my cash runway?
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Messages Area - Scrollable */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
