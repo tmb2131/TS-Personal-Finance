@@ -273,10 +273,35 @@ export function KeyInsights() {
       }))
       .sort((a, b) => a.month.localeCompare(b.month))
       .slice(-12)
-      .map((d) => ({
-        ...d,
-        label: d.month.slice(0, 7).replace('-', '/'),
-      }))
+      .map((d, idx, arr) => {
+        // Format label: show year for January months (start of year) and for first item, abbreviated month for others
+        const [year, month] = d.month.split('-')
+        const monthNum = parseInt(month, 10)
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        // Track previous year to detect year changes
+        const prevItem = idx > 0 ? arr[idx - 1] : null
+        const prevYear = prevItem ? prevItem.month.split('-')[0] : null
+        const isYearStart = monthNum === 1 || year !== prevYear
+        const isFirst = idx === 0
+        
+        let label: string
+        if (isYearStart || isFirst) {
+          // Show year for January months (start of year) and first item
+          label = year
+        } else {
+          // Show abbreviated month for other months
+          label = monthNames[monthNum - 1]
+        }
+        
+        return {
+          ...d,
+          label,
+          year, // Keep year for reference
+          monthNum, // Keep month number for reference
+          isYearTick: isYearStart || isFirst, // Flag to identify year ticks
+        }
+      })
 
     // Personal vs Family for donut (current snapshot)
     const personalVsFamilyPie = [
@@ -911,13 +936,24 @@ export function KeyInsights() {
               {netWorthInsights.netWorthChartData.length > 0 ? (
                 <div className="h-[180px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                    <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 5, right: isMobile ? 10 : 15, left: 0, bottom: isMobile ? 25 : 15 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis
                         dataKey="label"
                         tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fontWeight: 600 }}
-                        tickCount={isMobile ? 5 : undefined}
-                        interval={isMobile ? 'preserveStartEnd' : undefined}
+                        interval={0}
+                        angle={isMobile ? -45 : 0}
+                        textAnchor={isMobile ? 'end' : 'middle'}
+                        height={isMobile ? 50 : 35}
+                        domain={['dataMin', 'dataMax']}
+                        tickFormatter={(value, index) => {
+                          // Always show year labels, show month labels for context
+                          const data = netWorthInsights.netWorthChartData[index]
+                          if (data && data.isYearTick) {
+                            return value // Year labels (4 digits) - always show
+                          }
+                          return value // Month abbreviations
+                        }}
                       />
                       <YAxis
                         tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fontWeight: 400 }}
@@ -934,7 +970,19 @@ export function KeyInsights() {
                           return String(v)
                         }}
                       />
-                      <Tooltip formatter={(v: number) => [formatCurrencyLarge(v), 'Total']} labelFormatter={(l) => l} />
+                      <Tooltip 
+                        formatter={(v: number) => [formatCurrencyLarge(v), 'Total']} 
+                        labelFormatter={(label, payload) => {
+                          if (!payload || payload.length === 0) return label
+                          const data = payload[0].payload
+                          if (data && data.month) {
+                            const [year, month] = data.month.split('-')
+                            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+                            return `${monthNames[parseInt(month, 10) - 1]} ${year}`
+                          }
+                          return label
+                        }} 
+                      />
                       <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -987,16 +1035,24 @@ export function KeyInsights() {
                 const rightAccounts = accounts.slice(mid)
                 const maxValue = Math.max(...accounts.map((a) => Math.abs(a.balance)), 1)
                 const renderColumn = (list: typeof leftAccounts) => (
-                  <div className="space-y-3">
-                    {list.map((a) => {
+                  <div>
+                    {list.map((a, index) => {
                       const pct = (Math.abs(a.balance) / maxValue) * 100
+                      const isLast = index === list.length - 1
                       return (
-                        <div key={`${a.institution}-${a.accountName}`} className="flex items-start gap-2">
-                          <span className="text-sm w-[200px] shrink-0 break-words leading-5">{a.accountName}</span>
-                          <div className="flex-1 min-w-0 h-5 rounded bg-muted overflow-hidden shrink">
+                        <div 
+                          key={`${a.institution}-${a.accountName}`} 
+                          className={cn(
+                            "flex items-center gap-2",
+                            "min-h-[1.75rem]", // Minimum height to accommodate wrapped text while keeping compact
+                            !isLast && "mb-2" // Reduced spacing between items for more compact layout
+                          )}
+                        >
+                          <span className="text-sm w-[200px] shrink-0 break-words leading-tight">{a.accountName}</span>
+                          <div className="flex-1 min-w-0 h-4 rounded bg-muted overflow-hidden shrink">
                             <div className="h-full bg-blue-500 rounded" style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="text-xs font-medium w-16 text-right shrink-0 leading-5">{formatCurrencyLarge(a.balance)}</span>
+                          <span className="text-xs font-medium w-16 text-right shrink-0 leading-tight">{formatCurrencyLarge(a.balance)}</span>
                         </div>
                       )
                     })}
