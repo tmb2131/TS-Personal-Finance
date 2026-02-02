@@ -41,7 +41,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 | Table | Purpose |
 |-------|--------|
-| **user_profiles** | One row per user: `id` (PK, references `auth.users`), `email`, `google_spreadsheet_id`, `display_name`, `created_at`, `updated_at`. Created/updated on login; user sets `google_spreadsheet_id` in Settings. Cron and manual sync use this to know which sheet to sync per user. |
+| **user_profiles** | One row per user: `id` (PK, references `auth.users`), `email`, `google_spreadsheet_id`, `display_name`, `default_currency`, `created_at`, `updated_at`. Created/updated on login; user sets `google_spreadsheet_id` and optional `display_name`/`default_currency` in Settings. `default_currency` (USD/GBP, default USD) is the display currency the app opens with; CurrencyProvider loads from localStorage then profile. Cron and manual sync use `google_spreadsheet_id` to know which sheet to sync per user. |
 
 ### Transactions & spending
 
@@ -137,10 +137,12 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 ### 4.6 Settings (`/settings`)
 
 - **Connect your sheet:** User sets `google_spreadsheet_id` (and optional `display_name`) in `user_profiles`. Required before manual sync or cron can pull data for that user. Sidebar link to Settings.
-- **Manual sync:** If `google_spreadsheet_id` is null, `POST /api/sync` returns 400 with “Connect your sheet first”; user is directed to Settings.
+- **Default currency:** User can set display currency (GBP or USD) in Settings; stored in `user_profiles.default_currency`. The app opens with this currency on login (CurrencyProvider loads from localStorage, then user profile); new users default to USD. Changing the currency toggle elsewhere in the app persists the choice to `user_profiles` and localStorage.
+- **Manual sync:** If `google_spreadsheet_id` is null, `POST /api/sync` returns 400 with “Connect your sheet first”; user is directed to Settings. Saving settings with a spreadsheet ID triggers a sync after save.
 
 ### 4.7 Analysis (`/analysis`)
 
+- **Navigation:** In-page navigation (AnalysisNavigation) with anchor links to: Cash Runway, Transaction Analysis, Forecast Evolution, YTD Spend Over Time, Annual Cumulative Spend, YoY Net Worth Change, Monthly Trends by Category. Hash or `section` query param scrolls to the section (AnalysisHashScroll), e.g. `/analysis#forecast-evolution` or `/analysis?section=transaction-analysis`. Supports deep links from Dashboard (e.g. trends links with `section`, `period`, `year`, `month`, `category`). Transaction Analysis accepts optional URL params: `section`, `period` (YTD/MTD), `year`, `month`, `category` to pre-fill filters.
 - **Cash runway:** Cards/metrics showing how long funds last at current burn (based on balances and spending). Net burn (last 3 full calendar months) from `GET /api/cash-runway`, which calls RPC `get_cash_runway_net_burn` (expenses + refunds by currency; category excludes Income, Excluded, Gift Money).
 - **Transaction analysis:** Filter by period (YTD/month) and category; view transactions and category totals.
 - **Forecast evolution:**  
@@ -209,6 +211,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ## 6. Unknowns / Areas for Improvement
 
+- **Allowlist (optional):** `lib/allowed-emails.ts` reads `ALLOWED_EMAILS` (comma-separated) from env but is **not** used by the app today; any Google user can sign in and RLS isolates data. Optional allowlist behavior for a closed beta is described in `docs/SCALING-MULTI-USER.md`.
 - **FX fallbacks:** Multiple places use a hardcoded GBP/USD fallback when `fx_rate_current` is missing or zero (e.g. `1.27` in chat route and currency context, `1.25` in some trend wrappers). Consider a single shared constant or config and document the source (e.g. “last known rate” or “default for display only”).
 - **Google Spreadsheet ID:** Per-user in `user_profiles.google_spreadsheet_id`; set in Settings. If unset, sync returns 400 and user is directed to Settings.
 - **Cron secret:** If `CRON_SECRET` is not set, all cron requests are rejected (401). Document in README/deploy docs so Vercel (or other) cron is configured with the header.
@@ -221,4 +224,4 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ---
 
-*Document generated from codebase scan. Last updated: multi-tenant schema (user_id, user_profiles), RLS, removal of allowlist, Settings page, per-user sync and sync_metadata, cron loop over users.*
+*Document generated from codebase scan. Last updated: default_currency (user_profiles, migration 020), Settings default currency and post-save sync; Analysis in-page navigation (AnalysisNavigation), hash/query scroll (AnalysisHashScroll), and URL params for transaction analysis; allowlist noted as optional/unused.*

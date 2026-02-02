@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { KeyInsights } from '@/components/insights/key-insights'
+import { ConnectSheetModal } from '@/components/insights/connect-sheet-modal'
 
 export default async function InsightsPage() {
   const supabase = await createClient()
@@ -12,8 +13,17 @@ export default async function InsightsPage() {
     redirect('/login')
   }
 
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('google_spreadsheet_id')
+    .eq('id', user.id)
+    .single()
+
+  const needsSpreadsheet = !profile?.google_spreadsheet_id?.trim()
+
   return (
     <div className="space-y-4 md:space-y-6">
+      <ConnectSheetModal open={needsSpreadsheet} />
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Key Insights</h1>
         <p className="text-sm md:text-base text-muted-foreground">
