@@ -390,7 +390,7 @@ export function MonthlyCategorySummary({
     if (avgDirection === 'decreased' && shortTermTrends.length > 0) {
       parts.push(
         <>
-          Current monthly spending has{' '}
+          Latest monthly spending has{' '}
           <span className="font-bold text-green-600">decreased</span> relative to{' '}
           <span className="font-bold">recent short-term and long-term averages</span>
         </>
@@ -398,7 +398,7 @@ export function MonthlyCategorySummary({
     } else if (avgDirection === 'increased' && shortTermTrends.length > 0) {
       parts.push(
         <>
-          Current monthly spending has{' '}
+          Latest monthly spending has{' '}
           <span className="font-bold text-red-600">increased</span> relative to{' '}
           <span className="font-bold">recent short-term and long-term averages</span>
         </>
@@ -412,7 +412,7 @@ export function MonthlyCategorySummary({
         const color = vsL3M < 0 ? 'text-green-600' : 'text-red-600'
         parts.push(
           <>
-            Current monthly spending has{' '}
+            Latest monthly spending has{' '}
             <span className={cn('font-bold', color)}>{direction}</span> relative to the{' '}
             <span className="font-bold">3-month average</span>
           </>
@@ -422,16 +422,16 @@ export function MonthlyCategorySummary({
         const color = vsL12M < 0 ? 'text-green-600' : 'text-red-600'
         parts.push(
           <>
-            Current monthly spending has{' '}
+            Latest monthly spending has{' '}
             <span className={cn('font-bold', color)}>{direction}</span> relative to the{' '}
             <span className="font-bold">12-month average</span>
           </>
         )
       } else {
-        parts.push(`Current monthly spending in ${monthLabel}`)
+        parts.push(`Latest monthly spending in ${monthLabel}`)
       }
     } else {
-      parts.push(`Current monthly spending in ${monthLabel}`)
+      parts.push(`Latest monthly spending in ${monthLabel}`)
     }
     
     // Second part: add year-over-year comparison if available and significant
@@ -519,7 +519,7 @@ export function MonthlyCategorySummary({
                   <h3 className="font-semibold text-sm uppercase tracking-wide">{comparison.label}</h3>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Current Month</p>
+                  <p className="text-xs text-muted-foreground mb-1">Latest Month</p>
                   {changeAmount !== null ? (
                     isSpendingLess ? (
                       <div className="flex items-center gap-1.5">

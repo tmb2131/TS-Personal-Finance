@@ -139,7 +139,7 @@ export function MonthlyCategoryTrendsSection() {
     <Card id="monthly-category-trends" className="scroll-mt-24">
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle>Monthly Category Trends</CardTitle>
+          <CardTitle>Monthly Trends by Category</CardTitle>
           {categories.length > 0 && (
             <div className="flex items-center gap-2">
               <label htmlFor="category-select-combined" className="text-sm font-medium text-muted-foreground whitespace-nowrap">

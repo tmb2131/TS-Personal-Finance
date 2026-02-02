@@ -1,11 +1,12 @@
 'use client'
 
-import { Wallet, Receipt, TrendingUp, BarChart3, Activity, GitCompare } from 'lucide-react'
+import { Wallet, Receipt, TrendingUp, BarChart3, Activity, GitCompare, Calendar } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 
 const navButtonClass = cn(
-  'p-3 md:p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]',
-  'border-2 rounded-lg flex flex-col items-center gap-2 md:gap-3 text-center',
+  'p-2.5 md:p-3 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]',
+  'border-2 rounded-lg flex flex-col items-center gap-1.5 md:gap-2 text-center shrink-0',
   'bg-slate-700 border-slate-600 text-slate-100',
   'hover:bg-slate-600 hover:border-slate-500',
   'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-background'
@@ -24,6 +25,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'ytd-spend', label: 'YTD Spend Over Time', icon: TrendingUp },
   { id: 'annual-cumulative', label: 'Annual Cumulative Spend', icon: BarChart3 },
   { id: 'yoy-net-worth', label: 'YoY Net Worth Change', icon: Activity },
+  { id: 'monthly-category-trends', label: 'Monthly Trends by Category', icon: Calendar },
 ]
 
 function scrollToSection(id: string, e?: React.MouseEvent) {
@@ -47,8 +49,14 @@ function scrollToSection(id: string, e?: React.MouseEvent) {
 }
 
 export function AnalysisNavigation() {
+  const isMobile = useIsMobile()
+  
   return (
-    <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">
+    <div className={cn(
+      isMobile
+        ? 'flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
+        : 'grid grid-cols-7 gap-2 md:gap-4'
+    )}>
       {navigationItems.map((item) => {
         const Icon = item.icon
         return (
@@ -56,10 +64,13 @@ export function AnalysisNavigation() {
             key={item.id}
             type="button"
             onClick={(e) => scrollToSection(item.id, e)}
-            className={navButtonClass}
+            className={cn(
+              navButtonClass,
+              isMobile && 'min-w-[calc(33.333%-0.5rem)] max-w-[calc(33.333%-0.5rem)] snap-center'
+            )}
           >
-            <Icon className="h-5 w-5 md:h-6 md:w-6 text-slate-200" />
-            <span className="text-xs md:text-sm font-medium">{item.label}</span>
+            <Icon className="h-4 w-4 md:h-5 md:w-5 text-slate-200" />
+            <span className="text-xs font-medium leading-tight">{item.label}</span>
           </button>
         )
       })}

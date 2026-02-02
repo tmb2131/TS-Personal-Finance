@@ -285,7 +285,7 @@ export function MonthlyCategoryTrendsChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Category Trends</CardTitle>
+          <CardTitle>Monthly Trends by Category</CardTitle>
         </CardHeader>
         <CardContent>
           {emptyContent}
