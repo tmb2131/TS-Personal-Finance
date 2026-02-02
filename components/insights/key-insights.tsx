@@ -666,7 +666,7 @@ export function KeyInsights() {
         </CardHeader>
         <CardContent className="pt-6">
           <div className={isMobile
-            ? 'flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
+            ? 'flex gap-4 overflow-x-auto pt-2 pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
             : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
           }>
             {/* Net Worth Summary — clickable to scroll to section */}
