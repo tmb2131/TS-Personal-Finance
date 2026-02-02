@@ -16,11 +16,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await syncGoogleSheet()
+    const admin = createAdminClient()
+    const result = await syncGoogleSheet(admin)
     const today = new Date().toISOString().split('T')[0]
-    await snapshotBudgetHistory(today)
+    await snapshotBudgetHistory(today, admin)
     if (result.success) {
-      const admin = createAdminClient()
       await recordLastSync(admin)
     }
     return NextResponse.json({

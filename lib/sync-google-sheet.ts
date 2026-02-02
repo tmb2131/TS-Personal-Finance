@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from './supabase/server';
 
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '';
@@ -255,7 +256,12 @@ const SHEET_CONFIGS: SheetConfig[] = [
   },
 ];
 
-export async function syncGoogleSheet() {
+/**
+ * Sync Google Sheet data into Supabase.
+ * @param supabase - Optional client. When provided (e.g. cron with admin), uses it and bypasses RLS.
+ * When omitted (e.g. manual refresh), uses server client with authenticated user session.
+ */
+export async function syncGoogleSheet(supabase?: SupabaseClient) {
   try {
     // Validate environment variables
     if (!SPREADSHEET_ID) {
@@ -278,7 +284,7 @@ export async function syncGoogleSheet() {
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const supabase = await createClient();
+    const db = supabase ?? (await createClient());
 
     // First, get the list of sheets to verify they exist
     let availableSheets: string[] = [];
@@ -371,7 +377,7 @@ export async function syncGoogleSheet() {
             deleteChunks.map(async (batch) => {
               await Promise.all(
                 batch.map(async (accountInfo) => {
-                  const { error: deleteError } = await supabase
+                  const { error: deleteError } = await db
                     .from(config.table)
                     .delete()
                     .eq('account_name', accountInfo.account_name)
@@ -386,7 +392,7 @@ export async function syncGoogleSheet() {
             })
           );
           console.log(`Completed bulk delete for ${accountList.length} account combinations`);
-          const { data: d, error: e } = await supabase
+          const { data: d, error: e } = await db
             .from(config.table)
             .upsert(transformedData, { onConflict: 'institution,account_name,date_updated' });
           upsertResult = { data: d, error: e };
@@ -403,7 +409,7 @@ export async function syncGoogleSheet() {
           
           console.log(`Kids Accounts: Processing ${normalizedData.length} rows`);
           
-          const { data, error } = await supabase
+          const { data, error } = await db
             .from(config.table)
             .upsert(normalizedData, {
               onConflict: 'child_name,account_type,date_updated,notes',
@@ -411,14 +417,14 @@ export async function syncGoogleSheet() {
           upsertResult = { data, error };
         } else if (config.table === 'budget_targets' || config.table === 'annual_trends' || config.table === 'monthly_trends') {
           // For tables with unique category constraint
-          const { data, error } = await supabase
+          const { data, error } = await db
             .from(config.table)
             .upsert(transformedData, {
               onConflict: 'category',
             });
           upsertResult = { data, error };
         } else if (config.table === 'investment_return') {
-          const { data, error } = await supabase
+          const { data, error } = await db
             .from(config.table)
             .upsert(transformedData, {
               onConflict: 'income_source',
@@ -437,7 +443,7 @@ export async function syncGoogleSheet() {
             console.warn('FX Rate Current: No valid rows to upsert (all gbpusd_rate values invalid or missing)')
             upsertResult = { data: null, error: null }
           } else {
-            const { data, error } = await supabase
+            const { data, error } = await db
               .from(config.table)
               .upsert(validData, {
                 onConflict: 'date',
@@ -446,7 +452,7 @@ export async function syncGoogleSheet() {
           }
         } else if (config.table === 'yoy_net_worth') {
           // For YoY Net Worth, use category as conflict (unique constraint)
-          const { data, error } = await supabase
+          const { data, error } = await db
             .from(config.table)
             .upsert(transformedData, {
               onConflict: 'category',
@@ -472,7 +478,7 @@ export async function syncGoogleSheet() {
           const fxChunks = chunkArray(deduplicatedData, BATCH_SIZE);
           let fxLastError: any = null;
           for (const chunk of fxChunks) {
-            const { error } = await supabase
+            const { error } = await db
               .from(config.table)
               .upsert(chunk, { onConflict: 'date' });
             if (error) fxLastError = error;
@@ -480,7 +486,7 @@ export async function syncGoogleSheet() {
           upsertResult = { data: null, error: fxLastError };
         } else if (config.table === 'historical_net_worth') {
           // For historical net worth, use date and category as conflict
-          const { data, error } = await supabase
+          const { data, error } = await db
             .from(config.table)
             .upsert(transformedData, {
               onConflict: 'date,category',
@@ -491,7 +497,7 @@ export async function syncGoogleSheet() {
           const PAGE_SIZE = 1000;
           let totalDeleted = 0;
           while (true) {
-            const { data: page } = await supabase
+            const { data: page } = await db
               .from(config.table)
               .select('id')
               .range(0, PAGE_SIZE - 1);
@@ -499,7 +505,7 @@ export async function syncGoogleSheet() {
             const ids = page.map((r: { id: string }) => r.id);
             const deleteChunks = chunkArray(ids, 500);
             for (const idChunk of deleteChunks) {
-              const { error: delErr } = await supabase.from(config.table).delete().in('id', idChunk);
+              const { error: delErr } = await db.from(config.table).delete().in('id', idChunk);
               if (delErr) {
                 console.warn('Transaction Log: delete batch error', delErr);
               } else {
@@ -515,12 +521,12 @@ export async function syncGoogleSheet() {
           const chunks = chunkArray(transformedData, BATCH_SIZE);
           let lastError: any = null;
           for (const chunk of chunks) {
-            const { error } = await supabase.from(config.table).insert(chunk);
+            const { error } = await db.from(config.table).insert(chunk);
             if (error) lastError = error;
           }
           upsertResult = { data: null, error: lastError };
         } else if (config.table === 'recurring_payments') {
-          const { data: existingRecords } = await supabase
+          const { data: existingRecords } = await db
             .from(config.table)
             .select('name, needs_review');
           const reviewFlags = new Map<string, boolean>();
@@ -562,7 +568,7 @@ export async function syncGoogleSheet() {
           const chunks = chunkArray(mergedData, BATCH_SIZE);
           let lastError: any = null;
           for (const chunk of chunks) {
-            const { error } = await supabase
+            const { error } = await db
               .from(config.table)
               .upsert(chunk, { onConflict: 'name' });
             if (error) lastError = error;
@@ -570,7 +576,7 @@ export async function syncGoogleSheet() {
           upsertResult = { data: null, error: lastError };
         } else {
           // Default upsert
-          const { data, error } = await supabase
+          const { data, error } = await db
             .from(config.table)
             .insert(transformedData);
           upsertResult = { data, error };

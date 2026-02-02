@@ -1,12 +1,14 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 
 /**
  * Snapshot current budget_targets into budget_history for the given date.
  * Uses upsert on (date, category) so running twice the same day overwrites only that day's data.
+ * @param supabase - Optional client (e.g. admin for cron). When omitted, uses server client.
  */
-export async function snapshotBudgetHistory(date: string): Promise<void> {
-  const supabase = await createClient()
-  const { data: rows, error: selectError } = await supabase
+export async function snapshotBudgetHistory(date: string, supabase?: SupabaseClient): Promise<void> {
+  const db = supabase ?? (await createClient())
+  const { data: rows, error: selectError } = await db
     .from('budget_targets')
     .select('category, annual_budget_gbp, tracking_est_gbp, ytd_gbp')
 
@@ -24,7 +26,7 @@ export async function snapshotBudgetHistory(date: string): Promise<void> {
     actual_ytd: row.ytd_gbp ?? null,
   }))
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await db
     .from('budget_history')
     .upsert(historyRows, { onConflict: 'date,category' })
 
