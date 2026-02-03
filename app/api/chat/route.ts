@@ -1727,11 +1727,20 @@ If the user asks something you cannot answer with the available data (e.g., "How
             console.log('[chat] search_web: Starting web search', { query })
             
             const serperApiKey = process.env.SERPER_API_KEY
-            if (!serperApiKey || serperApiKey === 'your_serper_api_key_here') {
-              console.warn('[chat] search_web: SERPER_API_KEY not configured')
+            console.log('[chat] search_web: API key check', { 
+              hasKey: !!serperApiKey, 
+              keyLength: serperApiKey?.length,
+              keyPreview: serperApiKey ? `${serperApiKey.substring(0, 4)}...` : 'missing'
+            })
+            
+            if (!serperApiKey || serperApiKey === 'your_serper_api_key_here' || serperApiKey.trim() === '') {
+              console.warn('[chat] search_web: SERPER_API_KEY not configured', { 
+                value: serperApiKey,
+                envKeys: Object.keys(process.env).filter(k => k.includes('SERPER'))
+              })
               return {
-                error: 'Web search is not configured. Please set SERPER_API_KEY in environment variables.',
-                summary: 'Web search functionality requires API configuration. Please contact support or configure SERPER_API_KEY.',
+                error: 'Web search is not configured. Please set SERPER_API_KEY in environment variables and restart the server.',
+                summary: 'Web search functionality requires API configuration. If you just added SERPER_API_KEY to .env.local, please restart your development server (stop and run `npm run dev` again).',
               }
             }
 
