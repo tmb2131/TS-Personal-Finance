@@ -316,10 +316,10 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={360}>
+        <ResponsiveContainer width="100%" height={isMobile ? 260 : 360}>
           <BarChart
             data={waterfallData}
-            margin={{ top: 44, right: 30, left: 20, bottom: 72 }}
+            margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 44, right: 30, left: 20, bottom: 72 }}
             barCategoryGap="20%"
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -373,7 +373,8 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
                 backgroundColor: 'white',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
-                padding: '8px 12px',
+                padding: isMobile ? '6px 10px' : '8px 12px',
+                fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
             <Bar dataKey="min" stackId="bridge" fill="transparent" stroke="none" />

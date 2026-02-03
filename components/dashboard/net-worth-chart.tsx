@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { HistoricalNetWorth } from '@/lib/types'
@@ -23,6 +24,12 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 
+// Net worth category colors - using app's design system palette
+const PERSONAL_FILL = '#3b82f6' // Blue-500
+const FAMILY_FILL = '#22c55e' // Green-500 (matches app's positive/growth color)
+const TRUST_FILL = '#8b5cf6' // Violet-500
+const TOTAL_LINE_STROKE = '#1e40af' // Blue-800 (darker blue for emphasis)
+
 interface NetWorthChartProps {
   initialData?: HistoricalNetWorth[]
 }
@@ -35,21 +42,13 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   const [showPersonal, setShowPersonal] = useState(true)
   const [showFamily, setShowFamily] = useState(true)
   const [showTrust, setShowTrust] = useState(true)
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useIsMobile()
   const [mounted, setMounted] = useState(false)
   const fontSizes = getChartFontSizes(isMobile)
 
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    if (!mounted) return
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [mounted])
 
   // Process data function - use useCallback to memoize with currency dependency
   const processData = useCallback((netWorthData: HistoricalNetWorth[]) => {
@@ -323,15 +322,39 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
               iconSize={fontSizes.iconSize}
               formatter={(value) => <span style={{ fontSize: fontSizes.legend, marginRight: isMobile ? '16px' : '24px' }}>{value}</span>}
             />
-            {showPersonal && <Bar dataKey="Personal" fill="#8884d8" radius={[4, 4, 0, 0]} />}
-            {showFamily && <Bar dataKey="Family" fill="#82ca9d" radius={[4, 4, 0, 0]} />}
-            {showTrust && <Bar dataKey="Trust" fill="#ffc658" radius={[4, 4, 0, 0]} />}
-            <Line 
-              type="monotone" 
-              dataKey="Total" 
-              stroke="#ff7300" 
+            {showPersonal && (
+              <Bar
+                dataKey="Personal"
+                fill={PERSONAL_FILL}
+                radius={[4, 4, 0, 0]}
+                stroke="#fff"
+                strokeWidth={1}
+              />
+            )}
+            {showFamily && (
+              <Bar
+                dataKey="Family"
+                fill={FAMILY_FILL}
+                radius={[4, 4, 0, 0]}
+                stroke="#fff"
+                strokeWidth={1}
+              />
+            )}
+            {showTrust && (
+              <Bar
+                dataKey="Trust"
+                fill={TRUST_FILL}
+                radius={[4, 4, 0, 0]}
+                stroke="#fff"
+                strokeWidth={1}
+              />
+            )}
+            <Line
+              type="monotone"
+              dataKey="Total"
+              stroke={TOTAL_LINE_STROKE}
               strokeWidth={2}
-              dot={{ fill: '#ff7300', r: 3 }}
+              dot={{ fill: TOTAL_LINE_STROKE, r: 3 }}
               activeDot={{ r: 5 }}
             />
           </ComposedChart>

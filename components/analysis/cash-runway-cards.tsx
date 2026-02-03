@@ -63,9 +63,19 @@ export function CashRunwayCards() {
         })
 
         // Net burn from API (last 3 full calendar months UTC; aggregated in DB — no row limit; same filters as SQL).
-        const burnRes = await fetch('/api/cash-runway')
+        const burnRes = await fetch('/api/cash-runway', {
+          credentials: 'include',
+        })
         if (!burnRes.ok) {
-          throw new Error(`Failed to fetch burn: ${burnRes.status}`)
+          const errorText = await burnRes.text().catch(() => '')
+          let errorMessage = `Failed to fetch burn: ${burnRes.status}`
+          try {
+            const errorJson = JSON.parse(errorText)
+            errorMessage = errorJson.error || errorMessage
+          } catch {
+            // Use default error message
+          }
+          throw new Error(errorMessage)
         }
         const burnJson = await burnRes.json()
         const gbpNet = Number(burnJson.gbpNet ?? 0)

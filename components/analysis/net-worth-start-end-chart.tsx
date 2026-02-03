@@ -156,10 +156,10 @@ export function NetWorthStartEndChart() {
         </p>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <BarChart
             data={chartData}
-            margin={{ top: 36, right: 30, left: 20, bottom: 24 }}
+            margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
@@ -182,8 +182,8 @@ export function NetWorthStartEndChart() {
                 backgroundColor: 'white',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: fontSizes.tooltipMin,
+                padding: isMobile ? '6px 10px' : '8px 12px',
+                fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
             <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} minPointSize={8}>

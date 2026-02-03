@@ -46,7 +46,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   const [error, setError] = useState<string | null>(null)
   const [budgets, setBudgets] = useState<BudgetTarget[]>(initialData?.budgets ?? [])
   const [investmentReturns, setInvestmentReturns] = useState<InvestmentReturn[]>(initialData?.investmentReturns ?? [])
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useIsMobile()
   const [mounted, setMounted] = useState(false)
   const [includeInvestmentIncome, setIncludeInvestmentIncome] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -55,14 +55,6 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    if (!mounted) return
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [mounted])
 
   useEffect(() => {
     if (hasInitial && initialData) {
@@ -208,7 +200,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
         <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <BarChart
             data={chartData}
-            margin={{ top: 36, right: 30, left: 20, bottom: 24 }}
+            margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
             barCategoryGap="10%"
             barGap={4}
           >

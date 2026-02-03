@@ -9,6 +9,7 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
+import { cn } from '@/utils/cn'
 import { TrendingUp, AlertCircle } from 'lucide-react'
 import {
   BarChart,
@@ -174,6 +175,23 @@ export function YoYNetWorthWaterfall() {
     return `${sign}${formatCurrencyLarge(Math.abs(value))}`
   }
 
+  // Format currency for call-out box (full format, not compact)
+  const formatCurrencyFull = (value: number) => {
+    const currencySymbol = currency === 'USD' ? '$' : '£'
+    const abs = Math.abs(value)
+    if (abs >= 1_000_000) {
+      return `${currencySymbol}${(abs / 1_000_000).toFixed(1)}M`
+    }
+    if (abs >= 1_000) {
+      return `${currencySymbol}${(abs / 1_000).toFixed(1)}k`
+    }
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
   // Waterfall bar colors: green/red for increases/decreases, darker for net change
   const getBarColor = (type: string) => {
     switch (type) {
@@ -257,16 +275,88 @@ export function YoYNetWorthWaterfall() {
     )
   }
 
+  // Calculate net change and percentage change for call-out box
+  const netChange = summaryValues.yearStart !== null && summaryValues.yearEnd !== null
+    ? summaryValues.yearEnd - summaryValues.yearStart
+    : null
+
+  const percentChange = netChange !== null && summaryValues.yearStart !== null && summaryValues.yearStart !== 0
+    ? (netChange / summaryValues.yearStart) * 100
+    : null
+
+  const formatPercent = (value: number) => {
+    const sign = value >= 0 ? '+' : ''
+    return `${sign}${value.toFixed(1)}%`
+  }
+
   return (
     <Card>
       <CardHeader className="bg-muted/50">
-        <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+        <div className="flex flex-col gap-3">
+          <div>
+            <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+          </div>
+          {netChange !== null && (
+            <div className="rounded-lg border border-border bg-background p-3 shadow-sm">
+              <span className="text-sm font-medium tabular-nums">
+                {netChange > 0 && (
+                  <>
+                    Net worth increased by{' '}
+                    <span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>
+                      {formatCurrencyFull(Math.abs(netChange))}
+                    </span>
+                    {percentChange !== null && (
+                      <>
+                        {' '}(
+                        <span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>
+                          {formatPercent(percentChange)}
+                        </span>
+                        )
+                      </>
+                    )}
+                  </>
+                )}
+                {netChange < 0 && (
+                  <>
+                    Net worth decreased by{' '}
+                    <span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>
+                      {formatCurrencyFull(Math.abs(netChange))}
+                    </span>
+                    {percentChange !== null && (
+                      <>
+                        {' '}(
+                        <span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>
+                          {formatPercent(percentChange)}
+                        </span>
+                        )
+                      </>
+                    )}
+                  </>
+                )}
+                {netChange === 0 && (
+                  <>
+                    Net worth unchanged
+                    {percentChange !== null && (
+                      <>
+                        {' '}(
+                        <span className={cn('font-bold', 'text-muted-foreground')}>
+                          {formatPercent(percentChange)}
+                        </span>
+                        )
+                      </>
+                    )}
+                  </>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={360}>
+        <ResponsiveContainer width="100%" height={isMobile ? 260 : 360}>
           <BarChart
             data={waterfallData}
-            margin={{ top: 44, right: 30, left: 20, bottom: 72 }}
+            margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 44, right: 30, left: 20, bottom: 72 }}
             barCategoryGap="20%"
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -317,8 +407,8 @@ export function YoYNetWorthWaterfall() {
                 backgroundColor: 'white',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: fontSizes.tooltipMin,
+                padding: isMobile ? '6px 10px' : '8px 12px',
+                fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
             {/* Series A: transparent spacer (pedestal) so visible bar starts at running total */}

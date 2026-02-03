@@ -145,8 +145,8 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
         </p>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={360}>
-          <LineChart data={chartData} margin={{ top: 8, right: 20, left: 8, bottom: 24 }}>
+        <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
+          <LineChart data={chartData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="date"
@@ -174,8 +174,8 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
                 backgroundColor: 'white',
                 border: '1px solid #e5e7eb',
                 borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: fontSizes.tooltipMin,
+                padding: isMobile ? '6px 10px' : '8px 12px',
+                fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
             <Line
