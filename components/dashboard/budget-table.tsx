@@ -41,6 +41,11 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const [incomeSortDirection, setIncomeSortDirection] = useState<SortDirection>('asc')
   const [expensesExpanded, setExpensesExpanded] = useState(false)
   const [expenseFullView, setExpenseFullView] = useState(false)
+  const [historyForecastSpend, setHistoryForecastSpend] = useState<{
+    dayAgo: Record<string, number>
+    weekAgo: Record<string, number>
+    monthAgo: Record<string, number>
+  }>({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
 
   // Process data: always use GBP from data; convert to USD with current FX when currency is USD (matches Key Insights)
   const processData = useCallback(
@@ -107,6 +112,80 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
 
     fetchData()
   }, [currency, initialData, processData])
+
+  // Fetch budget_history for 1d / 1w / 1mo ago for forecast evolution columns in full view.
+  // Use latest snapshot on or before each target date (snapshots only exist when sync/cron ran).
+  // Refetch when full view opens so we run after auth is ready and get fresh data.
+  useEffect(() => {
+    if (!expenseFullView) return
+
+    const EXCLUDED = ['Income', 'Gift Money', 'Other Income', 'Excluded']
+    const toNum = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0)
+    const toDateStr = (d: Date) => d.toISOString().split('T')[0]
+    const normalizeDate = (v: unknown) => (typeof v === 'string' ? v.split('T')[0] : String(v).split('T')[0])
+
+    async function fetchHistory() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const today = new Date()
+      const weekAgoStr = toDateStr(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000))
+      const monthAgoStr = toDateStr(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000))
+      const monthAgoDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+      // Fetch all snapshots in the last 30 days; we'll pick the latest on or before each target
+      const { data: rows, error } = await supabase
+        .from('budget_history')
+        .select('category, annual_budget, forecast_spend, date')
+        .eq('user_id', user.id)
+        .gte('date', toDateStr(monthAgoDate))
+        .lte('date', toDateStr(today))
+
+      if (error || !rows?.length) {
+        setHistoryForecastSpend({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
+        return
+      }
+
+      const byDate = new Map<string, { category: string; annual_budget: unknown; forecast_spend: unknown }[]>()
+      for (const r of rows as { category: string; annual_budget: unknown; forecast_spend: unknown; date: unknown }[]) {
+        const d = normalizeDate(r.date)
+        if (!byDate.has(d)) byDate.set(d, [])
+        byDate.get(d)!.push({ category: r.category, annual_budget: r.annual_budget, forecast_spend: r.forecast_spend })
+      }
+      const sortedDates = Array.from(byDate.keys()).sort()
+      const todayStr = toDateStr(today)
+
+      const latestOnOrBefore = (target: string) => {
+        const idx = sortedDates.findIndex((d) => d > target)
+        if (idx === 0) return null
+        if (idx === -1) return sortedDates[sortedDates.length - 1]
+        return sortedDates[idx - 1]
+      }
+
+      // "1 day ago" must use a snapshot strictly before today (never today's snapshot)
+      const datesBeforeToday = sortedDates.filter((d) => d < todayStr)
+      const dayAgoDate = datesBeforeToday.length > 0 ? datesBeforeToday[datesBeforeToday.length - 1] : null
+
+      // Store forecast_spend (tracking) per category for each date — used to show change in gap (current Tracking − historical forecast_spend)
+      const buildForecastMap = (dateKey: string | null) => {
+        const map: Record<string, number> = {}
+        if (!dateKey) return map
+        const list = byDate.get(dateKey) ?? []
+        list.filter((r) => !EXCLUDED.includes(r.category)).forEach((r) => {
+          map[r.category] = toNum(r.forecast_spend)
+        })
+        return map
+      }
+
+      setHistoryForecastSpend({
+        dayAgo: buildForecastMap(dayAgoDate),
+        weekAgo: buildForecastMap(latestOnOrBefore(weekAgoStr)),
+        monthAgo: buildForecastMap(latestOnOrBefore(monthAgoStr)),
+      })
+    }
+    fetchHistory()
+  }, [expenseFullView])
 
   // Derive display data so we show initialData on first paint (avoids flash of empty before useEffect runs)
   const displayData = useMemo(
@@ -716,7 +795,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
-                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
                         <button
                           onClick={() => handleExpenseSort('gap')}
                           className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
@@ -726,6 +805,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         </button>
                       </TableHead>
                       <TableHead className="w-16 bg-muted"></TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">1 day ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">1 week ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">1 month ago</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -733,6 +815,23 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       const gap = row.tracking - row.annualBudget
                       const gapPercent = (Math.abs(gap) / maxGap) * 100
                       const isPositive = gap >= 0
+                      const forecastDay = historyForecastSpend.dayAgo[row.category]
+                      const forecastWeek = historyForecastSpend.weekAgo[row.category]
+                      const forecastMonth = historyForecastSpend.monthAgo[row.category]
+                      const changeInGap = (historicalForecastGbp: number | undefined) => {
+                        if (historicalForecastGbp === undefined) return undefined
+                        const historicalInDisplayCurrency = currency === 'USD' ? convertAmount(historicalForecastGbp, 'GBP', fxRate) : historicalForecastGbp
+                        return row.tracking - historicalInDisplayCurrency
+                      }
+                      const renderChangeInGap = (delta: number | undefined) => {
+                        if (delta === undefined || delta === 0) return '–'
+                        const pos = delta >= 0
+                        return (
+                          <span className={cn('font-medium', pos ? 'text-green-600' : 'text-red-600')}>
+                            {formatCurrencyCompact(delta)}
+                          </span>
+                        )
+                      }
                       return (
                         <TableRow key={row.category}>
                           <TableCell className="font-medium">{row.category}</TableCell>
@@ -763,6 +862,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                               )}
                             </div>
                           </TableCell>
+                          <TableCell className="text-right">{renderChangeInGap(changeInGap(forecastDay))}</TableCell>
+                          <TableCell className="text-right">{renderChangeInGap(changeInGap(forecastWeek))}</TableCell>
+                          <TableCell className="text-right">{renderChangeInGap(changeInGap(forecastMonth))}</TableCell>
                         </TableRow>
                       )
                     })}
