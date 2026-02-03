@@ -430,19 +430,61 @@ export async function syncGoogleSheet(
               onConflict: 'user_id,child_name,account_type,date_updated,notes',
             });
           upsertResult = { data, error };
-        } else if (config.table === 'budget_targets' || config.table === 'annual_trends' || config.table === 'monthly_trends') {
+        } else if (config.table === 'budget_targets') {
+          // Delete existing rows for this user first to ensure fresh data
+          const { error: deleteError } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (deleteError) {
+            console.warn(`Warning: Could not delete old budget_targets for user ${uid}:`, deleteError);
+          }
+          // Insert new data
           const { data, error } = await db
             .from(config.table)
-            .upsert(dataWithUser, {
-              onConflict: 'user_id,category',
-            });
+            .insert(dataWithUser);
+          upsertResult = { data, error };
+        } else if (config.table === 'annual_trends') {
+          // Delete existing rows for this user first to ensure fresh data
+          const { error: deleteError } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (deleteError) {
+            console.warn(`Warning: Could not delete old annual_trends for user ${uid}:`, deleteError);
+          }
+          // Insert new data
+          const { data, error } = await db
+            .from(config.table)
+            .insert(dataWithUser);
+          upsertResult = { data, error };
+        } else if (config.table === 'monthly_trends') {
+          // Delete existing rows for this user first to ensure fresh data
+          const { error: deleteError } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (deleteError) {
+            console.warn(`Warning: Could not delete old monthly_trends for user ${uid}:`, deleteError);
+          }
+          // Insert new data
+          const { data, error } = await db
+            .from(config.table)
+            .insert(dataWithUser);
           upsertResult = { data, error };
         } else if (config.table === 'investment_return') {
+          // Delete existing rows for this user first to ensure fresh data
+          const { error: deleteError } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (deleteError) {
+            console.warn(`Warning: Could not delete old investment_return for user ${uid}:`, deleteError);
+          }
+          // Insert new data
           const { data, error } = await db
             .from(config.table)
-            .upsert(dataWithUser, {
-              onConflict: 'user_id,income_source',
-            });
+            .insert(dataWithUser);
           upsertResult = { data, error };
         } else if (config.table === 'fx_rate_current') {
           // Skip rows with invalid gbpusd_rate (NaN, null, or non-positive) to avoid NOT NULL constraint violation
@@ -465,11 +507,18 @@ export async function syncGoogleSheet(
             upsertResult = { data, error }
           }
         } else if (config.table === 'yoy_net_worth') {
+          // Delete existing rows for this user first to ensure fresh data
+          const { error: deleteError } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (deleteError) {
+            console.warn(`Warning: Could not delete old yoy_net_worth for user ${uid}:`, deleteError);
+          }
+          // Insert new data
           const { data, error } = await db
             .from(config.table)
-            .upsert(dataWithUser, {
-              onConflict: 'user_id,category',
-            });
+            .insert(dataWithUser);
           upsertResult = { data, error };
         } else if (config.table === 'fx_rates') {
           // For historical FX rates, date is PRIMARY KEY
@@ -538,6 +587,7 @@ export async function syncGoogleSheet(
           }
           upsertResult = { data: null, error: lastError };
         } else if (config.table === 'recurring_payments') {
+          // Preserve needs_review flags from existing records before deleting
           const { data: existingRecords } = await db
             .from(config.table)
             .select('name, needs_review')
@@ -548,12 +598,24 @@ export async function syncGoogleSheet(
               reviewFlags.set((record.name || '').toLowerCase().trim(), !!record.needs_review);
             });
           }
+          
+          // Delete existing rows for this user first to ensure fresh data
+          const { error: deleteError } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (deleteError) {
+            console.warn(`Warning: Could not delete old recurring_payments for user ${uid}:`, deleteError);
+          }
+          
+          // Apply preserved needs_review flags and deduplicate by name (aggregate amounts)
           const withFlags = dataWithUser.map((item: any) => ({
             ...item,
             needs_review: reviewFlags.get((item.name || '').toLowerCase().trim()) ?? false,
             updated_at: new Date().toISOString(),
           }));
-          // Deduplicate by name (aggregate amounts) so upsert doesn't see duplicate keys in same batch
+          
+          // Deduplicate by name (aggregate amounts) in case sheet has duplicates
           const byName = new Map<
             string,
             { name: string; annualized_amount_gbp: number | null; annualized_amount_usd: number | null; needs_review: boolean; updated_at: string }
@@ -577,13 +639,14 @@ export async function syncGoogleSheet(
               existing.annualized_amount_usd = usd || null;
             }
           }
+          
           const mergedData = Array.from(byName.values()).map((row) => ({ ...row, user_id: uid }));
           const chunks = chunkArray(mergedData, BATCH_SIZE);
           let lastError: any = null;
           for (const chunk of chunks) {
             const { error } = await db
               .from(config.table)
-              .upsert(chunk, { onConflict: 'user_id,name' });
+              .insert(chunk);
             if (error) lastError = error;
           }
           upsertResult = { data: null, error: lastError };
