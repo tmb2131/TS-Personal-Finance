@@ -485,8 +485,8 @@ export function MonthlyCategorySummary({
 
   const content = (
     <div>
-      <div className="pb-3 mb-3 border-b">
-        <p className="text-base">
+      <div className="rounded-lg border border-border bg-background p-3 shadow-sm mb-4">
+        <p className="text-sm">
           {getExecutiveSummary()}
         </p>
       </div>

@@ -32,19 +32,12 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
 
-  // Load collapsed state from localStorage on mount
-  useEffect(() => {
-    const savedState = localStorage.getItem('sidebar-collapsed')
-    if (savedState !== null) {
-      setCollapsed(savedState === 'true')
-    }
-  }, [])
-
-  // Save collapsed state to localStorage
+  // Sidebar always defaults to open (not collapsed)
+  // Removed localStorage loading so it always starts open when entering the app
   const toggleCollapse = () => {
-    const newState = !collapsed
-    setCollapsed(newState)
-    localStorage.setItem('sidebar-collapsed', String(newState))
+    setCollapsed(!collapsed)
+    // Note: We don't persist the collapsed state to localStorage
+    // so the sidebar always opens when entering the app
   }
 
   return (
