@@ -234,6 +234,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               let queryBuilder = supabase
                 .from('historical_net_worth')
                 .select('*')
+                .eq('user_id', user.id)
                 .eq('date', asOfDate)
                 .order('category', { ascending: true })
               
@@ -291,6 +292,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const { data: balances, error } = await supabase
                 .from('account_balances')
                 .select('*')
+                .eq('user_id', user.id)
                 .order('date_updated', { ascending: false })
               
               if (error) {
@@ -481,6 +483,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
             let queryBuilder = supabase
               .from('transaction_log')
               .select('*')
+              .eq('user_id', user.id)
               .gte('date', start.toISOString().split('T')[0])
               .lte('date', end.toISOString().split('T')[0])
               .order('date', { ascending: false })
@@ -643,6 +646,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
             let budgetQuery = supabase
               .from('budget_targets')
               .select('*')
+              .eq('user_id', user.id)
             
             if (category) {
               budgetQuery = budgetQuery.eq('category', category)
@@ -695,6 +699,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               let transactionQuery = supabase
                 .from('transaction_log')
                 .select('*')
+                .eq('user_id', user.id)
                 .gte('date', startOfYear.toISOString().split('T')[0])
                 .lte('date', endDate.toISOString().split('T')[0])
               
@@ -839,6 +844,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const { data: histRows, error: histErr } = await supabase
                 .from('historical_net_worth')
                 .select('amount_gbp, amount_usd, category')
+                .eq('user_id', user.id)
                 .eq('date', asOfDate)
               if (!histErr && histRows?.length) {
                 histRows.forEach((r: { amount_gbp?: number | null; amount_usd?: number | null; category?: string | null }) => {
@@ -856,7 +862,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
                 allocationByCurrency.push({ currency: 'USD', totalGbp: totalUsdInclTrust / fxRate, totalUsd: totalUsdInclTrust })
               }
             } else {
-              const { data: balances, error: balErr } = await supabase.from('account_balances').select('*').order('date_updated', { ascending: false })
+              const { data: balances, error: balErr } = await supabase.from('account_balances').select('*').eq('user_id', user.id).order('date_updated', { ascending: false })
               if (balErr) throw new Error(balErr.message)
               const byAccount = new Map<string, { balance_total_local: number; currency: string; date_updated: string; category: string }>()
               ;(balances || []).forEach((b: { institution: string; account_name: string; date_updated: string; balance_total_local?: number | null; currency?: string | null; category?: string | null }) => {
@@ -920,7 +926,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
 
             // 2) Budget (net income: income - expenses from budget_targets)
             const EXCLUDED = ['Excluded', 'Income', 'Gift Money', 'Other Income']
-            const { data: budgetRows, error: budgetErr } = await supabase.from('budget_targets').select('category, annual_budget_gbp, tracking_est_gbp')
+            const { data: budgetRows, error: budgetErr } = await supabase.from('budget_targets').select('category, annual_budget_gbp, tracking_est_gbp').eq('user_id', user.id)
             if (budgetErr) throw new Error(budgetErr.message)
 
             let incomeBudget = 0
@@ -1007,6 +1013,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
             const { data: startRowsExact, error: startExactError } = await supabase
               .from('budget_history')
               .select('category, forecast_spend, annual_budget')
+              .eq('user_id', user.id)
               .eq('date', startDate)
 
             if (!startExactError && startRowsExact && startRowsExact.length > 0) {
@@ -1016,6 +1023,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const { data: startRowsLatest, error: startLatestError } = await supabase
                 .from('budget_history')
                 .select('date, category, forecast_spend, annual_budget')
+                .eq('user_id', user.id)
                 .lte('date', startDate)
                 .order('date', { ascending: false })
                 .limit(500)
@@ -1046,6 +1054,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
             const { data: endRowsExact, error: endExactError } = await supabase
               .from('budget_history')
               .select('category, forecast_spend, annual_budget')
+              .eq('user_id', user.id)
               .eq('date', end)
 
             if (!endExactError && endRowsExact && endRowsExact.length > 0) {
@@ -1059,6 +1068,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const { data: endRowsLatest, error: endLatestError } = await supabase
                 .from('budget_history')
                 .select('date, category, forecast_spend, annual_budget')
+                .eq('user_id', user.id)
                 .lte('date', end)
                 .order('date', { ascending: false })
                 .limit(500)
@@ -1077,6 +1087,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
                 const { data: targets, error: targetsError } = await supabase
                   .from('budget_targets')
                   .select('category, annual_budget_gbp, tracking_est_gbp, ytd_gbp')
+                  .eq('user_id', user.id)
 
                 if (targetsError || !targets?.length) {
                   return { error: 'No end snapshot available (no budget_history and no budget_targets).' }
@@ -1169,6 +1180,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
             const { data: rows, error } = await supabase
               .from('historical_net_worth')
               .select('date, category, amount_gbp, amount_usd')
+              .eq('user_id', user.id)
               .gte('date', startDate)
               .lte('date', end)
               .order('date', { ascending: true })
@@ -1297,6 +1309,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const transactionsResult = await supabase
                 .from('transaction_log')
                 .select('*', { count: 'exact' })
+                .eq('user_id', user.id)
                 .eq('category', category)
                 .gte('date', startDateStr)
                 .lte('date', endDateStr)
@@ -1634,6 +1647,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
             const { data: balancesData, error: balErr } = await supabase
               .from('account_balances')
               .select('institution, account_name, date_updated, balance_total_local, currency, category')
+              .eq('user_id', user.id)
               .order('date_updated', { ascending: false })
             if (balErr) return { error: balErr.message }
             const byAccount = new Map<string, { balance_total_local: number; currency: string; category: string; date_updated: string }>()
