@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { KeyInsights } from '@/components/insights/key-insights'
 import { ConnectSheetModal } from '@/components/insights/connect-sheet-modal'
+import { DummyDataMessage } from '@/components/insights/dummy-data-message'
+
+const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
 export default async function InsightsPage() {
   const supabase = await createClient()
@@ -20,10 +23,12 @@ export default async function InsightsPage() {
     .single()
 
   const needsSpreadsheet = !profile?.google_spreadsheet_id?.trim()
+  const hasDummyData = profile?.google_spreadsheet_id === DUMMY_SHEET_ID
 
   return (
     <div className="space-y-4 md:space-y-6">
       <ConnectSheetModal open={needsSpreadsheet} />
+      {hasDummyData && <DummyDataMessage />}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Key Insights</h1>
         <p className="text-sm md:text-base text-muted-foreground">
