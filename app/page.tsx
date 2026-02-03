@@ -8,6 +8,7 @@ import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-t
 import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
 import { DashboardAtAGlance } from '@/components/dashboard/dashboard-at-a-glance'
 import { DashboardBackToTop } from '@/components/dashboard/dashboard-back-to-top'
+import { DashboardHashScroll } from '@/components/dashboard/dashboard-hash-scroll'
 import {
   NetWorthChartSkeleton,
   BudgetTableSkeleton,
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-2 md:space-y-3 flex flex-col">
+      <DashboardHashScroll />
       {/* Header - Renders immediately; on mobile Executive Summary is moved to top via order */}
       <div className="max-md:order-2">
         <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>

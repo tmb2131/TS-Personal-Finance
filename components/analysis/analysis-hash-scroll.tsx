@@ -5,13 +5,17 @@ import { usePathname, useSearchParams } from 'next/navigation'
 
 const HEADER_OFFSET = 100
 const MOBILE_BREAKPOINT = 768
+/** Minimum height for #forecast-evolution before we trust scroll position (avoids scrolling before chart has rendered). */
+const FORECAST_EVOLUTION_MIN_HEIGHT = 150
+/** Retry delays (ms) for scrolling to #forecast-evolution so we run again after content has rendered. */
+const FORECAST_EVOLUTION_RETRY_DELAYS = [200, 500, 900]
 
 /**
  * On the Analysis page, scroll the main content to the section indicated by:
  * - URL hash (e.g. /analysis#forecast-evolution)
  * - section query param (e.g. /analysis?section=transaction-analysis from Dashboard trends links)
  * The main scroll container is .main-content, not the window.
- * On mobile, scrolling to #forecast-evolution centers the section in the viewport.
+ * Scrolling to #forecast-evolution centers the section vertically in the viewport (desktop and mobile).
  */
 export function AnalysisHashScroll() {
   const pathname = usePathname()
@@ -28,14 +32,17 @@ export function AnalysisHashScroll() {
     const mainRect = main.getBoundingClientRect()
     const relativeTop = elementRect.top - mainRect.top + main.scrollTop
     const elementHeight = elementRect.height
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT
+
+    // For forecast-evolution, wait until the section has real height so we don't scroll to the wrong place
+    if (targetId === 'forecast-evolution' && elementHeight < FORECAST_EVOLUTION_MIN_HEIGHT) {
+      return
+    }
 
     let scrollTop: number
-    if (isMobile && targetId === 'forecast-evolution') {
-      // Center the section in the viewport on mobile so the chart is visible
+    if (targetId === 'forecast-evolution') {
+      // Center the section vertically in the viewport (desktop and mobile)
       const centerOffset = Math.floor(mainHeight / 2 - elementHeight / 2)
       scrollTop = Math.max(0, relativeTop - centerOffset)
-      // Don't scroll past the bottom
       const maxScroll = main.scrollHeight - mainHeight
       scrollTop = Math.min(scrollTop, maxScroll)
     } else {
@@ -63,9 +70,21 @@ export function AnalysisHashScroll() {
     const t1 = requestAnimationFrame(() => {
       requestAnimationFrame(runScroll)
     })
-    // On mobile, allow more time for content to render (e.g. when navigating from Insights)
+    // Allow time for content to render (e.g. when navigating from Insights)
     const delay = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT ? 300 : 150
     const t2 = window.setTimeout(runScroll, delay)
+
+    // For forecast-evolution, retry scroll at intervals so we correct position once the section has rendered
+    const timeouts: ReturnType<typeof setTimeout>[] = []
+    if (targetId === 'forecast-evolution') {
+      FORECAST_EVOLUTION_RETRY_DELAYS.forEach((ms) => {
+        timeouts.push(
+          window.setTimeout(() => {
+            requestAnimationFrame(runScroll)
+          }, ms)
+        )
+      })
+    }
 
     const onHashChange = () => {
       const id = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
@@ -77,6 +96,7 @@ export function AnalysisHashScroll() {
     return () => {
       cancelAnimationFrame(t1)
       clearTimeout(t2)
+      timeouts.forEach(clearTimeout)
       window.removeEventListener('hashchange', onHashChange)
     }
   }, [pathname, searchParams, scrollToTarget])

@@ -12,7 +12,7 @@ import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
-import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
+import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
 import {
   LineChart,
   Line,
@@ -1223,10 +1223,25 @@ export function KeyInsights() {
       {/* Annual Spend Section */}
       <Card id="annual-spend" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Annual Spend</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            This year vs 4-year average.
-          </p>
+          <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
+            <div>
+              <CardTitle className="text-xl">Annual Spend</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                This year vs 4-year average.
+              </p>
+            </div>
+            <Link
+              href="/#annual-trends"
+              className={cn(
+                'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
+                'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+              )}
+              aria-label="View Annual Trends on Dashboard"
+            >
+              Annual Trends
+              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            </Link>
+          </div>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
           {/* Vs 4-year average — prominent call-out */}
@@ -1341,10 +1356,25 @@ export function KeyInsights() {
       {/* Monthly Spend Section */}
       <Card id="monthly-spend" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Monthly Spend</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            This month vs trailing 12‑month average.
-          </p>
+          <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
+            <div>
+              <CardTitle className="text-xl">Monthly Spend</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                This month vs trailing 12‑month average.
+              </p>
+            </div>
+            <Link
+              href="/#monthly-trends"
+              className={cn(
+                'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
+                'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+              )}
+              aria-label="View Monthly Trends on Dashboard"
+            >
+              Monthly Trends
+              <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            </Link>
+          </div>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
           {/* Vs TTM — prominent */}
