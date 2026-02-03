@@ -41,8 +41,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=your_service_account_private_key
 
+GOOGLE_GENERATIVE_AI_API_KEY=your_google_generative_ai_api_key
+
 # Optional: for daily 6am UTC data refresh cron (set in Vercel / hosting env)
 CRON_SECRET=your_random_secret_string
+
+# Optional: for AI assistant web search (comparative queries like "How does my spending compare?")
+# Get a free API key from https://serper.dev
+SERPER_API_KEY=your_serper_api_key
 ```
 
 ### 3. Database Setup

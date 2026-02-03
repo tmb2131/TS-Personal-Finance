@@ -100,6 +100,12 @@ YOUR CAPABILITIES:
 
 6. **Net worth trends and cash runway**: Use get_net_worth_trend when the user asks how their net worth has changed over time or for a trend over a date range. Use get_cash_runway when the user asks about runway, burn, or how long their cash will last.
 
+7. **Web Search for Comparative Data**: Use search_web when the user asks for comparisons with external benchmarks, averages, or market data. Examples:
+   - "How does my spending on X compare to average in Y location?"
+   - "What's the typical cost of X in Y?"
+   - "How does my budget compare to others?"
+   When using search_web, first get the user's data using appropriate financial tools (e.g., analyze_spending), then search for external benchmarks, and finally synthesize a comparison. Always include disclaimers about external data sources and their limitations.
+
 DATA CONTEXT:
 - The user has accounts in multiple currencies (primarily GBP and USD)
 - Accounts are categorized by type (Cash, Brokerage, Alt Inv, Retirement, Taconic, House, Trust, etc.)
@@ -110,7 +116,7 @@ DATA CONTEXT:
 CRITICAL INSTRUCTIONS:
 1. **Always use tools** - Never guess or make up financial data. Always call the appropriate tool to get accurate information.
 2. **Provide comprehensive summaries** - When you call a tool and receive results, you MUST immediately provide a clear, human-readable summary. Expand on the summary field provided by tools with context and insights.
-3. **Multi-step analysis** - You can call multiple tools in sequence to answer complex questions. For example, use get_financial_snapshot for balances, then analyze_spending for spending patterns, then get_budget_vs_actual for budget context.
+3. **Multi-step analysis** - You can call multiple tools in sequence to answer complex questions. For example, use get_financial_snapshot for balances, then analyze_spending for spending patterns, then get_budget_vs_actual for budget context. For comparative questions, first get the user's data, then use search_web for external benchmarks, then synthesize the comparison.
 4. **Currency handling** - Always format currency appropriately: £ for GBP, $ for USD, € for EUR. When comparing amounts, convert to a single currency or show both. For readability, do not show decimal points in currency or other numbers unless the user explicitly asks for them (e.g. show £1,234 not £1,234.56).
 5. **Entity distinction** - Clearly distinguish between Personal, Family, and Trust entities when relevant. Personal balances are in balance_personal_local, Family in balance_family_local.
 6. **Net worth default** - When describing net worth (e.g. from get_financial_health_summary), show the value excluding Trust as the main figure and, when different, add subtext for "Incl. Trust: £X" so the default view is excl. Trust.
@@ -137,9 +143,13 @@ EXAMPLE QUERIES YOU CAN HANDLE:
 - "Show me monthly trends for Food category"
 - "What's the top merchant for my Transport spending?"
 - "Compare my current month Bills spending to last year"
+- "How does my Uber spending compare to average Londoners?"
+- "What's the typical grocery budget for a family of 4 in NYC?"
+- "How does my spending on restaurants compare to the average person in London?"
 
 GUARDRAILS:
 - This is analysis of your data, not financial advice. Only describe and interpret; never suggest specific investments or actions.
+- When using web search results, always include disclaimers that external data may vary by source, location, and time period, and should be used for general comparison purposes only. Cite sources when possible.
 
 WHEN YOU CANNOT ANSWER:
 If the user asks something you cannot answer with the available data (e.g., "How much did Kiran spend yesterday?" — there is no data indicating who the owner of each transaction is; or questions about people, households, or attributes not in the data), respond in natural language explaining why you can't answer. Then follow up with a short list of types of questions you *can* answer, for example:
@@ -148,7 +158,8 @@ If the user asks something you cannot answer with the available data (e.g., "How
 - Net worth and account balances (current or historical, by currency or entity: Personal, Family, Trust)
 - Budget vs actual (over/under budget by category, YTD, annual)
 - Income vs expenses and trends
-- Net worth over time and cash runway`,
+- Net worth over time and cash runway
+- Comparative analysis with external benchmarks and averages (e.g., "How does my spending compare to average?")`,
       messages: modelMessages,
       // @ts-expect-error - maxSteps property exists at runtime but may not be in TypeScript types
       maxSteps: 5, // CRITICAL: Allow multiple steps so AI can call tool AND generate response
@@ -1697,6 +1708,121 @@ If the user asks something you cannot answer with the available data (e.g., "How
           } catch (err) {
             console.error('[chat] get_cash_runway: Execution error', err)
             return { error: err instanceof Error ? err.message : 'Unknown error' }
+          }
+        },
+      },
+      search_web: {
+        description: `Search the web for external data, benchmarks, averages, or market information to compare with the user's financial data. Use this when the user asks comparative questions like:
+        - "How does my spending on X compare to average in Y location?"
+        - "What's the typical cost of X in Y?"
+        - "How does my budget compare to others?"
+        - Any question requiring external benchmarks or market data
+        
+        IMPORTANT: Only use this tool when the user explicitly asks for comparisons with external data or benchmarks. For questions about the user's own data, use the other financial tools instead.`,
+        inputSchema: z.object({
+          query: z.string().describe('The search query to find relevant external data, benchmarks, or averages. Make it specific and include location/context when relevant (e.g., "average Uber spending per month London UK" or "typical grocery budget for family of 4 NYC").'),
+        }),
+        execute: async ({ query }) => {
+          try {
+            console.log('[chat] search_web: Starting web search', { query })
+            
+            const serperApiKey = process.env.SERPER_API_KEY
+            if (!serperApiKey || serperApiKey === 'your_serper_api_key_here') {
+              console.warn('[chat] search_web: SERPER_API_KEY not configured')
+              return {
+                error: 'Web search is not configured. Please set SERPER_API_KEY in environment variables.',
+                summary: 'Web search functionality requires API configuration. Please contact support or configure SERPER_API_KEY.',
+              }
+            }
+
+            // Call Serper API
+            const response = await fetch('https://google.serper.dev/search', {
+              method: 'POST',
+              headers: {
+                'X-API-KEY': serperApiKey,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                q: query,
+                num: 5, // Get top 5 results
+              }),
+            })
+
+            if (!response.ok) {
+              const errorText = await response.text()
+              console.error('[chat] search_web: API error', { status: response.status, error: errorText })
+              return {
+                error: `Web search API error: ${response.status} ${response.statusText}`,
+                summary: 'Unable to fetch external data. Please try again later.',
+              }
+            }
+
+            const data = await response.json()
+            
+            // Extract relevant information from search results
+            const organicResults = data.organic || []
+            const answerBox = data.answerBox
+            const knowledgeGraph = data.knowledgeGraph
+            
+            // Build summary from results
+            const summaryParts: string[] = []
+            
+            // Use answer box if available (often contains direct answers)
+            if (answerBox) {
+              if (answerBox.answer) {
+                summaryParts.push(`Answer: ${answerBox.answer}`)
+              }
+              if (answerBox.title && answerBox.title !== answerBox.answer) {
+                summaryParts.push(`Title: ${answerBox.title}`)
+              }
+            }
+            
+            // Use knowledge graph if available
+            if (knowledgeGraph) {
+              if (knowledgeGraph.description) {
+                summaryParts.push(`Description: ${knowledgeGraph.description}`)
+              }
+              if (knowledgeGraph.title) {
+                summaryParts.push(`Topic: ${knowledgeGraph.title}`)
+              }
+            }
+            
+            // Extract key information from top organic results
+            const topResults = organicResults.slice(0, 3).map((result: any) => ({
+              title: result.title,
+              snippet: result.snippet,
+              link: result.link,
+            }))
+            
+            if (topResults.length > 0 && summaryParts.length === 0) {
+              // If no answer box/knowledge graph, use snippets from top results
+              summaryParts.push(`Found ${organicResults.length} relevant sources. Top results:`)
+              topResults.forEach((result: any, idx: number) => {
+                summaryParts.push(`${idx + 1}. ${result.title}: ${result.snippet.substring(0, 150)}...`)
+              })
+            }
+            
+            const summary = summaryParts.length > 0 
+              ? summaryParts.join('\n\n')
+              : 'No relevant information found. Try rephrasing your query or being more specific about location/context.'
+            
+            return {
+              searchResults: {
+                query,
+                answerBox: answerBox || null,
+                knowledgeGraph: knowledgeGraph || null,
+                organicResults: topResults,
+                totalResults: organicResults.length,
+              },
+              summary,
+              disclaimer: 'Note: External data may vary by source, location, and time period. Use for general comparison purposes only.',
+            }
+          } catch (err) {
+            console.error('[chat] search_web: Execution error', err)
+            return {
+              error: err instanceof Error ? err.message : 'Unknown error during web search',
+              summary: 'Unable to complete web search. Please try again later.',
+            }
           }
         },
       },

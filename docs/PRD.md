@@ -166,6 +166,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
   2. **analyze_spending** – Transactions over a date range; optional merchant, category, type (expenses/income/all), groupBy (category, merchant, month). Uses `transaction_log`; excludes non-expense categories unless requested.
   3. **get_budget_vs_actual** – Budget vs actual (YTD or annual) by category; over/under budget. Uses `budget_targets` and `transaction_log`.
   4. **analyze_forecast_evolution** – How forecasted annual spend (and thus budget gap) changed between two dates. Uses `budget_history` (with fallback: latest date ≤ endDate, then `budget_targets`). Computes per-category `Spend_Delta = End_Forecast - Start_Forecast`; sorts by |delta|; returns total forecast change, gap impact direction, and drivers (all in GBP); summary can be in GBP or USD via current FX.
+  5. **search_web** (optional/future) – Query external web sources for comparative data, benchmarks, or market information. Enables questions like "How does my Uber spending compare to average Londoners?" or "What's the typical cost of X in Y location?" Implementation would use a web search API (e.g., Google Custom Search, Serper, Tavily) to fetch relevant data, then synthesize with user's financial data for comparative insights. Considerations: API costs, rate limits, data accuracy/recency, privacy (user data not sent to search APIs), and clear disclaimers about external data sources.
 - **System prompt:** Date context (today, “last month”, “this year”, etc.), capabilities (snapshots, spending, budget performance, forecast evolution), and rules (always use tools, format currency, no raw JSON).
 - **UX:** Markdown responses, loading states, clear chat; errors surfaced in UI.
 
@@ -192,11 +193,22 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 - **Role:** Chat model for the AI Financial Assistant (`@ai-sdk/google`, `google('gemini-2.5-flash')`).
 - **Flow:** User message → `/api/chat` → `streamText` with tools → tool executions (Supabase reads) → model summarizes in natural language; response streamed to the client.
 
-### 5.4 Vercel (or similar)
+### 5.4 Web Search API (optional/future)
+
+- **Role:** Enable comparative analysis by querying external web sources for benchmarks, averages, or market data (e.g., "average Uber spending in London", "typical cost of groceries in NYC").
+- **Options:** Google Custom Search API, Serper API, Tavily Search API, or similar. Each has different pricing, rate limits, and result formats.
+- **Implementation considerations:**
+  - **Privacy:** User's financial data (amounts, categories) should only be used to construct search queries, not sent as context to search APIs.
+  - **Cost:** Web search APIs typically charge per query (e.g., $0.001–$0.01 per search). Consider rate limiting or user opt-in for web search features.
+  - **Accuracy:** External data may be outdated, region-specific, or from varying sources. Always cite sources and include disclaimers.
+  - **Tool design:** Add `search_web` tool to chat route that accepts a search query string, calls the chosen API, extracts relevant data, and returns structured results. The AI model then synthesizes user's data with external benchmarks.
+  - **Example flow:** User asks "How does my Uber spending compare to average in London?" → AI calls `analyze_spending` for user's Uber data → AI calls `search_web` with query "average Uber spending per month London UK" → AI synthesizes comparison in response.
+
+### 5.5 Vercel (or similar)
 
 - **Cron:** `vercel.json` defines a daily cron for `/api/cron/refresh` at `0 6 * * *` (06:00 UTC). Caller must send `Authorization: Bearer <CRON_SECRET>`.
 
-### 5.5 API routes summary
+### 5.6 API routes summary
 
 | Route | Method | Purpose |
 |-------|--------|---------|

@@ -54,6 +54,11 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   'analyze_spending': 'Analyzing spending data',
   'get_budget_vs_actual': 'Calculating budget comparison',
   'analyze_forecast_evolution': 'Analyzing forecast evolution',
+  'get_financial_health_summary': 'Analyzing financial health',
+  'analyze_monthly_category_trends': 'Analyzing monthly trends',
+  'get_net_worth_trend': 'Analyzing net worth trends',
+  'get_cash_runway': 'Calculating cash runway',
+  'search_web': 'Searching the web for comparative data',
 }
 
 export function ChatWidget() {
