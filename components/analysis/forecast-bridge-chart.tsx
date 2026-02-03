@@ -124,6 +124,19 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     }).format(value)
   }
 
+  // Compact format for call-out box: £12.7k, £1.2M (matches YoY Net Worth card)
+  const formatCurrencyCallout = (value: number) => {
+    const symbol = currency === 'USD' ? '$' : '£'
+    const abs = Math.abs(value)
+    if (abs >= 1_000_000) {
+      return `${symbol}${(abs / 1_000_000).toFixed(1)}M`
+    }
+    if (abs >= 1_000) {
+      return `${symbol}${(abs / 1_000).toFixed(1)}k`
+    }
+    return formatCurrencyFull(value)
+  }
+
   // Gap: negative = under budget (good), positive = over budget (bad). Bar = change in gap: negative delta = green, positive = red. End bar = darker shade by improvement/worsening.
   const getBarColor = (type: string) => {
     switch (type) {
@@ -211,44 +224,19 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
   const fontSizes = getChartFontSizes(isMobile)
 
   const netChange = data.totalEnd - data.totalStart
-  const absAmount = formatCurrencyFull(Math.abs(netChange))
+  const absAmount = formatCurrencyCallout(Math.abs(netChange))
   const shortDate = (s: string) => {
     const d = new Date(s + 'T12:00:00')
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   }
   const periodLabel = `${shortDate(data.startDate)} → ${shortDate(data.endDate)}`
 
-  const totalAbsoluteDelta = data.drivers.reduce((sum, d) => sum + Math.abs(d.delta), 0)
-  const worsened = data.drivers
-    .filter(
-      (d) =>
-        d.delta > 0 &&
-        (totalAbsoluteDelta === 0 || Math.abs(d.delta) >= DRIVER_MIN_SHARE * totalAbsoluteDelta)
-    )
-    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
-  const improved = data.drivers
-    .filter(
-      (d) =>
-        d.delta < 0 &&
-        (totalAbsoluteDelta === 0 || Math.abs(d.delta) >= DRIVER_MIN_SHARE * totalAbsoluteDelta)
-    )
-    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
-  const hasWorsened = worsened.length > 0
-  const hasImproved = improved.length > 0
-  // When gap worsened, lead with worsening drivers; when improved, lead with improvement drivers
-  const driversFirst = netChange > 0 ? worsened : improved
-  const driversSecond = netChange > 0 ? improved : worsened
-  const hasFirst = netChange > 0 ? hasWorsened : hasImproved
-  const hasSecond = netChange > 0 ? hasImproved : hasWorsened
-  const driverSubtext =
-    hasWorsened || hasImproved
-      ? [
-          hasFirst && `Driven by ${driversFirst.map((d) => d.category).join(', ')}`,
-          hasSecond && `partially offset by ${driversSecond.map((d) => d.category).join(', ')}`,
-        ]
-          .filter(Boolean)
-          .join(', ')
-      : null
+  // Calculate percentage change for call-out box
+  const percentChange = data.totalStart !== 0
+    ? (netChange / Math.abs(data.totalStart)) * 100
+    : null
+
+  const formatPercent = (value: number) => `${Math.abs(value).toFixed(1)}%`
 
   return (
     <Card>
@@ -258,60 +246,45 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
             <CardTitle className="text-xl">Forecast Evolution</CardTitle>
             <p className="text-sm text-muted-foreground mt-0.5">{periodLabel}</p>
           </div>
-          <div className="rounded-lg border border-border bg-background p-3 shadow-sm space-y-1">
-            <span
-              className={cn(
-                'text-sm font-medium tabular-nums',
-                netChange < 0 && 'text-green-600 dark:text-green-500',
-                netChange > 0 && 'text-red-600 dark:text-red-500',
-                netChange === 0 && 'text-muted-foreground'
+          <div className="rounded-lg border border-border bg-background p-3 shadow-sm">
+            <span className="text-sm font-medium tabular-nums">
+              {netChange < 0 && (
+                <>
+                  Gap to budget improved by{' '}
+                  <span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>
+                    {absAmount}
+                  </span>
+                  {percentChange !== null && (
+                    <>
+                      {' '}(<span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>{formatPercent(percentChange)}</span>)
+                    </>
+                  )}
+                </>
               )}
-            >
-              {netChange < 0 && `Gap to budget improved by ${absAmount}`}
-              {netChange > 0 && `Gap to budget worsened by ${absAmount}`}
-              {netChange === 0 && 'Gap to budget unchanged'}
+              {netChange > 0 && (
+                <>
+                  Gap to budget worsened by{' '}
+                  <span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>
+                    {absAmount}
+                  </span>
+                  {percentChange !== null && (
+                    <>
+                      {' '}(<span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>{formatPercent(percentChange)}</span>)
+                    </>
+                  )}
+                </>
+              )}
+              {netChange === 0 && (
+                <>
+                  Gap to budget unchanged
+                  {percentChange !== null && (
+                    <>
+                      {' '}(<span className={cn('font-bold', 'text-muted-foreground')}>{formatPercent(percentChange)}</span>)
+                    </>
+                  )}
+                </>
+              )}
             </span>
-            {driverSubtext && (
-              <p className="text-xs text-muted-foreground">
-                {hasFirst && (
-                  <>
-                    Driven by{' '}
-                    {driversFirst.map((d, i) => (
-                      <span key={d.category}>
-                        {i > 0 && ', '}
-                        <span
-                          className={cn(
-                            'font-semibold',
-                            netChange > 0 ? 'text-red-600 dark:text-red-500' : 'text-green-600 dark:text-green-500'
-                          )}
-                        >
-                          {d.category}
-                        </span>
-                      </span>
-                    ))}
-                  </>
-                )}
-                {hasFirst && hasSecond && ', '}
-                {hasSecond && (
-                  <>
-                    partially offset by{' '}
-                    {driversSecond.map((d, i) => (
-                      <span key={d.category}>
-                        {i > 0 && ', '}
-                        <span
-                          className={cn(
-                            'font-semibold',
-                            netChange > 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'
-                          )}
-                        >
-                          {d.category}
-                        </span>
-                      </span>
-                    ))}
-                  </>
-                )}
-              </p>
-            )}
           </div>
         </div>
       </CardHeader>

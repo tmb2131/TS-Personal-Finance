@@ -33,6 +33,61 @@ Other notable deps: `lucide-react` (icons), `react-markdown` + `remark-gfm` (cha
 
 ---
 
+## 2.1 Design System & Chart Standards
+
+### Chart Typography
+- **Standard font sizes:** Defined in `lib/chart-styles.ts`
+  - Desktop: 12px (matches `text-xs`)
+  - Mobile: 11px (global floor)
+- **Usage:** All charts use `getChartFontSizes(isMobile)` for consistent typography
+- **Components:** Applied to axis ticks, legends, tooltips, and icon sizes
+
+### Chart Responsive Patterns
+- **Mobile detection:** All charts use `useIsMobile()` hook from `lib/hooks/use-is-mobile` (breakpoint: 768px)
+- **Chart heights:**
+  - **Standard charts:** `height={isMobile ? 260 : 320}` (most line/bar charts)
+  - **Complex waterfalls:** `height={isMobile ? 260 : 360}` (Forecast Bridge, YoY Net Worth Waterfall - requires extra space for angled labels)
+- **Responsive margins:**
+  - Mobile: `{ top: 10, right: 10, left: 0, bottom: 5 }`
+  - Desktop: `{ top: 20, right: 30, left: 20, bottom: 5 }`
+  - **Exception:** Complex waterfalls may use larger margins (e.g., `{ top: 44, right: 30, left: 20, bottom: 72 }`) for angled X-axis labels
+
+### Chart Color Palette
+- **App design system colors** (not generic Recharts defaults):
+  - **Green (positive/growth):** `#22c55e` (Green-500), `#16a34a` (Green-600 for emphasis)
+  - **Red (negative/decline):** `#ef4444` (Red-500), `#dc2626` (Red-600 for emphasis)
+  - **Blue:** `#3b82f6` (Blue-500), `#1e40af` (Blue-800 for emphasis)
+  - **Violet:** `#8b5cf6` (Violet-500)
+  - **Neutral/Gray:** `#6b7280` (Gray-500), `#64748b` (Slate-500)
+- **Grid/axis strokes:** `#e5e7eb` (grid), `#6b7280` (axes)
+- **Bar strokes:** White (`#fff`) with `strokeWidth={1}` for better separation
+
+### Chart Component Standards
+- **Card structure:** All charts use `Card` with `CardHeader className="bg-muted/50"` and `CardTitle className="text-xl"`
+- **Tooltip styling:**
+  - Responsive padding: `isMobile ? '6px 10px' : '8px 12px'`
+  - Border: `1px solid #e5e7eb`
+  - Background: `white`
+  - Border radius: `6px`
+  - Font size: `${fontSizes.tooltipMin}px` (with `px` suffix)
+- **Bar styling:** `radius={[4, 4, 0, 0]}` for rounded top corners
+- **Loading states:** Use `Skeleton` components matching chart structure
+- **Error states:** Use `EmptyState` component with appropriate icon and message
+
+### Call-Out Box Pattern
+- **Usage:** Summary call-out boxes in `CardHeader` for key metrics (Forecast Evolution, YoY Net Worth Change)
+- **Styling:** `rounded-lg border border-border bg-background p-3 shadow-sm`
+- **Content:** Main metric with color-coded monetary values (green for positive, red for negative, bold font)
+- **Layout:** Positioned in `CardHeader` with `flex flex-col gap-3` layout
+
+### Chart-Specific Notes
+- **Forecast Evolution:** Includes call-out box showing gap change and key drivers; uses 360px height for waterfall complexity
+- **YoY Net Worth Change:** Includes call-out box showing net worth change with percentage; uses 360px height for waterfall complexity
+- **Net Worth Start/End:** Simple bar chart, uses standard 320px height
+- **Forecast Gap Over Time:** Simple line chart, uses standard 320px height
+
+---
+
 ## 3. Data Model & Schema
 
 Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**: all user-specific tables include `user_id` (UUID, references `auth.users`). RLS policies restrict access to `user_id = current_user_id()`. FX tables (`fx_rates`, `fx_rate_current`) are global (no `user_id`).
@@ -236,4 +291,4 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ---
 
-*Document generated from codebase scan. Last updated: default_currency (user_profiles, migration 020), Settings default currency and post-save sync; Analysis in-page navigation (AnalysisNavigation), hash/query scroll (AnalysisHashScroll), and URL params for transaction analysis; allowlist noted as optional/unused.*
+*Document generated from codebase scan. Last updated: Chart style standardization (responsive heights/margins, app color palette, typography standards, call-out box pattern); default_currency (user_profiles, migration 020), Settings default currency and post-save sync; Analysis in-page navigation (AnalysisNavigation), hash/query scroll (AnalysisHashScroll), and URL params for transaction analysis; allowlist noted as optional/unused.*
