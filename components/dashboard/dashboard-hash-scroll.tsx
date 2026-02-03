@@ -61,7 +61,7 @@ export function DashboardHashScroll() {
     const t2 = window.setTimeout(runScroll, 150)
 
     // Retry so we scroll again after Suspense/content has rendered
-    const timeouts: ReturnType<typeof setTimeout>[] = []
+    const timeouts: number[] = []
     RETRY_DELAYS.forEach((ms) => {
       timeouts.push(
         window.setTimeout(() => {

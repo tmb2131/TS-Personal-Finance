@@ -1,6 +1,6 @@
 # TS Personal Finance - Personal Finance Dashboard
 
-A modern personal finance dashboard built with Next.js 14, Supabase, and Google Sheets integration.
+A modern personal finance dashboard built with Next.js 16, Supabase, and Google Sheets integration.
 
 ## Features
 
@@ -14,12 +14,12 @@ A modern personal finance dashboard built with Next.js 14, Supabase, and Google 
 
 ## Tech Stack
 
-- **Framework**: Next.js 14+ (App Router, TypeScript)
+- **Framework**: Next.js 16+ (App Router, TypeScript)
 - **Styling**: Tailwind CSS
 - **UI Components**: Shadcn/UI (Radix Primitives)
 - **Charts**: Recharts
 - **Backend/Database**: Supabase (PostgreSQL)
-- **Auth**: Supabase Auth (Magic Link/Email)
+- **Auth**: Supabase Auth (Google OAuth)
 - **Integration**: Google Sheets API (v4)
 
 ## Setup
@@ -107,11 +107,7 @@ The app expects a Google Sheet with the following tabs:
 
 ## Authentication
 
-Access is restricted to:
-- `thomas.brosens@gmail.com`
-- `sriya.sundaresan@gmail.com`
-
-Users will receive a magic link via email to authenticate.
+Sign in with Google; data is isolated per user via Supabase Row Level Security (RLS). Access can be restricted to specific emails (see `lib/allowed-emails.ts`).
 
 ## Project Structure
 

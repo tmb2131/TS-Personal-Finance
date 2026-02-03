@@ -1,6 +1,6 @@
 # Mobile UI Recommendations
 
-Recommendations to make the mobile experience polished and surface only the most relevant insights.
+Recommendations to make the mobile experience polished and surface only the most relevant insights. Items below in **Implemented** are done; the rest of the doc is kept for reference and optional follow-ups.
 
 **Implemented (current):**
 - Safe area padding for bottom nav and main content on mobile (notch/home indicator).
@@ -26,15 +26,15 @@ Recommendations to make the mobile experience polished and surface only the most
 
 ---
 
-## 2. **Safe area and touch targets** (Quick win)
+## 2. **Safe area and touch targets** (Quick win) — Implemented
 
-**Current:** `main` has `pb-44 md:pb-6` for the bottom nav. On notched devices the nav can sit in the safe area.
+**Current:** `main` uses `pb-[calc(6rem+env(safe-area-inset-bottom,0px))]` on mobile so content clears the bottom nav and the notch/home indicator. The bottom nav uses `env(safe-area-inset-bottom)` in its padding; the "More" sheet uses safe-area inset in its bottom padding. Touch targets: bottom nav items use `min-h-[48px]` and comfortable tap areas.
 
-**Recommendations:**
-- Add safe-area padding so the bottom nav and content clear the notch/home indicator: e.g. `pb-[max(11rem,env(safe-area-inset-bottom)+6rem)]` on `main` for mobile, or use `env(safe-area-inset-bottom)` in the nav container.
-- Ensure tappable targets (nav items, buttons, cards) are at least 44×44px. Bottom nav items already use `min-h-[72px]`; keep that or similar.
+**Recommendations (done):**
+- Safe-area padding is applied to main and the nav container.
+- Tappable targets are sized for touch; nav items meet or exceed 44px.
 
-**Files:** `app/layout.tsx`, `components/sidebar.tsx`.
+**Files:** `components/app-shell.tsx`, `components/sidebar.tsx`.
 
 ---
 

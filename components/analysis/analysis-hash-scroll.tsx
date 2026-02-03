@@ -75,7 +75,7 @@ export function AnalysisHashScroll() {
     const t2 = window.setTimeout(runScroll, delay)
 
     // For forecast-evolution, retry scroll at intervals so we correct position once the section has rendered
-    const timeouts: ReturnType<typeof setTimeout>[] = []
+    const timeouts: number[] = []
     if (targetId === 'forecast-evolution') {
       FORECAST_EVOLUTION_RETRY_DELAYS.forEach((ms) => {
         timeouts.push(

@@ -75,7 +75,7 @@ When the user says "last month", "this year", "this month", or similar, you MUST
 
   let result
   try {
-    // @ts-ignore - maxSteps property exists at runtime but may not be in TypeScript types
+    type StreamTextOptions = Parameters<typeof streamText>[0]
     result = streamText({
       model: google('gemini-2.5-flash'),
       system: `You are a Senior Financial Analyst AI Assistant with deep expertise in personal finance analysis. You have access to comprehensive financial data including account balances, transaction history, budget targets, and historical net worth trends.
@@ -161,7 +161,6 @@ If the user asks something you cannot answer with the available data (e.g., "How
 - Net worth over time and cash runway
 - Comparative analysis with external benchmarks and averages (e.g., "How does my spending compare to average?")`,
       messages: modelMessages,
-      // @ts-expect-error - maxSteps property exists at runtime but may not be in TypeScript types
       maxSteps: 5, // CRITICAL: Allow multiple steps so AI can call tool AND generate response
       stopWhen: () => false, // CRITICAL: Never stop early - allow all steps up to maxSteps
     onStepFinish: ({ text, toolCalls, toolResults, finishReason }) => {
@@ -1836,7 +1835,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
         },
       },
     },
-    })
+    } as StreamTextOptions & { maxSteps: number })
     
     return result.toUIMessageStreamResponse()
   } catch (streamError) {

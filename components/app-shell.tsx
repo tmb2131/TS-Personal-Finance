@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />
-          <main className="main-content flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6">
+          <main className="main-content flex-1 overflow-y-auto p-4 md:p-6 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-6">
             {children}
           </main>
         </div>
