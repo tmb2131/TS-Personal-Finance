@@ -29,9 +29,18 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { data: rows, error } = await supabase
     .from('budget_history')
     .select('date, category, annual_budget, forecast_spend')
+    .eq('user_id', user.id)
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date', { ascending: true })
