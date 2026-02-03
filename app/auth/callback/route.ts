@@ -63,10 +63,9 @@ export async function GET(request: Request) {
           { onConflict: 'id' }
         )
 
-      // For new users, trigger sync in background (don't wait for it to complete)
+      // For new users, trigger sync in background (don't block redirect)
       if (isNewUser) {
-        // Run sync asynchronously - don't block the redirect
-        // Use the supabase client we already have (it has the session)
+        // Start sync immediately but don't await - redirect happens right away
         syncGoogleSheet(supabase, {
           spreadsheetId: DUMMY_SHEET_ID,
           userId: data.user.id,
