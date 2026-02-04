@@ -3,32 +3,29 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 
-/** Offset from top of viewport so section title/cards sit nicely below any chrome. */
-const SECTION_TOP_OFFSET = 16
-/** For expenses-table, use minimal offset to put it at the top. */
-const EXPENSES_TABLE_TOP_OFFSET = 0
-/** Section ids we handle (scroll so summary cards at top, table below). */
-const DASHBOARD_SECTION_IDS = ['annual-trends', 'monthly-trends', 'expenses-table'] as const
-/** Minimum height for section before we trust scroll (avoids scrolling before Suspense content has rendered). */
-const SECTION_MIN_HEIGHT = 100
+/** Offset from top of viewport when scrolling to a section (0 = section at top of screen). */
+const SECTION_TOP_OFFSET = 0
+/** Section ids on the Insights page (KeyInsights cards). */
+const INSIGHTS_SECTION_IDS = ['executive-summary', 'net-worth', 'annual-budget', 'annual-spend', 'monthly-spend'] as const
+/** Minimum height for section before we trust scroll (avoids scrolling before content has rendered). */
+const SECTION_MIN_HEIGHT = 80
 /** Retry delays (ms) so we scroll again after content has rendered. */
-const RETRY_DELAYS = [200, 500, 900]
+const RETRY_DELAYS = [150, 400, 800]
 /** When already on page, poll for hash changes (Next.js may not fire hashchange). */
 const SAME_PAGE_POLL_INTERVAL = 120
 const SAME_PAGE_POLL_DURATION = 1200
 
 /**
- * On the Dashboard page, scroll the main content to the section indicated by the URL hash
- * (e.g. /#annual-trends, /#monthly-trends). Positions the section so its top (summary cards)
- * is at the top of the viewport and the table is visible below.
- * Works when navigating from another page and when already on Dashboard (same-page hash change).
+ * On the Insights page, scroll the main content to the section indicated by the URL hash
+ * (e.g. /insights#annual-budget). Positions the section at the top of the viewport.
+ * Works when navigating from another page and when already on Insights (same-page hash change).
  */
-export function DashboardHashScroll() {
+export function InsightsHashScroll() {
   const pathname = usePathname()
   const lastScrolledId = useRef<string | null>(null)
 
   const scrollToTarget = useCallback((targetId: string) => {
-    if (!targetId || !DASHBOARD_SECTION_IDS.includes(targetId as (typeof DASHBOARD_SECTION_IDS)[number])) return
+    if (!targetId || !INSIGHTS_SECTION_IDS.includes(targetId as (typeof INSIGHTS_SECTION_IDS)[number])) return
     const element = document.getElementById(targetId)
     const main = document.querySelector('.main-content') as HTMLElement | null
     if (!element || !main) return
@@ -38,12 +35,10 @@ export function DashboardHashScroll() {
     const relativeTop = elementRect.top - mainRect.top + main.scrollTop
     const elementHeight = elementRect.height
 
-    // Wait until the section has real height (Suspense may still be showing skeleton)
     if (elementHeight < SECTION_MIN_HEIGHT) return
 
     const mainHeight = main.clientHeight
-    const offset = targetId === 'expenses-table' ? EXPENSES_TABLE_TOP_OFFSET : SECTION_TOP_OFFSET
-    const scrollTop = Math.max(0, relativeTop - offset)
+    const scrollTop = Math.max(0, relativeTop - SECTION_TOP_OFFSET)
     const maxScroll = main.scrollHeight - mainHeight
     const clampedScroll = Math.min(scrollTop, maxScroll)
 
@@ -52,32 +47,27 @@ export function DashboardHashScroll() {
   }, [])
 
   useEffect(() => {
-    if (pathname !== '/') return
+    if (pathname !== '/insights') return
 
     const getTargetId = () =>
       typeof window !== 'undefined' ? (window.location.hash.slice(1) || '') : ''
 
-    const runScroll = (id: string) => {
-      if (id && DASHBOARD_SECTION_IDS.includes(id as (typeof DASHBOARD_SECTION_IDS)[number])) {
-        scrollToTarget(id)
+    const runScroll = (targetId: string) => {
+      if (targetId && INSIGHTS_SECTION_IDS.includes(targetId as (typeof INSIGHTS_SECTION_IDS)[number])) {
+        scrollToTarget(targetId)
       }
     }
 
+    // Initial run and retries (e.g. after nav from another page)
     const targetId = getTargetId()
     let t1: number | undefined
     const timeouts: number[] = []
-    if (targetId && DASHBOARD_SECTION_IDS.includes(targetId as (typeof DASHBOARD_SECTION_IDS)[number])) {
+    if (targetId) {
       lastScrolledId.current = null
-      const run = () => scrollToTarget(targetId)
+      const run = () => runScroll(targetId)
       t1 = requestAnimationFrame(() => requestAnimationFrame(run))
       timeouts.push(window.setTimeout(run, 150))
       RETRY_DELAYS.forEach((ms) => timeouts.push(window.setTimeout(() => requestAnimationFrame(run), ms)))
-    }
-
-    const scheduleRetries = (id: string) => {
-      RETRY_DELAYS.forEach((ms) =>
-        timeouts.push(window.setTimeout(() => requestAnimationFrame(() => runScroll(id)), ms))
-      )
     }
 
     const onHashChange = () => {
@@ -85,12 +75,10 @@ export function DashboardHashScroll() {
       if (id) {
         lastScrolledId.current = null
         runScroll(id)
-        scheduleRetries(id)
       }
     }
     window.addEventListener('hashchange', onHashChange)
 
-    /** When user re-clicks a link that already matches the current URL (same hash), still scroll to section. */
     const onDocumentClick = (e: MouseEvent) => {
       const link = (e.target as HTMLElement).closest('a[href*="#"]')
       if (!link) return
@@ -99,11 +87,10 @@ export function DashboardHashScroll() {
       if (idx === -1) return
       const pathFromLink = href.slice(0, idx) || '/'
       const hash = href.slice(idx + 1)
-      if (pathFromLink !== pathname || !DASHBOARD_SECTION_IDS.includes(hash as (typeof DASHBOARD_SECTION_IDS)[number])) return
+      if (pathFromLink !== pathname || !INSIGHTS_SECTION_IDS.includes(hash as (typeof INSIGHTS_SECTION_IDS)[number])) return
       if (getTargetId() === hash) {
         lastScrolledId.current = null
         runScroll(hash)
-        scheduleRetries(hash)
       }
     }
     document.addEventListener('click', onDocumentClick, true)

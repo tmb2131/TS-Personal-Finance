@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 const HEADER_OFFSET = 100
@@ -9,17 +9,21 @@ const MOBILE_BREAKPOINT = 768
 const FORECAST_EVOLUTION_MIN_HEIGHT = 150
 /** Retry delays (ms) for scrolling to #forecast-evolution so we run again after content has rendered. */
 const FORECAST_EVOLUTION_RETRY_DELAYS = [200, 500, 900]
+/** When already on page, poll for hash/section changes (Next.js may not fire hashchange). */
+const SAME_PAGE_POLL_INTERVAL = 120
+const SAME_PAGE_POLL_DURATION = 1200
 
 /**
  * On the Analysis page, scroll the main content to the section indicated by:
  * - URL hash (e.g. /analysis#forecast-evolution)
  * - section query param (e.g. /analysis?section=transaction-analysis from Dashboard trends links)
  * The main scroll container is .main-content, not the window.
- * Scrolling to #forecast-evolution centers the section vertically in the viewport (desktop and mobile).
+ * Works when navigating from another page and when already on Analysis (same-page hash/section change).
  */
 export function AnalysisHashScroll() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const lastScrolledId = useRef<string | null>(null)
 
   const scrollToTarget = useCallback((targetId: string) => {
     if (!targetId) return
@@ -50,6 +54,7 @@ export function AnalysisHashScroll() {
     }
 
     main.scrollTo({ top: scrollTop, behavior: 'smooth' })
+    lastScrolledId.current = targetId
   }, [])
 
   useEffect(() => {
@@ -62,42 +67,67 @@ export function AnalysisHashScroll() {
     }
 
     const targetId = getTargetId()
-    if (!targetId) return
-
-    const runScroll = () => scrollToTarget(targetId)
-
-    // Run after layout so the Analysis page content is in the DOM
-    const t1 = requestAnimationFrame(() => {
-      requestAnimationFrame(runScroll)
-    })
-    // Allow time for content to render (e.g. when navigating from Insights)
-    const delay = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT ? 300 : 150
-    const t2 = window.setTimeout(runScroll, delay)
-
-    // For forecast-evolution, retry scroll at intervals so we correct position once the section has rendered
+    let t1: number | undefined
     const timeouts: number[] = []
-    if (targetId === 'forecast-evolution') {
-      FORECAST_EVOLUTION_RETRY_DELAYS.forEach((ms) => {
-        timeouts.push(
-          window.setTimeout(() => {
-            requestAnimationFrame(runScroll)
-          }, ms)
-        )
-      })
+
+    if (targetId) {
+      lastScrolledId.current = null
+      const run = () => scrollToTarget(targetId)
+      t1 = requestAnimationFrame(() => requestAnimationFrame(run))
+      const delay = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT ? 300 : 150
+      timeouts.push(window.setTimeout(run, delay))
+      if (targetId === 'forecast-evolution') {
+        FORECAST_EVOLUTION_RETRY_DELAYS.forEach((ms) => {
+          timeouts.push(
+            window.setTimeout(() => requestAnimationFrame(run), ms)
+          )
+        })
+      }
     }
 
     const onHashChange = () => {
-      const id = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
-      if (id) scrollToTarget(id)
+      const id = getTargetId()
+      if (id) {
+        lastScrolledId.current = null
+        scrollToTarget(id)
+      }
     }
-
     window.addEventListener('hashchange', onHashChange)
 
+    const onDocumentClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest('a[href*="#"]')
+      if (!link) return
+      const href = link.getAttribute('href') ?? ''
+      const idx = href.indexOf('#')
+      if (idx === -1) return
+      const pathFromLink = href.slice(0, idx) || '/'
+      const hash = href.slice(idx + 1)
+      if (pathFromLink !== pathname) return
+      if (getTargetId() === hash && hash) {
+        lastScrolledId.current = null
+        scrollToTarget(hash)
+      }
+    }
+    document.addEventListener('click', onDocumentClick, true)
+
+    const pollStart = Date.now()
+    const pollId = window.setInterval(() => {
+      if (Date.now() - pollStart > SAME_PAGE_POLL_DURATION) {
+        window.clearInterval(pollId)
+        return
+      }
+      const id = getTargetId()
+      if (id && id !== lastScrolledId.current) {
+        scrollToTarget(id)
+      }
+    }, SAME_PAGE_POLL_INTERVAL)
+
     return () => {
-      cancelAnimationFrame(t1)
-      clearTimeout(t2)
+      if (t1 !== undefined) cancelAnimationFrame(t1)
       timeouts.forEach(clearTimeout)
       window.removeEventListener('hashchange', onHashChange)
+      document.removeEventListener('click', onDocumentClick, true)
+      window.clearInterval(pollId)
     }
   }, [pathname, searchParams, scrollToTarget])
 

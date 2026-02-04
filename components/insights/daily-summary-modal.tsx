@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrency } from '@/lib/contexts/currency-context'
@@ -259,10 +260,38 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const handleNavigate = (path: string) => {
     // Close modal without setting sessionStorage (navigation is not a dismissal)
     onOpenChange(false)
-    // Navigate after a brief delay to ensure modal closes cleanly
+    const hashMatch = path.match(/#([^#]+)$/)
+    const hash = hashMatch ? hashMatch[1] : null
+    const targetPathname = path.split('#')[0] || '/'
+    const applyHashIfOnTarget = () => {
+      if (typeof window === 'undefined' || !hash) return
+      if (window.location.pathname === targetPathname) window.location.hash = hash
+    }
     setTimeout(() => {
       router.push(path)
+      if (hash) {
+        applyHashIfOnTarget()
+        setTimeout(applyHashIfOnTarget, 100)
+        setTimeout(applyHashIfOnTarget, 300)
+        setTimeout(applyHashIfOnTarget, 600)
+        setTimeout(applyHashIfOnTarget, 1000)
+      }
     }, 150)
+  }
+
+  /** Use Link for Dashboard (/#...) so the hash is in the href. If Next.js drops the hash, apply it after nav. */
+  const navButtonClass = 'flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity text-left'
+  const applyHashAfterNav = (path: string) => {
+    const hashMatch = path.match(/#([^#]+)$/)
+    const hash = hashMatch ? hashMatch[1] : null
+    if (!hash || typeof window === 'undefined') return
+    const targetPathname = path.split('#')[0] || '/'
+    const apply = () => {
+      if (window.location.pathname === targetPathname) window.location.hash = hash
+    }
+    setTimeout(apply, 200)
+    setTimeout(apply, 500)
+    setTimeout(apply, 900)
   }
 
   const formatLastSync = () => {
@@ -305,16 +334,17 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             <div className="grid grid-cols-2 gap-3">
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <button
-                    onClick={() => handleNavigate('/#expenses-table')}
-                    className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                  <Link
+                    href="/#expenses-table"
+                    onClick={() => { onOpenChange(false); applyHashAfterNav('/#expenses-table') }}
+                    className={navButtonClass}
                   >
                     <div className="flex items-center gap-1.5">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs font-medium text-muted-foreground">Annual Est. Spend</span>
                     </div>
                     <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
+                  </Link>
                   <div className="text-xl font-bold tabular-nums">
                     {formatCurrency(annualEstimatedSpend)}
                   </div>
@@ -337,7 +367,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
               <Card>
                 <CardContent className="pt-4 pb-4">
                   <button
-                    onClick={() => handleNavigate('/#budget-table')}
+                    onClick={() => handleNavigate('/insights#annual-budget')}
                     className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
                   >
                     <div className="flex items-center gap-1.5">
@@ -391,54 +421,95 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                       {gapToBudget >= 0 ? (
                         <div className="grid grid-cols-2 gap-3 mb-1.5">
                           {/* When gap worsened, show Over Budget on left; when gap improved, show Under Budget on left */}
-                          {(yesterdayChange !== null && yesterdayChange > 0
-                            ? [topDrivers.overBudgetDrivers, topDrivers.underBudgetDrivers]
-                            : [topDrivers.underBudgetDrivers, topDrivers.overBudgetDrivers]
-                          ).map((drivers, idx) => {
-                            if (drivers.length === 0) return null
-                            const isOverBudget = idx === 0
-                              ? yesterdayChange !== null && yesterdayChange > 0
-                              : yesterdayChange === null || yesterdayChange <= 0
-                            return (
-                              <div key={idx}>
-                                <div className={cn(
-                                  'text-[10px] font-bold mb-1',
-                                  isOverBudget ? 'text-red-600' : 'text-green-600'
-                                )}>
-                                  {isOverBudget ? 'Top Drivers of Worsening Gap:' : 'Top Drivers of Improving Gap:'}
-                                </div>
-                                {drivers.map((driver) => (
-                                  <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                    <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                    <span className={cn(
-                                      'font-medium tabular-nums',
-                                      isOverBudget ? 'text-red-600' : 'text-green-600'
-                                    )}>
-                                      {formatCurrency(Math.abs(driver.delta))}
-                                    </span>
+                          {(() => {
+                            const allDrivers = [
+                              ...topDrivers.overBudgetDrivers,
+                              ...topDrivers.underBudgetDrivers,
+                            ]
+                            const maxDelta = allDrivers.length > 0
+                              ? Math.max(...allDrivers.map((d) => Math.abs(d.delta)), 1)
+                              : 1
+                            return (yesterdayChange !== null && yesterdayChange > 0
+                              ? [topDrivers.overBudgetDrivers, topDrivers.underBudgetDrivers]
+                              : [topDrivers.underBudgetDrivers, topDrivers.overBudgetDrivers]
+                            ).map((drivers, idx) => {
+                              if (drivers.length === 0) return null
+                              const isOverBudget = idx === 0
+                                ? yesterdayChange !== null && yesterdayChange > 0
+                                : yesterdayChange === null || yesterdayChange <= 0
+                              return (
+                                <div key={idx}>
+                                  <div className={cn(
+                                    'text-[10px] font-bold mb-1',
+                                    isOverBudget ? 'text-red-600' : 'text-green-600'
+                                  )}>
+                                    {isOverBudget ? 'Top Drivers of Worsening Gap:' : 'Top Drivers of Improving Gap:'}
                                   </div>
-                                ))}
-                              </div>
-                            )
-                          })}
+                                  <div className="space-y-1.5">
+                                    {drivers.map((driver) => {
+                                      const pct = (Math.abs(driver.delta) / maxDelta) * 100
+                                      return (
+                                        <div key={driver.category} className="flex items-center gap-1.5">
+                                          <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                          <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
+                                            <div
+                                              className={cn('h-full rounded', isOverBudget ? 'bg-red-500' : 'bg-green-500')}
+                                              style={{ width: `${pct}%` }}
+                                            />
+                                          </div>
+                                          <span className={cn(
+                                            'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
+                                            isOverBudget ? 'text-red-600' : 'text-green-600'
+                                          )}>
+                                            {formatCurrency(Math.abs(driver.delta))}
+                                          </span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })
+                          })()}
                         </div>
                       ) : (
                         <>
-                          <div className="text-[10px] font-bold text-muted-foreground mb-1.5">Top Drivers:</div>
-                          {[...topDrivers.underBudgetDrivers, ...topDrivers.overBudgetDrivers]
-                            .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
-                            .slice(0, 3)
-                            .map((driver) => (
-                              <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                <span className={cn(
-                                  'font-medium tabular-nums',
-                                  driver.delta < 0 ? 'text-green-600' : 'text-red-600'
-                                )}>
-                                  {formatCurrency(Math.abs(driver.delta))}
-                                </span>
-                              </div>
-                            ))}
+                          {(() => {
+                            const combined = [...topDrivers.underBudgetDrivers, ...topDrivers.overBudgetDrivers]
+                              .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+                              .slice(0, 3)
+                            const maxDelta = combined.length > 0
+                              ? Math.max(...combined.map((d) => Math.abs(d.delta)), 1)
+                              : 1
+                            return (
+                              <>
+                                <div className="text-[10px] font-bold text-muted-foreground mb-1.5">Top Drivers:</div>
+                                <div className="space-y-1.5">
+                                  {combined.map((driver) => {
+                                    const pct = (Math.abs(driver.delta) / maxDelta) * 100
+                                    const isWorsening = driver.delta > 0
+                                    return (
+                                      <div key={driver.category} className="flex items-center gap-1.5">
+                                        <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
+                                          <div
+                                            className={cn('h-full rounded', isWorsening ? 'bg-red-500' : 'bg-green-500')}
+                                            style={{ width: `${pct}%` }}
+                                          />
+                                        </div>
+                                        <span className={cn(
+                                          'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
+                                          isWorsening ? 'text-red-600' : 'text-green-600'
+                                        )}>
+                                          {formatCurrency(Math.abs(driver.delta))}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </>
+                            )
+                          })()}
                         </>
                       )}
                     </div>
@@ -451,16 +522,17 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             <div className="grid grid-cols-2 gap-3">
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <button
-                    onClick={() => handleNavigate('/#monthly-trends')}
-                    className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                  <Link
+                    href="/#monthly-trends"
+                    onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
+                    className={navButtonClass}
                   >
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs font-medium text-muted-foreground">Est. This Month</span>
                     </div>
                     <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
+                  </Link>
                   <div className="text-xl font-bold tabular-nums">
                     {formatCurrency(currentMonthlySpend)}
                   </div>
@@ -469,16 +541,17 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <button
-                    onClick={() => handleNavigate('/#monthly-trends')}
-                    className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                  <Link
+                    href="/#monthly-trends"
+                    onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
+                    className={navButtonClass}
                   >
                     <div className="flex items-center gap-1.5">
                       <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs font-medium text-muted-foreground">vs 3M Avg</span>
                     </div>
                     <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
+                  </Link>
                   {monthlyVs3M !== null ? (
                     <div className={cn(
                       'text-xl font-bold tabular-nums',
@@ -502,82 +575,89 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             {(monthlyDrivers.spendingMore.length > 0 || monthlyDrivers.spendingLess.length > 0) && (
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <button
-                    onClick={() => handleNavigate('/analysis#monthly-category-trends')}
+                  <Link
+                    href="/#monthly-trends"
+                    onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
                     className="flex items-center justify-between w-full mb-2 group hover:opacity-70 transition-opacity"
                   >
                     <span className="text-xs font-medium text-muted-foreground">Monthly Spend Drivers</span>
                     <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
+                  </Link>
                   <div className="grid grid-cols-2 gap-3">
-                    {/* When monthly spend decreased vs 3M avg, show "Spending Less" on left */}
-                    {monthlyVs3M !== null && monthlyVs3M < 0 ? (
-                      <>
-                        {monthlyDrivers.spendingLess.length > 0 && (
-                          <div>
-                            <div className="text-[10px] font-bold text-green-600 mb-1">Spending Less:</div>
-                            <div className="space-y-0.5">
-                              {monthlyDrivers.spendingLess.map((driver) => (
-                                <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                  <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                  <span className="font-medium text-green-600 tabular-nums">
-                                    {formatCurrency(Math.abs(driver.diff))}
-                                  </span>
-                                </div>
-                              ))}
+                    {(() => {
+                      const maxDiff = Math.max(
+                        ...monthlyDrivers.spendingMore.map((d) => Math.abs(d.diff)),
+                        ...monthlyDrivers.spendingLess.map((d) => Math.abs(d.diff)),
+                        1
+                      )
+                      const leftFirst = monthlyVs3M !== null && monthlyVs3M < 0
+                      const leftDrivers = leftFirst ? monthlyDrivers.spendingLess : monthlyDrivers.spendingMore
+                      const rightDrivers = leftFirst ? monthlyDrivers.spendingMore : monthlyDrivers.spendingLess
+                      const leftIsGreen = leftFirst
+                      const rightIsGreen = !leftFirst
+                      return (
+                        <>
+                          {leftDrivers.length > 0 && (
+                            <div>
+                              <div className={cn('text-[10px] font-bold mb-1', leftIsGreen ? 'text-green-600' : 'text-red-600')}>
+                                {leftIsGreen ? 'Spending Less:' : 'Spending More:'}
+                              </div>
+                              <div className="space-y-1.5">
+                                {leftDrivers.map((driver) => {
+                                  const pct = (Math.abs(driver.diff) / maxDiff) * 100
+                                  return (
+                                    <div key={driver.category} className="flex items-center gap-1.5">
+                                      <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                      <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
+                                        <div
+                                          className={cn('h-full rounded', leftIsGreen ? 'bg-green-500' : 'bg-red-500')}
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                      <span className={cn(
+                                        'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
+                                        leftIsGreen ? 'text-green-600' : 'text-red-600'
+                                      )}>
+                                        {formatCurrency(Math.abs(driver.diff))}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                        {monthlyDrivers.spendingMore.length > 0 && (
-                          <div>
-                            <div className="text-[10px] font-bold text-red-600 mb-1">Spending More:</div>
-                            <div className="space-y-0.5">
-                              {monthlyDrivers.spendingMore.map((driver) => (
-                                <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                  <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                  <span className="font-medium text-red-600 tabular-nums">
-                                    {formatCurrency(Math.abs(driver.diff))}
-                                  </span>
-                                </div>
-                              ))}
+                          )}
+                          {rightDrivers.length > 0 && (
+                            <div>
+                              <div className={cn('text-[10px] font-bold mb-1', rightIsGreen ? 'text-green-600' : 'text-red-600')}>
+                                {rightIsGreen ? 'Spending Less:' : 'Spending More:'}
+                              </div>
+                              <div className="space-y-1.5">
+                                {rightDrivers.map((driver) => {
+                                  const pct = (Math.abs(driver.diff) / maxDiff) * 100
+                                  return (
+                                    <div key={driver.category} className="flex items-center gap-1.5">
+                                      <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                      <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
+                                        <div
+                                          className={cn('h-full rounded', rightIsGreen ? 'bg-green-500' : 'bg-red-500')}
+                                          style={{ width: `${pct}%` }}
+                                        />
+                                      </div>
+                                      <span className={cn(
+                                        'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
+                                        rightIsGreen ? 'text-green-600' : 'text-red-600'
+                                      )}>
+                                        {formatCurrency(Math.abs(driver.diff))}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {monthlyDrivers.spendingMore.length > 0 && (
-                          <div>
-                            <div className="text-[10px] font-bold text-red-600 mb-1">Spending More:</div>
-                            <div className="space-y-0.5">
-                              {monthlyDrivers.spendingMore.map((driver) => (
-                                <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                  <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                  <span className="font-medium text-red-600 tabular-nums">
-                                    {formatCurrency(Math.abs(driver.diff))}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {monthlyDrivers.spendingLess.length > 0 && (
-                          <div>
-                            <div className="text-[10px] font-bold text-green-600 mb-1">Spending Less:</div>
-                            <div className="space-y-0.5">
-                              {monthlyDrivers.spendingLess.map((driver) => (
-                                <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                  <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                  <span className="font-medium text-green-600 tabular-nums">
-                                    {formatCurrency(Math.abs(driver.diff))}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 </CardContent>
               </Card>
