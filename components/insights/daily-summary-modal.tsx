@@ -133,7 +133,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
   // Top drivers of yesterday's change
   const topDrivers = useMemo(() => {
-    if (!forecastBridge) return []
+    if (!forecastBridge) return { underBudgetDrivers: [], overBudgetDrivers: [] }
     const allDrivers = forecastBridge.drivers
       .filter((d) => d.category !== 'Other' && Math.abs(d.delta) > 0)
       .map((d) => ({
