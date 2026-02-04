@@ -1149,73 +1149,148 @@ export function KeyInsights() {
           </div>
 
           {/* Under / Over budget — horizontal bars (shared scale across both cards) */}
+          {/* Order tables dynamically: if under budget overall, show "Under budget" on left */}
           <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <h3 className="font-semibold text-sm">Under budget</h3>
-              </div>
-              {annualBudgetInsights.underBudget.length > 0 ? (
-                (() => {
-                  const maxGap = Math.max(
-                    ...annualBudgetInsights.underBudget.map((i) => Math.abs(i.gap)),
-                    ...annualBudgetInsights.overBudget.map((i) => Math.abs(i.gap)),
-                    1
-                  )
-                  return (
-                    <div className="space-y-3">
-                      {annualBudgetInsights.underBudget.map((item) => {
-                        const pct = (Math.abs(item.gap) / maxGap) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+            {/* Under budget — show first if overall under budget */}
+            {annualBudgetInsights.overallGap < 0 ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-sm">Under budget</h3>
+                </div>
+                {annualBudgetInsights.underBudget.length > 0 ? (
+                  (() => {
+                    const maxGap = Math.max(
+                      ...annualBudgetInsights.underBudget.map((i) => Math.abs(i.gap)),
+                      ...annualBudgetInsights.overBudget.map((i) => Math.abs(i.gap)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualBudgetInsights.underBudget.map((item) => {
+                          const pct = (Math.abs(item.gap) / maxGap) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
                             </div>
-                            <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No categories under budget</p>
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                <XCircle className="h-4 w-4 text-red-600" />
-                <h3 className="font-semibold text-sm">Over budget</h3>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories under budget</p>
+                )}
               </div>
-              {annualBudgetInsights.overBudget.length > 0 ? (
-                (() => {
-                  const maxGap = Math.max(
-                    ...annualBudgetInsights.underBudget.map((i) => Math.abs(i.gap)),
-                    ...annualBudgetInsights.overBudget.map((i) => Math.abs(i.gap)),
-                    1
-                  )
-                  return (
-                    <div className="space-y-3">
-                      {annualBudgetInsights.overBudget.map((item) => {
-                        const pct = (Math.abs(item.gap) / maxGap) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-sm">Over budget</h3>
+                </div>
+                {annualBudgetInsights.overBudget.length > 0 ? (
+                  (() => {
+                    const maxGap = Math.max(
+                      ...annualBudgetInsights.underBudget.map((i) => Math.abs(i.gap)),
+                      ...annualBudgetInsights.overBudget.map((i) => Math.abs(i.gap)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualBudgetInsights.overBudget.map((item) => {
+                          const pct = (Math.abs(item.gap) / maxGap) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
                             </div>
-                            <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No categories over budget</p>
-              )}
-            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories over budget</p>
+                )}
+              </div>
+            )}
+            {/* Over budget — show second if overall under budget, first if over budget */}
+            {annualBudgetInsights.overallGap < 0 ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-sm">Over budget</h3>
+                </div>
+                {annualBudgetInsights.overBudget.length > 0 ? (
+                  (() => {
+                    const maxGap = Math.max(
+                      ...annualBudgetInsights.underBudget.map((i) => Math.abs(i.gap)),
+                      ...annualBudgetInsights.overBudget.map((i) => Math.abs(i.gap)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualBudgetInsights.overBudget.map((item) => {
+                          const pct = (Math.abs(item.gap) / maxGap) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories over budget</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-sm">Under budget</h3>
+                </div>
+                {annualBudgetInsights.underBudget.length > 0 ? (
+                  (() => {
+                    const maxGap = Math.max(
+                      ...annualBudgetInsights.underBudget.map((i) => Math.abs(i.gap)),
+                      ...annualBudgetInsights.overBudget.map((i) => Math.abs(i.gap)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualBudgetInsights.underBudget.map((item) => {
+                          const pct = (Math.abs(item.gap) / maxGap) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories under budget</p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1280,75 +1355,148 @@ export function KeyInsights() {
             </div>
           </div>
 
+          {/* Order tables dynamically: if spending less overall, show "Spending less" on left */}
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Spending less — same style as Annual Budget (shared scale) */}
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <h3 className="font-semibold text-sm">Spending less vs average</h3>
-              </div>
-              {annualSpendInsights.spendingLess.length > 0 ? (
-                (() => {
-                  const maxVal = Math.max(
-                    ...annualSpendInsights.spendingLess.map((i) => Math.abs(i.vsFourYearAvg)),
-                    ...annualSpendInsights.spendingMore.map((i) => Math.abs(i.vsFourYearAvg)),
-                    1
-                  )
-                  return (
-                    <div className="space-y-3">
-                      {annualSpendInsights.spendingLess.map((item) => {
-                        const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+            {/* Spending less vs average — show first if overall spending is less */}
+            {annualSpendInsights.vsFourYearAvg > 0 ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                </div>
+                {annualSpendInsights.spendingLess.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...annualSpendInsights.spendingLess.map((i) => Math.abs(i.vsFourYearAvg)),
+                      ...annualSpendInsights.spendingMore.map((i) => Math.abs(i.vsFourYearAvg)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualSpendInsights.spendingLess.map((item) => {
+                          const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
                             </div>
-                            <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
-              )}
-            </div>
-            {/* Spending more — same style as Annual Budget (shared scale) */}
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                <XCircle className="h-4 w-4 text-red-600" />
-                <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                )}
               </div>
-              {annualSpendInsights.spendingMore.length > 0 ? (
-                (() => {
-                  const maxVal = Math.max(
-                    ...annualSpendInsights.spendingLess.map((i) => Math.abs(i.vsFourYearAvg)),
-                    ...annualSpendInsights.spendingMore.map((i) => Math.abs(i.vsFourYearAvg)),
-                    1
-                  )
-                  return (
-                    <div className="space-y-3">
-                      {annualSpendInsights.spendingMore.map((item) => {
-                        const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                </div>
+                {annualSpendInsights.spendingMore.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...annualSpendInsights.spendingLess.map((i) => Math.abs(i.vsFourYearAvg)),
+                      ...annualSpendInsights.spendingMore.map((i) => Math.abs(i.vsFourYearAvg)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualSpendInsights.spendingMore.map((item) => {
+                          const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
                             </div>
-                            <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
-              )}
-            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                )}
+              </div>
+            )}
+            {/* Spending more vs average — show second if overall spending is less, first if spending more */}
+            {annualSpendInsights.vsFourYearAvg > 0 ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                </div>
+                {annualSpendInsights.spendingMore.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...annualSpendInsights.spendingLess.map((i) => Math.abs(i.vsFourYearAvg)),
+                      ...annualSpendInsights.spendingMore.map((i) => Math.abs(i.vsFourYearAvg)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualSpendInsights.spendingMore.map((item) => {
+                          const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                </div>
+                {annualSpendInsights.spendingLess.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...annualSpendInsights.spendingLess.map((i) => Math.abs(i.vsFourYearAvg)),
+                      ...annualSpendInsights.spendingMore.map((i) => Math.abs(i.vsFourYearAvg)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {annualSpendInsights.spendingLess.map((item) => {
+                          const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1414,73 +1562,148 @@ export function KeyInsights() {
           </div>
 
           {/* Categories driving delta — same style as Annual Budget (shared scale) */}
+          {/* Order tables dynamically: if spending less overall, show "Spending less" on left */}
           <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                <XCircle className="h-4 w-4 text-red-600" />
-                <h3 className="font-semibold text-sm">Spending more vs average</h3>
-              </div>
-              {monthlySpendInsights.spendingMore.length > 0 ? (
-                (() => {
-                  const maxVal = Math.max(
-                    ...monthlySpendInsights.spendingMore.map((i) => Math.abs(i.diff)),
-                    ...monthlySpendInsights.spendingLess.map((i) => Math.abs(i.diff)),
-                    1
-                  )
-                  return (
-                    <div className="space-y-3">
-                      {monthlySpendInsights.spendingMore.map((item) => {
-                        const pct = (Math.abs(item.diff) / maxVal) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+            {/* Spending less vs average — show first if overall spending is less */}
+            {monthlySpendInsights.vsTtmAvg > 0 ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                </div>
+                {monthlySpendInsights.spendingLess.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...monthlySpendInsights.spendingMore.map((i) => Math.abs(i.diff)),
+                      ...monthlySpendInsights.spendingLess.map((i) => Math.abs(i.diff)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {monthlySpendInsights.spendingLess.map((item) => {
+                          const pct = (Math.abs(item.diff) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
                             </div>
-                            <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                )}
               </div>
-              {monthlySpendInsights.spendingLess.length > 0 ? (
-                (() => {
-                  const maxVal = Math.max(
-                    ...monthlySpendInsights.spendingMore.map((i) => Math.abs(i.diff)),
-                    ...monthlySpendInsights.spendingLess.map((i) => Math.abs(i.diff)),
-                    1
-                  )
-                  return (
-                    <div className="space-y-3">
-                      {monthlySpendInsights.spendingLess.map((item) => {
-                        const pct = (Math.abs(item.diff) / maxVal) * 100
-                        return (
-                          <div key={item.category} className="flex items-center gap-2">
-                            <span className="text-sm w-24 truncate">{item.category}</span>
-                            <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                              <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                </div>
+                {monthlySpendInsights.spendingMore.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...monthlySpendInsights.spendingMore.map((i) => Math.abs(i.diff)),
+                      ...monthlySpendInsights.spendingLess.map((i) => Math.abs(i.diff)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {monthlySpendInsights.spendingMore.map((item) => {
+                          const pct = (Math.abs(item.diff) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
                             </div>
-                            <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })()
-              ) : (
-                <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
-              )}
-            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                )}
+              </div>
+            )}
+            {/* Spending more vs average — show second if overall spending is less, first if spending more */}
+            {monthlySpendInsights.vsTtmAvg > 0 ? (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                </div>
+                {monthlySpendInsights.spendingMore.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...monthlySpendInsights.spendingMore.map((i) => Math.abs(i.diff)),
+                      ...monthlySpendInsights.spendingLess.map((i) => Math.abs(i.diff)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {monthlySpendInsights.spendingMore.map((item) => {
+                          const pct = (Math.abs(item.diff) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                </div>
+                {monthlySpendInsights.spendingLess.length > 0 ? (
+                  (() => {
+                    const maxVal = Math.max(
+                      ...monthlySpendInsights.spendingMore.map((i) => Math.abs(i.diff)),
+                      ...monthlySpendInsights.spendingLess.map((i) => Math.abs(i.diff)),
+                      1
+                    )
+                    return (
+                      <div className="space-y-3">
+                        {monthlySpendInsights.spendingLess.map((item) => {
+                          const pct = (Math.abs(item.diff) / maxVal) * 100
+                          return (
+                            <div key={item.category} className="flex items-center gap-2">
+                              <span className="text-sm w-24 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
