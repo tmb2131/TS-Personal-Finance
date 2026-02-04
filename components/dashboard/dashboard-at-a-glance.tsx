@@ -106,7 +106,7 @@ export function DashboardAtAGlance() {
   const formatCompact = (value: number) => {
     const abs = Math.abs(value)
     if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-    if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+    if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}k`
     return value.toFixed(0)
   }
   const symbol = currency === 'USD' ? '$' : '£'

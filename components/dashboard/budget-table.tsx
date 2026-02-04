@@ -244,8 +244,8 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       { annualBudget: 0, tracking: 0, ytd: 0 }
     )
     // Calculate gap from totals: Gap = Tracking - Budget
-    // For expenses (negative values): if tracking = -192.5K and budget = -205.4K
-    // Gap = -192.5K - (-205.4K) = -192.5K + 205.4K = +12.9K (spending less = good)
+    // For expenses (negative values): if tracking = -192.5k and budget = -205.4k
+    // Gap = -192.5k - (-205.4k) = -192.5k + 205.4k = +12.9k (spending less = good)
     const gap = sum.tracking - sum.annualBudget
     
     return {
@@ -334,10 +334,10 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   }
 
   const formatCurrencyCompact = (value: number) => {
-    // Always format as £0.0K (divide by 1000, show 1 decimal place)
+    // Always format as £0.0k (divide by 1000, show 1 decimal place)
     const valueInK = value / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `${currencySymbol}${valueInK.toFixed(1)}K`
+    return `${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
   const formatCurrencyLarge = (value: number) => {

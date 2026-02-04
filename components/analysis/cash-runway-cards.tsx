@@ -119,7 +119,7 @@ export function CashRunwayCards() {
     const currencySymbol = currency === 'USD' ? '$' : '£'
     const valueInK = value / 1000
     if (valueInK >= 1) {
-      return `${currencySymbol}${valueInK.toFixed(1)}K`
+      return `${currencySymbol}${valueInK.toFixed(1)}k`
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',

@@ -74,6 +74,11 @@ Other notable deps: `lucide-react` (icons), `react-markdown` + `remark-gfm` (cha
 - **Loading states:** Use `Skeleton` components matching chart structure
 - **Error states:** Use `EmptyState` component with appropriate icon and message
 
+### Number abbreviation (thousands / millions)
+- **Thousands:** Abbreviate with **lowercase k** (e.g. £10k, $12.5k). Used in tables, charts, tooltips, and AI responses.
+- **Millions:** Abbreviate with **uppercase M** (e.g. £1.2M, $2M). Keeps M visually distinct from k.
+- **Scope:** All display formatting (formatCurrencyCompact, formatChartNumber, axis ticks, call-out boxes, chat prompts). Input parsing (e.g. Google Sheet values) may accept either k or K.
+
 ### Call-Out Box Pattern
 - **Usage:** Summary call-out boxes in `CardHeader` for key metrics (Forecast Evolution, YoY Net Worth Change)
 - **Styling:** `rounded-lg border border-border bg-background p-3 shadow-sm`

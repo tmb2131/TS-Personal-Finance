@@ -56,7 +56,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     const incomeGap = incomeTotal.tracking - incomeTotal.annualBudget
     // For expenses: use raw (negative) values to calculate gap correctly
     // Gap = Tracking - Budget = trackingRaw - annualBudgetRaw
-    // Example: (-192.5K) - (-205.4K) = -192.5K + 205.4K = +12.9K (spending less = positive gap)
+    // Example: (-192.5k) - (-205.4k) = -192.5k + 205.4k = +12.9k (spending less = positive gap)
     const expenseGap = expenseTotal.trackingRaw - expenseTotal.annualBudgetRaw
 
     // Calculate savings percentages (savings rate = net income / total income)
@@ -102,10 +102,10 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
   }, [totals])
 
   const formatCurrency = (value: number) => {
-    // Always format as £0.0K (divide by 1000, show 1 decimal place)
+    // Always format as £0.0k (divide by 1000, show 1 decimal place)
     const valueInK = value / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `${currencySymbol}${valueInK.toFixed(1)}K`
+    return `${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
   const renderCurrencyAligned = (value: number) => {

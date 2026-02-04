@@ -281,7 +281,7 @@ export function TransactionAnalysis({
   const formatCurrencyCompact = (value: number) => {
     const valueInK = value / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `${currencySymbol}${valueInK.toFixed(1)}K`
+    return `${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
   // Calculate category totals for the selected period

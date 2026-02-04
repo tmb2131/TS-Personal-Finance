@@ -90,10 +90,13 @@ export function KeyInsights() {
     fetchData()
   }, [])
 
-  // Filter out income categories
+  // Filter out income categories (for budget and trends)
   const expenseCategories = useMemo(() => {
     return ['Income', 'Gift Money']
   }, [])
+
+  // Same exclusions as Daily Summary modal for "annual spend" (est. spend from budget forecast)
+  const EXCLUDED_ANNUAL_SPEND = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
   // Net Worth Insights
   const netWorthInsights = useMemo(() => {
@@ -436,38 +439,37 @@ export function KeyInsights() {
     }
   }, [budgetData, currency, expenseCategories, fxRate, convertAmount])
 
-  // Annual Spend Insights
+  // Annual Spend Insights — use same source as Daily Summary: budget_targets.tracking_est_gbp (est. annual spend)
   const annualSpendInsights = useMemo(() => {
-    const expenses = annualTrends.filter((a) => !expenseCategories.includes(a.category))
     const mult = currency === 'USD' ? fxRate : 1
 
-    // Values are negative for expenses (e.g., -100 means spending 100)
-    const currentYearEst = expenses.reduce((sum, a) => sum + a.cur_yr_est, 0)
-    const lastYear = expenses.reduce((sum, a) => sum + a.cur_yr_minus_1, 0)
-    const fourYearAvg = expenses.reduce((sum, a) => {
+    // This year: from budget forecast (same as Daily Summary modal) so both places show the same number
+    const budgetExpenses = budgetData.filter((b) => !EXCLUDED_ANNUAL_SPEND.includes(b.category))
+    const trackingEstTotalGbp = budgetExpenses.reduce((sum, b) => sum + Math.abs(b.tracking_est_gbp ?? 0), 0)
+    const currentYearEstDisplay = trackingEstTotalGbp * mult
+
+    // Historical comparison: from annual_trends (same category exclusions)
+    const trendExpenses = annualTrends.filter((a) => !EXCLUDED_ANNUAL_SPEND.includes(a.category))
+    const lastYear = trendExpenses.reduce((sum, a) => sum + a.cur_yr_minus_1, 0)
+    const fourYearAvg = trendExpenses.reduce((sum, a) => {
       const avg = (a.cur_yr_minus_4 + a.cur_yr_minus_3 + a.cur_yr_minus_2 + a.cur_yr_minus_1) / 4
       return sum + avg
     }, 0)
 
-    // For negative values: if cur_yr_est = -100 and avg = -120, we're spending 20 less
-    // So: avg - cur_yr_est = -120 - (-100) = -20 (negative means spending MORE)
-    // We want: cur_yr_est - avg = -100 - (-120) = 20 (positive means spending LESS)
-    // Actually wait, if cur is -100 and avg is -120, cur is less negative = spending less
-    // So: avg - cur = -120 - (-100) = -20 means spending MORE (wrong)
-    // Let's think: spending less means cur > avg (less negative)
-    // So: cur - avg = -100 - (-120) = 20 (positive = spending less) ✓
-    const vsFourYearAvgGbp = currentYearEst - fourYearAvg // Positive = spending less
-    const vsLastYearGbp = currentYearEst - lastYear
+    // annual_trends uses negative values for expenses; compare with tracking total (positive) as -trackingEstTotalGbp
+    const currentYearSignedGbp = -trackingEstTotalGbp
+    const vsFourYearAvgGbp = currentYearSignedGbp - fourYearAvg // Positive = spending less
+    const vsLastYearGbp = currentYearSignedGbp - lastYear
     const vsFourYearAvg = vsFourYearAvgGbp * mult
     const vsLastYear = vsLastYearGbp * mult
 
     // Calculate percentage change vs 4-year average (unchanged by currency)
-    const vsFourYearAvgPercent = fourYearAvg !== 0 
-      ? (vsFourYearAvgGbp / Math.abs(fourYearAvg)) * 100 
+    const vsFourYearAvgPercent = fourYearAvg !== 0
+      ? (vsFourYearAvgGbp / Math.abs(fourYearAvg)) * 100
       : 0
 
-    // Calculate per-category differences (convert to display currency)
-    const categoryDiffs = expenses
+    // Per-category differences from trends (same exclusions)
+    const categoryDiffs = trendExpenses
       .map((a) => {
         const curEst = a.cur_yr_est
         const lastYr = a.cur_yr_minus_1
@@ -485,13 +487,14 @@ export function KeyInsights() {
     const spendingMore = categoryDiffs.filter((item) => item.vsFourYearAvg < 0).slice(0, 5)
 
     return {
+      currentYearEstDisplay,
       vsFourYearAvg,
       vsFourYearAvgPercent,
       vsLastYear,
       spendingLess,
       spendingMore,
     }
-  }, [annualTrends, expenseCategories, currency, fxRate])
+  }, [annualTrends, budgetData, currency, fxRate])
 
   // Monthly Spend Insights — values in GBP from monthly_trends; convert to USD with current FX when currency is USD
   const monthlySpendInsights = useMemo(() => {
@@ -527,7 +530,11 @@ export function KeyInsights() {
     const spendingMore = categoryDiffs.filter((item) => item.diff < 0).slice(0, 5)
     const spendingLess = categoryDiffs.filter((item) => item.diff > 0).slice(0, 5)
 
+    // Estimated spend this month (absolute, display currency)
+    const currentMonthEstDisplay = Math.abs(currentMonthEst) * mult
+
     return {
+      currentMonthEstDisplay,
       vsTtmAvg,
       vsTtmAvgPercent,
       spendingMore,
@@ -890,7 +897,7 @@ export function KeyInsights() {
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Net Worth</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Current net worth is {formatCurrencyLarge(netWorthInsights.currentTotal)} (Trust excluded).
+            Current net worth is <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</span> (Trust excluded).
           </p>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
@@ -1084,7 +1091,11 @@ export function KeyInsights() {
           <CardTitle className="text-xl">Annual Budget</CardTitle>
           <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
             <p className="text-sm text-muted-foreground">
-              {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by {formatCurrency(Math.abs(annualBudgetInsights.overallGap))} vs {new Date().getFullYear()} budget.
+              {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by{' '}
+              <span className={cn('font-semibold', annualBudgetInsights.overallGap < 0 ? 'text-green-600' : 'text-red-600')}>
+                {formatCurrency(Math.abs(annualBudgetInsights.overallGap))}
+              </span>
+              {' '}vs {new Date().getFullYear()} budget.
             </p>
             <Link
               href="/analysis#forecast-evolution"
@@ -1115,9 +1126,9 @@ export function KeyInsights() {
                 const budgetPct = (annualBudgetInsights.totalBudget / annualBudgetInsights.totalTracking) * 100
                 return (
                   <div className="relative h-2 w-full rounded-full overflow-hidden">
-                    <div className="absolute inset-0 rounded-full bg-muted" aria-hidden />
+                    <div className="absolute inset-0 rounded-full bg-red-100" aria-hidden />
                     <div
-                      className="absolute inset-y-0 left-0 rounded-l-full bg-muted"
+                      className="absolute inset-y-0 left-0 rounded-l-full bg-red-100"
                       style={{ width: `${budgetPct}%` }}
                       aria-hidden
                     />
@@ -1144,7 +1155,10 @@ export function KeyInsights() {
               <Progress value={100} className="[&>div]:bg-red-500" />
             )}
             <p className="text-xs text-muted-foreground mt-1">
-              {formatPercentAbs(annualBudgetInsights.gapPercent)} {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
+              <span className={cn(annualBudgetInsights.overallGap < 0 ? 'text-green-600' : 'text-red-600')}>
+                {formatPercentAbs(annualBudgetInsights.gapPercent)}
+              </span>
+              {' '}{annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
             </p>
           </div>
 
@@ -1302,7 +1316,7 @@ export function KeyInsights() {
             <div>
               <CardTitle className="text-xl">Annual Spend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                This year vs 4-year average.
+                Est. this year (<span className="font-semibold">{formatCurrencyLarge(annualSpendInsights.currentYearEstDisplay)}</span>) vs 4-year average.
               </p>
             </div>
             <Link
@@ -1508,7 +1522,7 @@ export function KeyInsights() {
             <div>
               <CardTitle className="text-xl">Monthly Spend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                This month vs trailing 12‑month average.
+                This month (<span className="font-semibold">{formatCurrencyLarge(monthlySpendInsights.currentMonthEstDisplay)}</span>) vs trailing 12‑month average.
               </p>
             </div>
             <Link

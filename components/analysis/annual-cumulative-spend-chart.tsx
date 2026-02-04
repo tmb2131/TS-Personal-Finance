@@ -469,7 +469,7 @@ export function AnnualCumulativeSpendChart() {
   const formatCurrencyCompact = (value: number) => {
     const valueInK = value / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `${currencySymbol}${valueInK.toFixed(0)}K`
+    return `${currencySymbol}${valueInK.toFixed(0)}k`
   }
 
   const currentYear = new Date().getFullYear()

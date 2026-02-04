@@ -92,10 +92,10 @@ export function BudgetIncomeTable({
   }
 
   const formatCurrency = (value: number) => {
-    // Always format as £0.0K (divide by 1000, show 1 decimal place)
+    // Always format as £0.0k (divide by 1000, show 1 decimal place)
     const valueInK = value / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `${currencySymbol}${valueInK.toFixed(1)}K`
+    return `${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
   const formatCurrencyLarge = (value: number) => {

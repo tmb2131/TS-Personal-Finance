@@ -234,7 +234,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       return `${symbol}${(value / 1_000_000).toFixed(1)}M`
     }
     if (abs >= 1_000) {
-      return `${symbol}${(value / 1_000).toFixed(1)}K`
+      return `${symbol}${(value / 1_000).toFixed(1)}k`
     }
     return `${symbol}${Math.round(value)}`
   }

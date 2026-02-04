@@ -128,11 +128,11 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
     }
   }, [currency, ratesByMonth, contextFxRate])
 
-  // Format currency as £0.0K
+  // Format currency as £0.0k
   const formatCurrency = (value: number) => {
     const valueInK = value / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `${currencySymbol}${valueInK.toFixed(1)}K`
+    return `${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
   // Format currency with parentheses for negative values
@@ -141,10 +141,10 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
     const absValue = Math.abs(value)
     const valueInK = absValue / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `(${currencySymbol}${valueInK.toFixed(1)}K)`
+    return `(${currencySymbol}${valueInK.toFixed(1)}k)`
   }
 
-  // Format currency for large values (M for millions, K for thousands)
+  // Format currency for large values (M for millions, k for thousands)
   const formatCurrencyLarge = (value: number) => {
     const valueInM = Math.abs(value) / 1000000
     const currencySymbol = currency === 'USD' ? '$' : '£'
