@@ -3,12 +3,22 @@
 import { useRouter } from 'next/navigation'
 import { CurrencyToggle } from './currency-toggle'
 import { Button } from './ui/button'
-import { RefreshCw, LogOut } from 'lucide-react'
+import { RefreshCw, LogOut, BarChart3 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useDailySummary } from '@/components/insights/daily-summary-context'
 import { cn } from '@/utils/cn'
+
+// Safe hook that returns null if context is not available
+function useDailySummarySafe() {
+  try {
+    return useDailySummary()
+  } catch {
+    return null
+  }
+}
 
 const SCROLL_THRESHOLD = 8
 const BOTTOM_BOUNDARY_PX = 100
@@ -18,6 +28,7 @@ const HIDE_MIN_DISTANCE_FROM_BOTTOM_PX = 180
 export function Header() {
   const router = useRouter()
   const isMobile = useIsMobile()
+  const dailySummary = useDailySummarySafe()
   const [syncing, setSyncing] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(true)
@@ -198,6 +209,19 @@ export function Header() {
       )}
     >
       <div className="flex items-center gap-2 md:gap-4 flex-wrap">
+        {dailySummary && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={dailySummary.openModal}
+            className="flex items-center gap-2 text-xs md:text-sm"
+            title="View daily financial summary"
+          >
+            <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
+            <span className="hidden sm:inline">Daily Summary</span>
+            <span className="sm:hidden">Summary</span>
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

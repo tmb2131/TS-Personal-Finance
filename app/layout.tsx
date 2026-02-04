@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
 import { AuthTimeoutProvider } from '@/lib/contexts/auth-timeout-provider'
+import { DailySummaryProvider } from '@/components/insights/daily-summary-context'
 import { AppShell } from '@/components/app-shell'
 
 const inter = Inter({
@@ -31,7 +32,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <CurrencyProvider>
           <AuthTimeoutProvider>
-            <AppShell>{children}</AppShell>
+            <DailySummaryProvider>
+              <AppShell>{children}</AppShell>
+            </DailySummaryProvider>
           </AuthTimeoutProvider>
         </CurrencyProvider>
         <Analytics />
