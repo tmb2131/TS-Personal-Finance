@@ -1,27 +1,24 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { BudgetTarget, MonthlyTrend } from '@/lib/types'
-import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, X } from 'lucide-react'
+import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
+import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, X, ChevronRight } from 'lucide-react'
 import { cn } from '@/utils/cn'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
-const STORAGE_KEY = 'findash_daily_summary_dismissed'
+const SESSION_KEY = 'findash_daily_summary_shown'
 
 interface ForecastBridgeResponse {
   startDate: string
@@ -43,9 +40,11 @@ interface ForecastBridgeResponse {
 interface DailySummaryModalProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  modalKey?: number
 }
 
-export function DailySummaryModal({ open: controlledOpen, onOpenChange: controlledOnOpenChange }: DailySummaryModalProps = {}) {
+export function DailySummaryModal({ open: controlledOpen, onOpenChange: controlledOnOpenChange, modalKey }: DailySummaryModalProps = {}) {
+  const router = useRouter()
   const { currency, fxRate, convertAmount } = useCurrency()
   // Support both controlled (from context) and uncontrolled (direct prop) usage
   const [internalOpen, setInternalOpen] = useState(false)
@@ -53,16 +52,25 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const open = isControlled ? controlledOpen : internalOpen
   const onOpenChange = isControlled ? controlledOnOpenChange! : setInternalOpen
   const [loading, setLoading] = useState(true)
-  const [dontShowAgain, setDontShowAgain] = useState(false)
   
   // Data state
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
+  const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
   const [forecastBridge, setForecastBridge] = useState<ForecastBridgeResponse | null>(null)
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
 
+  // Reset state when modal closes
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setLoading(true)
+      setBudgetData([])
+      setAnnualTrends([])
+      setMonthlyTrends([])
+      setForecastBridge(null)
+      setLastSyncDate(null)
+      return
+    }
 
     async function fetchData() {
       setLoading(true)
@@ -75,8 +83,9 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       const todayStr = new Date().toISOString().split('T')[0]
 
       try {
-        const [budgetResult, monthlyResult, syncResult, bridgeResponse] = await Promise.all([
+        const [budgetResult, annualResult, monthlyResult, syncResult, bridgeResponse] = await Promise.all([
           supabase.from('budget_targets').select('*'),
+          supabase.from('annual_trends').select('*'),
           supabase.from('monthly_trends').select('*'),
           supabase.from('sync_metadata').select('last_sync_at').single(),
           fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${todayStr}`)
@@ -93,6 +102,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
         ])
 
         if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
+        if (annualResult.data) setAnnualTrends(annualResult.data as AnnualTrend[])
         if (monthlyResult.data) setMonthlyTrends(monthlyResult.data as MonthlyTrend[])
         if (syncResult.data?.last_sync_at) setLastSyncDate(syncResult.data.last_sync_at)
         if (bridgeResponse && !bridgeResponse.error) {
@@ -114,6 +124,18 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
     const totalGBP = expenses.reduce((sum, b) => sum + Math.abs(b.tracking_est_gbp ?? 0), 0)
     return currency === 'USD' ? convertAmount(totalGBP, 'GBP', fxRate) : totalGBP
   }, [budgetData, currency, fxRate, convertAmount])
+
+  // Last year total spend (from annual_trends) for comparison
+  const annualVsLastYear = useMemo(() => {
+    const expenses = annualTrends.filter((a) => !EXCLUDED_CATEGORIES.includes(a.category))
+    if (!expenses.length) return null
+    const lastYearGBP = expenses.reduce((sum, a) => sum + Math.abs(a.cur_yr_minus_1 ?? 0), 0)
+    if (lastYearGBP === 0) return null
+    const lastYearDisplay = currency === 'USD' ? convertAmount(lastYearGBP, 'GBP', fxRate) : lastYearGBP
+    const diff = annualEstimatedSpend - lastYearDisplay
+    const percent = (diff / Math.abs(lastYearDisplay)) * 100
+    return { lastYearDisplay, diff, percent }
+  }, [annualTrends, annualEstimatedSpend, currency, fxRate, convertAmount])
 
   // Calculate gap to budget
   const gapToBudget = useMemo(() => {
@@ -199,8 +221,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       .filter((item) => Math.abs(item.diffGBP) > 50) // Filter small changes
       .sort((a, b) => Math.abs(b.diffGBP) - Math.abs(a.diffGBP))
 
-    const spendingMore = categoryDiffs.filter((item) => item.diffGBP < 0).slice(0, 3)
-    const spendingLess = categoryDiffs.filter((item) => item.diffGBP > 0).slice(0, 3)
+    const spendingMore = categoryDiffs.filter((item) => item.diffGBP > 0).slice(0, 3)
+    const spendingLess = categoryDiffs.filter((item) => item.diffGBP < 0).slice(0, 3)
 
     return { spendingMore, spendingLess }
   }, [monthlyTrends, currency, fxRate, convertAmount])
@@ -223,11 +245,24 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
   }
 
-  const handleClose = () => {
-    if (dontShowAgain) {
-      localStorage.setItem(STORAGE_KEY, 'true')
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // When closing, set sessionStorage
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(SESSION_KEY, 'true')
+      }
     }
+    // Always notify parent of the change
+    onOpenChange(newOpen)
+  }
+
+  const handleNavigate = (path: string) => {
+    // Close modal without setting sessionStorage (navigation is not a dismissal)
     onOpenChange(false)
+    // Navigate after a brief delay to ensure modal closes cleanly
+    setTimeout(() => {
+      router.push(path)
+    }, 150)
   }
 
   const formatLastSync = () => {
@@ -249,7 +284,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog key={modalKey} open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader className="pb-3">
           <DialogTitle className="text-xl font-bold">Daily Financial Summary</DialogTitle>
@@ -270,22 +305,47 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             <div className="grid grid-cols-2 gap-3">
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground">Annual Est. Spend</span>
-                  </div>
+                  <button
+                    onClick={() => handleNavigate('/#expenses-table')}
+                    className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Annual Est. Spend</span>
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                   <div className="text-xl font-bold tabular-nums">
                     {formatCurrency(annualEstimatedSpend)}
                   </div>
+                  {annualVsLastYear && (
+                    <div className={cn(
+                      'text-[10px] font-medium mt-1 tabular-nums',
+                      annualVsLastYear.diff < 0 ? 'text-green-600' : annualVsLastYear.diff > 0 ? 'text-red-600' : 'text-muted-foreground'
+                    )}>
+                      vs last year: {annualVsLastYear.diff >= 0 ? '+' : '-'}{formatCurrency(Math.abs(annualVsLastYear.diff))}
+                      {Math.abs(annualVsLastYear.percent) >= 0.1 && (
+                        <span className="text-muted-foreground">
+                          {' '}({annualVsLastYear.percent >= 0 ? '+' : ''}{annualVsLastYear.percent.toFixed(1)}%)
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Target className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground">Gap to Budget</span>
-                  </div>
+                  <button
+                    onClick={() => handleNavigate('/#budget-table')}
+                    className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Target className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Gap to Budget</span>
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                   <div className={cn(
                     'text-xl font-bold tabular-nums',
                     gapToBudget >= 0 ? 'text-green-600' : 'text-red-600'
@@ -300,10 +360,16 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             {yesterdayChange !== null && (
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground">Change Since Yesterday</span>
-                  </div>
+                  <button
+                    onClick={() => handleNavigate('/analysis#forecast-evolution')}
+                    className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Change Since Yesterday</span>
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                   <div className={cn(
                     'text-lg font-bold tabular-nums mb-2',
                     yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
@@ -324,33 +390,37 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                     <div className="space-y-0.5">
                       {gapToBudget >= 0 ? (
                         <div className="grid grid-cols-2 gap-3 mb-1.5">
-                          {/* When under budget, show under budget drivers on left */}
-                          {topDrivers.underBudgetDrivers.length > 0 && (
-                            <div>
-                              <div className="text-[10px] font-bold text-green-600 mb-1">Top Drivers of Under Budget:</div>
-                              {topDrivers.underBudgetDrivers.map((driver) => (
-                                <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                  <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                  <span className="font-medium tabular-nums text-green-600">
-                                    {formatCurrency(Math.abs(driver.delta))}
-                                  </span>
+                          {/* When gap worsened, show Over Budget on left; when gap improved, show Under Budget on left */}
+                          {(yesterdayChange !== null && yesterdayChange > 0
+                            ? [topDrivers.overBudgetDrivers, topDrivers.underBudgetDrivers]
+                            : [topDrivers.underBudgetDrivers, topDrivers.overBudgetDrivers]
+                          ).map((drivers, idx) => {
+                            if (drivers.length === 0) return null
+                            const isOverBudget = idx === 0
+                              ? yesterdayChange !== null && yesterdayChange > 0
+                              : yesterdayChange === null || yesterdayChange <= 0
+                            return (
+                              <div key={idx}>
+                                <div className={cn(
+                                  'text-[10px] font-bold mb-1',
+                                  isOverBudget ? 'text-red-600' : 'text-green-600'
+                                )}>
+                                  {isOverBudget ? 'Top Drivers of Worsening Gap:' : 'Top Drivers of Improving Gap:'}
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                          {topDrivers.overBudgetDrivers.length > 0 && (
-                            <div>
-                              <div className="text-[10px] font-bold text-red-600 mb-1">Top Drivers of Over Budget:</div>
-                              {topDrivers.overBudgetDrivers.map((driver) => (
-                                <div key={driver.category} className="flex items-center justify-between text-[10px]">
-                                  <span className="text-muted-foreground font-medium">{driver.category}</span>
-                                  <span className="font-medium tabular-nums text-red-600">
-                                    {formatCurrency(Math.abs(driver.delta))}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                                {drivers.map((driver) => (
+                                  <div key={driver.category} className="flex items-center justify-between text-[10px]">
+                                    <span className="text-muted-foreground font-medium">{driver.category}</span>
+                                    <span className={cn(
+                                      'font-medium tabular-nums',
+                                      isOverBudget ? 'text-red-600' : 'text-green-600'
+                                    )}>
+                                      {formatCurrency(Math.abs(driver.delta))}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          })}
                         </div>
                       ) : (
                         <>
@@ -381,10 +451,16 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             <div className="grid grid-cols-2 gap-3">
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground">Est. This Month</span>
-                  </div>
+                  <button
+                    onClick={() => handleNavigate('/#monthly-trends')}
+                    className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Est. This Month</span>
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                   <div className="text-xl font-bold tabular-nums">
                     {formatCurrency(currentMonthlySpend)}
                   </div>
@@ -393,10 +469,16 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium text-muted-foreground">vs 3M Avg</span>
-                  </div>
+                  <button
+                    onClick={() => handleNavigate('/#monthly-trends')}
+                    className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">vs 3M Avg</span>
+                    </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                   {monthlyVs3M !== null ? (
                     <div className={cn(
                       'text-xl font-bold tabular-nums',
@@ -420,7 +502,13 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             {(monthlyDrivers.spendingMore.length > 0 || monthlyDrivers.spendingLess.length > 0) && (
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">Monthly Spend Drivers</div>
+                  <button
+                    onClick={() => handleNavigate('/analysis#monthly-category-trends')}
+                    className="flex items-center justify-between w-full mb-2 group hover:opacity-70 transition-opacity"
+                  >
+                    <span className="text-xs font-medium text-muted-foreground">Monthly Spend Drivers</span>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
                   <div className="grid grid-cols-2 gap-3">
                     {/* When monthly spend decreased vs 3M avg, show "Spending Less" on left */}
                     {monthlyVs3M !== null && monthlyVs3M < 0 ? (
@@ -497,32 +585,13 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
           </div>
         )}
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="dont-show-again"
-              checked={dontShowAgain}
-              onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-              className="h-4 w-4"
-            />
-            <Label
-              htmlFor="dont-show-again"
-              className="text-xs text-muted-foreground cursor-pointer"
-            >
-              Don't show again
-            </Label>
-          </div>
-          <Button onClick={handleClose} size="sm" className="w-full sm:w-auto">
-            Got it
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
 
-// Hook to check if modal should be shown
+// Show once per session (e.g. after first login). Next login = new session = show again.
 export function shouldShowDailySummary(): boolean {
   if (typeof window === 'undefined') return false
-  return localStorage.getItem(STORAGE_KEY) !== 'true'
+  return sessionStorage.getItem(SESSION_KEY) !== 'true'
 }

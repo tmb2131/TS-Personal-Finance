@@ -36,12 +36,52 @@ export function Header() {
   const [lastRefreshDate, setLastRefreshDate] = useState<string | null>(null)
   const [latestTransactionDate, setLatestTransactionDate] = useState<string | null>(null)
   const [maxAccountDate, setMaxAccountDate] = useState<string | null>(null)
+  const syncStartTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     setMounted(true)
     // Fetch latest dates (including last sync) from database
     fetchLatestDates()
   }, [])
+
+  // When user returns to app (e.g. from home screen), recover if sync was in progress — mobile often suspends/kills in-flight requests
+  useEffect(() => {
+    const onVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') return
+      if (!syncing) return
+      const startedAt = syncStartTimeRef.current
+      if (startedAt == null) return
+      await new Promise((r) => setTimeout(r, 1500))
+      try {
+        const supabase = createClient()
+        const { data } = await supabase.from('sync_metadata').select('last_sync_at').maybeSingle()
+        const lastSyncAt = data?.last_sync_at ? new Date(data.last_sync_at).getTime() : 0
+        if (lastSyncAt >= startedAt) {
+          setSyncing(false)
+          syncStartTimeRef.current = null
+          await fetchLatestDates()
+          toast.success('Data synced', { description: 'Sync completed while you were away.' })
+          setTimeout(() => window.location.reload(), 800)
+        } else {
+          setSyncing(false)
+          syncStartTimeRef.current = null
+          toast.info('Sync interrupted', {
+            description: 'Tap Refresh to sync again.',
+            action: { label: 'Refresh', onClick: () => handleSync() },
+          })
+        }
+      } catch {
+        setSyncing(false)
+        syncStartTimeRef.current = null
+        toast.info('Sync interrupted', {
+          description: 'Tap Refresh to sync again.',
+          action: { label: 'Refresh', onClick: () => handleSync() },
+        })
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [syncing])
 
   // Hide header on scroll down, show on scroll up (mobile only). Disable toggle near bottom to prevent rubber-band flicker.
   useEffect(() => {
@@ -112,6 +152,7 @@ export function Header() {
 
   const handleSync = async () => {
     setSyncing(true)
+    syncStartTimeRef.current = Date.now()
     const abortController = new AbortController()
     const timeoutId = setTimeout(() => {
       abortController.abort()
@@ -135,12 +176,14 @@ export function Header() {
             onClick: () => handleSync(),
           },
         })
+        syncStartTimeRef.current = null
         setSyncing(false)
         return
       }
       
       const result = await response.json()
       console.log('Sync result:', result)
+      syncStartTimeRef.current = null
       setSyncing(false)
       
       if (result.success) {
@@ -169,6 +212,7 @@ export function Header() {
       }
     } catch (error) {
       clearTimeout(timeoutId)
+      syncStartTimeRef.current = null
       setSyncing(false)
       const isAborted = error instanceof Error && error.name === 'AbortError'
       console.error('Sync error:', error)

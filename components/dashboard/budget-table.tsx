@@ -481,7 +481,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       />
 
       {/* Expenses Table - on mobile collapsed by default, expand with "Show expenses breakdown" */}
-      <Card>
+      <Card id="expenses-table">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <CardTitle className="text-base">Expenses</CardTitle>
@@ -554,7 +554,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         {expenseTotals.gap >= 0 ? 'under' : 'over'} budget
                       </span>
                     </p>
-                    <div className="pt-0.5 mt-0.5 border-t">
+                    <div className="pt-1.5 mt-0.5 border-t">
                       <p className="text-xs text-muted-foreground">
                         Expenses Tracking: <span className="font-medium">{formatCurrencyLarge(expenseTotals.tracking)}</span>
                       </p>

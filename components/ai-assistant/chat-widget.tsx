@@ -16,6 +16,7 @@ import { cn } from '@/utils/cn'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { createClient } from '@/lib/supabase/client'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -62,6 +63,7 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
 }
 
 export function ChatWidget() {
+  const isMobile = useIsMobile()
   const [isOpen, setIsOpen] = useState(false)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [showHelp, setShowHelp] = useState(false)
@@ -1114,7 +1116,7 @@ export function ChatWidget() {
                 ref={inputRef}
                 value={localInput}
                 onChange={handleInputChange}
-                placeholder="Ask about your finances... (Press Cmd+K to focus)"
+                placeholder={isMobile ? 'Ask about your finances...' : 'Ask about your finances... (Press Cmd+K to focus)'}
                 className="flex-1 text-base min-[768px]:text-sm"
                 disabled={isLoading}
                 onKeyDown={(e) => {

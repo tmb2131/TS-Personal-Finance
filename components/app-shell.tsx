@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { ChatWidget } from '@/components/ai-assistant/chat-widget'
 import { LoginHeader } from '@/components/login-header'
+import { DailySummaryWrapper } from '@/components/insights/daily-summary-wrapper'
 import { Toaster } from 'sonner'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <Toaster position="top-right" richColors />
       <ChatWidget />
+      <DailySummaryWrapper />
     </>
   )
 }

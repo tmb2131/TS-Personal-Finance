@@ -1,23 +1,35 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback } from 'react'
 
 interface DailySummaryContextType {
   openModal: () => void
   closeModal: () => void
   isOpen: boolean
+  modalKey: number
 }
 
 const DailySummaryContext = createContext<DailySummaryContextType | undefined>(undefined)
 
 export function DailySummaryProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [modalKey, setModalKey] = useState(0)
 
-  const openModal = () => setIsOpen(true)
-  const closeModal = () => setIsOpen(false)
+  const openModal = useCallback(() => {
+    // Increment key to force fresh mount, then open
+    setModalKey((k) => k + 1)
+    // Use requestAnimationFrame to ensure Dialog properly initializes
+    requestAnimationFrame(() => {
+      setIsOpen(true)
+    })
+  }, [])
+
+  const closeModal = useCallback(() => {
+    setIsOpen(false)
+  }, [])
 
   return (
-    <DailySummaryContext.Provider value={{ openModal, closeModal, isOpen }}>
+    <DailySummaryContext.Provider value={{ openModal, closeModal, isOpen, modalKey }}>
       {children}
     </DailySummaryContext.Provider>
   )

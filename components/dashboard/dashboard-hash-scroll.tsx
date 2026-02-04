@@ -5,8 +5,10 @@ import { usePathname } from 'next/navigation'
 
 /** Offset from top of viewport so section title/cards sit nicely below any chrome. */
 const SECTION_TOP_OFFSET = 16
+/** For expenses-table, use minimal offset to put it at the top. */
+const EXPENSES_TABLE_TOP_OFFSET = 0
 /** Section ids we handle (scroll so summary cards at top, table below). */
-const DASHBOARD_SECTION_IDS = ['annual-trends', 'monthly-trends'] as const
+const DASHBOARD_SECTION_IDS = ['annual-trends', 'monthly-trends', 'expenses-table'] as const
 /** Minimum height for section before we trust scroll (avoids scrolling before Suspense content has rendered). */
 const SECTION_MIN_HEIGHT = 100
 /** Retry delays (ms) so we scroll again after content has rendered. */
@@ -36,7 +38,8 @@ export function DashboardHashScroll() {
     if (elementHeight < SECTION_MIN_HEIGHT) return
 
     const mainHeight = main.clientHeight
-    const scrollTop = Math.max(0, relativeTop - SECTION_TOP_OFFSET)
+    const offset = targetId === 'expenses-table' ? EXPENSES_TABLE_TOP_OFFSET : SECTION_TOP_OFFSET
+    const scrollTop = Math.max(0, relativeTop - offset)
     const maxScroll = main.scrollHeight - mainHeight
     const clampedScroll = Math.min(scrollTop, maxScroll)
 

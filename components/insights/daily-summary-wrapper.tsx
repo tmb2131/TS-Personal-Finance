@@ -4,13 +4,15 @@ import { DailySummaryModal } from './daily-summary-modal'
 import { useDailySummary } from './daily-summary-context'
 
 export function DailySummaryWrapper() {
-  const { isOpen, closeModal } = useDailySummary()
+  const { isOpen, openModal, closeModal, modalKey } = useDailySummary()
 
   const handleOpenChange = (open: boolean) => {
-    if (!open) {
+    if (open) {
+      openModal()
+    } else {
       closeModal()
     }
   }
 
-  return <DailySummaryModal open={isOpen} onOpenChange={handleOpenChange} />
+  return <DailySummaryModal open={isOpen} onOpenChange={handleOpenChange} modalKey={modalKey} />
 }
