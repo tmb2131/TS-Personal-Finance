@@ -18,6 +18,8 @@ import { TransactionLog } from '@/lib/types'
 import { fetchFxRatesUpTo, buildGetRateForDate } from '@/lib/utils/fx-rates'
 import { Receipt, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
+import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 
 interface AggregatedTransaction {
   counterpartyKey: string
@@ -61,6 +63,7 @@ export function TransactionAnalysis({
   const [ratesByDate, setRatesByDate] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fullView, setFullView] = useState(false)
 
   // Scroll to Transaction Analysis section when opened via URL (e.g. from Dashboard trends)
   useEffect(() => {
@@ -201,13 +204,14 @@ export function TransactionAnalysis({
     [ratesByDate, fxRate]
   )
 
-  // Aggregate transactions by first 9 letters of counterparty
+  // Aggregate transactions by first 9 letters of counterparty (case-insensitive)
   const aggregatedTransactions = useMemo(() => {
     const grouped = new Map<string, AggregatedTransaction>()
 
     transactions.forEach((tx) => {
       const counterparty = tx.counterparty || 'Unknown'
-      const counterpartyKey = counterparty.substring(0, 9).trim()
+      // Use case-insensitive key to prevent duplicates like "OURARING" vs "Ouraring"
+      const counterpartyKey = counterparty.substring(0, 9).trim().toUpperCase()
       const rate = getRateForDate(typeof tx.date === 'string' ? tx.date : tx.date)
       // Use FX rate for transaction date when one side is null
       const amount = currency === 'USD'
@@ -218,6 +222,8 @@ export function TransactionAnalysis({
         const existing = grouped.get(counterpartyKey)!
         existing.amount += amount
         existing.transactionCount += 1
+        // Keep the most common casing (prefer title case over all caps if available)
+        // For now, keep the first encountered counterparty name
       } else {
         grouped.set(counterpartyKey, {
           counterpartyKey,
@@ -253,6 +259,15 @@ export function TransactionAnalysis({
       }
     })
   }, [aggregatedTransactions, threshold80Percent])
+
+  // Filter to only show top 80% in the default view (full view shows all)
+  const displayedTransactions = useMemo(() => {
+    if (fullView) {
+      return transactionsWithCumulative
+    }
+    // Only show transactions that contribute to the top 80% of spending
+    return transactionsWithCumulative.filter((tx) => tx.cumulative <= threshold80Percent)
+  }, [transactionsWithCumulative, threshold80Percent, fullView])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -340,7 +355,14 @@ export function TransactionAnalysis({
   return (
     <Card ref={cardRef}>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-        <CardTitle className="text-base">Transaction Analysis</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-base">Transaction Analysis</CardTitle>
+          <FullTableViewToggle
+            fullView={fullView}
+            onToggle={() => setFullView((v) => !v)}
+            aria-label="Toggle full table view for Transaction Analysis"
+          />
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Filters */}
@@ -415,11 +437,20 @@ export function TransactionAnalysis({
           </div>
         )}
 
+        {/* Instructional text */}
+        {!fullView && transactionsWithCumulative.length > 0 && (
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
+            <p className="text-sm text-blue-900 dark:text-blue-200">
+              <span className="font-semibold">Showing top 80% of transactions.</span> Click <span className="font-medium">"Full table view"</span> above to see all transactions for the selected period and category.
+            </p>
+          </div>
+        )}
+
         {/* Transactions — Mobile cards */}
-        {transactionsWithCumulative.length > 0 ? (
+        {displayedTransactions.length > 0 ? (
           <>
             <div className="md:hidden space-y-3">
-              {transactionsWithCumulative.map((tx, index) => {
+              {displayedTransactions.map((tx, index) => {
                 const percentage = (Math.abs(tx.amount) / totalSpend) * 100
                 const cumulativePercentage = (tx.cumulative / totalSpend) * 100
                 return (
@@ -448,55 +479,59 @@ export function TransactionAnalysis({
                 )
               })}
             </div>
-            <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
-            <table className="w-full caption-bottom text-[13px] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium">
-              <TableHeader>
-                <TableRow className="border-b bg-muted">
-                  <TableHead className="sticky top-0 z-20 bg-muted">Counterparty</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Amount</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Transactions</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Cumulative</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">% of Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactionsWithCumulative.map((tx, index) => {
-                  const percentage = (Math.abs(tx.amount) / totalSpend) * 100
-                  const cumulativePercentage = (tx.cumulative / totalSpend) * 100
-                  
-                  return (
-                    <TableRow
-                      key={`${tx.counterpartyKey}-${index}`}
-                      className={cn(
-                        tx.isTop80Percent && 'bg-yellow-50 dark:bg-yellow-950/20'
-                      )}
-                    >
-                      <TableCell className="font-medium">
-                        {tx.counterparty}
-                        {tx.isTop80Percent && (
-                          <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400 font-semibold">
-                            (Top 80%)
-                          </span>
+            <FullTableViewWrapper
+              fullView={fullView}
+              onClose={() => setFullView(false)}
+              className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md"
+            >
+              <table className="w-full caption-bottom text-[13px] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium">
+                <TableHeader>
+                  <TableRow className="border-b bg-muted">
+                    <TableHead className="sticky top-0 z-20 bg-muted">Counterparty</TableHead>
+                    <TableHead className="sticky top-0 z-20 text-right bg-muted">Amount</TableHead>
+                    <TableHead className="sticky top-0 z-20 text-right bg-muted">Transactions</TableHead>
+                    <TableHead className="sticky top-0 z-20 text-right bg-muted">Cumulative</TableHead>
+                    <TableHead className="sticky top-0 z-20 text-right bg-muted">% of Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayedTransactions.map((tx, index) => {
+                    const percentage = (Math.abs(tx.amount) / totalSpend) * 100
+                    const cumulativePercentage = (tx.cumulative / totalSpend) * 100
+                    
+                    return (
+                      <TableRow
+                        key={`${tx.counterpartyKey}-${index}`}
+                        className={cn(
+                          tx.isTop80Percent && 'bg-yellow-50 dark:bg-yellow-950/20'
                         )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {formatCurrency(tx.amount)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground tabular-nums">
-                        {tx.transactionCount}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums">
-                        {formatCurrency(tx.cumulative)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground tabular-nums">
-                        {cumulativePercentage.toFixed(1)}%
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </table>
-          </div>
+                      >
+                        <TableCell className="font-medium">
+                          {tx.counterparty}
+                          {tx.isTop80Percent && (
+                            <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400 font-semibold">
+                              (Top 80%)
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatCurrency(tx.amount)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground tabular-nums">
+                          {tx.transactionCount}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
+                          {formatCurrency(tx.cumulative)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground tabular-nums">
+                          {cumulativePercentage.toFixed(1)}%
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </table>
+            </FullTableViewWrapper>
           </>
         ) : (
           <EmptyState

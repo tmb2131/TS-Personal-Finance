@@ -90,8 +90,10 @@ export function MonthlyCategoryTrendsChart({
       allMonths,
     })
 
-    // Filter transactions for selected category
-    const categoryTransactions = transactions.filter((tx) => tx.category === selectedCategory)
+    // Filter transactions for selected category (or all if "Total Expenses")
+    const categoryTransactions = selectedCategory === 'Total Expenses'
+      ? transactions
+      : transactions.filter((tx) => tx.category === selectedCategory)
     
     // Debug logging
     console.log('MonthlyCategoryTrendsChart - Debug:', {
@@ -296,9 +298,15 @@ export function MonthlyCategoryTrendsChart({
 
   const fontSizes = getChartFontSizes(isMobile)
 
+  // Get the top counterparty name for the explanation text
+  const topCounterpartyName = chartData.length > 0 && chartData[0]?.topTransactionCounterparty
+    ? chartData[0].topTransactionCounterparty
+    : null
+
   const chartContent = (
-    <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
-      <ComposedChart
+    <div className="space-y-3">
+      <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
+        <ComposedChart
         data={chartData}
         margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
             barCategoryGap="10%"
@@ -351,14 +359,14 @@ export function MonthlyCategoryTrendsChart({
                   return [
                     formatCurrency(value),
                     dataPoint?.topTransactionCounterparty 
-                      ? `${selectedCategory} - ${dataPoint.topTransactionCounterparty}`
-                      : `${selectedCategory} - Top Transaction`,
+                      ? `Largest: ${dataPoint.topTransactionCounterparty}`
+                      : 'Largest Transaction Pattern',
                   ]
                 }
                 if (name === 'trendLine') {
                   return [formatCurrency(value), 'Trend (3M Avg)']
                 }
-                return [formatCurrency(value), `${selectedCategory} - Other`]
+                return [formatCurrency(value), 'Other Spending']
               }}
               labelFormatter={(label) => {
                 const dataPoint = chartData.find((d) => d.monthLabel === label)
@@ -383,14 +391,14 @@ export function MonthlyCategoryTrendsChart({
               formatter={(value) => {
                 if (value === 'topTransactionAmount') {
                   const currentData = chartData[chartData.length - 1]
-                  return currentData 
-                    ? `${selectedCategory} - ${currentData.topTransactionCounterparty}`
-                    : `${selectedCategory} - Top Transaction`
+                  return currentData?.topTransactionCounterparty
+                    ? `Largest: ${currentData.topTransactionCounterparty}`
+                    : 'Largest Transaction Pattern'
                 }
                 if (value === 'trendLine') {
                   return 'Trend (3M Avg)'
                 }
-                return `${selectedCategory} - Other`
+                return 'Other Spending'
               }}
               wrapperStyle={{ fontSize: fontSizes.legend }}
               iconSize={fontSizes.iconSize}
@@ -518,7 +526,15 @@ export function MonthlyCategoryTrendsChart({
               />
             </Line>
           </ComposedChart>
-    </ResponsiveContainer>
+      </ResponsiveContainer>
+      {topCounterpartyName && (
+        <p className="text-xs text-muted-foreground text-center px-2 leading-relaxed">
+          <span className="font-semibold" style={{ color: TOP_TRANSACTION_FILL_HIGHLIGHT }}>Largest transaction pattern:</span> The blue segment shows spending with{' '}
+          <span className="font-medium">{topCounterpartyName}</span> (merchants matching the first 7 characters), 
+          which is the highest-spending counterparty pattern across all 13 months. The red segment shows all other spending.
+        </p>
+      )}
+    </div>
   )
 
   if (hideCard) {

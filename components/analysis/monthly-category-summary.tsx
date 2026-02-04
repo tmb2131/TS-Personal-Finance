@@ -43,8 +43,10 @@ export function MonthlyCategorySummary({
   const summaryData = useMemo(() => {
     if (!selectedCategory || transactions.length === 0) return null
 
-    // Filter transactions for selected category
-    const categoryTransactions = transactions.filter((tx) => tx.category === selectedCategory)
+    // Filter transactions for selected category (or all if "Total Expenses")
+    const categoryTransactions = selectedCategory === 'Total Expenses'
+      ? transactions
+      : transactions.filter((tx) => tx.category === selectedCategory)
 
     if (categoryTransactions.length === 0) return null
 

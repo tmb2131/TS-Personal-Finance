@@ -192,6 +192,36 @@ export function YoYNetWorthWaterfall() {
     }).format(value)
   }
 
+  // Custom tooltip component without label
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null
+    
+    // Find the payload entry that's not 'min' (which is the transparent spacer)
+    const dataEntry = payload.find((entry: any) => entry.dataKey !== 'min')
+    if (!dataEntry) return null
+    
+    const data = dataEntry.payload as any
+    if (!data) return null
+    
+    const raw = data.value as number
+    const formattedValue = formatSignedLarge(raw)
+    return (
+      <div
+        style={{
+          backgroundColor: 'white',
+          border: '1px solid #e5e7eb',
+          borderRadius: '6px',
+          padding: isMobile ? '6px 10px' : '8px 12px',
+          fontSize: `${fontSizes.tooltipMin}px`,
+        }}
+      >
+        <div style={{ color: '#374151' }}>
+          {data.name}: {formattedValue}
+        </div>
+      </div>
+    )
+  }
+
   // Waterfall bar colors: green/red for increases/decreases, darker for net change
   const getBarColor = (type: string) => {
     switch (type) {
@@ -396,21 +426,7 @@ export function YoYNetWorthWaterfall() {
               stroke="#6b7280"
               width={isMobile ? 48 : 60}
             />
-            <Tooltip
-              formatter={(value: number, name: string, props: any) => {
-                const payload = props?.payload
-                if (!payload || name === 'min') return null
-                const raw = payload.value as number
-                return [formatSignedLarge(raw), payload.name]
-              }}
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                padding: isMobile ? '6px 10px' : '8px 12px',
-                fontSize: `${fontSizes.tooltipMin}px`,
-              }}
-            />
+            <Tooltip content={<CustomTooltip />} />
             {/* Series A: transparent spacer (pedestal) so visible bar starts at running total */}
             <Bar dataKey="min" stackId="waterfall" fill="transparent" stroke="none" />
             {/* Series B: visible delta bar, colored by increase/decrease */}

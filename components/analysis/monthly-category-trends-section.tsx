@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
+const STORAGE_KEY = 'monthly-category-trends-selected-category'
 
 export function MonthlyCategoryTrendsSection() {
   const { currency, fxRate } = useCurrency()
@@ -99,7 +100,8 @@ export function MonthlyCategoryTrendsSection() {
         new Set(expenseTransactions.map((tx: TransactionLog) => tx.category).filter(Boolean))
       ).sort() as string[]
 
-      setCategories(uniqueCategories)
+      // Add "Total Expenses" as the first option
+      setCategories(['Total Expenses', ...uniqueCategories])
       setTransactions(expenseTransactions as TransactionLog[])
 
       setLoading(false)
@@ -108,12 +110,27 @@ export function MonthlyCategoryTrendsSection() {
     fetchData()
   }, [currency])
 
-  // Set default category when categories are loaded
+  // Set default category when categories are loaded (use localStorage or default to "Total Expenses")
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
-      setSelectedCategory(categories[0])
+      // Try to get saved selection from localStorage
+      const savedCategory = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
+      
+      // If saved category exists in current categories, use it; otherwise default to "Total Expenses"
+      const categoryToSelect = savedCategory && categories.includes(savedCategory)
+        ? savedCategory
+        : 'Total Expenses'
+      
+      setSelectedCategory(categoryToSelect)
     }
   }, [categories, selectedCategory])
+
+  // Save selection to localStorage when it changes
+  useEffect(() => {
+    if (selectedCategory && typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, selectedCategory)
+    }
+  }, [selectedCategory])
 
   // Rate for a given date
   const getRateForDate = useMemo(

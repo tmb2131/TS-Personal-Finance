@@ -223,6 +223,38 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
 
   const fontSizes = getChartFontSizes(isMobile)
 
+  // Custom tooltip component without label
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null
+    
+    // Find the payload entry that's not 'min' (which is the transparent spacer)
+    const dataEntry = payload.find((entry: any) => entry.dataKey !== 'min')
+    if (!dataEntry) return null
+    
+    const data = dataEntry.payload as WaterfallBar | undefined
+    if (!data) return null
+    
+    const raw = data.value as number
+    const formattedValue = data.type === 'start' || data.type === 'end'
+      ? formatCurrencyFull(raw)
+      : `${raw >= 0 ? '+' : ''}${formatCurrencyFull(raw)}`
+    return (
+      <div
+        style={{
+          backgroundColor: 'white',
+          border: '1px solid #e5e7eb',
+          borderRadius: '6px',
+          padding: isMobile ? '6px 10px' : '8px 12px',
+          fontSize: `${fontSizes.tooltipMin}px`,
+        }}
+      >
+        <div style={{ color: '#374151' }}>
+          {data.name}: {formattedValue}
+        </div>
+      </div>
+    )
+  }
+
   const netChange = data.totalEnd - data.totalStart
   const absAmount = formatCurrencyCallout(Math.abs(netChange))
   const shortDate = (s: string) => {
@@ -331,25 +363,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
               stroke="#6b7280"
               width={isMobile ? 48 : 60}
             />
-            <Tooltip
-              formatter={(value: number, name: string, props: { payload?: WaterfallBar }) => {
-                const payload = props?.payload
-                if (!payload || name === 'min') return null
-                const raw = payload.value as number
-                if (payload.type === 'start' || payload.type === 'end') {
-                  return [formatCurrencyFull(raw), payload.name]
-                }
-                const sign = raw >= 0 ? '+' : ''
-                return [`${sign}${formatCurrencyFull(raw)}`, payload.name]
-              }}
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                padding: isMobile ? '6px 10px' : '8px 12px',
-                fontSize: `${fontSizes.tooltipMin}px`,
-              }}
-            />
+            <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="min" stackId="bridge" fill="transparent" stroke="none" />
             <Bar
               dataKey="delta"
