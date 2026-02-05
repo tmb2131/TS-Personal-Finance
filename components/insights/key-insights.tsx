@@ -994,7 +994,7 @@ export function KeyInsights() {
               {netWorthInsights.netWorthChartData.length > 0 ? (
                 <div className="h-[180px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 5, right: isMobile ? 10 : 15, left: 0, bottom: isMobile ? 25 : 15 }}>
+                    <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 25, right: isMobile ? 10 : 15, left: 0, bottom: isMobile ? 25 : 15 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis
                         dataKey="label"
