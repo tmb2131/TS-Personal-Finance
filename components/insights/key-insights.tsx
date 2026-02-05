@@ -25,6 +25,7 @@ import {
   PieChart,
   Pie,
   Legend,
+  LabelList,
 } from 'recharts'
 
 export function KeyInsights() {
@@ -288,6 +289,7 @@ export function KeyInsights() {
         Personal: v.personal,
         Family: v.family,
       }))
+      .filter((d) => d.total > 0) // Only display months/years where total net worth > 0 (per PRD requirement)
       .sort((a, b) => a.month.localeCompare(b.month))
       .slice(-12)
       .map((d, idx, arr) => {
@@ -1039,7 +1041,15 @@ export function KeyInsights() {
                           return label
                         }} 
                       />
-                      <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} dot={false}>
+                        <LabelList
+                          dataKey="total"
+                          position="top"
+                          offset={8}
+                          formatter={(v: number) => formatCurrencyLarge(v)}
+                          style={{ fontSize: getChartFontSizes(isMobile).axisTick, fill: '#374151' }}
+                        />
+                      </Line>
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -1059,25 +1069,48 @@ export function KeyInsights() {
                 )}
               </div>
               {(netWorthInsights.personalVsFamilyPie.length > 0 || netWorthInsights.categoryPie.length > 0) ? (
-                <div className="h-[180px] w-full flex items-center justify-center">
+                <div className="h-[200px] w-full flex items-center justify-center pt-2">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                    <PieChart margin={{ top: 8, right: 10, bottom: 0, left: 10 }}>
                       <Pie
                         data={netWorthInsights.hasPersonalFamilySplit ? netWorthInsights.personalVsFamilyPie : netWorthInsights.categoryPie}
                         cx="50%"
-                        cy="50%"
+                        cy="48%"
                         innerRadius={40}
                         outerRadius={70}
                         paddingAngle={2}
                         dataKey="value"
                         nameKey="name"
+                        stroke="#fff"
+                        strokeWidth={1}
                       >
                         {(netWorthInsights.hasPersonalFamilySplit ? netWorthInsights.personalVsFamilyPie : netWorthInsights.categoryPie).map((entry, i) => (
                           <Cell key={i} fill={entry.fill} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v: number) => formatCurrencyLarge(v)} />
-                      <Legend />
+                      <Tooltip
+                        formatter={(v: number) => formatCurrencyLarge(v)}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          padding: isMobile ? '6px 10px' : '8px 12px',
+                          fontSize: `${getChartFontSizes(isMobile).tooltipMin}px`,
+                        }}
+                      />
+                      <Legend
+                        wrapperStyle={{
+                          paddingTop: isMobile ? '10px' : '20px',
+                          fontSize: getChartFontSizes(isMobile).legend,
+                        }}
+                        iconType="square"
+                        iconSize={getChartFontSizes(isMobile).iconSize}
+                        formatter={(value) => (
+                          <span style={{ fontSize: getChartFontSizes(isMobile).legend, marginRight: isMobile ? '16px' : '24px' }}>
+                            {value}
+                          </span>
+                        )}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

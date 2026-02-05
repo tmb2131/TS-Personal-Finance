@@ -80,7 +80,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
     }, {})
 
     return Object.values(grouped)
-      .filter((item: any) => item.year != null && !isNaN(item.year) && isFinite(item.year))
+      .filter((item: any) => item.year != null && !isNaN(item.year) && isFinite(item.year) && item.Total > 0) // Only display years where total net worth > 0 (per PRD requirement)
       .sort((a: any, b: any) => a.year - b.year)
   }, [currency])
 
