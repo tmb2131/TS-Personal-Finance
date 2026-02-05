@@ -8,6 +8,9 @@ export interface AccountBalance {
   balance_personal_local: number
   balance_family_local: number
   balance_total_local: number
+  liquidity_profile: string | null
+  risk_profile: string | null
+  horizon_profile: string | null
 }
 
 export interface TransactionLog {
@@ -114,4 +117,17 @@ export interface KidsAccount {
   date_updated: string
   notes: string | null
   purpose: string | null
+}
+
+// Debt tracking - mortgages, loans, credit cards
+export interface Debt {
+  id: string
+  user_id: string
+  type: string
+  name: string
+  purpose: string | null
+  amount_gbp: number | null
+  amount_usd: number | null
+  date_updated: string
+  created_at: string
 }

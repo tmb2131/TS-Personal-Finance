@@ -38,7 +38,7 @@ interface SheetConfig {
 const SHEET_CONFIGS: SheetConfig[] = [
   {
     name: 'Account Balances',
-    range: 'A:H',
+    range: 'A:K',
     table: 'account_balances',
     transform: (row) => ({
       date_updated: new Date(row[0]),
@@ -49,6 +49,9 @@ const SHEET_CONFIGS: SheetConfig[] = [
       balance_personal_local: parseFloat(row[5] || '0'),
       balance_family_local: parseFloat(row[6] || '0'),
       balance_total_local: parseFloat(row[7] || '0'),
+      liquidity_profile: (row[8] && row[8].trim()) || null,
+      risk_profile: (row[9] && row[9].trim()) || null,
+      horizon_profile: (row[10] && row[10].trim()) || null,
     }),
   },
   {
@@ -62,6 +65,19 @@ const SHEET_CONFIGS: SheetConfig[] = [
       date_updated: new Date(row[3]),
       notes: (row[4] && row[4].trim()) || null, // Convert empty strings to null for unique constraint
       purpose: (row[5] && row[5].trim()) || null,
+    }),
+  },
+  {
+    name: 'Debt',
+    range: 'A:F',
+    table: 'debt',
+    transform: (row) => ({
+      type: row[0] || '',
+      name: row[1] || '',
+      purpose: (row[2] && row[2].trim()) || null,
+      amount_gbp: row[3] ? parseFloat(row[3]) : null,
+      amount_usd: row[4] ? parseFloat(row[4]) : null,
+      date_updated: new Date(row[5]),
     }),
   },
   {
@@ -429,6 +445,20 @@ export async function syncGoogleSheet(
             .upsert(normalizedData, {
               onConflict: 'user_id,child_name,account_type,date_updated,notes',
             });
+          upsertResult = { data, error };
+        } else if (config.table === 'debt') {
+          // Delete existing rows for this user first to ensure fresh data
+          const { error: deleteError } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (deleteError) {
+            console.warn(`Warning: Could not delete old debt for user ${uid}:`, deleteError);
+          }
+          // Insert new data
+          const { data, error } = await db
+            .from(config.table)
+            .insert(dataWithUser);
           upsertResult = { data, error };
         } else if (config.table === 'budget_targets') {
           // Delete existing rows for this user first to ensure fresh data
