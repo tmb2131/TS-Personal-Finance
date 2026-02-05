@@ -138,6 +138,16 @@ export function AccountsOverview() {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
+  // Check if there are any Trust accounts
+  const hasTrustAccounts = useMemo(() => {
+    return accounts.some((acc) => acc.category === 'Trust' && Math.abs(acc.balance_total_local) > 0)
+  }, [accounts])
+
+  // Filter categories to exclude Trust if no Trust accounts exist
+  const visibleCategories = useMemo(() => {
+    return hasTrustAccounts ? CATEGORIES : CATEGORIES.filter((cat) => cat !== 'Trust')
+  }, [hasTrustAccounts])
+
   // Calculate summary metrics
   const totalNetWorth = accounts.reduce((sum, acc) => {
     const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
@@ -160,7 +170,7 @@ export function AccountsOverview() {
 
   // Calculate category summary with Personal, Family, and Total
   const categorySummary = useMemo(() => {
-    return CATEGORIES.map((category) => {
+    return visibleCategories.map((category) => {
       const categoryAccounts = accounts.filter((acc) => acc.category === category)
       
       const personalTotal = categoryAccounts.reduce((sum, acc) => {
@@ -201,7 +211,7 @@ export function AccountsOverview() {
 
   // Calculate category summary by currency (GBP/USD)
   const categorySummaryByCurrency = useMemo(() => {
-    return CATEGORIES.map((category) => {
+    return visibleCategories.map((category) => {
       const categoryAccounts = accounts.filter((acc) => acc.category === category)
       
       const gbpTotal = categoryAccounts
@@ -251,7 +261,7 @@ export function AccountsOverview() {
 
   // Group accounts by category and sort by balance (descending)
   const groupedByCategory = useMemo(() => {
-    return CATEGORIES.map((category) => {
+    return visibleCategories.map((category) => {
       const categoryAccounts = accounts.filter((acc) => acc.category === category)
       
       // Sort accounts by converted balance in descending order
@@ -272,7 +282,7 @@ export function AccountsOverview() {
         subtotal,
       }
     }).filter((group) => group.accounts.length > 0)
-  }, [accounts, fxRate, convertAmount])
+  }, [accounts, fxRate, convertAmount, visibleCategories])
 
   // Calculate max balance for scaling bars in accounts table
   const maxAccountBalance = useMemo(() => {

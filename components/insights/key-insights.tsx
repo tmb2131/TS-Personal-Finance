@@ -98,6 +98,19 @@ export function KeyInsights() {
   // Same exclusions as Daily Summary modal for "annual spend" (est. spend from budget forecast)
   const EXCLUDED_ANNUAL_SPEND = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
+  // Check if there's any Trust data
+  const hasTrustData = useMemo(() => {
+    // Check account balances for Trust category
+    const hasTrustAccounts = accountBalances.some(
+      (account) => account.category === 'Trust' && Math.abs(account.balance_total_local) > 0
+    )
+    // Check historical net worth for Trust category
+    const hasTrustNetWorth = historicalNetWorth.some(
+      (item) => item.category === 'Trust' && Math.abs(currency === 'USD' ? (item.amount_usd ?? 0) : (item.amount_gbp ?? 0)) > 0
+    )
+    return hasTrustAccounts || hasTrustNetWorth
+  }, [accountBalances, historicalNetWorth, currency])
+
   // Net Worth Insights
   const netWorthInsights = useMemo(() => {
     // Calculate current net worth from account balances (same method as Dashboard AccountsOverview)
@@ -307,11 +320,41 @@ export function KeyInsights() {
         }
       })
 
-    // Personal vs Family for donut (current snapshot)
-    const personalVsFamilyPie = [
-      { name: 'Personal', value: Math.max(0, currentPersonal), fill: '#3b82f6' },
-      { name: 'Family', value: Math.max(0, currentFamily), fill: '#8b5cf6' },
-    ].filter((d) => d.value > 0)
+    // Check if there's a Personal/Family split
+    const hasPersonalFamilySplit = currentFamily > 0
+
+    // Category colors for pie chart
+    const categoryColors: Record<string, string> = {
+      'Cash': '#22c55e', // Green-500
+      'Brokerage': '#3b82f6', // Blue-500
+      'Alt Inv': '#8b5cf6', // Violet-500
+      'Retirement': '#ef4444', // Red-500
+      'Taconic': '#f59e0b', // Amber-500
+      'House': '#64748b', // Slate-500
+      'Trust': '#8b5cf6', // Violet-500
+    }
+
+    // Personal vs Family for donut (current snapshot) - only if there's a split
+    const personalVsFamilyPie = hasPersonalFamilySplit
+      ? [
+          { name: 'Personal', value: Math.max(0, currentPersonal), fill: '#3b82f6' },
+          { name: 'Family', value: Math.max(0, currentFamily), fill: '#8b5cf6' },
+        ].filter((d) => d.value > 0)
+      : []
+
+    // Category breakdown for donut (when no Personal/Family split)
+    // Exclude Trust from category breakdown
+    const categoryPie = !hasPersonalFamilySplit
+      ? Object.entries(categorySummary)
+          .filter(([category]) => category !== 'Trust') // Exclude Trust
+          .map(([category, item]: [string, any]) => ({
+            name: category,
+            value: Math.max(0, item.total),
+            fill: categoryColors[category] || '#6b7280', // Default gray if category not in map
+          }))
+          .filter((d) => d.value > 0)
+          .sort((a, b) => b.value - a.value) // Sort by value descending
+      : []
 
     return {
       currentTotal,
@@ -326,6 +369,8 @@ export function KeyInsights() {
       lastYearTotal,
       netWorthChartData,
       personalVsFamilyPie,
+      categoryPie,
+      hasPersonalFamilySplit,
     }
   }, [accountBalances, historicalNetWorth, currency, fxRate, convertAmount])
 
@@ -696,7 +741,9 @@ export function KeyInsights() {
               </div>
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Current Value <span className="text-[11px]">(Trust excluded)</span></p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    Current Value {hasTrustData && <span className="text-[11px]">(Trust excluded)</span>}
+                  </p>
                   <p className="text-2xl font-bold tabular-nums">{formatCurrencyLarge(netWorthInsights.currentTotal)}</p>
                 </div>
                 <div className="space-y-1 pt-2 border-t">
@@ -897,7 +944,8 @@ export function KeyInsights() {
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Net Worth</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Current net worth is <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</span> (Trust excluded).
+            Current net worth is <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</span>
+            {hasTrustData && ' (Trust excluded)'}.
           </p>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
@@ -1000,15 +1048,22 @@ export function KeyInsights() {
               )}
             </div>
 
-            {/* Personal vs Family — donut */}
+            {/* Personal vs Family or Category Breakdown — donut */}
             <div>
-              <h3 className="text-sm font-semibold mb-3">Personal vs Family</h3>
-              {netWorthInsights.personalVsFamilyPie.length > 0 ? (
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-sm font-semibold">
+                  {netWorthInsights.hasPersonalFamilySplit ? 'Personal vs Family' : 'Net Worth by Category'}
+                </h3>
+                {!netWorthInsights.hasPersonalFamilySplit && hasTrustData && (
+                  <span className="text-xs text-muted-foreground">(Trust excluded)</span>
+                )}
+              </div>
+              {(netWorthInsights.personalVsFamilyPie.length > 0 || netWorthInsights.categoryPie.length > 0) ? (
                 <div className="h-[180px] w-full flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={netWorthInsights.personalVsFamilyPie}
+                        data={netWorthInsights.hasPersonalFamilySplit ? netWorthInsights.personalVsFamilyPie : netWorthInsights.categoryPie}
                         cx="50%"
                         cy="50%"
                         innerRadius={40}
@@ -1017,7 +1072,7 @@ export function KeyInsights() {
                         dataKey="value"
                         nameKey="name"
                       >
-                        {netWorthInsights.personalVsFamilyPie.map((entry, i) => (
+                        {(netWorthInsights.hasPersonalFamilySplit ? netWorthInsights.personalVsFamilyPie : netWorthInsights.categoryPie).map((entry, i) => (
                           <Cell key={i} fill={entry.fill} />
                         ))}
                       </Pie>

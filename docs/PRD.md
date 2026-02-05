@@ -175,7 +175,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 - **At a glance:** Executive summary (e.g. net worth, budget gap, key KPIs); mobile uses horizontal scroll carousel.
 - **Net worth chart:** Line chart of historical net worth (with optional entity filters: Personal/Family/Trust); mobile: reduced ticks and compact Y-axis. Only displays years where total net worth > 0 (see Data Filtering Requirements in Section 2.1).
-- **Income vs expenses chart:** Budget vs tracking vs YTD; optional investment return; mobile: toggles can be hidden. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
+- **Income vs expenses chart:** Budget vs tracking vs YTD; all amounts are after tax; optional investment return; mobile: toggles can be hidden. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
 - **Budget table:** Categories with annual budget, tracking (forecast), YTD actual; variance and over/under budget. Optional **Full table view** toggle on Expenses: opens the expense tables in a full-screen overlay scaled to fit. See `docs/COMPACT-DATA-GRID.md`.
 - **Annual trends table:** Current year vs prior years by category (GBP/USD via FX). Optional **Full table view** toggle: opens the table in a full-screen overlay scaled to fit (no scrolling).
 - **Monthly trends table:** Current month vs prior months, TTM avg, z-score, delta vs last 3 months. Optional **Full table view** toggle (same behavior as Annual). Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
@@ -184,6 +184,10 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 ### 4.2 Key Insights (`/insights`)
 
 - **Key Insights:** Combined view of budget targets, annual/monthly trends, historical net worth, and latest account balances. Includes charts (e.g. net worth over time, pie by category), progress indicators, and “at a glance” style cards. Currency toggle (GBP/USD) and mobile-friendly layout. All charts and tables follow Data Filtering Requirements (see Section 2.1): only months with full historical coverage and years with net worth > 0 are displayed.
+- **Net worth pie chart:** 
+  - **Personal/Family split:** If account data includes both Personal and Family balances (Family > 0), displays a pie chart showing "Personal vs Family" breakdown.
+  - **Category breakdown:** If all accounts are Personal (Family = 0), displays a pie chart showing "Net Worth by Category" breakdown by account category (Cash, Brokerage, Alt Inv, Retirement, Taconic, House). Trust category is excluded from the category breakdown; if Trust data exists, displays "(Trust excluded)" text next to the title.
+- **Conditional Trust display:** All Trust-related UI elements (filters, labels, references) are conditionally hidden when no Trust data exists. If Trust data is present, Trust is excluded from Family calculations and category breakdowns, with appropriate exclusion text displayed.
 
 ### 4.3 Accounts (`/accounts`)
 
@@ -196,6 +200,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 ### 4.5 Recurring (`/recurring`)
 
 - **Recurring payments:** Table and cards of recurring items (name, annualized amount, needs review). Data from sheet `recurring_payments`.
+- **Detected recurring payments:** Automatically detects recurring payments from transaction history. Analysis window: **30 months (2.5 years)** of transaction history to ensure annual recurring payments can be detected (requires at least 2 transactions to identify a yearly pattern). Monthly patterns require 2+ transactions in the last 4 months. Only includes series with transactions in the last 60 days (live check). See `lib/utils/detect-recurring-payments.ts` for full detection logic.
 - **Recurring preferences:** Support for marking counterparty patterns as ignored (not recurring).
 
 ### 4.6 Settings (`/settings`)
@@ -244,7 +249,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 - **Config:** Google API credentials (service account) for the Sheets API. Spreadsheet ID is per-user from `user_profiles`, not from env.
 - **Flow:**  
   - **Sync:** `syncGoogleSheet(supabase, { spreadsheetId, userId })` reads the given sheet’s ranges/tabs, maps rows to table columns, and upserts into Supabase with `user_id` on every row (except global `fx_rates`, `fx_rate_current`). After a successful sync, `recordLastSync(supabase, userId)` updates `sync_metadata` for that user; `snapshotBudgetHistory(date, supabase, userId)` snapshots that user’s `budget_targets` into `budget_history`.  
-  - **Triggers:** (1) **Cron:** `GET|POST /api/cron/refresh` (06:00 UTC, `CRON_SECRET`) lists `user_profiles` where `google_spreadsheet_id IS NOT NULL`, then for each user runs sync, snapshot, and `recordLastSync(admin, user.id)`. (2) **Manual:** `POST /api/sync` (auth required) reads current user’s `google_spreadsheet_id`; if null, returns 400 “Connect your sheet first”. Otherwise runs sync, snapshot, and `recordLastSync(supabase, user.id)`.  
+  - **Triggers:** (1) **Cron:** `GET|POST /api/cron/refresh` (06:00 UTC and 23:30 UTC, `CRON_SECRET`) lists `user_profiles` where `google_spreadsheet_id IS NOT NULL`, then for each user runs sync, snapshot, and `recordLastSync(admin, user.id)`. (2) **Manual:** `POST /api/sync` (auth required) reads current user’s `google_spreadsheet_id`; if null, returns 400 “Connect your sheet first”. Otherwise runs sync, snapshot, and `recordLastSync(supabase, user.id)`.  
 - **Sheets → tables:** Same mapping as before (Account Balances → `account_balances`, etc.); all user tables receive `user_id` on each row.
 
 ### 5.2 Supabase
@@ -270,7 +275,7 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ### 5.5 Vercel (or similar)
 
-- **Cron:** `vercel.json` defines a daily cron for `/api/cron/refresh` at `0 6 * * *` (06:00 UTC). Caller must send `Authorization: Bearer <CRON_SECRET>`.
+- **Cron:** `vercel.json` defines daily crons for `/api/cron/refresh` at `0 6 * * *` (06:00 UTC) and `30 23 * * *` (23:30 UTC). Caller must send `Authorization: Bearer <CRON_SECRET>`.
 
 ### 5.6 API routes summary
 

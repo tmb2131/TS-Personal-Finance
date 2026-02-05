@@ -136,6 +136,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-64 w-full" />
@@ -149,6 +150,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
         <CardContent>
           <EmptyState icon={AlertCircle} title="Error loading data" description={error} />
@@ -163,7 +165,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
       <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()}</p>
+          <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
         <CardContent className="pt-8">
           <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
@@ -182,7 +184,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     <Card>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()}</p>
+          <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
       <CardContent className="pt-8">
         <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">

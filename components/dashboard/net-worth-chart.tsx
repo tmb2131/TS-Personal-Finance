@@ -124,6 +124,18 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
     [data, initialData, processData]
   )
 
+  // Check if there's any Trust data
+  const hasTrustData = useMemo(() => {
+    return displayData.some((item: any) => item.Trust && Math.abs(item.Trust) > 0)
+  }, [displayData])
+
+  // Auto-hide Trust if no Trust data exists
+  useEffect(() => {
+    if (!hasTrustData && showTrust) {
+      setShowTrust(false)
+    }
+  }, [hasTrustData, showTrust])
+
   // Filter data based on selected categories
   const filteredData = useMemo(() => {
     return displayData
@@ -220,14 +232,16 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
               <div className="h-4 w-4 rounded border border-input" />
               <span className="text-sm">Personal</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="h-4 w-4 rounded border border-input" />
-              <span className="text-sm">Family</span>
-            </div>
+          <div className="flex items-center space-x-2">
+            <div className="h-4 w-4 rounded border border-input" />
+            <span className="text-sm">Family</span>
+          </div>
+          {hasTrustData && (
             <div className="flex items-center space-x-2">
               <div className="h-4 w-4 rounded border border-input" />
               <span className="text-sm">Trust</span>
             </div>
+          )}
           </div>
           <Skeleton className="h-[320px] w-full" />
         </CardContent>
@@ -263,16 +277,18 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
               Family
             </Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="filter-trust"
-              checked={showTrust}
-              onCheckedChange={(checked) => setShowTrust(checked === true)}
-            />
-            <Label htmlFor="filter-trust" className="text-sm font-normal cursor-pointer">
-              Trust
-            </Label>
-          </div>
+          {hasTrustData && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="filter-trust"
+                checked={showTrust}
+                onCheckedChange={(checked) => setShowTrust(checked === true)}
+              />
+              <Label htmlFor="filter-trust" className="text-sm font-normal cursor-pointer">
+                Trust
+              </Label>
+            </div>
+          )}
         </div>
 
         <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>

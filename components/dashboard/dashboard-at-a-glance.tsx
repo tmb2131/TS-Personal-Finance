@@ -31,8 +31,7 @@ type Section = {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const SECTIONS: Section[] = [
-  { id: 'net-worth-chart', label: 'Net Worth (incl. Trust)', labelShort: 'Net Worth', icon: LineChart },
+const SECTIONS_BASE: Section[] = [
   { id: 'budget-table', label: 'Budget (Net Income)', labelShort: 'Budget', icon: Receipt },
   { id: 'annual-trends', label: 'Annual Trends', labelShort: 'Annual', icon: Calendar },
   { id: 'monthly-trends', label: 'Monthly Trends', labelShort: 'Monthly', icon: CalendarDays },
@@ -47,7 +46,8 @@ export function DashboardAtAGlance() {
     budgetGap: number | null
     incomeTotal: number | null
     expensesTotal: number | null
-  }>({ netWorth: null, budgetStatus: null, budgetGap: null, incomeTotal: null, expensesTotal: null })
+    hasTrustData: boolean
+  }>({ netWorth: null, budgetStatus: null, budgetGap: null, incomeTotal: null, expensesTotal: null, hasTrustData: false })
 
   useEffect(() => {
     let cancelled = false
@@ -59,6 +59,7 @@ export function DashboardAtAGlance() {
       ])
       if (cancelled) return
       let netWorth: number | null = null
+      let hasTrustData = false
       if (nwRes.data?.length) {
         const byYear = (nwRes.data as HistoricalNetWorth[]).reduce<Record<number, number>>((acc, item) => {
           const year = new Date(item.date).getFullYear()
@@ -68,6 +69,11 @@ export function DashboardAtAGlance() {
         }, {})
         const latestYear = Math.max(...Object.keys(byYear).map(Number))
         netWorth = byYear[latestYear] ?? null
+        
+        // Check if there's any Trust data
+        hasTrustData = (nwRes.data as HistoricalNetWorth[]).some(
+          (item) => item.category === 'Trust' && Math.abs(currency === 'USD' ? (item.amount_usd ?? 0) : (item.amount_gbp ?? 0)) > 0
+        )
       }
       let incomeTotal = 0
       let expensesTotal = 0
@@ -96,6 +102,7 @@ export function DashboardAtAGlance() {
         budgetGap,
         incomeTotal: incomeTotal || null,
         expensesTotal: expensesTotal || null,
+        hasTrustData,
       })
       setLoading(false)
     }
@@ -147,7 +154,10 @@ export function DashboardAtAGlance() {
           'md:grid-cols-2 lg:grid-cols-4',
           'max-md:flex max-md:gap-4 max-md:overflow-x-auto max-md:pb-2 max-md:snap-x max-md:snap-mandatory max-md:-mx-1 max-md:px-1'
         )}>
-          {SECTIONS.map((section) => {
+          {[
+            { id: 'net-worth-chart', label: data.hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
+            ...SECTIONS_BASE
+          ].map((section) => {
             const Icon = section.icon
             return (
               <button
