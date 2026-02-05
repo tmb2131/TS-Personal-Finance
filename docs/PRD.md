@@ -91,6 +91,10 @@ Other notable deps: `lucide-react` (icons), `react-markdown` + `remark-gfm` (cha
 - **Net Worth Start/End:** Simple bar chart, uses standard 320px height
 - **Forecast Gap Over Time:** Simple line chart, uses standard 320px height
 
+### Data Filtering Requirements
+- **Monthly data completeness:** Charts and tables must only display data for months with full historical coverage. If the minimum date of the transaction dataset (or other relevant dataset) falls within a month, that month should be excluded from display. For example, if the first historical transaction is December 30, 2024, only show data starting from January 1, 2025 (since December 2024 would not have complete month data). This ensures accurate monthly comparisons and prevents misleading partial-month aggregations.
+- **Historical net worth years:** For historical net worth charts and tables, only display years where the total net worth value is greater than 0. Years with zero or null values should be excluded to avoid cluttering the visualization with empty periods.
+
 ---
 
 ## 3. Data Model & Schema
@@ -170,16 +174,16 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 ### 4.1 Dashboard (`/`)
 
 - **At a glance:** Executive summary (e.g. net worth, budget gap, key KPIs); mobile uses horizontal scroll carousel.
-- **Net worth chart:** Line chart of historical net worth (with optional entity filters: Personal/Family/Trust); mobile: reduced ticks and compact Y-axis.
-- **Income vs expenses chart:** Budget vs tracking vs YTD; optional investment return; mobile: toggles can be hidden.
+- **Net worth chart:** Line chart of historical net worth (with optional entity filters: Personal/Family/Trust); mobile: reduced ticks and compact Y-axis. Only displays years where total net worth > 0 (see Data Filtering Requirements in Section 2.1).
+- **Income vs expenses chart:** Budget vs tracking vs YTD; optional investment return; mobile: toggles can be hidden. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
 - **Budget table:** Categories with annual budget, tracking (forecast), YTD actual; variance and over/under budget. Optional **Full table view** toggle on Expenses: opens the expense tables in a full-screen overlay scaled to fit. See `docs/COMPACT-DATA-GRID.md`.
 - **Annual trends table:** Current year vs prior years by category (GBP/USD via FX). Optional **Full table view** toggle: opens the table in a full-screen overlay scaled to fit (no scrolling).
-- **Monthly trends table:** Current month vs prior months, TTM avg, z-score, delta vs last 3 months. Optional **Full table view** toggle (same behavior as Annual).
+- **Monthly trends table:** Current month vs prior months, TTM avg, z-score, delta vs last 3 months. Optional **Full table view** toggle (same behavior as Annual). Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
 - **Navigation:** In-page anchors (Net Worth, Budget Table, Annual Trends, Monthly Trends) and “Back to top.”
 
 ### 4.2 Key Insights (`/insights`)
 
-- **Key Insights:** Combined view of budget targets, annual/monthly trends, historical net worth, and latest account balances. Includes charts (e.g. net worth over time, pie by category), progress indicators, and “at a glance” style cards. Currency toggle (GBP/USD) and mobile-friendly layout.
+- **Key Insights:** Combined view of budget targets, annual/monthly trends, historical net worth, and latest account balances. Includes charts (e.g. net worth over time, pie by category), progress indicators, and “at a glance” style cards. Currency toggle (GBP/USD) and mobile-friendly layout. All charts and tables follow Data Filtering Requirements (see Section 2.1): only months with full historical coverage and years with net worth > 0 are displayed.
 
 ### 4.3 Accounts (`/accounts`)
 
@@ -208,14 +212,14 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 - **Forecast evolution:**  
   - **Compare to:** Dropdown (Yesterday, Last Week, Last Month) to choose start date; end date defaults to today.  
   - **Forecast bridge chart:** Waterfall (stacked bar “invisible spacer” technique): Start total → category-level drivers (forecast deltas) → End total. Green = forecast down (gap improved), red = forecast up (gap worsened). Data from `budget_history` via `/api/forecast-bridge`.  
-  - **Forecast gap over time:** Line chart of total budget gap (annual_budget − forecast_spend, expense categories only) over the selected date range. Data from `budget_history` via `GET /api/forecast-gap-over-time?startDate=&endDate=`.  
+  - **Forecast gap over time:** Line chart of total budget gap (annual_budget − forecast_spend, expense categories only) over the selected date range. Data from `budget_history` via `GET /api/forecast-gap-over-time?startDate=&endDate=`. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).  
   - **Logic:** For start date and end date, load snapshots from `budget_history`; compute per-category `Spend_Delta = End_Forecast - Start_Forecast`; sort by absolute delta; top drivers (e.g. top 5 + Other) drive the waterfall.
-- **YTD spend over time:** Cumulative spend chart (e.g. by category) over the year.
-- **Annual cumulative spend:** Multi-year cumulative spend vs budget (optional year toggles; mobile may show fewer lines by default).
-- **YoY net worth change:** Start/end chart and YoY net worth waterfall (income, expenses, transfers, etc.) from `yoy_net_worth`.
+- **YTD spend over time:** Cumulative spend chart (e.g. by category) over the year. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
+- **Annual cumulative spend:** Multi-year cumulative spend vs budget (optional year toggles; mobile may show fewer lines by default). Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
+- **YoY net worth change:** Start/end chart and YoY net worth waterfall (income, expenses, transfers, etc.) from `yoy_net_worth`. Only displays years where total net worth > 0 (see Data Filtering Requirements in Section 2.1).
 - **Monthly Trends by Category:** 
   - **Monthly Category Summary:** Summary cards showing latest month spending vs. L3M Avg, L12M Avg, and LY (Last Year) for the selected category, broken down by top transaction and other spending. Includes a category selector dropdown to choose which category to analyze.
-  - **Monthly Trends Chart:** Stacked bar chart showing monthly spending trends for the selected category. Each bar represents a month and is split into two segments: the top transaction (counterparty with highest spending) for that month, and the rest of the category ("Other"). Highlights the latest month. Data from `transaction_log`; shows last 13 months of trends. Category selection is controlled by the selector in the Monthly Category Summary section above.
+  - **Monthly Trends Chart:** Stacked bar chart showing monthly spending trends for the selected category. Each bar represents a month and is split into two segments: the top transaction (counterparty with highest spending) for that month, and the rest of the category ("Other"). Highlights the latest month. Data from `transaction_log`; shows last 13 months of trends. Category selection is controlled by the selector in the Monthly Category Summary section above. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
 
 ### 4.8 Chat / AI Assistant
 

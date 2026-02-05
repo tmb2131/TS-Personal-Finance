@@ -17,6 +17,9 @@ const EXCLUDED_CATEGORIES = ['Excluded', 'Income', 'Gift Money', 'Other Income']
  * Groups by first 5 letters of counterparty (normalized to lowercase)
  * Identifies monthly (25-37 day intervals) and yearly (365 day intervals) patterns
  * 
+ * Data window: Analyzes transactions from the last 30 months (2.5 years) to ensure
+ * annual recurring payments can be detected (requires at least 2 transactions).
+ * 
  * Filtering rules:
  * 1. Live Check: Only includes series with transactions in the last 60 days
  * 2. Monthly Density Check: Monthly patterns must have 2+ transactions in last 4 months
@@ -30,10 +33,12 @@ export function detectRecurringPayments(
   currency: 'GBP' | 'USD',
   fxRate: number = 1
 ): DetectedRecurringPayment[] {
-  // Filter to last 12 months and exclude income categories
-  const twelveMonthsAgo = new Date()
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
-  twelveMonthsAgo.setHours(0, 0, 0, 0)
+  // Filter to last 30 months (2.5 years) to detect annual recurring payments
+  // Annual payments need at least 2 transactions to detect pattern, so we need to look back
+  // at least 2 years. Using 30 months provides buffer for slightly irregular annual payments.
+  const thirtyMonthsAgo = new Date()
+  thirtyMonthsAgo.setMonth(thirtyMonthsAgo.getMonth() - 30)
+  thirtyMonthsAgo.setHours(0, 0, 0, 0)
 
   const filteredTransactions = transactions.filter((tx) => {
     if (!tx.date) return false
@@ -41,7 +46,7 @@ export function detectRecurringPayments(
 
     const txDate = typeof tx.date === 'string' ? new Date(tx.date) : new Date(tx.date)
     txDate.setHours(0, 0, 0, 0)
-    return txDate >= twelveMonthsAgo
+    return txDate >= thirtyMonthsAgo
   })
 
   // Group by first 5 letters of counterparty (normalized to lowercase)
@@ -150,14 +155,12 @@ export function detectRecurringPayments(
       ? yearlyIntervals.reduce((sum, days) => sum + days, 0) / yearlyIntervals.length
       : 0
 
-    // 2. DENSITY CHECK: Count transactions in last 4 months and last 12 months
+    // 2. DENSITY CHECK: Count transactions in last 4 months
     const transactionsLast4Months = sortedTxs.filter((tx) => {
       const txDate = typeof tx.date === 'string' ? new Date(tx.date) : new Date(tx.date)
       txDate.setHours(0, 0, 0, 0)
       return txDate >= fourMonthsAgo
     }).length
-
-    const transactionsLast12Months = sortedTxs.length // Already filtered to last 12 months
 
     // Determine frequency
     let frequency: 'Monthly' | 'Yearly' | null = null

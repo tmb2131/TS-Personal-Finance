@@ -28,10 +28,10 @@ export function RecurringPayments() {
       const supabase = createClient()
 
       try {
-        // Fetch transactions from last 12 months
-        const twelveMonthsAgo = new Date()
-        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
-        const startDateStr = twelveMonthsAgo.toISOString().split('T')[0]
+        // Fetch transactions from last 30 months (2.5 years) to detect annual recurring payments
+        const thirtyMonthsAgo = new Date()
+        thirtyMonthsAgo.setMonth(thirtyMonthsAgo.getMonth() - 30)
+        const startDateStr = thirtyMonthsAgo.toISOString().split('T')[0]
 
         // Fetch all transactions with pagination
         let allTransactions: TransactionLog[] = []
@@ -313,7 +313,7 @@ export function RecurringPayments() {
             <EmptyState
               icon={Calendar}
               title="No monthly subscriptions found"
-              description="No recurring monthly payments detected in the last 12 months."
+              description="No recurring monthly payments detected in your transaction history."
             />
           )}
         </CardContent>
@@ -341,7 +341,7 @@ export function RecurringPayments() {
             <EmptyState
               icon={Calendar}
               title="No annual commitments found"
-              description="No recurring annual payments detected in the last 12 months."
+              description="No recurring annual payments detected in your transaction history (analyzing last 30 months)."
             />
           )}
         </CardContent>
