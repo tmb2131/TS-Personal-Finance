@@ -1048,8 +1048,14 @@ export function KeyInsights() {
                           offset={8}
                           content={({ x, y, value, index }: { x?: string | number; y?: string | number; value?: string | number; index?: number }) => {
                             if (value == null || x == null || y == null || typeof x === 'string' || typeof y === 'string' || typeof value === 'string') return null
+                            const data = netWorthInsights.netWorthChartData
                             const isFirst = index === 0
-                            const isLast = index === netWorthInsights.netWorthChartData.length - 1
+                            const isLast = index === data.length - 1
+                            // Find peak index (highest total)
+                            const peakIndex = data.reduce((maxIdx, item, i) => item.total > data[maxIdx].total ? i : maxIdx, 0)
+                            const isPeak = index === peakIndex
+                            // Only label first, last, and peak points
+                            if (!isFirst && !isLast && !isPeak) return null
                             return (
                               <text
                                 key={index}
