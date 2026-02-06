@@ -213,7 +213,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               </div>
               <div className="space-y-0.5 pt-1.5 border-t">
                 <p className="text-xs">
-                  <span className="font-semibold">{formatCurrency(Math.abs(totals.netIncome.gap))}</span>
+                  <span className={cn('font-semibold', totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600')}>{formatCurrency(Math.abs(totals.netIncome.gap))}</span>
                   <span className="text-muted-foreground ml-1">
                     {totals.netIncome.gap >= 0 ? 'under' : 'over'} budget
                   </span>

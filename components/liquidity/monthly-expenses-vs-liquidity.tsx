@@ -78,21 +78,18 @@ export default function MonthlyExpensesVsLiquidity() {
           fxRate
         )
 
-        if (
-          account.liquidity_profile === 'High' ||
-          account.category === 'Cash'
-        ) {
+        // Cash: Cash category
+        if (account.category === 'Cash') {
           cashTotal += amount
         }
 
-        if (
-          account.liquidity_profile === 'High' ||
-          account.liquidity_profile === 'Medium'
-        ) {
+        // Liquid: Cash + Brokerage categories
+        if (account.category === 'Cash' || account.category === 'Brokerage') {
           liquidTotal += amount
         }
 
-        if (account.liquidity_profile === 'High') {
+        // Instant: Instant liquidity profile
+        if (account.liquidity_profile === 'Instant') {
           instantTotal += amount
         }
       })
@@ -100,8 +97,8 @@ export default function MonthlyExpensesVsLiquidity() {
       const data = [
         { name: 'Monthly Expenses', value: monthlyExpenses, color: '#3b82f6' },
         { name: 'Cash', value: cashTotal, color: '#10b981' },
-        { name: 'Liquid', value: liquidTotal, color: '#22c55e' },
         { name: 'Instant', value: instantTotal, color: '#34d399' },
+        { name: 'Liquid', value: liquidTotal, color: '#22c55e' },
       ]
 
       setChartData(data)
@@ -181,6 +178,9 @@ export default function MonthlyExpensesVsLiquidity() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        <p className="text-xs text-muted-foreground mt-2">
+          Monthly Expenses = avg net spend over last 3 full months (excl. income &amp; gifts)
+        </p>
       </CardContent>
     </Card>
   )

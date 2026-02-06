@@ -56,24 +56,18 @@ export default function LiquidityOverviewKPIs() {
           fxRate
         )
 
-        // Cash: High liquidity or Cash category
-        if (
-          account.liquidity_profile === 'High' ||
-          account.category === 'Cash'
-        ) {
+        // Cash: Cash category
+        if (account.category === 'Cash') {
           cash += amount
         }
 
-        // Liquid: High or Medium liquidity
-        if (
-          account.liquidity_profile === 'High' ||
-          account.liquidity_profile === 'Medium'
-        ) {
+        // Liquid Assets: Cash + Brokerage categories
+        if (account.category === 'Cash' || account.category === 'Brokerage') {
           liquid += amount
         }
 
-        // Instant: Only High liquidity
-        if (account.liquidity_profile === 'High') {
+        // Instant: Instant liquidity profile
+        if (account.liquidity_profile === 'Instant') {
           instant += amount
         }
       })
@@ -99,9 +93,9 @@ export default function LiquidityOverviewKPIs() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <KPICard title="Total Cash" value={cashTotal} />
-      <KPICard title="Total Liquid Assets" value={liquidTotal} subtitle="High + Medium liquidity" />
-      <KPICard title="Instant Liquidity" value={instantTotal} subtitle="High liquidity only" />
+      <KPICard title="Total Cash" value={cashTotal} subtitle="Cash accounts" />
+      <KPICard title="Liquid Assets" value={liquidTotal} subtitle="Cash + Brokerage" />
+      <KPICard title="Instant Liquidity" value={instantTotal} subtitle="Instant access only" />
     </div>
   )
 }

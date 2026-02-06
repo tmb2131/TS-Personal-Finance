@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { AccountBalance, Debt } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { getChartFontSizes } from '@/lib/chart-styles'
@@ -19,19 +18,13 @@ import {
   Cell,
 } from 'recharts'
 
-type LiquidityLevel = 'cash' | 'liquid' | 'instant'
-
 export default function CommittedCapitalVsCash() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
   const [loading, setLoading] = useState(true)
-  const [selectedLevel, setSelectedLevel] = useState<LiquidityLevel>('liquid')
-  const [committedCapital, setCommittedCapital] = useState(0)
-  const [liquidityAmounts, setLiquidityAmounts] = useState({
-    cash: 0,
-    liquid: 0,
-    instant: 0,
-  })
+  const [chartData, setChartData] = useState<
+    Array<{ name: string; value: number; color: string }>
+  >([])
 
   useEffect(() => {
     async function fetchData() {
@@ -49,8 +42,6 @@ export default function CommittedCapitalVsCash() {
           const amount = (currency === 'USD' ? item.amount_usd : item.amount_gbp) ?? 0
           return sum + amount
         }, 0) ?? 0
-
-      setCommittedCapital(totalCommitted)
 
       // Fetch account balances
       const { data: accounts } = await supabase
@@ -80,8 +71,8 @@ export default function CommittedCapitalVsCash() {
 
       // Calculate liquidity totals
       let cash = 0
-      let liquid = 0
       let instant = 0
+      let within6Months = 0
 
       latestAccounts.forEach((account) => {
         const amount = convertAmount(
@@ -90,26 +81,30 @@ export default function CommittedCapitalVsCash() {
           fxRate
         )
 
-        if (
-          account.liquidity_profile === 'High' ||
-          account.category === 'Cash'
-        ) {
+        // Cash: Cash category
+        if (account.category === 'Cash') {
           cash += amount
         }
 
-        if (
-          account.liquidity_profile === 'High' ||
-          account.liquidity_profile === 'Medium'
-        ) {
-          liquid += amount
+        // Instant: Instant liquidity profile
+        if (account.liquidity_profile === 'Instant') {
+          instant += amount
         }
 
-        if (account.liquidity_profile === 'High') {
-          instant += amount
+        // Within 6 Months: Within 6 Months liquidity profile
+        if (account.liquidity_profile === 'Within 6 Months') {
+          within6Months += amount
         }
       })
 
-      setLiquidityAmounts({ cash, liquid, instant })
+      const data = [
+        { name: 'Committed Capital', value: totalCommitted, color: '#ef4444' },
+        { name: 'Cash', value: cash, color: '#10b981' },
+        { name: 'Instant', value: instant, color: '#34d399' },
+        { name: 'Within 6 Months', value: within6Months, color: '#3b82f6' },
+      ]
+
+      setChartData(data)
       setLoading(false)
     }
 
@@ -125,20 +120,6 @@ export default function CommittedCapitalVsCash() {
     }).format(value)
   }
 
-  const chartData = [
-    { name: 'Committed Capital', value: committedCapital, color: '#ef4444' },
-    {
-      name:
-        selectedLevel === 'cash'
-          ? 'Cash'
-          : selectedLevel === 'liquid'
-            ? 'Liquid'
-            : 'Instant',
-      value: liquidityAmounts[selectedLevel],
-      color: '#10b981',
-    },
-  ]
-
   const fontSizes = getChartFontSizes(isMobile)
   const chartHeight = isMobile ? 260 : 320
 
@@ -146,7 +127,7 @@ export default function CommittedCapitalVsCash() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Committed Capital vs. Cash</CardTitle>
+          <CardTitle>Committed Capital vs. Liquidity</CardTitle>
         </CardHeader>
         <CardContent>
           <div
@@ -163,32 +144,7 @@ export default function CommittedCapitalVsCash() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle>Committed Capital vs. Cash</CardTitle>
-          <div className="flex gap-2">
-            <Button
-              variant={selectedLevel === 'cash' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedLevel('cash')}
-            >
-              Cash
-            </Button>
-            <Button
-              variant={selectedLevel === 'liquid' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedLevel('liquid')}
-            >
-              Liquid
-            </Button>
-            <Button
-              variant={selectedLevel === 'instant' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedLevel('instant')}
-            >
-              Instant
-            </Button>
-          </div>
-        </div>
+        <CardTitle>Committed Capital vs. Liquidity</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={chartHeight}>
@@ -225,6 +181,9 @@ export default function CommittedCapitalVsCash() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        <p className="text-xs text-muted-foreground mt-2">
+          Cash = Cash category (may overlap with Instant). Instant &amp; Within 6 Months = liquidity profile (no overlap).
+        </p>
       </CardContent>
     </Card>
   )

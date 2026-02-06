@@ -2,9 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Directory
+
+Always edit files in `/Users/tombrosens/findash`. Never use git worktrees or worktree paths.
+
 ## Project Overview
 
-**Findash** (displayed as "TS Personal Finance") is a Next.js 16 personal finance dashboard that syncs data from Google Sheets and displays net worth tracking, budget analysis, spending trends, and includes an AI financial assistant powered by Google Gemini.
+**Findash** (displayed as "TS Personal Finance") is a Next.js 16 personal finance dashboard that syncs data from Google Sheets and displays net worth tracking, budget analysis, spending trends, liquidity monitoring, recurring payment detection, and includes an AI financial assistant powered by Google Gemini.
 
 ## Development Commands
 
@@ -31,6 +35,10 @@ npm run lint
 - **Auth**: Supabase Auth (Google OAuth)
 - **AI**: Google Gemini 2.5 Flash (via @ai-sdk/google)
 - **Data Source**: Google Sheets API v4 (source of truth)
+- **Analytics**: Vercel Analytics
+- **Dates**: date-fns
+- **Toasts**: Sonner
+- **Markdown**: react-markdown + remark-gfm (used in AI chat)
 
 ## Key Architecture Patterns
 
@@ -69,12 +77,17 @@ Core tables (user-scoped):
 - `account_balances`: Current account balances by institution/category with liquidity/risk/horizon profiles
 - `transaction_log`: Historical transactions (income/expenses)
 - `budget_targets`: Annual budget targets by category
+- `budget_history`: Historical budget snapshots
 - `historical_net_worth`: Net worth snapshots over time
+- `yoy_net_worth`: Year-over-year net worth comparisons
 - `annual_trends`: Year-over-year spending patterns
 - `monthly_trends`: Month-over-month spending with Z-scores
 - `kids_accounts`: Children's account balances
 - `debt`: Debt tracking (mortgages, loans, credit cards) with dual currency amounts
 - `recurring_payments`: Detected recurring payment patterns
+- `recurring_preferences`: User preferences for recurring payment detection
+- `investment_return`: Investment return tracking
+- `sync_metadata`: Sync operation metadata and tracking
 - `user_profiles`: Stores user's Google Sheet ID and settings
 
 Global tables (no user_id):
@@ -94,18 +107,37 @@ Expected tabs:
 8. **Monthly Trends**: Last 3 months + current month estimates with Z-scores
 9. **Kids**: Children's accounts (name, type, balance, notes)
 10. **Debt**: Type, Name, Purpose, Amounts (GBP/USD), Date Updated
+11. **Budget History**: Historical budget snapshots
+12. **YoY Net Worth**: Year-over-year net worth comparisons
+13. **Investment Return**: Investment return data
+14. **Recurring Payments**: Detected recurring payment patterns
 
 ## Key Files
 
 - `lib/sync-google-sheet.ts`: Google Sheets sync service (transform functions, batching logic)
+- `lib/sync-metadata.ts`: Sync metadata tracking
 - `lib/types.ts`: TypeScript interfaces for all data models
 - `lib/allowed-emails.ts`: Email allowlist for auth (if used)
+- `lib/analysis-url.ts`: Analysis URL utilities
+- `lib/snapshot-budget-history.ts`: Budget history snapshot logic
+- `lib/chart-styles.ts`: Consistent chart color palette for Recharts
+- `lib/utils/detect-recurring-payments.ts`: Recurring payment detection logic
+- `lib/utils/fx-rates.ts`: FX rate utilities
+- `lib/utils/chart-format.ts`: Chart formatting utilities
+- `lib/contexts/currency-context.tsx`: Global currency state (GBP/USD)
+- `lib/contexts/auth-timeout-provider.tsx`: Auth timeout provider
+- `lib/hooks/use-is-mobile.ts`: Mobile detection hook
 - `app/actions.ts`: Server actions (syncData)
+- `app/manifest.ts`: PWA manifest configuration
 - `app/api/chat/route.ts`: AI assistant streaming endpoint
 - `app/api/cron/refresh/route.ts`: Scheduled sync endpoint
-- `supabase/migrations/001_initial_schema.sql`: Database schema
+- `app/api/sync/route.ts`: Sync API endpoint
+- `app/api/forecast-bridge/route.ts`: Budget forecast bridge/waterfall analysis
+- `app/api/cash-runway/route.ts`: Cash runway calculation
+- `app/api/forecast-gap-over-time/route.ts`: Forecast gap timeline data
+- `proxy.ts`: Middleware/proxy configuration
 - `components/app-shell.tsx`: Main layout wrapper with sidebar/header
-- `lib/contexts/currency-context.tsx`: Global currency state (GBP/USD)
+- `supabase/migrations/`: 22 migration files (001 through 022)
 
 ## Environment Variables
 
@@ -126,12 +158,12 @@ SERPER_API_KEY=  # For AI web search
 
 ## Database Migrations
 
-Run migrations in Supabase SQL Editor:
+Run migrations in Supabase SQL Editor. There are currently 22 migrations (001 through 022):
 ```sql
--- Copy contents from supabase/migrations/001_initial_schema.sql
+-- Copy contents from supabase/migrations/00N_description.sql
 ```
 
-Subsequent migrations should follow the pattern `00N_description.sql`.
+New migrations should follow the pattern `00N_description.sql` (next: `023_*.sql`).
 
 ## Deployment
 
@@ -143,20 +175,47 @@ Configured for Vercel:
 
 `vercel.json` contains cron configuration for automatic data refresh.
 
+## Pages & Navigation
+
+The sidebar navigation order (defined in `components/sidebar.tsx`):
+1. **Key Insights** (`/insights`) — Primary landing page with KPIs, daily summary, sheet connection
+2. **Dashboard** (`/`) — Net worth charts, budget overview, spending trends
+3. **Accounts** (`/accounts`) — Account balances by institution/category
+4. **Liquidity** (`/liquidity`) — Cash position, debt tracking, liquidity distribution, committed capital vs liquidity
+5. **Kids Accounts** (`/kids`) — Children's account balances
+6. **Analysis** (`/analysis`) — Detailed spending analysis, forecast bridge, category breakdowns
+7. **Recurring** (`/recurring`) — Detected recurring payments and subscriptions
+8. **Settings** (`/settings`) — Google Sheet connection, sync preferences
+
+## API Routes
+
+- `POST /api/chat` — AI assistant streaming endpoint (Gemini + tool calling)
+- `GET /api/cron/refresh` — Scheduled sync endpoint (Bearer auth via CRON_SECRET)
+- `POST /api/sync` — Manual sync endpoint
+- `GET /api/forecast-bridge` — Budget forecast bridge/waterfall analysis
+- `GET /api/cash-runway` — Cash runway calculation (net burn last 3 months)
+- `GET /api/forecast-gap-over-time` — Forecast gap timeline data
+
 ## Component Organization
 
 ```
 components/
-├── ui/              # Shadcn/UI primitives (button, dialog, card, etc.)
-├── dashboard/       # Dashboard page components (charts, tables)
+├── ui/              # Shadcn/UI primitives (button, dialog, card, empty-state, etc.)
+├── dashboard/       # Dashboard page components (charts, tables) — 19 files
 ├── accounts/        # Accounts page components
-├── analysis/        # Analysis page components
-├── insights/        # Key Insights page components
+├── analysis/        # Analysis page components — 16 files
+├── insights/        # Key Insights page (KPIs, daily summary, navigation, connect-sheet modal)
+├── liquidity/       # Liquidity page (KPIs, committed capital vs liquidity, monthly expenses vs liquidity, debt overview, distribution)
+├── kids/            # Kids accounts page
+├── recurring/       # Recurring payments page (detection, table)
 ├── settings/        # Settings page components
 ├── ai-assistant/    # AI chat widget
 ├── app-shell.tsx    # Main layout with sidebar
 ├── header.tsx       # Top header with sync button
-└── sidebar.tsx      # Navigation sidebar
+├── sidebar.tsx      # Navigation sidebar
+├── kpi-card.tsx     # Reusable KPI card component
+├── currency-toggle.tsx  # GBP/USD currency switcher
+└── login-header.tsx # Login page header
 ```
 
 ## Authentication Flow
@@ -173,6 +232,34 @@ components/
 - Dark mode support via `class` strategy (toggle not yet implemented in UI)
 - Responsive: mobile-first with `md:` and `lg:` breakpoints
 - Chart colors: Defined in `lib/chart-styles.ts` (consistent palette across Recharts)
+- Chart formatting: Shared utilities in `lib/utils/chart-format.ts`
+
+## Other Directories
+
+- `utils/cn.ts`: Tailwind `cn()` merge utility (clsx + tailwind-merge)
+- `docs/`: Planning documents and PRDs (`PRD.md`, mobile UI recommendations, scaling notes, etc.)
+
+## Liquidity Page Definitions
+
+The Liquidity page uses two different classification systems from `account_balances`:
+
+### Category-based (from `category` column)
+- **Cash**: `category === 'Cash'`
+- **Liquid Assets**: `category === 'Cash' || category === 'Brokerage'`
+
+### Liquidity profile-based (from `liquidity_profile` column)
+- **Instant**: `liquidity_profile === 'Instant'`
+- **Within 6 Months**: `liquidity_profile === 'Within 6 Months'`
+- **Locked Up**: `liquidity_profile === 'Locked Up'`
+
+Note: Cash (category-based) may overlap with Instant (profile-based). Instant and Within 6 Months do not overlap.
+
+### Charts
+- **KPIs**: Total Cash, Liquid Assets (Cash + Brokerage), Instant Liquidity
+- **Committed Capital vs. Liquidity**: 4 bars — Committed Capital (from `debt` table), Cash, Instant, Within 6 Months
+- **Monthly Expenses vs. Liquidity**: 4 bars — Monthly Expenses (avg net spend over last 3 full months, excl. income & gifts), Cash, Instant, Liquid
+- **Liquidity Distribution**: Pie chart by `liquidity_profile` (color-coded: Instant=emerald, Within 6 Months=blue, Locked Up=slate)
+- **Debt vs Assets**: Total debt vs total assets (excludes Trust category from assets; shows "Assets exclude Trust" subtext when Trust exists)
 
 ## Common Tasks
 

@@ -44,6 +44,7 @@ export default function DebtOverview() {
   const [debtRatio, setDebtRatio] = useState<number | null>(null)
   const [debtItems, setDebtItems] = useState<Debt[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [hasTrust, setHasTrust] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -93,9 +94,14 @@ export default function DebtOverview() {
 
       const latestAccounts = Array.from(accountsMap.values())
 
-      // Calculate total assets (excluding debt-related accounts)
+      // Calculate total assets (excluding Trust accounts)
       let assets = 0
+      let trustExists = false
       latestAccounts.forEach((account) => {
+        if (account.category === 'Trust') {
+          trustExists = true
+          return
+        }
         const amount = convertAmount(
           account.balance_total_local ?? 0,
           account.currency ?? 'USD',
@@ -103,6 +109,7 @@ export default function DebtOverview() {
         )
         assets += amount
       })
+      setHasTrust(trustExists)
 
       setTotalDebt(debt)
       setTotalAssets(assets)
@@ -180,7 +187,12 @@ export default function DebtOverview() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Debt vs Assets</CardTitle>
+        <div>
+          <CardTitle>Debt vs Assets</CardTitle>
+          {hasTrust && (
+            <p className="text-xs text-muted-foreground mt-1">Assets exclude Trust</p>
+          )}
+        </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">

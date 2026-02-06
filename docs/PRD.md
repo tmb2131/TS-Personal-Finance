@@ -193,6 +193,18 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 - **Accounts overview:** List/cards of account balances (by institution, account name, category, currency). Latest balance per account; optional grouping. Mobile: card layout instead of table.
 
+### 4.3.1 Liquidity (`/liquidity`)
+
+- **Purpose:** Monitor cash position, liquidity tiers, committed capital exposure, and debt-to-asset ratios.
+- **Liquidity definitions:** The page uses two classification systems from `account_balances`:
+  - **Category-based** (from `category` column): Cash = Cash category; Liquid Assets = Cash + Brokerage categories.
+  - **Profile-based** (from `liquidity_profile` column): Instant, Within 6 Months, Locked Up. These do not overlap. Cash (category-based) may overlap with Instant (profile-based).
+- **KPIs:** Three cards — Total Cash (Cash category), Liquid Assets (Cash + Brokerage), Instant Liquidity (Instant profile).
+- **Committed Capital vs. Liquidity:** Bar chart with 4 bars — Committed Capital (from `debt` table where `type = 'Committed Capital'`), Cash, Instant, Within 6 Months. Includes definition text explaining category vs profile overlap.
+- **Monthly Expenses vs. Liquidity:** Bar chart with 4 bars — Monthly Expenses (avg net spend over last 3 full months via `/api/cash-runway`, excl. income & gifts), Cash, Instant, Liquid. Includes definition text for Monthly Expenses.
+- **Liquidity Distribution:** Pie chart grouped by `liquidity_profile` values. Color-coded: Instant (emerald `#10b981`), Within 6 Months (blue `#3b82f6`), Locked Up (slate `#64748b`).
+- **Debt vs Assets:** Bar chart comparing total debt (from `debt` table, excluding Committed Capital) vs total assets (from `account_balances`, excluding Trust category). Shows "Assets exclude Trust" subtext when Trust accounts exist. Includes debt ratio percentage and a "View Details" dialog listing individual debt line items.
+
 ### 4.4 Kids Accounts (`/kids`)
 
 - **Kids accounts overview:** Balances by child and account type (USD), with notes and purpose. Data sourced from Google Sheet and synced into `kids_accounts`.

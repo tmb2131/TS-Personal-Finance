@@ -1046,8 +1046,23 @@ export function KeyInsights() {
                           dataKey="total"
                           position="top"
                           offset={8}
-                          formatter={(v: number) => formatCurrencyLarge(v)}
-                          style={{ fontSize: getChartFontSizes(isMobile).axisTick, fill: '#374151' }}
+                          content={({ x, y, value, index }: { x?: number; y?: number; value?: number; index?: number }) => {
+                            if (value == null || x == null || y == null) return null
+                            const isFirst = index === 0
+                            const isLast = index === netWorthInsights.netWorthChartData.length - 1
+                            return (
+                              <text
+                                key={index}
+                                x={x}
+                                y={y - 8}
+                                textAnchor={isFirst ? 'start' : isLast ? 'end' : 'middle'}
+                                fontSize={getChartFontSizes(isMobile).axisTick}
+                                fill="#374151"
+                              >
+                                {formatCurrencyLarge(value)}
+                              </text>
+                            )
+                          }}
                         />
                       </Line>
                     </LineChart>

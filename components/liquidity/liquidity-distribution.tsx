@@ -17,11 +17,10 @@ import {
 } from 'recharts'
 
 const COLORS: Record<string, string> = {
-  High: '#10b981', // Green
-  Medium: '#fbbf24', // Yellow
-  Low: '#f97316', // Orange
-  Locked: '#ef4444', // Red
-  Unknown: '#94a3b8', // Slate
+  Instant: '#10b981', // Emerald-500
+  'Within 6 Months': '#3b82f6', // Blue-500
+  'Locked Up': '#64748b', // Slate-500
+  Unknown: '#94a3b8', // Slate-300
 }
 
 export default function LiquidityDistribution() {
