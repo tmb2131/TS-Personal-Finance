@@ -285,3 +285,15 @@ Note: Cash (category-based) may overlap with Instant (profile-based). Instant an
 3. Confirm service account has access to sheet
 4. Check Supabase logs for database errors
 5. Review transform functions in sync-google-sheet.ts for data parsing issues
+
+## Automation Shortcuts
+
+### shipit
+1. Run `npm run build`.
+2. If the build fails:
+   - Analyze the error logs and fix the source code.
+   - Repeat the build and fix loop until the build succeeds.
+3. Once the build is successful:
+   - Stage all changes.
+   - Commit with a concise, descriptive message.
+   - Push directly to the `main` branch.

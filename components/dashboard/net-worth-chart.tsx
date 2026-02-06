@@ -124,10 +124,22 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
     [data, initialData, processData]
   )
 
+  // Check if there's any Family data
+  const hasFamilyData = useMemo(() => {
+    return displayData.some((item: any) => item.Family && Math.abs(item.Family) > 0)
+  }, [displayData])
+
   // Check if there's any Trust data
   const hasTrustData = useMemo(() => {
     return displayData.some((item: any) => item.Trust && Math.abs(item.Trust) > 0)
   }, [displayData])
+
+  // Auto-hide Family if no Family data exists
+  useEffect(() => {
+    if (!hasFamilyData && showFamily) {
+      setShowFamily(false)
+    }
+  }, [hasFamilyData, showFamily])
 
   // Auto-hide Trust if no Trust data exists
   useEffect(() => {
@@ -232,10 +244,12 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
               <div className="h-4 w-4 rounded border border-input" />
               <span className="text-sm">Personal</span>
             </div>
-          <div className="flex items-center space-x-2">
-            <div className="h-4 w-4 rounded border border-input" />
-            <span className="text-sm">Family</span>
-          </div>
+          {hasFamilyData && (
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 rounded border border-input" />
+              <span className="text-sm">Family</span>
+            </div>
+          )}
           {hasTrustData && (
             <div className="flex items-center space-x-2">
               <div className="h-4 w-4 rounded border border-input" />
@@ -267,16 +281,18 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
               Personal
             </Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="filter-family"
-              checked={showFamily}
-              onCheckedChange={(checked) => setShowFamily(checked === true)}
-            />
-            <Label htmlFor="filter-family" className="text-sm font-normal cursor-pointer">
-              Family
-            </Label>
-          </div>
+          {hasFamilyData && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="filter-family"
+                checked={showFamily}
+                onCheckedChange={(checked) => setShowFamily(checked === true)}
+              />
+              <Label htmlFor="filter-family" className="text-sm font-normal cursor-pointer">
+                Family
+              </Label>
+            </div>
+          )}
           {hasTrustData && (
             <div className="flex items-center space-x-2">
               <Checkbox

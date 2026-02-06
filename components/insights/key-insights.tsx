@@ -1046,8 +1046,8 @@ export function KeyInsights() {
                           dataKey="total"
                           position="top"
                           offset={8}
-                          content={({ x, y, value, index }: { x?: number; y?: number; value?: number; index?: number }) => {
-                            if (value == null || x == null || y == null) return null
+                          content={({ x, y, value, index }: { x?: string | number; y?: string | number; value?: string | number; index?: number }) => {
+                            if (value == null || x == null || y == null || typeof x === 'string' || typeof y === 'string' || typeof value === 'string') return null
                             const isFirst = index === 0
                             const isLast = index === netWorthInsights.netWorthChartData.length - 1
                             return (

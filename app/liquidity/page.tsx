@@ -5,6 +5,7 @@ import CommittedCapitalVsCash from '@/components/liquidity/committed-capital-vs-
 import MonthlyExpensesVsLiquidity from '@/components/liquidity/monthly-expenses-vs-liquidity'
 import DebtOverview from '@/components/liquidity/debt-overview'
 import LiquidityDistribution from '@/components/liquidity/liquidity-distribution'
+import RiskProfileTable from '@/components/liquidity/risk-profile-table'
 
 export default async function LiquidityPage() {
   const supabase = await createClient()
@@ -36,6 +37,8 @@ export default async function LiquidityPage() {
         <DebtOverview />
         <LiquidityDistribution />
       </div>
+
+      <RiskProfileTable />
     </div>
   )
 }

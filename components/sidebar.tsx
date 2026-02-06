@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
@@ -13,8 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { createClient } from '@/lib/supabase/client'
 
-const navigation = [
+const allNavigation = [
   { name: 'Key Insights', href: '/insights', icon: Lightbulb },
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Accounts', href: '/accounts', icon: Wallet },
@@ -25,13 +26,26 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
-const mobilePrimaryNav = navigation.slice(0, 3)
-const mobileMoreNav = navigation.slice(3)
-
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [hasKidsData, setHasKidsData] = useState(true) // default true to avoid flash
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('kids_accounts')
+      .select('id', { count: 'exact', head: true })
+      .then(({ count }) => setHasKidsData((count ?? 0) > 0))
+  }, [])
+
+  const navigation = useMemo(() => {
+    return hasKidsData ? allNavigation : allNavigation.filter((item) => item.href !== '/kids')
+  }, [hasKidsData])
+
+  const mobilePrimaryNav = useMemo(() => navigation.slice(0, 3), [navigation])
+  const mobileMoreNav = useMemo(() => navigation.slice(3), [navigation])
 
   // Sidebar always defaults to open (not collapsed)
   // Removed localStorage loading so it always starts open when entering the app

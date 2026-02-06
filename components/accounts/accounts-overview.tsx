@@ -16,7 +16,16 @@ import { KPICard } from '@/components/kpi-card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { AccountBalance } from '@/lib/types'
-import { AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { AlertCircle, Maximize2 } from 'lucide-react'
+import { cn } from '@/utils/cn'
 
 const CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Taconic', 'House', 'Trust']
 
@@ -63,6 +72,7 @@ export function AccountsOverview() {
   const [accounts, setAccounts] = useState<AccountBalance[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fullTableOpen, setFullTableOpen] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -148,6 +158,17 @@ export function AccountsOverview() {
     return hasTrustAccounts ? CATEGORIES : CATEGORIES.filter((cat) => cat !== 'Trust')
   }, [hasTrustAccounts])
 
+  // Check if dataset has multiple currencies
+  const hasMultipleCurrencies = useMemo(() => {
+    const currencies = new Set(accounts.map((acc) => acc.currency))
+    return currencies.size > 1
+  }, [accounts])
+
+  // Check if dataset has any family data
+  const hasPersonalAndFamily = useMemo(() => {
+    return accounts.some((acc) => Math.abs(acc.balance_family_local) > 0)
+  }, [accounts])
+
   // Calculate summary metrics
   const totalNetWorth = accounts.reduce((sum, acc) => {
     const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
@@ -168,34 +189,34 @@ export function AccountsOverview() {
       return sum + converted
     }, 0)
 
-  // Calculate category summary with Personal, Family, and Total
+  // Calculate merged category summary (Personal/Family + Currency breakdown)
   const categorySummary = useMemo(() => {
     return visibleCategories.map((category) => {
       const categoryAccounts = accounts.filter((acc) => acc.category === category)
-      
-      const personalTotal = categoryAccounts.reduce((sum, acc) => {
-        const converted = convertAmount(acc.balance_personal_local, acc.currency, fxRate)
-        return sum + converted
+
+      const personal = categoryAccounts.reduce((sum, acc) => {
+        return sum + convertAmount(acc.balance_personal_local, acc.currency, fxRate)
       }, 0)
-      
-      const familyTotal = categoryAccounts.reduce((sum, acc) => {
-        const converted = convertAmount(acc.balance_family_local, acc.currency, fxRate)
-        return sum + converted
+
+      const family = categoryAccounts.reduce((sum, acc) => {
+        return sum + convertAmount(acc.balance_family_local, acc.currency, fxRate)
       }, 0)
-      
+
+      const gbp = categoryAccounts
+        .filter((acc) => acc.currency === 'GBP')
+        .reduce((sum, acc) => sum + acc.balance_total_local, 0)
+
+      const usd = categoryAccounts
+        .filter((acc) => acc.currency === 'USD')
+        .reduce((sum, acc) => sum + acc.balance_total_local, 0)
+
       const total = categoryAccounts.reduce((sum, acc) => {
-        const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
-        return sum + converted
+        return sum + convertAmount(acc.balance_total_local, acc.currency, fxRate)
       }, 0)
-      
-      return {
-        category,
-        personal: personalTotal,
-        family: familyTotal,
-        total,
-      }
+
+      return { category, personal, family, gbp, usd, total }
     }).filter((item) => item.total !== 0)
-  }, [accounts, fxRate, convertAmount])
+  }, [accounts, fxRate, convertAmount, visibleCategories])
 
   // Calculate grand totals
   const grandTotals = useMemo(() => {
@@ -203,56 +224,13 @@ export function AccountsOverview() {
       (acc, item) => ({
         personal: acc.personal + item.personal,
         family: acc.family + item.family,
-        total: acc.total + item.total,
-      }),
-      { personal: 0, family: 0, total: 0 }
-    )
-  }, [categorySummary])
-
-  // Calculate category summary by currency (GBP/USD)
-  const categorySummaryByCurrency = useMemo(() => {
-    return visibleCategories.map((category) => {
-      const categoryAccounts = accounts.filter((acc) => acc.category === category)
-      
-      const gbpTotal = categoryAccounts
-        .filter((acc) => acc.currency === 'GBP')
-        .reduce((sum, acc) => sum + acc.balance_total_local, 0)
-      
-      const usdTotal = categoryAccounts
-        .filter((acc) => acc.currency === 'USD')
-        .reduce((sum, acc) => sum + acc.balance_total_local, 0)
-      
-      // Convert total to selected currency
-      const total = categoryAccounts.reduce((sum, acc) => {
-        const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
-        return sum + converted
-      }, 0)
-      
-      return {
-        category,
-        gbp: gbpTotal,
-        usd: usdTotal,
-        total,
-      }
-    }).filter((item) => item.total !== 0)
-  }, [accounts, fxRate, convertAmount])
-
-  // Calculate grand totals by currency
-  const grandTotalsByCurrency = useMemo(() => {
-    return categorySummaryByCurrency.reduce(
-      (acc, item) => ({
         gbp: acc.gbp + item.gbp,
         usd: acc.usd + item.usd,
-        total: acc.total + item.total, // Already converted to selected currency
+        total: acc.total + item.total,
       }),
-      { gbp: 0, usd: 0, total: 0 }
+      { personal: 0, family: 0, gbp: 0, usd: 0, total: 0 }
     )
-  }, [categorySummaryByCurrency])
-
-  // Calculate max balance for scaling bars in currency summary table
-  const maxCurrencySummaryBalance = useMemo(() => {
-    return Math.max(...categorySummaryByCurrency.map((item) => Math.abs(item.total)), 1)
-  }, [categorySummaryByCurrency])
+  }, [categorySummary])
 
   // Calculate max balance for scaling bars in summary table
   const maxSummaryBalance = useMemo(() => {
@@ -355,14 +333,31 @@ export function AccountsOverview() {
         <CardContent className="p-4 pt-0 space-y-3">
           <div className="rounded-lg border bg-muted/30 p-3">
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Grand Total</div>
-            <div className="flex justify-between items-baseline gap-2 mb-1">
-              <span className="text-sm">Personal</span>
-              <span className="font-medium tabular-nums">{formatCurrency(grandTotals.personal)}</span>
-            </div>
-            <div className="flex justify-between items-baseline gap-2 mb-1">
-              <span className="text-sm">Family</span>
-              <span className="font-medium tabular-nums">{formatCurrency(grandTotals.family)}</span>
-            </div>
+            {hasPersonalAndFamily && (
+              <>
+                <div className="flex justify-between items-baseline gap-2 mb-1">
+                  <span className="text-sm">Personal</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(grandTotals.personal)}</span>
+                </div>
+                <div className="flex justify-between items-baseline gap-2 mb-1">
+                  <span className="text-sm">Family</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(grandTotals.family)}</span>
+                </div>
+              </>
+            )}
+            {hasMultipleCurrencies && (
+              <>
+                {hasPersonalAndFamily && <div className="border-t border-dashed my-1" />}
+                <div className="flex justify-between items-baseline gap-2 mb-1">
+                  <span className="text-sm">GBP</span>
+                  <span className="font-medium tabular-nums">{formatGBP(grandTotals.gbp)}</span>
+                </div>
+                <div className="flex justify-between items-baseline gap-2 mb-1">
+                  <span className="text-sm">USD</span>
+                  <span className="font-medium tabular-nums">{formatUSD(grandTotals.usd)}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between items-baseline gap-2 pt-2 border-t">
               <span className="text-sm font-semibold">Total</span>
               <span className="font-semibold tabular-nums">{formatCurrency(grandTotals.total)}</span>
@@ -381,14 +376,31 @@ export function AccountsOverview() {
               <div className="text-sm font-medium mb-2">
                 {CATEGORY_DISPLAY_NAMES[item.category] || item.category}
               </div>
-              <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                <span className="text-muted-foreground">Personal</span>
-                <span className="tabular-nums">{item.personal === 0 ? '–' : formatCurrency(item.personal)}</span>
-              </div>
-              <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                <span className="text-muted-foreground">Family</span>
-                <span className="tabular-nums">{item.family === 0 ? '–' : formatCurrency(item.family)}</span>
-              </div>
+              {hasPersonalAndFamily && (
+                <>
+                  <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
+                    <span className="text-blue-700">Personal</span>
+                    <span className="tabular-nums">{item.personal === 0 ? '–' : formatCurrency(item.personal)}</span>
+                  </div>
+                  <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
+                    <span className="text-blue-700">Family</span>
+                    <span className="tabular-nums">{item.family === 0 ? '–' : formatCurrency(item.family)}</span>
+                  </div>
+                </>
+              )}
+              {hasMultipleCurrencies && (
+                <>
+                  {hasPersonalAndFamily && <div className="border-t border-dashed my-1" />}
+                  <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
+                    <span className="text-emerald-700">GBP</span>
+                    <span className="tabular-nums">{item.gbp === 0 ? '–' : formatGBP(item.gbp)}</span>
+                  </div>
+                  <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
+                    <span className="text-emerald-700">USD</span>
+                    <span className="tabular-nums">{item.usd === 0 ? '–' : formatUSD(item.usd)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between items-baseline gap-2 text-sm pt-2 border-t mt-1">
                 <span className="font-medium">Balance</span>
                 <span className="font-medium tabular-nums">{formatCurrency(item.total)}</span>
@@ -406,34 +418,57 @@ export function AccountsOverview() {
         </CardContent>
       </Card>
 
-      {/* Category Summary Tables — Desktop */}
-      <div className="hidden md:flex md:gap-4 md:items-start">
-        <div className="w-fit">
-          <Card>
-            <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-              <CardTitle className="text-base">Account Category Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <Table className={compactTable}>
+      {/* Category Summary Table — Desktop */}
+      <div className="hidden md:block w-fit">
+        <Card>
+          <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+            <CardTitle className="text-base">Account Category Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <Table className={compactTable}>
               <TableHeader>
                 <TableRow className="bg-muted">
                   <TableHead className="font-bold text-black">Total</TableHead>
-                  <TableHead className="text-right font-bold text-black">
-                    {formatCurrency(grandTotals.personal)}
-                  </TableHead>
-                  <TableHead className="text-right font-bold text-black">
-                    {formatCurrency(grandTotals.family)}
-                  </TableHead>
-                  <TableHead className="text-right font-bold text-black">
+                  {hasPersonalAndFamily && (
+                    <>
+                      <TableHead className="text-right font-bold text-black">
+                        {formatCurrency(grandTotals.personal)}
+                      </TableHead>
+                      <TableHead className="text-right font-bold text-black">
+                        {formatCurrency(grandTotals.family)}
+                      </TableHead>
+                    </>
+                  )}
+                  {hasMultipleCurrencies && (
+                    <>
+                      <TableHead className={cn("text-right font-bold text-black", hasPersonalAndFamily && "border-l-2 border-border")}>
+                        {formatGBP(grandTotals.gbp)}
+                      </TableHead>
+                      <TableHead className="text-right font-bold text-black">
+                        {formatUSD(grandTotals.usd)}
+                      </TableHead>
+                    </>
+                  )}
+                  <TableHead className="text-right !font-extrabold !text-sm text-black">
                     {formatCurrency(grandTotals.total)}
                   </TableHead>
                   <TableHead className="w-16"></TableHead>
                 </TableRow>
                 <TableRow className="bg-muted">
                   <TableHead>Account Category</TableHead>
-                  <TableHead className="text-right">Personal</TableHead>
-                  <TableHead className="text-right">Family</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
+                  {hasPersonalAndFamily && (
+                    <>
+                      <TableHead className="text-right text-blue-700">Personal</TableHead>
+                      <TableHead className="text-right text-blue-700">Family</TableHead>
+                    </>
+                  )}
+                  {hasMultipleCurrencies && (
+                    <>
+                      <TableHead className={cn("text-right text-emerald-700", hasPersonalAndFamily && "border-l-2 border-border")}>GBP</TableHead>
+                      <TableHead className="text-right text-emerald-700">USD</TableHead>
+                    </>
+                  )}
+                  <TableHead className="text-right font-bold">Balance</TableHead>
                   <TableHead className="w-16"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -443,13 +478,27 @@ export function AccountsOverview() {
                     <TableCell className="font-medium">
                       {CATEGORY_DISPLAY_NAMES[item.category] || item.category}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {item.personal === 0 ? '-' : formatCurrency(item.personal)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.family === 0 ? '-' : formatCurrency(item.family)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
+                    {hasPersonalAndFamily && (
+                      <>
+                        <TableCell className="text-right">
+                          {item.personal === 0 ? '-' : formatCurrency(item.personal)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.family === 0 ? '-' : formatCurrency(item.family)}
+                        </TableCell>
+                      </>
+                    )}
+                    {hasMultipleCurrencies && (
+                      <>
+                        <TableCell className={cn("text-right", hasPersonalAndFamily && "border-l-2 border-border")}>
+                          {item.gbp === 0 ? '-' : formatGBP(item.gbp)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.usd === 0 ? '-' : formatUSD(item.usd)}
+                        </TableCell>
+                      </>
+                    )}
+                    <TableCell className="text-right font-semibold">
                       {formatCurrency(item.total)}
                     </TableCell>
                     <TableCell>
@@ -466,71 +515,8 @@ export function AccountsOverview() {
                 ))}
               </TableBody>
             </Table>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="w-fit">
-          <Card>
-            <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-              <CardTitle className="text-base">Account Category Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <Table className={compactTable}>
-              <TableHeader>
-                <TableRow className="bg-muted">
-                  <TableHead className="font-bold text-black">Total</TableHead>
-                  <TableHead className="text-right font-bold text-black">
-                    {formatGBP(grandTotalsByCurrency.gbp)}
-                  </TableHead>
-                  <TableHead className="text-right font-bold text-black">
-                    {formatUSD(grandTotalsByCurrency.usd)}
-                  </TableHead>
-                  <TableHead className="text-right font-bold text-black">
-                    {formatCurrency(grandTotalsByCurrency.total)}
-                  </TableHead>
-                  <TableHead className="w-16"></TableHead>
-                </TableRow>
-                <TableRow className="bg-muted">
-                  <TableHead>Account Category</TableHead>
-                  <TableHead className="text-right">GBP</TableHead>
-                  <TableHead className="text-right">USD</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead className="w-16"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categorySummaryByCurrency.map((item) => (
-                  <TableRow key={item.category}>
-                    <TableCell className="font-medium">
-                      {CATEGORY_DISPLAY_NAMES[item.category] || item.category}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.gbp === 0 ? '-' : formatGBP(item.gbp)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.usd === 0 ? '-' : formatUSD(item.usd)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.total)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="relative h-3 w-16">
-                        <div
-                          className="absolute h-full bg-blue-900 right-0"
-                          style={{
-                            width: `${Math.min((Math.abs(item.total) / maxCurrencySummaryBalance) * 100, 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            </CardContent>
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Accounts — Mobile card layout */}
@@ -596,8 +582,77 @@ export function AccountsOverview() {
 
       {/* Accounts Table — Desktop */}
       <Card className="hidden md:block">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardHeader className="bg-muted/50 px-4 py-3 pb-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Accounts</CardTitle>
+          <Dialog open={fullTableOpen} onOpenChange={setFullTableOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Maximize2 className="h-4 w-4 mr-2" />
+                View Full Table
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>All Accounts</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4 [&_table]:text-[11px] [&_th]:h-7 [&_td]:h-7 [&_th]:py-0.5 [&_td]:py-0.5 [&_th]:px-2 [&_td]:px-2 [&_th]:text-[11px] [&_td]:tabular-nums">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted">
+                      <TableHead className="font-bold">Category</TableHead>
+                      <TableHead>Institution</TableHead>
+                      <TableHead>Account Name</TableHead>
+                      <TableHead>Currency</TableHead>
+                      <TableHead className="text-right font-bold">Balance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="bg-muted/70 font-semibold">
+                      <TableCell>Grand Total</TableCell>
+                      <TableCell colSpan={3}></TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatCurrency(totalNetWorth)}
+                      </TableCell>
+                    </TableRow>
+                    {groupedByCategory.map((group) => (
+                      <Fragment key={`dialog-${group.category}`}>
+                        {group.accounts.map((account) => {
+                          const convertedBalance = convertAmount(
+                            account.balance_total_local,
+                            account.currency,
+                            fxRate
+                          )
+                          return (
+                            <TableRow key={`dialog-${account.institution}-${account.account_name}`}>
+                              <TableCell className="font-medium">{account.category}</TableCell>
+                              <TableCell>{account.institution}</TableCell>
+                              <TableCell>{account.account_name}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">
+                                  {account.currency}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-medium tabular-nums">
+                                {formatCurrency(convertedBalance)}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                        <TableRow className="bg-muted/50">
+                          <TableCell colSpan={4} className="font-semibold">
+                            {group.category} Subtotal
+                          </TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {formatCurrency(group.subtotal)}
+                          </TableCell>
+                        </TableRow>
+                      </Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <div className={`relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}>
