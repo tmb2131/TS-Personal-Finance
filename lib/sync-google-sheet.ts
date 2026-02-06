@@ -19,13 +19,11 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return chunks;
 }
 
-/** Tables with large row counts: process sequentially to avoid DB locks. */
-const HEAVY_TABLES = new Set(['transaction_log', 'fx_rates']);
-
-/** All other tables: can be processed in parallel. */
-function isHeavyTable(table: string): boolean {
-  return HEAVY_TABLES.has(table);
-}
+/** Tables that use delete-all-then-insert (no upsert key). */
+const DELETE_INSERT_TABLES = new Set([
+  'debt', 'budget_targets', 'annual_trends', 'monthly_trends',
+  'investment_return', 'yoy_net_worth', 'recurring_payments',
+]);
 
 interface SheetConfig {
   name: string;
@@ -258,27 +256,27 @@ const SHEET_CONFIGS: SheetConfig[] = [
       // G: Date
       // H: CCY (currency)
       // I: Notes
-      
+
       const colB = (row[1] || '').toString().trim() // Name
       const colE = (row[4] || '').toString().trim() // Annual amount
       const colH = (row[7] || '').toString().trim().toUpperCase() // Currency (CCY)
-      
+
       // Skip empty rows or header rows
       if (!colB || colB.toLowerCase() === 'name' || colB.toLowerCase().includes('annualized')) {
         return null
       }
-      
+
       // Parse the annual amount (remove commas, currency symbols, etc.)
       const amount = colE ? parseFloat(colE.replace(/[£$,\s]/g, '')) : null
-      
+
       if (!amount || isNaN(amount)) {
         return null // Skip rows without valid amounts
       }
-      
+
       // Store amount in the appropriate currency column based on CCY
       let amountGbp: number | null = null
       let amountUsd: number | null = null
-      
+
       if (colH === 'GBP' || !colH) {
         // Default to GBP if no currency specified
         amountGbp = amount
@@ -291,7 +289,7 @@ const SHEET_CONFIGS: SheetConfig[] = [
         amountGbp = amount
         amountUsd = null
       }
-      
+
       return {
         name: colB,
         annualized_amount_gbp: amountGbp,
@@ -356,30 +354,44 @@ export async function syncGoogleSheet(
       throw new Error(`Failed to access spreadsheet: ${error.message}`);
     }
 
-    // Step 1: Fetch all sheets in parallel for better performance
-    console.log('Fetching all sheets in parallel...');
-    const fetchPromises = SHEET_CONFIGS.map(async (config) => {
-      if (!availableSheets.includes(config.name)) {
-        console.warn(`Sheet "${config.name}" not found in spreadsheet – skipping. Available sheets: ${availableSheets.join(', ')}`);
-        return {
-          config,
-          error: null,
-          data: null,
-        };
+    // Filter to only configs whose sheet tab exists in the spreadsheet
+    const presentConfigs: SheetConfig[] = [];
+    const missingConfigs: SheetConfig[] = [];
+    for (const config of SHEET_CONFIGS) {
+      if (availableSheets.includes(config.name)) {
+        presentConfigs.push(config);
+      } else {
+        missingConfigs.push(config);
+        console.warn(`Sheet "${config.name}" not found in spreadsheet – skipping.`);
       }
+    }
 
-      try {
-        const quotedSheetName = config.name.includes(' ') ? `'${config.name}'` : config.name;
-        const rangeString = `${quotedSheetName}!${config.range}`;
-        
-        const response = await sheets.spreadsheets.values.get({
-          spreadsheetId,
-          range: rangeString,
-        });
+    // Build ranges for a single batchGet call (one API round-trip instead of N)
+    const ranges = presentConfigs.map((config) => {
+      const quotedSheetName = config.name.includes(' ') ? `'${config.name}'` : config.name;
+      return `${quotedSheetName}!${config.range}`;
+    });
 
-        const rows = response.data.values;
+    // Fetch ALL sheet data in one batchGet call
+    console.log(`Fetching ${ranges.length} sheets in a single batchGet call...`);
+    type FetchedItem = { config: SheetConfig; error: string | null; data: any[] | null };
+    const fetchedData: FetchedItem[] = [];
+
+    try {
+      const batchResponse = await sheets.spreadsheets.values.batchGet({
+        spreadsheetId,
+        ranges,
+      });
+
+      const valueRanges = batchResponse.data.valueRanges || [];
+
+      for (let i = 0; i < presentConfigs.length; i++) {
+        const config = presentConfigs[i];
+        const rows = valueRanges[i]?.values;
+
         if (!rows || rows.length < 2) {
-          return { config, error: null, data: null }; // No data, skip
+          fetchedData.push({ config, error: null, data: null });
+          continue;
         }
 
         const dataRows = rows.slice(1);
@@ -388,22 +400,55 @@ export async function syncGoogleSheet(
           .filter((row) => row && Object.values(row).some((v) => v !== null && v !== ''));
 
         if (transformedData.length === 0) {
-          return { config, error: null, data: null }; // No valid data, skip
+          fetchedData.push({ config, error: null, data: null });
+        } else {
+          fetchedData.push({ config, error: null, data: transformedData });
         }
-
-        return { config, error: null, data: transformedData };
-      } catch (error: any) {
-        return { config, error: error.message || 'Unknown error', data: null };
       }
-    });
+    } catch (error: any) {
+      console.error('batchGet failed, falling back to individual fetches:', error.message);
+      // Fallback: fetch individually in parallel
+      const fallbackResults = await Promise.all(
+        presentConfigs.map(async (config) => {
+          try {
+            const quotedSheetName = config.name.includes(' ') ? `'${config.name}'` : config.name;
+            const rangeString = `${quotedSheetName}!${config.range}`;
+            const response = await sheets.spreadsheets.values.get({
+              spreadsheetId,
+              range: rangeString,
+            });
+            const rows = response.data.values;
+            if (!rows || rows.length < 2) {
+              return { config, error: null, data: null } as FetchedItem;
+            }
+            const dataRows = rows.slice(1);
+            const transformedData = dataRows
+              .map((row) => config.transform?.(row))
+              .filter((row) => row && Object.values(row).some((v) => v !== null && v !== ''));
+            return {
+              config,
+              error: null,
+              data: transformedData.length === 0 ? null : transformedData,
+            } as FetchedItem;
+          } catch (err: any) {
+            return { config, error: err.message || 'Unknown error', data: null } as FetchedItem;
+          }
+        })
+      );
+      fetchedData.push(...fallbackResults);
+    }
 
-    const fetchedData = await Promise.all(fetchPromises);
+    // Add missing sheets as no-data items
+    for (const config of missingConfigs) {
+      fetchedData.push({ config, error: null, data: null });
+    }
+
     console.log(`Fetched ${fetchedData.length} sheets`);
 
     const results: { sheet: string; success: boolean; error?: string; rowsProcessed: number }[] = [];
 
     const processOneSheet = async (
-      item: { config: SheetConfig; error: string | null; data: any[] | null },
+      item: FetchedItem,
       uid: string
     ): Promise<{ sheet: string; success: boolean; error?: string; rowsProcessed: number }> => {
       const { config, error: itemError, data } = item;
@@ -422,6 +467,7 @@ export async function syncGoogleSheet(
       try {
         let upsertResult: { data: any; error: any };
         if (config.table === 'account_balances') {
+          // Build set of current institution per account_name|category to clean up stale rows
           const uniqueAccounts = new Map<string, { account_name: string; category: string; institution: string }>();
           for (const record of transformedData) {
             const key = `${record.account_name}|${record.category}`;
@@ -433,28 +479,22 @@ export async function syncGoogleSheet(
               });
             }
           }
+          // Delete stale rows in parallel (all at once, no nested chunking)
           const accountList = Array.from(uniqueAccounts.values());
-          const deleteChunks = chunkArray(accountList, 50);
           await Promise.all(
-            deleteChunks.map(async (batch) => {
-              await Promise.all(
-                batch.map(async (accountInfo) => {
-                  const { error: deleteError } = await db
-                    .from(config.table)
-                    .delete()
-                    .eq('user_id', uid)
-                    .eq('account_name', accountInfo.account_name)
-                    .eq('category', accountInfo.category)
-                    .neq('institution', accountInfo.institution);
-                  if (deleteError) {
-                    console.warn(`Warning: Could not delete old account_balances for ${accountInfo.account_name} (${accountInfo.category}):`, deleteError);
-                  }
-                  return deleteError;
-                })
-              );
+            accountList.map(async (accountInfo) => {
+              const { error: deleteError } = await db
+                .from(config.table)
+                .delete()
+                .eq('user_id', uid)
+                .eq('account_name', accountInfo.account_name)
+                .eq('category', accountInfo.category)
+                .neq('institution', accountInfo.institution);
+              if (deleteError) {
+                console.warn(`Warning: Could not delete old account_balances for ${accountInfo.account_name} (${accountInfo.category}):`, deleteError);
+              }
             })
           );
-          console.log(`Completed bulk delete for ${accountList.length} account combinations`);
           const { data: d, error: e } = await db
             .from(config.table)
             .upsert(dataWithUser, { onConflict: 'user_id,institution,account_name,date_updated' });
@@ -472,76 +512,70 @@ export async function syncGoogleSheet(
               onConflict: 'user_id,child_name,account_type,date_updated,notes',
             });
           upsertResult = { data, error };
-        } else if (config.table === 'debt') {
-          // Delete existing rows for this user first to ensure fresh data
-          const { error: deleteError } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid);
-          if (deleteError) {
-            console.warn(`Warning: Could not delete old debt for user ${uid}:`, deleteError);
+        } else if (DELETE_INSERT_TABLES.has(config.table)) {
+          // Generic delete-then-insert for all tables using this pattern
+          if (config.table === 'recurring_payments') {
+            // Preserve needs_review flags from existing records before deleting
+            const { data: existingRecords } = await db
+              .from(config.table)
+              .select('name, needs_review')
+              .eq('user_id', uid);
+            const reviewFlags = new Map<string, boolean>();
+            if (existingRecords) {
+              existingRecords.forEach((record: any) => {
+                reviewFlags.set((record.name || '').toLowerCase().trim(), !!record.needs_review);
+              });
+            }
+
+            // Delete existing rows
+            await db.from(config.table).delete().eq('user_id', uid);
+
+            // Apply preserved needs_review flags and deduplicate by name (aggregate amounts)
+            const withFlags = dataWithUser.map((item: any) => ({
+              ...item,
+              needs_review: reviewFlags.get((item.name || '').toLowerCase().trim()) ?? false,
+              updated_at: new Date().toISOString(),
+            }));
+
+            const byName = new Map<
+              string,
+              { name: string; annualized_amount_gbp: number | null; annualized_amount_usd: number | null; needs_review: boolean; updated_at: string }
+            >();
+            for (const item of withFlags) {
+              const name = (item.name || '').trim();
+              if (!name) continue;
+              const existing = byName.get(name);
+              if (!existing) {
+                byName.set(name, {
+                  name,
+                  annualized_amount_gbp: item.annualized_amount_gbp ?? null,
+                  annualized_amount_usd: item.annualized_amount_usd ?? null,
+                  needs_review: item.needs_review,
+                  updated_at: item.updated_at,
+                });
+              } else {
+                const gbp = (existing.annualized_amount_gbp ?? 0) + (item.annualized_amount_gbp ?? 0);
+                const usd = (existing.annualized_amount_usd ?? 0) + (item.annualized_amount_usd ?? 0);
+                existing.annualized_amount_gbp = gbp || null;
+                existing.annualized_amount_usd = usd || null;
+              }
+            }
+
+            const mergedData = Array.from(byName.values()).map((row) => ({ ...row, user_id: uid }));
+            const { data, error } = await db.from(config.table).insert(mergedData);
+            upsertResult = { data, error };
+          } else {
+            // Simple delete-then-insert (debt, budget_targets, annual_trends, etc.)
+            const { error: deleteError } = await db
+              .from(config.table)
+              .delete()
+              .eq('user_id', uid);
+            if (deleteError) {
+              console.warn(`Warning: Could not delete old ${config.name} for user ${uid}:`, deleteError);
+            }
+            const { data, error } = await db.from(config.table).insert(dataWithUser);
+            upsertResult = { data, error };
           }
-          // Insert new data
-          const { data, error } = await db
-            .from(config.table)
-            .insert(dataWithUser);
-          upsertResult = { data, error };
-        } else if (config.table === 'budget_targets') {
-          // Delete existing rows for this user first to ensure fresh data
-          const { error: deleteError } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid);
-          if (deleteError) {
-            console.warn(`Warning: Could not delete old budget_targets for user ${uid}:`, deleteError);
-          }
-          // Insert new data
-          const { data, error } = await db
-            .from(config.table)
-            .insert(dataWithUser);
-          upsertResult = { data, error };
-        } else if (config.table === 'annual_trends') {
-          // Delete existing rows for this user first to ensure fresh data
-          const { error: deleteError } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid);
-          if (deleteError) {
-            console.warn(`Warning: Could not delete old annual_trends for user ${uid}:`, deleteError);
-          }
-          // Insert new data
-          const { data, error } = await db
-            .from(config.table)
-            .insert(dataWithUser);
-          upsertResult = { data, error };
-        } else if (config.table === 'monthly_trends') {
-          // Delete existing rows for this user first to ensure fresh data
-          const { error: deleteError } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid);
-          if (deleteError) {
-            console.warn(`Warning: Could not delete old monthly_trends for user ${uid}:`, deleteError);
-          }
-          // Insert new data
-          const { data, error } = await db
-            .from(config.table)
-            .insert(dataWithUser);
-          upsertResult = { data, error };
-        } else if (config.table === 'investment_return') {
-          // Delete existing rows for this user first to ensure fresh data
-          const { error: deleteError } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid);
-          if (deleteError) {
-            console.warn(`Warning: Could not delete old investment_return for user ${uid}:`, deleteError);
-          }
-          // Insert new data
-          const { data, error } = await db
-            .from(config.table)
-            .insert(dataWithUser);
-          upsertResult = { data, error };
         } else if (config.table === 'fx_rate_current') {
           // Skip rows with invalid gbpusd_rate (NaN, null, or non-positive) to avoid NOT NULL constraint violation
           const validData = transformedData.filter((row: any) => {
@@ -562,32 +596,15 @@ export async function syncGoogleSheet(
               })
             upsertResult = { data, error }
           }
-        } else if (config.table === 'yoy_net_worth') {
-          // Delete existing rows for this user first to ensure fresh data
-          const { error: deleteError } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid);
-          if (deleteError) {
-            console.warn(`Warning: Could not delete old yoy_net_worth for user ${uid}:`, deleteError);
-          }
-          // Insert new data
-          const { data, error } = await db
-            .from(config.table)
-            .insert(dataWithUser);
-          upsertResult = { data, error };
         } else if (config.table === 'fx_rates') {
           // For historical FX rates, date is PRIMARY KEY
           // Deduplicate by date, keeping the last occurrence (in case of duplicates in source data)
-          // Dates are already normalized to ISO string format (YYYY-MM-DD) in transform function
           const dateMap = new Map<string, any>();
-          
+
           transformedData.forEach((item: any) => {
-            // Use date as key (already normalized to ISO string format)
-            const dateKey = item.date;
-            dateMap.set(dateKey, item);
+            dateMap.set(item.date, item);
           });
-          
+
           const deduplicatedData = Array.from(dateMap.values());
           console.log(`FX Rates: Processing ${transformedData.length} rows, ${deduplicatedData.length} unique dates`);
           if (transformedData.length !== deduplicatedData.length) {
@@ -610,99 +627,19 @@ export async function syncGoogleSheet(
             });
           upsertResult = { data, error };
         } else if (config.table === 'transaction_log') {
-          const PAGE_SIZE = 1000;
-          let totalDeleted = 0;
-          while (true) {
-            const { data: page } = await db
-              .from(config.table)
-              .select('id')
-              .eq('user_id', uid)
-              .range(0, PAGE_SIZE - 1);
-            if (!page || page.length === 0) break;
-            const ids = page.map((r: { id: string }) => r.id);
-            const deleteChunks = chunkArray(ids, 500);
-            for (const idChunk of deleteChunks) {
-              const { error: delErr } = await db.from(config.table).delete().in('id', idChunk);
-              if (delErr) {
-                console.warn('Transaction Log: delete batch error', delErr);
-              } else {
-                totalDeleted += idChunk.length;
-              }
-            }
-            if (page.length < PAGE_SIZE) break;
-          }
-          if (totalDeleted > 0) {
-            console.log(`Transaction Log: Deleted ${totalDeleted} existing rows (replace-all sync)`);
+          // Single delete for all user rows, then chunked insert
+          const { error: delErr } = await db
+            .from(config.table)
+            .delete()
+            .eq('user_id', uid);
+          if (delErr) {
+            console.warn('Transaction Log: delete error', delErr);
           }
 
           const chunks = chunkArray(dataWithUser, BATCH_SIZE);
           let lastError: any = null;
           for (const chunk of chunks) {
             const { error } = await db.from(config.table).insert(chunk);
-            if (error) lastError = error;
-          }
-          upsertResult = { data: null, error: lastError };
-        } else if (config.table === 'recurring_payments') {
-          // Preserve needs_review flags from existing records before deleting
-          const { data: existingRecords } = await db
-            .from(config.table)
-            .select('name, needs_review')
-            .eq('user_id', uid);
-          const reviewFlags = new Map<string, boolean>();
-          if (existingRecords) {
-            existingRecords.forEach((record: any) => {
-              reviewFlags.set((record.name || '').toLowerCase().trim(), !!record.needs_review);
-            });
-          }
-          
-          // Delete existing rows for this user first to ensure fresh data
-          const { error: deleteError } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid);
-          if (deleteError) {
-            console.warn(`Warning: Could not delete old recurring_payments for user ${uid}:`, deleteError);
-          }
-          
-          // Apply preserved needs_review flags and deduplicate by name (aggregate amounts)
-          const withFlags = dataWithUser.map((item: any) => ({
-            ...item,
-            needs_review: reviewFlags.get((item.name || '').toLowerCase().trim()) ?? false,
-            updated_at: new Date().toISOString(),
-          }));
-          
-          // Deduplicate by name (aggregate amounts) in case sheet has duplicates
-          const byName = new Map<
-            string,
-            { name: string; annualized_amount_gbp: number | null; annualized_amount_usd: number | null; needs_review: boolean; updated_at: string }
-          >();
-          for (const item of withFlags) {
-            const name = (item.name || '').trim();
-            if (!name) continue;
-            const existing = byName.get(name);
-            if (!existing) {
-              byName.set(name, {
-                name,
-                annualized_amount_gbp: item.annualized_amount_gbp ?? null,
-                annualized_amount_usd: item.annualized_amount_usd ?? null,
-                needs_review: item.needs_review,
-                updated_at: item.updated_at,
-              });
-            } else {
-              const gbp = (existing.annualized_amount_gbp ?? 0) + (item.annualized_amount_gbp ?? 0);
-              const usd = (existing.annualized_amount_usd ?? 0) + (item.annualized_amount_usd ?? 0);
-              existing.annualized_amount_gbp = gbp || null;
-              existing.annualized_amount_usd = usd || null;
-            }
-          }
-          
-          const mergedData = Array.from(byName.values()).map((row) => ({ ...row, user_id: uid }));
-          const chunks = chunkArray(mergedData, BATCH_SIZE);
-          let lastError: any = null;
-          for (const chunk of chunks) {
-            const { error } = await db
-              .from(config.table)
-              .insert(chunk);
             if (error) lastError = error;
           }
           upsertResult = { data: null, error: lastError };
@@ -746,23 +683,18 @@ export async function syncGoogleSheet(
       }
     };
 
-    const lightItems = fetchedData.filter((item) => item.data && !isHeavyTable(item.config.table));
-    const heavyItems = fetchedData.filter((item) => item.data && isHeavyTable(item.config.table));
+    // Separate items by processing strategy
+    const withData = fetchedData.filter((item) => item.data);
     const noDataItems = fetchedData.filter((item) => !item.data && !item.error);
+    const errorItems = fetchedData.filter((item) => item.error);
 
-    const lightResults = await Promise.all(lightItems.map((item) => processOneSheet(item, userId)));
-    results.push(...lightResults);
+    // Process ALL sheets with data in parallel (no more light/heavy distinction —
+    // heavy tables are internally sequential with chunked inserts, safe to start concurrently)
+    const dataResults = await Promise.all(withData.map((item) => processOneSheet(item, userId)));
+    results.push(...dataResults);
 
-    for (const item of heavyItems) {
-      results.push(await processOneSheet(item, userId));
-    }
-
-    // Tables that use delete-then-insert: clear stale data even when sheet is empty
-    const DELETE_INSERT_TABLES = new Set([
-      'debt', 'budget_targets', 'annual_trends', 'monthly_trends',
-      'investment_return', 'yoy_net_worth', 'recurring_payments',
-    ]);
-    for (const item of noDataItems) {
+    // Clear stale data for delete-then-insert tables whose sheet was empty, in parallel
+    const noDataCleanups = noDataItems.map(async (item) => {
       if (DELETE_INSERT_TABLES.has(item.config.table) && !isGlobalTable(item.config.table)) {
         const { error: deleteError } = await db
           .from(item.config.table)
@@ -774,14 +706,14 @@ export async function syncGoogleSheet(
           console.log(`Cleared existing ${item.config.name} data (sheet tab was empty)`);
         }
       }
-      results.push({
+      return {
         sheet: item.config.name,
         success: true,
         rowsProcessed: 0,
-      });
-    }
+      };
+    });
+    results.push(...(await Promise.all(noDataCleanups)));
 
-    const errorItems = fetchedData.filter((item) => item.error);
     for (const item of errorItems) {
       results.push({
         sheet: item.config.name,
@@ -797,10 +729,10 @@ export async function syncGoogleSheet(
     };
   } catch (error: any) {
     console.error('Error syncing Google Sheet:', error);
-    
+
     // Provide more specific error messages
     let errorMessage = error.message || 'Unknown error occurred';
-    
+
     if (error.message?.includes('credentials')) {
       errorMessage = 'Google Sheets authentication failed. Check service account credentials.';
     } else if (error.message?.includes('spreadsheet')) {
@@ -808,7 +740,7 @@ export async function syncGoogleSheet(
     } else if (error.message?.includes('permission') || error.message?.includes('403')) {
       errorMessage = 'Permission denied. Ensure service account has access to the spreadsheet.';
     }
-    
+
     return {
       success: false,
       error: errorMessage,
