@@ -40,58 +40,74 @@ const SHEET_CONFIGS: SheetConfig[] = [
     name: 'Account Balances',
     range: 'A:K',
     table: 'account_balances',
-    transform: (row) => ({
-      date_updated: new Date(row[0]),
-      institution: row[1] || '',
-      account_name: row[2] || '',
-      category: row[3] || '',
-      currency: row[4] || 'USD',
-      balance_personal_local: parseFloat(row[5] || '0'),
-      balance_family_local: parseFloat(row[6] || '0'),
-      balance_total_local: parseFloat(row[7] || '0'),
-      liquidity_profile: (row[8] && row[8].trim()) || null,
-      risk_profile: (row[9] && row[9].trim()) || null,
-      horizon_profile: (row[10] && row[10].trim()) || null,
-    }),
+    transform: (row) => {
+      const date = row[0] ? new Date(row[0]) : null;
+      if (!date || isNaN(date.getTime())) return null;
+      return {
+        date_updated: date,
+        institution: row[1] || '',
+        account_name: row[2] || '',
+        category: row[3] || '',
+        currency: row[4] || 'USD',
+        balance_personal_local: parseFloat(row[5] || '0'),
+        balance_family_local: parseFloat(row[6] || '0'),
+        balance_total_local: parseFloat(row[7] || '0'),
+        liquidity_profile: (row[8] && row[8].trim()) || null,
+        risk_profile: (row[9] && row[9].trim()) || null,
+        horizon_profile: (row[10] && row[10].trim()) || null,
+      };
+    },
   },
   {
     name: 'Kids',
     range: 'A:F',
     table: 'kids_accounts',
-    transform: (row) => ({
-      child_name: row[0] || '',
-      account_type: row[1] || '',
-      balance_usd: parseFloat(row[2] || '0'),
-      date_updated: new Date(row[3]),
-      notes: (row[4] && row[4].trim()) || null, // Convert empty strings to null for unique constraint
-      purpose: (row[5] && row[5].trim()) || null,
-    }),
+    transform: (row) => {
+      const date = row[3] ? new Date(row[3]) : null;
+      if (!date || isNaN(date.getTime())) return null;
+      return {
+        child_name: row[0] || '',
+        account_type: row[1] || '',
+        balance_usd: parseFloat(row[2] || '0'),
+        date_updated: date,
+        notes: (row[4] && row[4].trim()) || null,
+        purpose: (row[5] && row[5].trim()) || null,
+      };
+    },
   },
   {
     name: 'Debt',
     range: 'A:F',
     table: 'debt',
-    transform: (row) => ({
-      type: row[0] || '',
-      name: row[1] || '',
-      purpose: (row[2] && row[2].trim()) || null,
-      amount_gbp: row[3] ? parseFloat(row[3]) : null,
-      amount_usd: row[4] ? parseFloat(row[4]) : null,
-      date_updated: new Date(row[5]),
-    }),
+    transform: (row) => {
+      // Skip rows missing essential fields (name and at least one amount)
+      if (!row[1] || (!row[3] && !row[4])) return null;
+      const date = row[5] ? new Date(row[5]) : null;
+      if (!date || isNaN(date.getTime())) return null;
+      return {
+        type: row[0] || '',
+        name: row[1] || '',
+        purpose: (row[2] && row[2].trim()) || null,
+        amount_gbp: row[3] ? parseFloat(row[3]) : null,
+        amount_usd: row[4] ? parseFloat(row[4]) : null,
+        date_updated: date,
+      };
+    },
   },
   {
     name: 'Transaction Log',
     range: 'A:F',
     table: 'transaction_log',
     transform: (row) => {
+      const date = row[0] ? new Date(row[0]) : null;
+      if (!date || isNaN(date.getTime())) return null;
       const counterparty = row[2] || null;
       // Column F may be missing in sparse rows; accept any value that starts with USD/GBP (case-insensitive)
       const raw = row.length > 5 && row[5] != null ? String(row[5]).trim() : '';
       const u = raw.toUpperCase();
       const currency = u.startsWith('USD') ? 'USD' : u.startsWith('GBP') ? 'GBP' : null;
       return {
-        date: new Date(row[0]),
+        date,
         category: row[1] || '',
         counterparty,
         counterparty_dedup: (counterparty ?? '').toString(),
@@ -125,12 +141,16 @@ const SHEET_CONFIGS: SheetConfig[] = [
     name: 'Historical Net Worth',
     range: 'A:D',
     table: 'historical_net_worth',
-    transform: (row) => ({
-      date: new Date(row[0]),
-      category: row[1] || '',
-      amount_usd: row[2] ? parseFloat(row[2]) : null,
-      amount_gbp: row[3] ? parseFloat(row[3]) : null,
-    }),
+    transform: (row) => {
+      const date = row[0] ? new Date(row[0]) : null;
+      if (!date || isNaN(date.getTime())) return null;
+      return {
+        date,
+        category: row[1] || '',
+        amount_usd: row[2] ? parseFloat(row[2]) : null,
+        amount_gbp: row[3] ? parseFloat(row[3]) : null,
+      };
+    },
   },
   {
     name: 'FX Rates',
@@ -138,7 +158,8 @@ const SHEET_CONFIGS: SheetConfig[] = [
     table: 'fx_rates',
     transform: (row) => {
       // Normalize date to ISO string format (YYYY-MM-DD) for consistent comparison
-      const dateValue = new Date(row[0]);
+      const dateValue = row[0] ? new Date(row[0]) : null;
+      if (!dateValue || isNaN(dateValue.getTime())) return null;
       const dateStr = dateValue.toISOString().split('T')[0];
       return {
         date: dateStr,
@@ -151,10 +172,14 @@ const SHEET_CONFIGS: SheetConfig[] = [
     name: 'FX Rate Current',
     range: 'A:B',
     table: 'fx_rate_current',
-    transform: (row) => ({
-      date: new Date(row[0]),
-      gbpusd_rate: parseFloat(row[1] || '0'),
-    }),
+    transform: (row) => {
+      const date = row[0] ? new Date(row[0]) : null;
+      if (!date || isNaN(date.getTime())) return null;
+      return {
+        date,
+        gbpusd_rate: parseFloat(row[1] || '0'),
+      };
+    },
   },
   {
     name: 'Annual Trends',
@@ -335,9 +360,10 @@ export async function syncGoogleSheet(
     console.log('Fetching all sheets in parallel...');
     const fetchPromises = SHEET_CONFIGS.map(async (config) => {
       if (!availableSheets.includes(config.name)) {
+        console.warn(`Sheet "${config.name}" not found in spreadsheet – skipping. Available sheets: ${availableSheets.join(', ')}`);
         return {
           config,
-          error: `Sheet "${config.name}" not found. Available sheets: ${availableSheets.join(', ')}`,
+          error: null,
           data: null,
         };
       }
@@ -731,7 +757,23 @@ export async function syncGoogleSheet(
       results.push(await processOneSheet(item, userId));
     }
 
+    // Tables that use delete-then-insert: clear stale data even when sheet is empty
+    const DELETE_INSERT_TABLES = new Set([
+      'debt', 'budget_targets', 'annual_trends', 'monthly_trends',
+      'investment_return', 'yoy_net_worth', 'recurring_payments',
+    ]);
     for (const item of noDataItems) {
+      if (DELETE_INSERT_TABLES.has(item.config.table) && !isGlobalTable(item.config.table)) {
+        const { error: deleteError } = await db
+          .from(item.config.table)
+          .delete()
+          .eq('user_id', userId);
+        if (deleteError) {
+          console.warn(`Warning: Could not clear empty-tab data for ${item.config.name}:`, deleteError);
+        } else {
+          console.log(`Cleared existing ${item.config.name} data (sheet tab was empty)`);
+        }
+      }
       results.push({
         sheet: item.config.name,
         success: true,
