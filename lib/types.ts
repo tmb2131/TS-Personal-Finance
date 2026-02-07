@@ -1,3 +1,5 @@
+export type DataSource = 'google_sheet' | 'plaid' | 'csv' | 'manual'
+
 export interface AccountBalance {
   id: string
   date_updated: string
@@ -11,6 +13,7 @@ export interface AccountBalance {
   liquidity_profile: string | null
   risk_profile: string | null
   horizon_profile: string | null
+  data_source?: DataSource
 }
 
 export interface TransactionLog {
@@ -22,6 +25,7 @@ export interface TransactionLog {
   amount_gbp: number | null
   /** Original transaction currency from sheet column F: 'USD' | 'GBP'. Used for per-currency burn. */
   currency?: string | null
+  data_source?: DataSource
 }
 
 export interface BudgetTarget {
@@ -33,6 +37,7 @@ export interface BudgetTarget {
   ytd_gbp: number
   tracking_est_usd: number
   ytd_usd: number
+  data_source?: DataSource
 }
 
 export interface HistoricalNetWorth {
@@ -117,6 +122,7 @@ export interface KidsAccount {
   date_updated: string
   notes: string | null
   purpose: string | null
+  data_source?: DataSource
 }
 
 // Debt tracking - mortgages, loans, credit cards
@@ -130,4 +136,5 @@ export interface Debt {
   amount_usd: number | null
   date_updated: string
   created_at: string
+  data_source?: DataSource
 }
