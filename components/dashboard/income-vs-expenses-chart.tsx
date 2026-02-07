@@ -13,6 +13,7 @@ import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
+import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
 import {
   BarChart,
   Bar,
@@ -185,7 +186,10 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   return (
     <Card>
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
+            <AddTransactionDialog />
+          </div>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
       <CardContent className="pt-8">

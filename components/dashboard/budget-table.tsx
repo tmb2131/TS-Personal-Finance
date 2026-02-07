@@ -22,6 +22,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Receipt, CheckCircle2, XC
 import { Button } from '@/components/ui/button'
 import { BudgetSummaryTable } from './budget-summary-table'
 import { BudgetIncomeTable } from './budget-income-table'
+import { EditBudgetDialog } from '@/components/budgets/edit-budget-dialog'
 
 type SortField = 'category' | 'annualBudget' | 'tracking' | 'ytd' | 'gap'
 type SortDirection = 'asc' | 'desc' | null
@@ -469,6 +470,10 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Budget Tracker</h2>
+        <EditBudgetDialog />
+      </div>
       {/* Summary Table */}
       <BudgetSummaryTable incomeData={incomeData} expenseData={expenseData} />
 
