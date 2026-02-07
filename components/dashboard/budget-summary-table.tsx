@@ -193,7 +193,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
           {/* Summary card - left; on mobile show first (order-1) */}
           <div className="space-y-2 p-3 rounded-lg border bg-card min-w-0 max-md:order-1">
             <div className="flex items-center gap-1.5">
-              <Target className="h-4 w-4 text-purple-600" />
+              <Target className="h-4 w-4 text-purple-600 dark:text-purple-400" />
               <h3 className="font-semibold text-xs uppercase tracking-wide">Budget Status</h3>
             </div>
             <div className="space-y-1">
@@ -310,7 +310,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
 
             {/* Savings */}
             <TableRow>
-              <TableCell className="text-gray-500 italic">Savings</TableCell>
+              <TableCell className="text-muted-foreground italic">Savings</TableCell>
               <TableCell
                 className={cn(
                   'text-right italic',

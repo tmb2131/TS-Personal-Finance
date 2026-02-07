@@ -302,8 +302,8 @@ export function KidsAccountsOverview() {
                   <TableHeader>
                     {/* Grand Totals Row */}
                     <TableRow className="bg-muted">
-                      <TableHead className="font-bold text-black">Total</TableHead>
-                      <TableHead className="text-right font-bold text-black">
+                      <TableHead className="font-bold text-foreground">Total</TableHead>
+                      <TableHead className="text-right font-bold text-foreground">
                         {formatCurrency(grandTotal)}
                       </TableHead>
                       <TableHead>

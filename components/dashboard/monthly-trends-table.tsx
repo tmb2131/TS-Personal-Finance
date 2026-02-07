@@ -380,7 +380,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
 
   // Get background color intensity for monthly values
   const getMonthlyBgColor = (value: number) => {
-    if (value === 0) return 'bg-white'
+    if (value === 0) return 'bg-background'
     const intensity = Math.min(Math.abs(value) / maxValues.monthly, 1)
     const opacity = 0.1 + intensity * 0.4 // Range from 0.1 to 0.5
     return `bg-red-100`
@@ -680,7 +680,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           {/* Total Variance */}
           <div className="space-y-2 p-3 rounded-lg border-2 border-gray-700 bg-card">
             <div className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-indigo-600" />
+              <Calendar className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               <h3 className="font-semibold text-xs uppercase tracking-wide">Total Variance</h3>
             </div>
             <div className="space-y-1">
@@ -1066,8 +1066,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <TableCell className="text-right w-20">
                     <div className="flex items-center justify-end gap-2">
                       <span className="font-medium min-w-[3rem] text-right">{row.z_score.toFixed(1)}</span>
-                      <div className="relative h-2.5 w-14 border border-gray-300 rounded bg-white">
-                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-400 border-dashed -translate-x-1/2"></div>
+                      <div className="relative h-2.5 w-14 border border-border rounded bg-background">
+                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted-foreground/50 border-dashed -translate-x-1/2"></div>
                         {row.z_score !== 0 && (
                           <div
                             className={cn('absolute h-1 top-0.5 rounded-sm', row.z_score >= 0 ? 'bg-green-500' : 'bg-purple-500')}

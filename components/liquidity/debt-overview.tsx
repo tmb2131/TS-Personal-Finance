@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { AlertCircle, ListIcon } from 'lucide-react'
 import {
@@ -38,6 +39,7 @@ import {
 export default function DebtOverview() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [loading, setLoading] = useState(true)
   const [totalDebt, setTotalDebt] = useState(0)
   const [totalAssets, setTotalAssets] = useState(0)
@@ -263,21 +265,24 @@ export default function DebtOverview() {
                 : { top: 20, right: 30, left: 20, bottom: 5 }
             }
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
             />
             <YAxis
               tickFormatter={formatCurrency}
-              tick={{ fontSize: fontSizes.axisTick }}
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
               width={isMobile ? 48 : 60}
-              stroke="#6b7280"
+              stroke={chartTheme.axisStroke}
             />
             <Tooltip
               formatter={(value: number) => formatCurrency(value)}
               contentStyle={{
+                backgroundColor: chartTheme.tooltipBg,
+                borderColor: chartTheme.tooltipBorder,
+                color: chartTheme.tooltipText,
                 fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />

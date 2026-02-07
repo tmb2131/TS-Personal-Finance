@@ -428,28 +428,28 @@ export function AccountsOverview() {
             <Table className={compactTable}>
               <TableHeader>
                 <TableRow className="bg-muted">
-                  <TableHead className="font-bold text-black">Total</TableHead>
+                  <TableHead className="font-bold text-foreground">Total</TableHead>
                   {hasPersonalAndFamily && (
                     <>
-                      <TableHead className="text-right font-bold text-black">
+                      <TableHead className="text-right font-bold text-foreground">
                         {formatCurrency(grandTotals.personal)}
                       </TableHead>
-                      <TableHead className="text-right font-bold text-black">
+                      <TableHead className="text-right font-bold text-foreground">
                         {formatCurrency(grandTotals.family)}
                       </TableHead>
                     </>
                   )}
                   {hasMultipleCurrencies && (
                     <>
-                      <TableHead className={cn("text-right font-bold text-black", hasPersonalAndFamily && "border-l-2 border-border")}>
+                      <TableHead className={cn("text-right font-bold text-foreground", hasPersonalAndFamily && "border-l-2 border-border")}>
                         {formatGBP(grandTotals.gbp)}
                       </TableHead>
-                      <TableHead className="text-right font-bold text-black">
+                      <TableHead className="text-right font-bold text-foreground">
                         {formatUSD(grandTotals.usd)}
                       </TableHead>
                     </>
                   )}
-                  <TableHead className="text-right !font-extrabold !text-sm text-black">
+                  <TableHead className="text-right !font-extrabold !text-sm text-foreground">
                     {formatCurrency(grandTotals.total)}
                   </TableHead>
                   <TableHead className="w-16"></TableHead>

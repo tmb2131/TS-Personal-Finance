@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { HistoricalNetWorth } from '@/lib/types'
@@ -43,6 +44,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   const [showFamily, setShowFamily] = useState(true)
   const [showTrust, setShowTrust] = useState(true)
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [mounted, setMounted] = useState(false)
   const fontSizes = getChartFontSizes(isMobile)
 
@@ -309,11 +311,11 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
 
         <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <ComposedChart data={filteredData} margin={isMobile ? { top: 30, right: 10, left: 0, bottom: 5 } : { top: 50, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="year"
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
             />
@@ -326,8 +328,8 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
                   maximumFractionDigits: 0,
                 }).format(value)
               }
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               width={isMobile ? 60 : 80}
             />
             <Tooltip
@@ -338,8 +340,9 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
                 }).format(value)
               }
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
+                backgroundColor: chartTheme.tooltipBg,
+                borderColor: chartTheme.tooltipBorder,
+                color: chartTheme.tooltipText,
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
@@ -26,6 +27,7 @@ const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 export function CumulativeSpendChart() {
   const { currency, fxRate } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('Total Expenses')
@@ -286,11 +288,11 @@ export function CumulativeSpendChart() {
         ) : (
           <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
             <LineChart data={chartData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
               <XAxis
                 dataKey="dateLabel"
-                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
-                stroke="#6b7280"
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fill: chartTheme.labelFill }}
+                stroke={chartTheme.axisStroke}
                 angle={-45}
                 textAnchor="end"
                 height={isMobile ? 60 : 80}
@@ -308,8 +310,8 @@ export function CumulativeSpendChart() {
                     maximumFractionDigits: 0,
                   }).format(value)
                 }
-                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
-                stroke="#6b7280"
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fill: chartTheme.labelFill }}
+                stroke={chartTheme.axisStroke}
                 width={isMobile ? 48 : 60}
               />
               <YAxis
@@ -341,8 +343,9 @@ export function CumulativeSpendChart() {
                   }) : label
                 }}
                 contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: chartTheme.tooltipBg,
+                  borderColor: chartTheme.tooltipBorder,
+                  color: chartTheme.tooltipText,
                   borderRadius: '6px',
                   padding: '8px 12px',
                   fontSize: getChartFontSizes(isMobile).tooltipMin,

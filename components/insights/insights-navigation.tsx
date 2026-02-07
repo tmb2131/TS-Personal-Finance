@@ -6,9 +6,9 @@ import { cn } from '@/utils/cn'
 const navButtonClass = cn(
   'p-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]',
   'border-2 rounded-lg flex flex-col items-center gap-2 text-center',
-  'bg-slate-700 border-slate-600 text-slate-100',
-  'hover:bg-slate-600 hover:border-slate-500',
-  'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-background'
+  'bg-primary text-primary-foreground border-primary/80',
+  'hover:bg-primary/90 hover:border-primary/70',
+  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
 )
 
 interface NavigationItem {
@@ -57,7 +57,7 @@ export function InsightsNavigation() {
             onClick={(e) => scrollToSection(item.id, e)}
             className={navButtonClass}
           >
-            <Icon className="h-6 w-6 text-slate-200" />
+            <Icon className="h-6 w-6 text-primary-foreground/80" />
             <span className="text-sm font-medium">{item.label}</span>
           </button>
         )

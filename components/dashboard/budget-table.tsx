@@ -519,7 +519,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               {/* Expenses Status */}
               <div className="space-y-2 p-3 rounded-lg border bg-card">
                 <div className="flex items-center gap-1.5">
-                  <Receipt className="h-4 w-4 text-orange-600" />
+                  <Receipt className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   <h3 className="font-semibold text-xs uppercase tracking-wide">Expenses Status</h3>
                 </div>
                 <div className="space-y-1">

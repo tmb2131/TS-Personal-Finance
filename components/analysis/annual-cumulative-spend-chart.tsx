@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog, BudgetTarget, AnnualTrend } from '@/lib/types'
@@ -29,6 +30,7 @@ const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 export function AnnualCumulativeSpendChart() {
   const { currency, fxRate } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
@@ -539,8 +541,8 @@ export function AnnualCumulativeSpendChart() {
     tooltipItems.sort((a, b) => b.value - a.value)
     
     return (
-      <div className="bg-white border border-gray-200 rounded-md shadow-lg p-3">
-        <p className="font-semibold text-sm mb-2 text-gray-700">
+      <div className="bg-popover border border-border rounded-md shadow-lg p-3">
+        <p className="font-semibold text-sm mb-2 text-popover-foreground">
           {monthName} {day} (Day {dayOfYear + 1})
         </p>
         <div className="space-y-1">
@@ -551,9 +553,9 @@ export function AnnualCumulativeSpendChart() {
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="text-gray-600">{item.name}</span>
+                <span className="text-muted-foreground">{item.name}</span>
               </div>
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-popover-foreground">
                 {formatCurrency(item.value)}
               </span>
             </div>
@@ -620,11 +622,11 @@ export function AnnualCumulativeSpendChart() {
         ) : (
           <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
             <LineChart data={chartData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
               <XAxis
                 dataKey="dayOfYear"
-                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
-                stroke="#6b7280"
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fill: chartTheme.labelFill }}
+                stroke={chartTheme.axisStroke}
                 ticks={getMonthStartDays()}
                 tickFormatter={(value) => {
                   const month = dayOfYearToMonth(value)
@@ -635,8 +637,8 @@ export function AnnualCumulativeSpendChart() {
                 />
               <YAxis
                 tickFormatter={(value) => formatCurrencyCompact(value)}
-                tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
-                stroke="#6b7280"
+                tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fill: chartTheme.labelFill }}
+                stroke={chartTheme.axisStroke}
                 width={isMobile ? 48 : 60}
               />
               <Tooltip content={<CustomTooltip />} />

@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
@@ -31,6 +32,7 @@ import {
 export function KeyInsights() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const previousYear = new Date().getFullYear() - 1
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
@@ -789,7 +791,7 @@ export function KeyInsights() {
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-purple-600" />
+                  <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Budget</h3>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -843,7 +845,7 @@ export function KeyInsights() {
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-orange-600" />
+                  <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                   <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Spend</h3>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -897,7 +899,7 @@ export function KeyInsights() {
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-indigo-600" />
+                  <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                   <h3 className="font-semibold text-sm uppercase tracking-wide">Monthly Spend</h3>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -995,7 +997,7 @@ export function KeyInsights() {
                 <div className="h-[180px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 25, right: isMobile ? 10 : 15, left: 0, bottom: isMobile ? 25 : 15 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
                       <XAxis
                         dataKey="label"
                         tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fontWeight: 600 }}
@@ -1063,7 +1065,7 @@ export function KeyInsights() {
                                 y={y - 8}
                                 textAnchor={isFirst ? 'start' : isLast ? 'end' : 'middle'}
                                 fontSize={getChartFontSizes(isMobile).axisTick}
-                                fill="#374151"
+                                fill={chartTheme.labelFill}
                               >
                                 {formatCurrencyLarge(value)}
                               </text>
@@ -1112,8 +1114,9 @@ export function KeyInsights() {
                       <Tooltip
                         formatter={(v: number) => formatCurrencyLarge(v)}
                         contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
+                          backgroundColor: chartTheme.tooltipBg,
+                          borderColor: chartTheme.tooltipBorder,
+                          color: chartTheme.tooltipText,
                           borderRadius: '6px',
                           padding: isMobile ? '6px 10px' : '8px 12px',
                           fontSize: `${getChartFontSizes(isMobile).tooltipMin}px`,

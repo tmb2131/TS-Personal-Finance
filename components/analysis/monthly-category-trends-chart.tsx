@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { TransactionLog } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
@@ -56,6 +57,7 @@ export function MonthlyCategoryTrendsChart({
 }: MonthlyCategoryTrendsChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
 
   // Calculate monthly data with top transaction per month
   const chartData = useMemo(() => {
@@ -311,7 +313,7 @@ export function MonthlyCategoryTrendsChart({
         margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
             barCategoryGap="10%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="monthLabel"
               tick={(props) => {
@@ -324,7 +326,7 @@ export function MonthlyCategoryTrendsChart({
                       y={0}
                       dy={16}
                       textAnchor="end"
-                      fill="#6b7280"
+                      fill={chartTheme.labelFill}
                       fontSize={fontSizes.axisTick}
                       fontWeight={isLastMonth ? 'bold' : 'normal'}
                       transform={`rotate(-45)`}
@@ -334,7 +336,7 @@ export function MonthlyCategoryTrendsChart({
                   </g>
                 )
               }}
-              stroke="#6b7280"
+              stroke={chartTheme.axisStroke}
               height={isMobile ? 80 : 100}
               interval="preserveStartEnd"
               minTickGap={isMobile ? 40 : 30}
@@ -348,8 +350,8 @@ export function MonthlyCategoryTrendsChart({
                   maximumFractionDigits: 0,
                 }).format(value)
               }
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               width={isMobile ? 48 : 60}
             />
             <Tooltip
@@ -380,8 +382,9 @@ export function MonthlyCategoryTrendsChart({
                 return label
               }}
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
+                backgroundColor: chartTheme.tooltipBg,
+                borderColor: chartTheme.tooltipBorder,
+                color: chartTheme.tooltipText,
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,
@@ -473,7 +476,7 @@ export function MonthlyCategoryTrendsChart({
                       <text
                         textAnchor="middle"
                         dy={0}
-                        fill="#374151"
+                        fill={chartTheme.labelFill}
                         fontSize={fontSizes.axisTick}
                         fontWeight={500}
                       >
@@ -514,7 +517,7 @@ export function MonthlyCategoryTrendsChart({
                       <text
                         textAnchor="middle"
                         dy={0}
-                        fill="#6b7280"
+                        fill={chartTheme.axisStroke}
                         fontSize={fontSizes.axisTick}
                         fontWeight={500}
                       >
