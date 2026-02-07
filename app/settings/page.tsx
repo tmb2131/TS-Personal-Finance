@@ -33,6 +33,7 @@ export default async function SettingsPage() {
         initialSpreadsheetId={profile?.google_spreadsheet_id ?? ''}
         initialDisplayName={profile?.display_name ?? ''}
         initialDefaultCurrency={defaultCurrency}
+        serviceAccountEmail={process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? ''}
       />
       <AppearanceForm />
     </div>

@@ -8,6 +8,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { ExternalLink, Copy } from 'lucide-react'
+
+const TEMPLATE_SHEET_ID = '1LsbT4ahDlq7Lyf04d5nyr4bsjqmkDq-kqQoA2t66Kgg'
+const TEMPLATE_COPY_URL = `https://docs.google.com/spreadsheets/d/${TEMPLATE_SHEET_ID}/copy`
 
 type CurrencyOption = 'USD' | 'GBP'
 
@@ -15,9 +19,12 @@ interface SettingsFormProps {
   initialSpreadsheetId: string
   initialDisplayName: string
   initialDefaultCurrency: CurrencyOption
+  serviceAccountEmail: string
 }
 
-export function SettingsForm({ initialSpreadsheetId, initialDisplayName, initialDefaultCurrency }: SettingsFormProps) {
+export function SettingsForm({ initialSpreadsheetId, initialDisplayName, initialDefaultCurrency, serviceAccountEmail }: SettingsFormProps) {
+  const [copiedEmail, setCopiedEmail] = useState(false)
+
   const [spreadsheetId, setSpreadsheetId] = useState(initialSpreadsheetId)
   const [displayName, setDisplayName] = useState(initialDisplayName)
   const [defaultCurrency, setDefaultCurrency] = useState<CurrencyOption>(initialDefaultCurrency)
@@ -73,7 +80,62 @@ export function SettingsForm({ initialSpreadsheetId, initialDisplayName, initial
     }
   }
 
+  const handleCopyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(serviceAccountEmail)
+      setCopiedEmail(true)
+      toast.success('Service account email copied')
+      setTimeout(() => setCopiedEmail(false), 2000)
+    } catch {
+      toast.error('Failed to copy email')
+    }
+  }
+
   return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Get Started with Google Sheets</CardTitle>
+          <CardDescription>
+            Don&apos;t have a spreadsheet yet? Copy our template to your Google Drive, then paste the new spreadsheet ID below.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button asChild variant="outline">
+              <a
+                href={TEMPLATE_COPY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Copy Template to My Drive
+              </a>
+            </Button>
+          </div>
+          <div className="rounded-md bg-muted p-3 text-sm space-y-2">
+            <p className="font-medium">After copying, share your new sheet with our service account:</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs bg-background px-2 py-1 rounded border break-all">
+                {serviceAccountEmail}
+              </code>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 h-7 px-2"
+                onClick={handleCopyEmail}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span className="ml-1 text-xs">{copiedEmail ? 'Copied!' : 'Copy'}</span>
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Open your copied sheet → click Share → paste this email → grant Viewer access.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
     <Card>
       <CardHeader>
         <CardTitle>Connect your Google Sheet</CardTitle>
@@ -121,5 +183,6 @@ export function SettingsForm({ initialSpreadsheetId, initialDisplayName, initial
         </Button>
       </CardContent>
     </Card>
+    </div>
   )
 }
