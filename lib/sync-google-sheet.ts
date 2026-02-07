@@ -25,6 +25,11 @@ const DELETE_INSERT_TABLES = new Set([
   'investment_return', 'yoy_net_worth', 'recurring_payments',
 ]);
 
+/** Tables that have a data_source column (scoped deletes during sync). */
+const DATA_SOURCE_TABLES = new Set([
+  'account_balances', 'transaction_log', 'budget_targets', 'debt', 'kids_accounts',
+]);
+
 interface SheetConfig {
   name: string;
   range: string;
@@ -487,6 +492,7 @@ export async function syncGoogleSheet(
                 .from(config.table)
                 .delete()
                 .eq('user_id', uid)
+                .eq('data_source', 'google_sheet')
                 .eq('account_name', accountInfo.account_name)
                 .eq('category', accountInfo.category)
                 .neq('institution', accountInfo.institution);
@@ -527,7 +533,7 @@ export async function syncGoogleSheet(
               });
             }
 
-            // Delete existing rows
+            // Delete existing rows (recurring_payments doesn't have data_source column)
             await db.from(config.table).delete().eq('user_id', uid);
 
             // Apply preserved needs_review flags and deduplicate by name (aggregate amounts)
@@ -566,10 +572,14 @@ export async function syncGoogleSheet(
             upsertResult = { data, error };
           } else {
             // Simple delete-then-insert (debt, budget_targets, annual_trends, etc.)
-            const { error: deleteError } = await db
+            let deleteQuery = db
               .from(config.table)
               .delete()
               .eq('user_id', uid);
+            if (DATA_SOURCE_TABLES.has(config.table)) {
+              deleteQuery = deleteQuery.eq('data_source', 'google_sheet');
+            }
+            const { error: deleteError } = await deleteQuery;
             if (deleteError) {
               console.warn(`Warning: Could not delete old ${config.name} for user ${uid}:`, deleteError);
             }
@@ -627,11 +637,12 @@ export async function syncGoogleSheet(
             });
           upsertResult = { data, error };
         } else if (config.table === 'transaction_log') {
-          // Single delete for all user rows, then chunked insert
+          // Delete only google_sheet rows, then chunked insert
           const { error: delErr } = await db
             .from(config.table)
             .delete()
-            .eq('user_id', uid);
+            .eq('user_id', uid)
+            .eq('data_source', 'google_sheet');
           if (delErr) {
             console.warn('Transaction Log: delete error', delErr);
           }
@@ -696,10 +707,14 @@ export async function syncGoogleSheet(
     // Clear stale data for delete-then-insert tables whose sheet was empty, in parallel
     const noDataCleanups = noDataItems.map(async (item) => {
       if (DELETE_INSERT_TABLES.has(item.config.table) && !isGlobalTable(item.config.table)) {
-        const { error: deleteError } = await db
+        let cleanupQuery = db
           .from(item.config.table)
           .delete()
           .eq('user_id', userId);
+        if (DATA_SOURCE_TABLES.has(item.config.table)) {
+          cleanupQuery = cleanupQuery.eq('data_source', 'google_sheet');
+        }
+        const { error: deleteError } = await cleanupQuery;
         if (deleteError) {
           console.warn(`Warning: Could not clear empty-tab data for ${item.config.name}:`, deleteError);
         } else {
