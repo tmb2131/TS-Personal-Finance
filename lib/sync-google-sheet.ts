@@ -501,6 +501,31 @@ export async function syncGoogleSheet(
               }
             })
           );
+          // Delete accounts that were removed from the sheet entirely
+          const incomingKeys = new Set(
+            transformedData.map((r: any) => `${r.institution}|${r.account_name}`)
+          );
+          const { data: existingRows } = await db
+            .from('account_balances')
+            .select('id, institution, account_name')
+            .eq('user_id', uid)
+            .eq('data_source', 'google_sheet');
+          if (existingRows) {
+            const toDelete = existingRows.filter(
+              (row) => !incomingKeys.has(`${row.institution}|${row.account_name}`)
+            );
+            if (toDelete.length > 0) {
+              const { error: delRemovedErr } = await db
+                .from('account_balances')
+                .delete()
+                .in('id', toDelete.map((r) => r.id));
+              if (delRemovedErr) {
+                console.warn('Warning: Could not delete removed account_balances:', delRemovedErr);
+              } else {
+                console.log(`Deleted ${toDelete.length} account_balances rows no longer in sheet`);
+              }
+            }
+          }
           const { data: d, error: e } = await db
             .from(config.table)
             .upsert(dataWithUser, { onConflict: 'user_id,institution,account_name,date_updated' });
