@@ -24,8 +24,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { AlertCircle, Maximize2 } from 'lucide-react'
+import { AlertCircle, Maximize2, Pencil } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { EditAccountDialog } from '@/components/accounts/edit-account-dialog'
 
 const CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Taconic', 'House', 'Trust']
 
@@ -73,6 +74,7 @@ export function AccountsOverview() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [fullTableOpen, setFullTableOpen] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<AccountBalance | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -547,9 +549,21 @@ export function AccountsOverview() {
                           <div className="font-medium text-sm truncate">{account.account_name}</div>
                           <div className="text-xs text-muted-foreground truncate">{account.institution}</div>
                         </div>
-                        <Badge variant="outline" className="shrink-0 text-[11px] px-1.5 py-0">
-                          {account.currency}
-                        </Badge>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {account.data_source === 'manual' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => setEditingAccount(account)}
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          )}
+                          <Badge variant="outline" className="text-[11px] px-1.5 py-0">
+                            {account.currency}
+                          </Badge>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t">
                         <span className="text-xs text-muted-foreground block">
@@ -666,6 +680,7 @@ export function AccountsOverview() {
                   <TableHead className="sticky top-0 z-20 text-right bg-muted">Balance</TableHead>
                   <TableHead className="sticky top-0 z-20 w-16 bg-muted"></TableHead>
                   <TableHead className="sticky top-0 z-20 bg-muted">Last Updated</TableHead>
+                  <TableHead className="sticky top-0 z-20 bg-muted w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -699,6 +714,18 @@ export function AccountsOverview() {
                             </div>
                           </TableCell>
                           <TableCell>{formatDate(account.date_updated)}</TableCell>
+                          <TableCell>
+                            {account.data_source === 'manual' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={() => setEditingAccount(account)}
+                              >
+                                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       )
                     })}
@@ -720,6 +747,7 @@ export function AccountsOverview() {
                         </div>
                       </TableCell>
                       <TableCell></TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                   </Fragment>
                 ))}
@@ -728,6 +756,15 @@ export function AccountsOverview() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Account Dialog */}
+      {editingAccount && (
+        <EditAccountDialog
+          account={editingAccount}
+          open={!!editingAccount}
+          onOpenChange={(open) => { if (!open) setEditingAccount(null) }}
+        />
+      )}
     </div>
   )
 }
