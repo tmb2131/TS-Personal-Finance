@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
@@ -28,6 +29,7 @@ const YEAR_END = 'Year End'
 export function NetWorthStartEndChart() {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [data, setData] = useState<YoYNetWorth[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -161,26 +163,27 @@ export function NetWorthStartEndChart() {
             data={chartData}
             margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
             />
             <YAxis
               tickFormatter={formatAsMillions}
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               width={isMobile ? 48 : 60}
             />
             <Tooltip
               formatter={(value: number) => formatAsMillions(value)}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
+                backgroundColor: chartTheme.tooltipBg,
+                borderColor: chartTheme.tooltipBorder,
+                color: chartTheme.tooltipText,
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,
@@ -194,7 +197,7 @@ export function NetWorthStartEndChart() {
                 dataKey="value"
                 position="top"
                 formatter={(v: number) => formatAsMillions(v)}
-                style={{ fontSize: fontSizes.axisTick, fill: '#374151' }}
+                style={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
               />
             </Bar>
           </BarChart>

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { AlertCircle, TrendingUp } from 'lucide-react'
@@ -58,6 +59,7 @@ type ForecastBridgeChartProps = {
 export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [data, setData] = useState<ForecastBridgeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -241,14 +243,14 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     return (
       <div
         style={{
-          backgroundColor: 'white',
-          border: '1px solid #e5e7eb',
+          backgroundColor: chartTheme.tooltipBg,
+          border: `1px solid ${chartTheme.tooltipBorder}`,
           borderRadius: '6px',
           padding: isMobile ? '6px 10px' : '8px 12px',
           fontSize: `${fontSizes.tooltipMin}px`,
         }}
       >
-        <div style={{ color: '#374151' }}>
+        <div style={{ color: chartTheme.tooltipText }}>
           {data.name}: {formattedValue}
         </div>
       </div>
@@ -327,13 +329,13 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
             margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 44, right: 30, left: 20, bottom: 72 }}
             barCategoryGap="20%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="name"
               angle={-45}
               textAnchor="end"
               height={isMobile ? 80 : 100}
-              stroke="#6b7280"
+              stroke={chartTheme.axisStroke}
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
               tick={(props: { x: number; y: number; payload: { value: string } }) => {
@@ -345,7 +347,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
                       y={0}
                       dy={16}
                       textAnchor="end"
-                      fill="#6b7280"
+                      fill={chartTheme.labelFill}
                       fontSize={fontSizes.axisTick}
                       transform="rotate(-45)"
                     >
@@ -359,8 +361,8 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
               domain={yDomain}
               reversed={!!(data && data.totalEnd - data.totalStart < 0)}
               tickFormatter={formatCurrency}
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               width={isMobile ? 48 : 60}
             />
             <Tooltip content={<CustomTooltip />} />
@@ -402,7 +404,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
                   const labelY = isNegative ? y + height + 14 : y - 14
                   return (
                     <g transform={`translate(${x + width / 2},${labelY})`}>
-                      <text textAnchor="middle" dy={0} fill="#374151" fontSize={fontSizes.axisTick}>
+                      <text textAnchor="middle" dy={0} fill={chartTheme.labelFill} fontSize={fontSizes.axisTick}>
                         {text}
                       </text>
                     </g>

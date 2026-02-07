@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { HistoricalNetWorth, TransactionLog } from '@/lib/types'
@@ -31,6 +32,7 @@ const EXPENSES_FILL = '#ef4444' // Red-500 (matches app's negative color)
 export function YoYWaterfallChart() {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const fontSizes = getChartFontSizes(isMobile)
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -200,11 +202,11 @@ export function YoYWaterfallChart() {
             data={data}
             margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
             />
@@ -217,8 +219,8 @@ export function YoYWaterfallChart() {
                   maximumFractionDigits: 0,
                 }).format(value)
               }
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               width={isMobile ? 60 : 80}
             />
             <Tooltip
@@ -229,8 +231,9 @@ export function YoYWaterfallChart() {
                 }).format(value)
               }
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
+                backgroundColor: chartTheme.tooltipBg,
+                borderColor: chartTheme.tooltipBorder,
+                color: chartTheme.tooltipText,
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { AlertCircle } from 'lucide-react'
 import {
@@ -32,6 +33,7 @@ type ForecastGapOverTimeChartProps = {
 export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOverTimeChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [data, setData] = useState<ForecastGapOverTimePoint[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -147,12 +149,12 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
       <CardContent>
         <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
           <LineChart data={chartData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="date"
               tickFormatter={formatDateLabel}
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               angle={isMobile ? -45 : 0}
               textAnchor={isMobile ? 'end' : 'middle'}
               height={isMobile ? 60 : 36}
@@ -161,18 +163,19 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
             />
             <YAxis
               tickFormatter={(v) => formatCurrency(v)}
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               width={isMobile ? 48 : 60}
               domain={['auto', 'auto']}
             />
-            <ReferenceLine y={0} stroke="#6b7280" strokeDasharray="3 3" />
+            <ReferenceLine y={0} stroke={chartTheme.axisStroke} strokeDasharray="3 3" />
             <Tooltip
               formatter={(value: number) => [formatCurrencyFull(value), 'Gap']}
               labelFormatter={(label) => chartData.find((d) => d.date === label)?.label ?? label}
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
+                backgroundColor: chartTheme.tooltipBg,
+                borderColor: chartTheme.tooltipBorder,
+                color: chartTheme.tooltipText,
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,

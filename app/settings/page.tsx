@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SettingsForm } from '@/components/settings/settings-form'
+import { AppearanceForm } from '@/components/settings/appearance-form'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -33,6 +34,7 @@ export default async function SettingsPage() {
         initialDisplayName={profile?.display_name ?? ''}
         initialDefaultCurrency={defaultCurrency}
       />
+      <AppearanceForm />
     </div>
   )
 }

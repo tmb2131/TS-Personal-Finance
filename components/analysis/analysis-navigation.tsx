@@ -7,9 +7,9 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 const navButtonClass = cn(
   'p-2.5 md:p-3 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]',
   'border-2 rounded-lg flex flex-col items-center gap-1.5 md:gap-2 text-center shrink-0',
-  'bg-slate-700 border-slate-600 text-slate-100',
-  'hover:bg-slate-600 hover:border-slate-500',
-  'focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-background'
+  'bg-primary text-primary-foreground border-primary/80',
+  'hover:bg-primary/90 hover:border-primary/70',
+  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
 )
 
 interface NavigationItem {
@@ -69,7 +69,7 @@ export function AnalysisNavigation() {
               isMobile && 'min-w-[calc(33.333%-0.5rem)] max-w-[calc(33.333%-0.5rem)] snap-center'
             )}
           >
-            <Icon className="h-4 w-4 md:h-5 md:w-5 text-slate-200" />
+            <Icon className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground/80" />
             <span className="text-xs font-medium leading-tight">{item.label}</span>
           </button>
         )

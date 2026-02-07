@@ -354,10 +354,10 @@ export function MonthlyCategorySummary({
 
   // Get icon and color for each comparison type
   const getComparisonIcon = (label: string) => {
-    if (label.includes('L3M')) return { Icon: Calendar, color: 'text-indigo-600' }
-    if (label.includes('L12M')) return { Icon: Calendar, color: 'text-purple-600' }
-    if (label.includes('LY')) return { Icon: Calendar, color: 'text-orange-600' }
-    return { Icon: Calendar, color: 'text-gray-600' }
+    if (label.includes('L3M')) return { Icon: Calendar, color: 'text-indigo-600 dark:text-indigo-400' }
+    if (label.includes('L12M')) return { Icon: Calendar, color: 'text-purple-600 dark:text-purple-400' }
+    if (label.includes('LY')) return { Icon: Calendar, color: 'text-orange-600 dark:text-orange-400' }
+    return { Icon: Calendar, color: 'text-muted-foreground' }
   }
 
   // Generate intelligent executive summary with color-coded highlights

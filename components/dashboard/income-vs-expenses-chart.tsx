@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
@@ -47,6 +48,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   const [budgets, setBudgets] = useState<BudgetTarget[]>(initialData?.budgets ?? [])
   const [investmentReturns, setInvestmentReturns] = useState<InvestmentReturn[]>(initialData?.investmentReturns ?? [])
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [mounted, setMounted] = useState(false)
   const [includeInvestmentIncome, setIncludeInvestmentIncome] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -206,11 +208,11 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
             barCategoryGap="10%"
             barGap={4}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               tickCount={isMobile ? 5 : undefined}
               interval={isMobile ? 'preserveStartEnd' : undefined}
             />
@@ -223,8 +225,8 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
                   maximumFractionDigits: 0,
                 }).format(value)
               }
-              tick={{ fontSize: fontSizes.axisTick }}
-              stroke="#6b7280"
+              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              stroke={chartTheme.axisStroke}
               width={isMobile ? 60 : 80}
             />
             <Tooltip
@@ -235,8 +237,9 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
                 }).format(value)
               }
               contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
+                backgroundColor: chartTheme.tooltipBg,
+                borderColor: chartTheme.tooltipBorder,
+                color: chartTheme.tooltipText,
                 borderRadius: '6px',
                 padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,

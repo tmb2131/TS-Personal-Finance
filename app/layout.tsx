@@ -5,6 +5,7 @@ import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
 import { AuthTimeoutProvider } from '@/lib/contexts/auth-timeout-provider'
 import { DailySummaryProvider } from '@/components/insights/daily-summary-context'
+import { ThemeProvider } from '@/lib/contexts/theme-provider'
 import { AppShell } from '@/components/app-shell'
 
 const inter = Inter({
@@ -30,13 +31,15 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <CurrencyProvider>
-          <AuthTimeoutProvider>
-            <DailySummaryProvider>
-              <AppShell>{children}</AppShell>
-            </DailySummaryProvider>
-          </AuthTimeoutProvider>
-        </CurrencyProvider>
+        <ThemeProvider>
+          <CurrencyProvider>
+            <AuthTimeoutProvider>
+              <DailySummaryProvider>
+                <AppShell>{children}</AppShell>
+              </DailySummaryProvider>
+            </AuthTimeoutProvider>
+          </CurrencyProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
