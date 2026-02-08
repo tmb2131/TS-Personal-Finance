@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Plus, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,9 +14,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const ACCOUNT_CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Property', 'Trust', 'Other']
 const LIQUIDITY_PROFILES = ['Instant', 'Within 6 Months', 'Locked Up']
+const RISK_PROFILES = ['Low', 'Medium', 'High']
+const HORIZON_PROFILES = ['Short-Term', 'Medium-Term', 'Long-Term']
+
+const PROFILE_DESCRIPTIONS = {
+  liquidity: 'How quickly is the money accessible? Instant (e.g., cash), Within 6 Months (e.g., investment accounts not immediately accessible), or Locked Up (e.g., equity in a house, angel investments, hedge fund holdings).',
+  risk: 'How risky is the account? Low (e.g., cash, bonds, home equity), Medium (e.g., diversified brokerage accounts), High (e.g., angel investments, hedge fund investments).',
+  horizon: 'What is the intended duration? Short-Term (e.g., checking/savings), Medium-Term (e.g., brokerage accounts for longer-term growth), Long-Term (e.g., retirement accounts, home, trusts).',
+}
+
+function ProfileLabel({ htmlFor, label, description }: { htmlFor: string; label: string; description: string }) {
+  return (
+    <div className="flex items-center gap-1">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs text-xs">
+            {description}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  )
+}
 
 export function AddAccountDialog() {
   const router = useRouter()
@@ -168,7 +200,7 @@ export function AddAccountDialog() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acc-liquidity">Liquidity Profile</Label>
+            <ProfileLabel htmlFor="acc-liquidity" label="Liquidity Profile" description={PROFILE_DESCRIPTIONS.liquidity} />
             <select
               id="acc-liquidity"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -183,22 +215,32 @@ export function AddAccountDialog() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="acc-risk">Risk Profile</Label>
-              <Input
+              <ProfileLabel htmlFor="acc-risk" label="Risk Profile" description={PROFILE_DESCRIPTIONS.risk} />
+              <select
                 id="acc-risk"
-                placeholder="e.g. Low, Medium, High"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={riskProfile}
                 onChange={(e) => setRiskProfile(e.target.value)}
-              />
+              >
+                <option value="">— Select —</option>
+                {RISK_PROFILES.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="acc-horizon">Horizon Profile</Label>
-              <Input
+              <ProfileLabel htmlFor="acc-horizon" label="Horizon Profile" description={PROFILE_DESCRIPTIONS.horizon} />
+              <select
                 id="acc-horizon"
-                placeholder="e.g. Short, Long"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={horizonProfile}
                 onChange={(e) => setHorizonProfile(e.target.value)}
-              />
+              >
+                <option value="">— Select —</option>
+                {HORIZON_PROFILES.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
             </div>
           </div>
           <Button type="submit" className="w-full" disabled={saving}>

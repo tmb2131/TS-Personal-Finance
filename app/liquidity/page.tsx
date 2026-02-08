@@ -6,6 +6,7 @@ import MonthlyExpensesVsLiquidity from '@/components/liquidity/monthly-expenses-
 import DebtOverview from '@/components/liquidity/debt-overview'
 import LiquidityDistribution from '@/components/liquidity/liquidity-distribution'
 import RiskProfileTable from '@/components/liquidity/risk-profile-table'
+import HorizonProfileTable from '@/components/liquidity/horizon-profile-table'
 import { AddDebtDialog } from '@/components/liquidity/add-debt-dialog'
 
 export default async function LiquidityPage() {
@@ -42,7 +43,10 @@ export default async function LiquidityPage() {
         <LiquidityDistribution />
       </div>
 
-      <RiskProfileTable />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <RiskProfileTable />
+        <HorizonProfileTable />
+      </div>
     </div>
   )
 }
