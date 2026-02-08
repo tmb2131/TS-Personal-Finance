@@ -162,26 +162,44 @@ export function TransactionAnalysis({
         ? new Date(selectedYear, 11, 31, 23, 59, 59)
         : new Date(selectedYear, selectedMonth, 0, 23, 59, 59)
 
-      const { data, error } = await supabase
-        .from('transaction_log')
-        .select('*')
-        .eq('category', selectedCategory)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0])
-        .order('date', { ascending: false })
+      // Fetch all matching transactions with pagination (Supabase defaults to 1,000 rows)
+      let allTransactions: TransactionLog[] = []
+      let page = 0
+      const pageSize = 1000
+      let hasMore = true
+      const startDateStr = startDate.toISOString().split('T')[0]
+      const endDateStr = endDate.toISOString().split('T')[0]
 
-      if (error) {
-        console.error('Error fetching transactions:', error)
-        setError('Failed to load transactions. Please try refreshing the page.')
-        return
+      while (hasMore) {
+        const from = page * pageSize
+        const to = from + pageSize - 1
+        const { data: pageData, error: pageError } = await supabase
+          .from('transaction_log')
+          .select('*')
+          .eq('category', selectedCategory)
+          .gte('date', startDateStr)
+          .lte('date', endDateStr)
+          .order('date', { ascending: false })
+          .range(from, to)
+
+        if (pageError) {
+          console.error('Error fetching transactions:', pageError)
+          setError('Failed to load transactions. Please try refreshing the page.')
+          return
+        }
+
+        const rows = pageData || []
+        allTransactions = [...allTransactions, ...rows]
+        hasMore = rows.length === pageSize
+        page++
       }
-      
+
       setError(null)
 
-      setTransactions(data as TransactionLog[] || [])
+      setTransactions(allTransactions)
 
       // Fetch historical FX rates for transaction dates (for null amount conversion)
-      const txs = (data || []) as TransactionLog[]
+      const txs = allTransactions
       if (txs.length > 0) {
         const maxDate = txs.reduce((max, tx) => {
           const d = typeof tx.date === 'string' ? tx.date.split('T')[0] : tx.date

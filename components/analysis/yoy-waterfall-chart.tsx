@@ -45,25 +45,47 @@ export function YoYWaterfallChart() {
       const currentYear = new Date().getFullYear()
       const startOfYear = new Date(currentYear, 0, 1)
       
-      const [netWorthResult, transactionsResult] = await Promise.all([
-        supabase
-          .from('historical_net_worth')
-          .select('*')
-          .gte('date', startOfYear.toISOString())
-          .order('date', { ascending: true }),
-        supabase
-          .from('transaction_log')
-          .select('*')
-          .gte('date', startOfYear.toISOString())
-          .order('date', { ascending: true }),
-      ])
+      const netWorthResult = await supabase
+        .from('historical_net_worth')
+        .select('*')
+        .gte('date', startOfYear.toISOString())
+        .order('date', { ascending: true })
 
-      if (netWorthResult.error || transactionsResult.error) {
-        const errorMsg = netWorthResult.error?.message || transactionsResult.error?.message || 'Failed to load data'
-        console.error('Error fetching YoY data:', netWorthResult.error || transactionsResult.error)
-        setError(errorMsg)
+      if (netWorthResult.error) {
+        console.error('Error fetching net worth data:', netWorthResult.error)
+        setError(netWorthResult.error.message || 'Failed to load data')
         setLoading(false)
         return
+      }
+
+      // Fetch all transactions with pagination (Supabase defaults to 1,000 rows)
+      let allTransactions: TransactionLog[] = []
+      let page = 0
+      const pageSize = 1000
+      let hasMore = true
+      const startDateStr = startOfYear.toISOString()
+
+      while (hasMore) {
+        const from = page * pageSize
+        const to = from + pageSize - 1
+        const { data: pageData, error: pageError } = await supabase
+          .from('transaction_log')
+          .select('*')
+          .gte('date', startDateStr)
+          .order('date', { ascending: true })
+          .range(from, to)
+
+        if (pageError) {
+          console.error('Error fetching transactions:', pageError)
+          setError(pageError.message || 'Failed to load data')
+          setLoading(false)
+          return
+        }
+
+        const rows = pageData || []
+        allTransactions = [...allTransactions, ...rows]
+        hasMore = rows.length === pageSize
+        page++
       }
 
       // Calculate start net worth (Jan 1)
@@ -86,7 +108,7 @@ export function YoYWaterfallChart() {
         : startNW
 
       // Calculate income (positive transactions)
-      const income = transactionsResult.data
+      const income = allTransactions
         .filter((t: TransactionLog) => {
           const amount = currency === 'USD' ? t.amount_usd : t.amount_gbp
           return amount && amount > 0
@@ -98,7 +120,7 @@ export function YoYWaterfallChart() {
 
       // Calculate expenses (negative transactions)
       const expenses = Math.abs(
-        transactionsResult.data
+        allTransactions
           .filter((t: TransactionLog) => {
             const amount = currency === 'USD' ? t.amount_usd : t.amount_gbp
             return amount && amount < 0

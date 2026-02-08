@@ -49,24 +49,40 @@ export function CumulativeSpendChart() {
       const startDateStr = startOfYear.toISOString().split('T')[0]
       const todayDateStr = today.toISOString().split('T')[0]
       
-      const { data, error } = await supabase
-        .from('transaction_log')
-        .select('*')
-        .gte('date', startDateStr)
-        .lte('date', todayDateStr)
-        .order('date', { ascending: true })
+      // Fetch all transactions with pagination (Supabase defaults to 1,000 rows)
+      let allTransactions: TransactionLog[] = []
+      let page = 0
+      const pageSize = 1000
+      let hasMore = true
 
-      if (error) {
-        console.error('Error fetching transactions:', error)
-        setError('Failed to load transaction data. Please try refreshing the page.')
-        setLoading(false)
-        return
+      while (hasMore) {
+        const from = page * pageSize
+        const to = from + pageSize - 1
+        const { data: pageData, error: pageError } = await supabase
+          .from('transaction_log')
+          .select('*')
+          .gte('date', startDateStr)
+          .lte('date', todayDateStr)
+          .order('date', { ascending: true })
+          .range(from, to)
+
+        if (pageError) {
+          console.error('Error fetching transactions:', pageError)
+          setError('Failed to load transaction data. Please try refreshing the page.')
+          setLoading(false)
+          return
+        }
+
+        const rows = pageData || []
+        allTransactions = [...allTransactions, ...rows]
+        hasMore = rows.length === pageSize
+        page++
       }
 
       setError(null)
-      
+
       // Filter out excluded categories and get unique expense categories
-      const expenseTransactions = (data || []).filter(
+      const expenseTransactions = allTransactions.filter(
         (tx: TransactionLog) => !EXCLUDED_CATEGORIES.includes(tx.category || '')
       )
       
