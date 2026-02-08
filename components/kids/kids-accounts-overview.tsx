@@ -14,7 +14,9 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { KidsAccount } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Pencil } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { EditKidsAccountDialog } from '@/components/kids/edit-kids-account-dialog'
 
 interface ChildSummary {
   childName: string
@@ -28,6 +30,7 @@ export function KidsAccountsOverview() {
   const [accounts, setAccounts] = useState<KidsAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editingAccount, setEditingAccount] = useState<KidsAccount | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -378,9 +381,16 @@ export function KidsAccountsOverview() {
                             key={account.id ?? `${account.account_type}-${account.date_updated}-${account.notes ?? ''}`}
                             className="rounded-lg border p-3 min-h-[44px]"
                           >
-                            <div className="flex justify-between items-baseline gap-2">
+                            <div className="flex justify-between items-center gap-2">
                               <span className="font-medium text-sm truncate">{account.account_type ?? '–'}</span>
-                              <span className="font-semibold tabular-nums text-sm shrink-0">{formatCurrency(convertedBalance)}</span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="font-semibold tabular-nums text-sm">{formatCurrency(convertedBalance)}</span>
+                                {account.data_source === 'manual' && (
+                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingAccount(account)}>
+                                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                             <div className="mt-2 pt-2 border-t text-xs text-muted-foreground space-y-0.5">
                               <div>Updated {formatDate(account.date_updated ?? null)}</div>
@@ -417,6 +427,7 @@ export function KidsAccountsOverview() {
                         <TableHead className="sticky top-0 z-20 bg-muted">As of Date</TableHead>
                         <TableHead className="sticky top-0 z-20 bg-muted">Purpose</TableHead>
                         <TableHead className="sticky top-0 z-20 bg-muted">Notes</TableHead>
+                        <TableHead className="sticky top-0 z-20 w-10 bg-muted"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -447,6 +458,13 @@ export function KidsAccountsOverview() {
                                 <TableCell className="text-sm text-muted-foreground">
                                   {account.notes ?? '-'}
                                 </TableCell>
+                                <TableCell>
+                                  {account.data_source === 'manual' && (
+                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingAccount(account)}>
+                                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </Button>
+                                  )}
+                                </TableCell>
                               </TableRow>
                             )
                           })}
@@ -467,7 +485,7 @@ export function KidsAccountsOverview() {
                                 />
                               </div>
                             </TableCell>
-                            <TableCell colSpan={3}></TableCell>
+                            <TableCell colSpan={4}></TableCell>
                           </TableRow>
                         </Fragment>
                       ))}
@@ -479,6 +497,15 @@ export function KidsAccountsOverview() {
           </div>
         )
       })}
+
+      {/* Edit dialog for manual accounts */}
+      {editingAccount && (
+        <EditKidsAccountDialog
+          account={editingAccount}
+          open={!!editingAccount}
+          onOpenChange={(open) => { if (!open) setEditingAccount(null) }}
+        />
+      )}
     </div>
   )
 }

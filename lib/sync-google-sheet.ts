@@ -122,22 +122,24 @@ const SHEET_CONFIGS: SheetConfig[] = [
   },
   {
     name: 'Budget Targets',
-    range: 'A:H',
+    range: 'A:I',
     table: 'budget_targets',
     transform: (row) => ({
       category: row[0] || '',
-      // Column B: Annual Budget GBP (assuming this is still in column B)
+      // Column B: Annual Budget GBP
       annual_budget_gbp: parseFloat(row[1] || '0'),
       // Column C: Tracking GBP (Est)
       tracking_est_gbp: parseFloat(row[2] || '0'),
       // Column D: YTD GBP
       ytd_gbp: parseFloat(row[3] || '0'),
-      // Column E: Annual Budget USD (assuming this is in column E, or could be in another column)
-      annual_budget_usd: parseFloat(row[4] || row[5] || '0'),
-      // Column G: Tracking USD (Est) - skip column F (index 5)
+      // Column E: Gap GBP — skipped (computed field)
+      // Column F: Annual Budget USD
+      annual_budget_usd: parseFloat(row[5] || '0'),
+      // Column G: Tracking USD (Est)
       tracking_est_usd: parseFloat(row[6] || '0'),
       // Column H: YTD USD
       ytd_usd: parseFloat(row[7] || '0'),
+      // Column I: Gap USD — skipped (computed field)
     }),
   },
   {
