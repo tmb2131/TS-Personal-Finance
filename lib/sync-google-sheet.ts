@@ -560,8 +560,8 @@ export async function syncGoogleSheet(
               });
             }
 
-            // Delete existing rows (recurring_payments doesn't have data_source column)
-            await db.from(config.table).delete().eq('user_id', uid);
+            // Delete only google_sheet rows (preserve manual entries)
+            await db.from(config.table).delete().eq('user_id', uid).eq('data_source', 'google_sheet');
 
             // Apply preserved needs_review flags and deduplicate by name (aggregate amounts)
             const withFlags = dataWithUser.map((item: any) => ({
@@ -594,7 +594,7 @@ export async function syncGoogleSheet(
               }
             }
 
-            const mergedData = Array.from(byName.values()).map((row) => ({ ...row, user_id: uid }));
+            const mergedData = Array.from(byName.values()).map((row) => ({ ...row, user_id: uid, data_source: 'google_sheet' }));
             const { data, error } = await db.from(config.table).insert(mergedData);
             upsertResult = { data, error };
           } else {

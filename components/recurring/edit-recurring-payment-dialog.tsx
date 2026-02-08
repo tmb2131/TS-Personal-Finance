@@ -1,0 +1,149 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { RecurringPayment } from '@/lib/types'
+import { useCurrency } from '@/lib/contexts/currency-context'
+
+interface EditRecurringPaymentDialogProps {
+  payment: RecurringPayment
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: EditRecurringPaymentDialogProps) {
+  const router = useRouter()
+  const { currency, fxRate } = useCurrency()
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  // Show amount in active currency
+  const initialAmount = currency === 'USD'
+    ? (payment.annualized_amount_usd ?? (payment.annualized_amount_gbp ?? 0) * (fxRate || 1))
+    : (payment.annualized_amount_gbp ?? (payment.annualized_amount_usd ?? 0) / (fxRate || 1))
+
+  const [name, setName] = useState(payment.name)
+  const [amount, setAmount] = useState(String(Math.round(initialAmount * 100) / 100))
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!name.trim()) {
+      toast.error('Please enter a payment name')
+      return
+    }
+
+    const parsedAmount = parseFloat(amount)
+    if (isNaN(parsedAmount)) {
+      toast.error('Please enter a valid amount')
+      return
+    }
+
+    const amountGbp = currency === 'GBP' ? parsedAmount : parsedAmount / (fxRate || 1)
+    const amountUsd = currency === 'USD' ? parsedAmount : parsedAmount * (fxRate || 1)
+
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/recurring/${payment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          annualized_amount_gbp: Math.round(amountGbp * 100) / 100,
+          annualized_amount_usd: Math.round(amountUsd * 100) / 100,
+        }),
+      })
+
+      const result = await res.json()
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to update payment')
+        return
+      }
+
+      toast.success('Payment updated')
+      onOpenChange(false)
+      router.refresh()
+    } catch {
+      toast.error('Failed to update payment')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/recurring/${payment.id}`, { method: 'DELETE' })
+      const result = await res.json()
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to delete payment')
+        return
+      }
+
+      toast.success('Payment deleted')
+      onOpenChange(false)
+      router.refresh()
+    } catch {
+      toast.error('Failed to delete payment')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Recurring Payment</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="edit-recurring-name">Payment Name</Label>
+            <Input
+              id="edit-recurring-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-recurring-amount">Annualized Amount ({currency})</Label>
+            <Input
+              id="edit-recurring-amount"
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button type="submit" className="flex-1" disabled={saving || deleting}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={saving || deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

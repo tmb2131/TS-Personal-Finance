@@ -6,6 +6,7 @@ import MonthlyExpensesVsLiquidity from '@/components/liquidity/monthly-expenses-
 import DebtOverview from '@/components/liquidity/debt-overview'
 import LiquidityDistribution from '@/components/liquidity/liquidity-distribution'
 import RiskProfileTable from '@/components/liquidity/risk-profile-table'
+import { AddDebtDialog } from '@/components/liquidity/add-debt-dialog'
 
 export default async function LiquidityPage() {
   const supabase = await createClient()
@@ -19,11 +20,14 @@ export default async function LiquidityPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Liquidity Overview</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Track cash position, debt obligations, and asset liquidity
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Liquidity Overview</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Track cash position, debt obligations, and asset liquidity
+          </p>
+        </div>
+        <AddDebtDialog />
       </div>
 
       <LiquidityOverviewKPIs />

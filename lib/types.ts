@@ -111,6 +111,7 @@ export interface RecurringPayment {
   needs_review: boolean
   created_at: string
   updated_at: string
+  data_source?: DataSource
 }
 
 // Kids Accounts - simplified structure matching Google Sheet

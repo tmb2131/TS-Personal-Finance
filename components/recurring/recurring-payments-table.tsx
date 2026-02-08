@@ -17,15 +17,18 @@ import { Badge } from '@/components/ui/badge'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { RecurringPayment } from '@/lib/types'
-import { AlertCircle, Flag, FlagOff } from 'lucide-react'
+import { AlertCircle, Flag, FlagOff, Pencil } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { toast } from 'sonner'
+import { EditRecurringPaymentDialog } from './edit-recurring-payment-dialog'
 
 interface AggregatedRecurringPayment {
   name: string
   annualizedAmount: number
   ids: string[]
   needsReview: boolean
+  /** If this aggregated row has exactly one underlying manual payment, store it for editing */
+  manualPayment: RecurringPayment | null
 }
 
 export function RecurringPaymentsTable() {
@@ -33,6 +36,7 @@ export function RecurringPaymentsTable() {
   const [payments, setPayments] = useState<RecurringPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
 
   // Fetch recurring payments
   useEffect(() => {
@@ -89,12 +93,15 @@ export function RecurringPaymentsTable() {
         if (payment.needs_review) {
           existing.needsReview = true
         }
+        // If multiple payments aggregated, can't edit as single manual entry
+        existing.manualPayment = null
       } else {
         grouped.set(normalizedName, {
           name: payment.name.trim(), // Use original casing from first occurrence
           annualizedAmount: amount,
           ids: [payment.id],
           needsReview: payment.needs_review || false,
+          manualPayment: payment.data_source === 'manual' ? payment : null,
         })
       }
     })
@@ -253,13 +260,13 @@ export function RecurringPaymentsTable() {
                       <span className="text-xs text-muted-foreground">Annual</span>
                     </div>
                   </div>
-                  <div className="mt-2 pt-2 border-t">
+                  <div className="mt-2 pt-2 border-t flex gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleReviewFlag(payment.name, payment.needsReview)}
                       className={cn(
-                        'h-9 min-h-[44px] w-full justify-center text-xs',
+                        'h-9 min-h-[44px] flex-1 justify-center text-xs',
                         payment.needsReview && 'text-orange-600 dark:text-orange-400'
                       )}
                     >
@@ -275,6 +282,17 @@ export function RecurringPaymentsTable() {
                         </>
                       )}
                     </Button>
+                    {payment.manualPayment && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 min-h-[44px] text-xs"
+                        onClick={() => setEditingPayment(payment.manualPayment)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                        Edit
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -314,26 +332,38 @@ export function RecurringPaymentsTable() {
                         {formatCurrency(payment.annualizedAmount)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleReviewFlag(payment.name, payment.needsReview)}
-                          className={cn(
-                            payment.needsReview && 'text-orange-600 dark:text-orange-400'
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleReviewFlag(payment.name, payment.needsReview)}
+                            className={cn(
+                              payment.needsReview && 'text-orange-600 dark:text-orange-400'
+                            )}
+                          >
+                            {payment.needsReview ? (
+                              <>
+                                <FlagOff className="h-4 w-4 mr-2" />
+                                Remove Flag
+                              </>
+                            ) : (
+                              <>
+                                <Flag className="h-4 w-4 mr-2" />
+                                Flag for Review
+                              </>
+                            )}
+                          </Button>
+                          {payment.manualPayment && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setEditingPayment(payment.manualPayment)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                           )}
-                        >
-                          {payment.needsReview ? (
-                            <>
-                              <FlagOff className="h-4 w-4 mr-2" />
-                              Remove Flag
-                            </>
-                          ) : (
-                            <>
-                              <Flag className="h-4 w-4 mr-2" />
-                              Flag for Review
-                            </>
-                          )}
-                        </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -350,6 +380,13 @@ export function RecurringPaymentsTable() {
           />
         )}
       </CardContent>
+      {editingPayment && (
+        <EditRecurringPaymentDialog
+          payment={editingPayment}
+          open={!!editingPayment}
+          onOpenChange={(open) => { if (!open) setEditingPayment(null) }}
+        />
+      )}
     </Card>
   )
 }

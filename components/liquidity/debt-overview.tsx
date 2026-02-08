@@ -24,7 +24,8 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
-import { AlertCircle, ListIcon } from 'lucide-react'
+import { AlertCircle, ListIcon, Pencil } from 'lucide-react'
+import { EditDebtDialog } from './edit-debt-dialog'
 import {
   BarChart,
   Bar,
@@ -47,6 +48,7 @@ export default function DebtOverview() {
   const [debtItems, setDebtItems] = useState<Debt[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [hasTrust, setHasTrust] = useState(false)
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -220,6 +222,7 @@ export default function DebtOverview() {
                       <TableHead>Purpose</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead className="text-right">Date</TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -244,6 +247,18 @@ export default function DebtOverview() {
                             {item.date_updated
                               ? new Date(item.date_updated).toLocaleDateString()
                               : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {item.data_source === 'manual' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setEditingDebt(item)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       )
@@ -310,6 +325,13 @@ export default function DebtOverview() {
           </div>
         </div>
       </CardContent>
+      {editingDebt && (
+        <EditDebtDialog
+          debt={editingDebt}
+          open={!!editingDebt}
+          onOpenChange={(open) => { if (!open) setEditingDebt(null) }}
+        />
+      )}
     </Card>
   )
 }
