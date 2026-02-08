@@ -21,6 +21,8 @@ import { AlertCircle, Flag, FlagOff, Pencil } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { toast } from 'sonner'
 import { EditRecurringPaymentDialog } from './edit-recurring-payment-dialog'
+import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
+import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 
 interface AggregatedRecurringPayment {
   name: string
@@ -37,6 +39,7 @@ export function RecurringPaymentsTable() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
+  const [fullView, setFullView] = useState(false)
 
   // Fetch recurring payments
   useEffect(() => {
@@ -132,6 +135,14 @@ export function RecurringPaymentsTable() {
     })
   }, [aggregatedPayments, threshold80Percent])
 
+  // Filter to only show top 80% in the default view (full view shows all)
+  const displayedPayments = useMemo(() => {
+    if (fullView) {
+      return paymentsWithCumulative
+    }
+    return paymentsWithCumulative.filter((p) => p.cumulative <= threshold80Percent)
+  }, [paymentsWithCumulative, threshold80Percent, fullView])
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -226,16 +237,32 @@ export function RecurringPaymentsTable() {
   return (
     <Card>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-        <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
+            </p>
+          </div>
+          <FullTableViewToggle
+            fullView={fullView}
+            onToggle={() => setFullView((v) => !v)}
+            aria-label="Toggle full table view for Recurring Payments"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {paymentsWithCumulative.length > 0 ? (
+        {!fullView && paymentsWithCumulative.length > 0 && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
+            <p className="text-sm text-blue-900 dark:text-blue-200">
+              <span className="font-semibold">Showing top 80% of recurring payments.</span> Click <span className="font-medium">&quot;Full table view&quot;</span> above to see all payments.
+            </p>
+          </div>
+        )}
+        {displayedPayments.length > 0 ? (
           <>
             <div className="md:hidden space-y-3">
-              {paymentsWithCumulative.map((payment, index) => (
+              {displayedPayments.map((payment, index) => (
                 <div
                   key={`${payment.name}-${index}`}
                   className={cn(
@@ -297,8 +324,12 @@ export function RecurringPaymentsTable() {
                 </div>
               ))}
             </div>
-            <div className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md">
-            <table className="w-full caption-bottom text-sm">
+            <FullTableViewWrapper
+              fullView={fullView}
+              onClose={() => setFullView(false)}
+              className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md"
+            >
+            <table className="w-full caption-bottom text-[13px] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_th]:py-1.5 [&_td]:py-1.5">
               <TableHeader>
                 <TableRow className="border-b bg-muted">
                   <TableHead className="sticky top-0 z-20 bg-muted">Name</TableHead>
@@ -307,7 +338,7 @@ export function RecurringPaymentsTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paymentsWithCumulative.map((payment, index) => {
+                {displayedPayments.map((payment, index) => {
                   return (
                     <TableRow
                       key={`${payment.name}-${index}`}
@@ -370,7 +401,7 @@ export function RecurringPaymentsTable() {
                 })}
               </TableBody>
             </table>
-          </div>
+            </FullTableViewWrapper>
           </>
         ) : (
           <EmptyState
