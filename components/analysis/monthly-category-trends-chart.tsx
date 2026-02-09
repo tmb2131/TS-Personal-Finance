@@ -500,32 +500,24 @@ export function MonthlyCategoryTrendsChart({
                   const x = Number(props.x ?? 0)
                   const y = Number(props.y ?? 0)
                   const width = Number(props.width ?? 0)
-                  const payload = props.payload
-                  
-                  if (!payload || chartData.length === 0) return null
-                  
-                  // Find the index in chartData by matching the periodLabel
-                  const periodLabel = payload.periodLabel
-                  const dataIndex = chartData.findIndex((d) => d.periodLabel === periodLabel)
-                  
-                  if (dataIndex === -1) return null
-                  
-                  // Use index to identify first (0) and last (chartData.length - 1) months
-                  const isFirstMonth = dataIndex === 0
-                  const isLastMonth = dataIndex === chartData.length - 1
-                  
-                  // Only show label for first and last months
-                  if (!isFirstMonth && !isLastMonth) {
+                  const dataIndex = props.index ?? -1
+
+                  if (dataIndex === -1 || chartData.length === 0) return null
+
+                  const isFirstPeriod = dataIndex === 0
+                  const isLastPeriod = dataIndex === chartData.length - 1
+
+                  // Only show label for first and last periods
+                  if (!isFirstPeriod && !isLastPeriod) {
                     return null
                   }
-                  
-                  const value = payload?.total || 0
+
+                  const value = chartData[dataIndex]?.total || 0
                   if (value === 0) return null
-                  
+
                   // Position label above the bar
-                  // For stacked bars, y is the top of the top segment (which is the top of the stack)
                   const labelY = y - 12
-                  
+
                   return (
                     <g transform={`translate(${x + width / 2},${labelY})`}>
                       <text
@@ -557,19 +549,21 @@ export function MonthlyCategoryTrendsChart({
                 position="top"
                 offset={10}
                 content={(props: any) => {
-                  const { x, y, payload } = props
-                  if (!payload || chartData.length === 0) return null
+                  const { x, y } = props
+                  const dataIndex = props.index ?? -1
+                  if (dataIndex === -1 || chartData.length === 0) return null
 
-                  // Find which data point has the max trend value
-                  const maxTrendPoint = chartData.reduce((max, d) => d.trendLine > max.trendLine ? d : max, chartData[0])
-                  const isMaxTrend = payload.periodLabel === maxTrendPoint?.periodLabel
-                  const isLastPeriod = payload.periodLabel === chartData[chartData.length - 1]?.periodLabel
+                  // Find the index of the max trend value
+                  const maxTrendIndex = chartData.reduce(
+                    (maxI, d, i, arr) => d.trendLine > arr[maxI].trendLine ? i : maxI, 0
+                  )
+                  const isMaxTrend = dataIndex === maxTrendIndex
+                  const isLastPeriod = dataIndex === chartData.length - 1
 
                   // Show label for the last period and the max trend period
-                  // Skip max if it's the same as last period (avoid duplicate)
                   if (!isLastPeriod && !isMaxTrend) return null
 
-                  const value = payload?.trendLine || 0
+                  const value = chartData[dataIndex]?.trendLine || 0
                   if (value === 0) return null
 
                   return (
