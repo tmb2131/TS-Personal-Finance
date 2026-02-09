@@ -559,14 +559,19 @@ export function MonthlyCategoryTrendsChart({
                 content={(props: any) => {
                   const { x, y, payload } = props
                   if (!payload || chartData.length === 0) return null
-                  
-                  // Only show label for the last month (most recent)
-                  const isLastMonth = payload.periodLabel === chartData[chartData.length - 1]?.periodLabel
-                  if (!isLastMonth) return null
-                  
+
+                  // Find which data point has the max trend value
+                  const maxTrendPoint = chartData.reduce((max, d) => d.trendLine > max.trendLine ? d : max, chartData[0])
+                  const isMaxTrend = payload.periodLabel === maxTrendPoint?.periodLabel
+                  const isLastPeriod = payload.periodLabel === chartData[chartData.length - 1]?.periodLabel
+
+                  // Show label for the last period and the max trend period
+                  // Skip max if it's the same as last period (avoid duplicate)
+                  if (!isLastPeriod && !isMaxTrend) return null
+
                   const value = payload?.trendLine || 0
                   if (value === 0) return null
-                  
+
                   return (
                     <g transform={`translate(${x},${y - 12})`}>
                       <text

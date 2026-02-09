@@ -38,9 +38,10 @@ export function MonthlyCategoryTrendsSection() {
       const supabase = createClient()
 
       // Get date range: last 13 months starting from last full month
+      // endDate extends to today so the weekly view can access current-month transactions
       const today = new Date()
       const lastFullMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-      const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
+      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
       endDate.setHours(23, 59, 59, 999)
       // Go back 12 months from last full month to get 13 months total
       // This gives us: lastFullMonth - 12 months = first month of the 13-month range
