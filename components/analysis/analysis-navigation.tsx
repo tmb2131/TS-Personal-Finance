@@ -25,7 +25,7 @@ const navigationItems: NavigationItem[] = [
   { id: 'ytd-spend', label: 'YTD Spend Over Time', icon: TrendingUp },
   { id: 'annual-cumulative', label: 'Annual Cumulative Spend', icon: BarChart3 },
   { id: 'yoy-net-worth', label: 'YoY Net Worth Change', icon: Activity },
-  { id: 'monthly-category-trends', label: 'Monthly Trends by Category', icon: Calendar },
+  { id: 'monthly-category-trends', label: 'Trends by Category', icon: Calendar },
 ]
 
 function scrollToSection(id: string, e?: React.MouseEvent) {

@@ -336,7 +336,7 @@ export function MonthlyCategoryTrendsChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Trends by Category</CardTitle>
+          <CardTitle>Trends by Category</CardTitle>
         </CardHeader>
         <CardContent>
           {emptyContent}
@@ -357,7 +357,7 @@ export function MonthlyCategoryTrendsChart({
       <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
         <ComposedChart
         data={chartData}
-        margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}
+        margin={isMobile ? { top: 25, right: 10, left: 0, bottom: 5 } : { top: 30, right: 30, left: 20, bottom: 5 }}
             barCategoryGap="10%"
           >
             <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
@@ -492,47 +492,6 @@ export function MonthlyCategoryTrendsChart({
                   fill={entry.isHighlighted ? TOP_TRANSACTION_FILL_HIGHLIGHT : TOP_TRANSACTION_FILL}
                 />
               ))}
-              <LabelList
-                dataKey="total"
-                position="top"
-                offset={10}
-                content={(props: any) => {
-                  const x = Number(props.x ?? 0)
-                  const y = Number(props.y ?? 0)
-                  const width = Number(props.width ?? 0)
-                  const dataIndex = props.index ?? -1
-
-                  if (dataIndex === -1 || chartData.length === 0) return null
-
-                  const isFirstPeriod = dataIndex === 0
-                  const isLastPeriod = dataIndex === chartData.length - 1
-
-                  // Only show label for first and last periods
-                  if (!isFirstPeriod && !isLastPeriod) {
-                    return null
-                  }
-
-                  const value = chartData[dataIndex]?.total || 0
-                  if (value === 0) return null
-
-                  // Position label above the bar
-                  const labelY = y - 12
-
-                  return (
-                    <g transform={`translate(${x + width / 2},${labelY})`}>
-                      <text
-                        textAnchor="middle"
-                        dy={0}
-                        fill={chartTheme.labelFill}
-                        fontSize={fontSizes.axisTick}
-                        fontWeight={500}
-                      >
-                        {formatCurrency(value)}
-                      </text>
-                    </g>
-                  )
-                }}
-              />
             </Bar>
             <Line
               type="monotone"
