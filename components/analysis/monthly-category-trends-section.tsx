@@ -10,14 +10,23 @@ import { MonthlyCategorySummary } from './monthly-category-summary'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+export type ViewMode = 'monthly' | 'weekly'
+
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 const STORAGE_KEY = 'monthly-category-trends-selected-category'
+const VIEW_MODE_STORAGE_KEY = 'monthly-category-trends-view-mode'
 
 export function MonthlyCategoryTrendsSection() {
   const { currency, fxRate } = useCurrency()
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(VIEW_MODE_STORAGE_KEY) as ViewMode) || 'monthly'
+    }
+    return 'monthly'
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [ratesByDate, setRatesByDate] = useState<Map<string, number>>(new Map())
@@ -132,6 +141,13 @@ export function MonthlyCategoryTrendsSection() {
     }
   }, [selectedCategory])
 
+  // Save view mode to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode)
+    }
+  }, [viewMode])
+
   // Rate for a given date
   const getRateForDate = useMemo(
     () => buildGetRateForDate(ratesByDate, fxRate),
@@ -156,26 +172,50 @@ export function MonthlyCategoryTrendsSection() {
     <Card id="monthly-category-trends" className="scroll-mt-24">
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle className="text-base">Monthly Trends by Category</CardTitle>
-          {categories.length > 0 && (
-            <div className="flex items-center gap-2">
-              <label htmlFor="category-select-combined" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                Category:
-              </label>
-              <select
-                id="category-select-combined"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="flex h-10 w-full md:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          <CardTitle className="text-base">Trends by Category</CardTitle>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="inline-flex rounded-md border border-input bg-background p-0.5">
+              <button
+                onClick={() => setViewMode('monthly')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                  viewMode === 'monthly'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                Monthly
+              </button>
+              <button
+                onClick={() => setViewMode('weekly')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors ${
+                  viewMode === 'weekly'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Weekly
+              </button>
             </div>
-          )}
+            {categories.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="category-select-combined" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                  Category:
+                </label>
+                <select
+                  id="category-select-combined"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="flex h-10 w-full md:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -186,6 +226,7 @@ export function MonthlyCategoryTrendsSection() {
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
             getRateForDate={getRateForDate}
+            viewMode={viewMode}
             hideCard={true}
           />
         )}
@@ -193,6 +234,7 @@ export function MonthlyCategoryTrendsSection() {
           transactions={transactions}
           selectedCategory={selectedCategory}
           getRateForDate={getRateForDate}
+          viewMode={viewMode}
           hideCard={true}
         />
       </CardContent>
