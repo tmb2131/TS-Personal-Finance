@@ -9,6 +9,7 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { TransactionLog } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
+import type { ViewMode } from './monthly-category-trends-section'
 import {
   ComposedChart,
   Bar,
@@ -31,9 +32,9 @@ const TOP_TRANSACTION_FILL_HIGHLIGHT = '#3b82f6' // Dark blue
 const OTHER_FILL = '#fca5a5' // Light red/pink
 const OTHER_FILL_HIGHLIGHT = '#dc2626' // Dark red
 
-interface MonthlyData {
-  month: string // YYYY-MM format
-  monthLabel: string // Display label like "2026-1"
+interface ChartDataPoint {
+  period: string // YYYY-MM or YYYY-Wxx format
+  periodLabel: string // Display label
   topTransactionCounterparty: string
   topTransactionAmount: number
   otherAmount: number
@@ -46,122 +47,65 @@ interface MonthlyCategoryTrendsChartProps {
   transactions: TransactionLog[]
   selectedCategory: string
   getRateForDate: (dateStr: string) => number
+  viewMode?: ViewMode
   hideCard?: boolean
+}
+
+/** Get the ISO week number and year for a date (Monday-based weeks) */
+function getISOWeek(date: Date): { year: number; week: number } {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return { year: d.getUTCFullYear(), week: weekNo }
+}
+
+/** Get the Monday of a given ISO week */
+function getWeekStart(isoYear: number, isoWeek: number): Date {
+  const jan4 = new Date(Date.UTC(isoYear, 0, 4))
+  const dayOfWeek = jan4.getUTCDay() || 7
+  const monday = new Date(jan4)
+  monday.setUTCDate(jan4.getUTCDate() - dayOfWeek + 1 + (isoWeek - 1) * 7)
+  return monday
 }
 
 export function MonthlyCategoryTrendsChart({
   transactions,
   selectedCategory,
   getRateForDate,
+  viewMode = 'monthly',
   hideCard = false,
 }: MonthlyCategoryTrendsChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
 
-  // Calculate monthly data with top transaction per month
-  const chartData = useMemo(() => {
-    if (!selectedCategory) return []
+  // Helper: get transaction amount in the current currency
+  const getTxAmount = (tx: TransactionLog): number => {
+    const rate = getRateForDate(typeof tx.date === 'string' ? tx.date.split('T')[0] : tx.date)
+    return currency === 'USD'
+      ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
+      : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
+  }
 
-    // Always show all 13 months, even if there are no transactions
-
-    // Calculate the expected 13-month range
-    const today = new Date()
-    const lastFullMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
-    const startDate = new Date(lastFullMonth.getFullYear(), lastFullMonth.getMonth() - 12, 1)
-
-    // Generate all 13 months in the range
-    const allMonths: string[] = []
-    const currentMonth = new Date(startDate)
-    
-    // Generate exactly 13 months
-    for (let i = 0; i < 13; i++) {
-      const year = currentMonth.getFullYear()
-      const month = currentMonth.getMonth() + 1 // Convert 0-indexed to 1-indexed
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`
-      allMonths.push(monthKey)
-      // Move to next month
-      currentMonth.setMonth(currentMonth.getMonth() + 1)
-    }
-    
-    // Debug: log date range and generated months
-    console.log('MonthlyCategoryTrendsChart - Date range:', {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      allMonths,
-    })
-
-    // Filter transactions for selected category (or all if "Total Expenses")
+  // Find top counterparty across all category transactions
+  const { topCounterpartyKey, topCounterpartyFullName } = useMemo(() => {
     const categoryTransactions = selectedCategory === 'Total Expenses'
       ? transactions
       : transactions.filter((tx) => tx.category === selectedCategory)
-    
-    // Debug logging
-    console.log('MonthlyCategoryTrendsChart - Debug:', {
-      totalTransactions: transactions.length,
-      selectedCategory,
-      categoryTransactionsCount: categoryTransactions.length,
-      allMonths,
-    })
 
-    // Group transactions by month
-    const monthlyGroups = new Map<string, TransactionLog[]>()
-    
-    categoryTransactions.forEach((tx) => {
-      if (!tx.date) return
-      
-      // Parse date string directly to avoid timezone issues
-      const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
-      const [yearStr, monthStr] = dateStr.split('-')
-      
-      if (!yearStr || !monthStr) {
-        console.warn('Invalid date format:', tx.date, 'parsed as:', dateStr)
-        return
-      }
-      
-      const year = parseInt(yearStr, 10)
-      const month = parseInt(monthStr, 10)
-      
-      if (isNaN(year) || isNaN(month)) {
-        console.warn('Invalid date values:', { yearStr, monthStr, dateStr, originalDate: tx.date })
-        return
-      }
-      
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`
-      
-      if (!monthlyGroups.has(monthKey)) {
-        monthlyGroups.set(monthKey, [])
-      }
-      monthlyGroups.get(monthKey)!.push(tx)
-    })
-    
-    // Debug: log which months have transactions
-    console.log('MonthlyCategoryTrendsChart - Monthly groups:', {
-      monthsWithTransactions: Array.from(monthlyGroups.keys()),
-      transactionCountsByMonth: Array.from(monthlyGroups.entries()).map(([month, txs]) => ({ month, count: txs.length })),
-    })
-
-    // First, find the top transaction across ALL months by aggregating all transactions
-    // Group by first 7 letters of counterparty name
     const allCounterpartyTotals = new Map<string, { total: number; fullName: string }>()
-    
+
     categoryTransactions.forEach((tx) => {
-      const rate = getRateForDate(typeof tx.date === 'string' ? tx.date.split('T')[0] : tx.date)
-      const amount = currency === 'USD'
-        ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
-        : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
-      
-      // Expenses are stored as negative values, only include negative amounts (expenses)
+      const amount = getTxAmount(tx)
       if (amount < 0) {
         const absAmount = Math.abs(amount)
         const counterparty = tx.counterparty || 'Unknown'
-        const counterpartyKey = counterparty.substring(0, 7).trim() // First 7 letters
-        
+        const counterpartyKey = counterparty.substring(0, 7).trim()
+
         if (allCounterpartyTotals.has(counterpartyKey)) {
           const existing = allCounterpartyTotals.get(counterpartyKey)!
           existing.total += absAmount
-          // Keep the full name from the first occurrence (or longest)
           if (counterparty.length > existing.fullName.length) {
             existing.fullName = counterparty
           }
@@ -174,95 +118,198 @@ export function MonthlyCategoryTrendsChart({
       }
     })
 
-    // Find the top counterparty pattern across all months
-    let topCounterpartyKey = ''
-    let topCounterpartyFullName = ''
-    let topTotalAmount = 0
+    let topKey = ''
+    let topName = ''
+    let topTotal = 0
 
     allCounterpartyTotals.forEach((data, key) => {
-      if (data.total > topTotalAmount) {
-        topTotalAmount = data.total
-        topCounterpartyKey = key
-        topCounterpartyFullName = data.fullName
+      if (data.total > topTotal) {
+        topTotal = data.total
+        topKey = key
+        topName = data.fullName
       }
     })
 
-    // Process each month in the range (including months with no transactions)
-    const monthlyData: MonthlyData[] = []
-    
-    allMonths.forEach((monthKey) => {
-      const monthTransactions = monthlyGroups.get(monthKey) || []
-      
-      // Calculate amounts for this month, separating the top transaction from others
-      let topTransactionAmount = 0
-      let totalAmount = 0
-      
-      monthTransactions.forEach((tx) => {
-        const rate = getRateForDate(typeof tx.date === 'string' ? tx.date.split('T')[0] : tx.date)
-        const amount = currency === 'USD'
-          ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
-          : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
-        
-        // Expenses are stored as negative values, only include negative amounts (expenses)
+    return { topCounterpartyKey: topKey, topCounterpartyFullName: topName }
+  }, [transactions, selectedCategory, currency, getRateForDate])
+
+  // Calculate chart data based on view mode
+  const chartData = useMemo((): ChartDataPoint[] => {
+    if (!selectedCategory) return []
+
+    const categoryTransactions = selectedCategory === 'Total Expenses'
+      ? transactions
+      : transactions.filter((tx) => tx.category === selectedCategory)
+
+    // Parse a transaction date into components
+    const parseDateStr = (tx: TransactionLog): string | null => {
+      if (!tx.date) return null
+      const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
+      return dateStr
+    }
+
+    // Process a group of transactions into amounts
+    const processGroup = (txs: TransactionLog[]): { topAmount: number; otherAmount: number; total: number } => {
+      let topAmount = 0
+      let total = 0
+
+      txs.forEach((tx) => {
+        const amount = getTxAmount(tx)
         if (amount < 0) {
           const absAmount = Math.abs(amount)
-          totalAmount += absAmount
-          
-          // Check if this transaction matches the top counterparty pattern (first 7 letters)
+          total += absAmount
           const counterparty = tx.counterparty || 'Unknown'
           const counterpartyKey = counterparty.substring(0, 7).trim()
-          
           if (counterpartyKey === topCounterpartyKey) {
-            topTransactionAmount += absAmount
+            topAmount += absAmount
           }
         }
       })
 
-      // Calculate "other" amount (total minus top transaction)
-      const otherAmount = totalAmount - topTransactionAmount
+      return { topAmount, otherAmount: total - topAmount, total }
+    }
 
-      // Format month label (e.g., "2026-1" for January 2026)
-      const [year, month] = monthKey.split('-')
-      const monthLabel = `${year}-${parseInt(month)}`
+    if (viewMode === 'weekly') {
+      // WEEKLY VIEW: show ~13 weeks ending at the latest full week
+      const today = new Date()
+      const dayOfWeek = today.getUTCDay() || 7 // Mon=1, Sun=7
+      // Latest full week ends on last Sunday
+      const lastSunday = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
+      lastSunday.setUTCDate(lastSunday.getUTCDate() - dayOfWeek)
+      // Go back 13 weeks from the Monday of the latest full week
+      const lastFullWeekMonday = new Date(lastSunday)
+      lastFullWeekMonday.setUTCDate(lastFullWeekMonday.getUTCDate() - 6)
+      const startMonday = new Date(lastFullWeekMonday)
+      startMonday.setUTCDate(startMonday.getUTCDate() - 12 * 7) // 12 more weeks back = 13 total
 
-      monthlyData.push({
-        month: monthKey,
-        monthLabel,
-        topTransactionCounterparty: topCounterpartyFullName || '',
-        topTransactionAmount: topTransactionAmount,
-        otherAmount,
-        total: totalAmount,
-        trendLine: 0, // Will be calculated below
-      })
-    })
+      // Generate 13 week keys
+      const allWeeks: { key: string; label: string; year: number; week: number }[] = []
+      const cursor = new Date(startMonday)
+      for (let i = 0; i < 13; i++) {
+        const { year, week } = getISOWeek(cursor)
+        const weekKey = `${year}-W${String(week).padStart(2, '0')}`
+        // Label: show the Monday date as "D Mon"
+        const monthName = cursor.toLocaleDateString('en-GB', { month: 'short' })
+        const dayNum = cursor.getUTCDate()
+        const weekLabel = `${dayNum} ${monthName}`
+        allWeeks.push({ key: weekKey, label: weekLabel, year, week })
+        cursor.setUTCDate(cursor.getUTCDate() + 7)
+      }
 
-    // Calculate trend line using 3-month moving average
-    monthlyData.forEach((data, index) => {
-      if (index < 2) {
-        // For first 2 months, use the value itself (not enough data for moving average)
-        data.trendLine = data.total
-      } else {
-        // Calculate 3-month moving average ending at this month
-        const values = []
-        for (let i = Math.max(0, index - 2); i <= index; i++) {
-          values.push(monthlyData[i].total)
+      // Group transactions by week
+      const weeklyGroups = new Map<string, TransactionLog[]>()
+      allWeeks.forEach(w => weeklyGroups.set(w.key, []))
+
+      categoryTransactions.forEach((tx) => {
+        const dateStr = parseDateStr(tx)
+        if (!dateStr) return
+        const [y, m, d] = dateStr.split('-').map(Number)
+        const txDate = new Date(Date.UTC(y, m - 1, d))
+        const { year, week } = getISOWeek(txDate)
+        const weekKey = `${year}-W${String(week).padStart(2, '0')}`
+        if (weeklyGroups.has(weekKey)) {
+          weeklyGroups.get(weekKey)!.push(tx)
         }
-        data.trendLine = values.reduce((sum, val) => sum + val, 0) / values.length
+      })
+
+      // Build chart data
+      const data: ChartDataPoint[] = allWeeks.map((w) => {
+        const txs = weeklyGroups.get(w.key) || []
+        const { topAmount, otherAmount, total } = processGroup(txs)
+        return {
+          period: w.key,
+          periodLabel: w.label,
+          topTransactionCounterparty: topCounterpartyFullName || '',
+          topTransactionAmount: topAmount,
+          otherAmount,
+          total,
+          trendLine: 0,
+        }
+      })
+
+      // Highlight the last full week
+      if (data.length > 0) {
+        data[data.length - 1].isHighlighted = true
+      }
+
+      // 3-period moving average trend line
+      data.forEach((d, i) => {
+        if (i < 2) {
+          d.trendLine = d.total
+        } else {
+          d.trendLine = (data[i - 2].total + data[i - 1].total + d.total) / 3
+        }
+      })
+
+      return data
+    }
+
+    // MONTHLY VIEW (existing logic)
+    const today = new Date()
+    const lastFullMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const startDate = new Date(lastFullMonth.getFullYear(), lastFullMonth.getMonth() - 12, 1)
+
+    const allMonths: string[] = []
+    const currentMonth = new Date(startDate)
+    for (let i = 0; i < 13; i++) {
+      const year = currentMonth.getFullYear()
+      const month = currentMonth.getMonth() + 1
+      allMonths.push(`${year}-${String(month).padStart(2, '0')}`)
+      currentMonth.setMonth(currentMonth.getMonth() + 1)
+    }
+
+    // Group transactions by month
+    const monthlyGroups = new Map<string, TransactionLog[]>()
+    allMonths.forEach(m => monthlyGroups.set(m, []))
+
+    categoryTransactions.forEach((tx) => {
+      const dateStr = parseDateStr(tx)
+      if (!dateStr) return
+      const [yearStr, monthStr] = dateStr.split('-')
+      if (!yearStr || !monthStr) return
+      const year = parseInt(yearStr, 10)
+      const month = parseInt(monthStr, 10)
+      if (isNaN(year) || isNaN(month)) return
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`
+      if (monthlyGroups.has(monthKey)) {
+        monthlyGroups.get(monthKey)!.push(tx)
       }
     })
 
-    // Highlight only the last full month (most recent in chart)
-    // Reuse the lastFullMonth Date object calculated above
+    const data: ChartDataPoint[] = allMonths.map((monthKey) => {
+      const txs = monthlyGroups.get(monthKey) || []
+      const { topAmount, otherAmount, total } = processGroup(txs)
+      const [year, month] = monthKey.split('-')
+      return {
+        period: monthKey,
+        periodLabel: `${year}-${parseInt(month)}`,
+        topTransactionCounterparty: topCounterpartyFullName || '',
+        topTransactionAmount: topAmount,
+        otherAmount,
+        total,
+        trendLine: 0,
+      }
+    })
+
+    // 3-period moving average trend line
+    data.forEach((d, i) => {
+      if (i < 2) {
+        d.trendLine = d.total
+      } else {
+        d.trendLine = (data[i - 2].total + data[i - 1].total + d.total) / 3
+      }
+    })
+
+    // Highlight last full month
     const lastFullMonthKey = `${lastFullMonth.getFullYear()}-${String(lastFullMonth.getMonth() + 1).padStart(2, '0')}`
-
-    monthlyData.forEach((data) => {
-      if (data.month === lastFullMonthKey) {
-        data.isHighlighted = true
+    data.forEach((d) => {
+      if (d.period === lastFullMonthKey) {
+        d.isHighlighted = true
       }
     })
 
-    return monthlyData
-  }, [transactions, selectedCategory, currency, getRateForDate])
+    return data
+  }, [transactions, selectedCategory, currency, getRateForDate, viewMode, topCounterpartyKey, topCounterpartyFullName])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -315,10 +362,10 @@ export function MonthlyCategoryTrendsChart({
           >
             <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
-              dataKey="monthLabel"
+              dataKey="periodLabel"
               tick={(props) => {
                 const { x, y, payload } = props
-                const isLastMonth = payload.value === chartData[chartData.length - 1]?.monthLabel
+                const isLastMonth = payload.value === chartData[chartData.length - 1]?.periodLabel
                 return (
                   <g transform={`translate(${x},${y})`}>
                     <text
@@ -366,14 +413,22 @@ export function MonthlyCategoryTrendsChart({
                   ]
                 }
                 if (name === 'trendLine') {
-                  return [formatCurrency(value), 'Trend (3M Avg)']
+                  return [formatCurrency(value), viewMode === 'weekly' ? 'Trend (3W Avg)' : 'Trend (3M Avg)']
                 }
                 return [formatCurrency(value), 'Other Spending']
               }}
               labelFormatter={(label) => {
-                const dataPoint = chartData.find((d) => d.monthLabel === label)
+                const dataPoint = chartData.find((d) => d.periodLabel === label)
                 if (dataPoint) {
-                  const [year, month] = dataPoint.month.split('-')
+                  if (viewMode === 'weekly') {
+                    // Show "Week of D Mon YYYY"
+                    const parts = dataPoint.period.split('-W')
+                    if (parts.length === 2) {
+                      const wStart = getWeekStart(parseInt(parts[0]), parseInt(parts[1]))
+                      return `Week of ${wStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                    }
+                  }
+                  const [year, month] = dataPoint.period.split('-')
                   return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-GB', {
                     month: 'long',
                     year: 'numeric',
@@ -399,7 +454,7 @@ export function MonthlyCategoryTrendsChart({
                     : 'Largest Transaction Pattern'
                 }
                 if (value === 'trendLine') {
-                  return 'Trend (3M Avg)'
+                  return viewMode === 'weekly' ? 'Trend (3W Avg)' : 'Trend (3M Avg)'
                 }
                 return 'Other Spending'
               }}
@@ -449,9 +504,9 @@ export function MonthlyCategoryTrendsChart({
                   
                   if (!payload || chartData.length === 0) return null
                   
-                  // Find the index in chartData by matching the monthLabel
-                  const monthLabel = payload.monthLabel
-                  const dataIndex = chartData.findIndex((d) => d.monthLabel === monthLabel)
+                  // Find the index in chartData by matching the periodLabel
+                  const periodLabel = payload.periodLabel
+                  const dataIndex = chartData.findIndex((d) => d.periodLabel === periodLabel)
                   
                   if (dataIndex === -1) return null
                   
@@ -506,7 +561,7 @@ export function MonthlyCategoryTrendsChart({
                   if (!payload || chartData.length === 0) return null
                   
                   // Only show label for the last month (most recent)
-                  const isLastMonth = payload.monthLabel === chartData[chartData.length - 1]?.monthLabel
+                  const isLastMonth = payload.periodLabel === chartData[chartData.length - 1]?.periodLabel
                   if (!isLastMonth) return null
                   
                   const value = payload?.trendLine || 0
@@ -534,7 +589,7 @@ export function MonthlyCategoryTrendsChart({
         <p className="text-xs text-muted-foreground text-center px-2 leading-relaxed">
           <span className="font-semibold" style={{ color: TOP_TRANSACTION_FILL_HIGHLIGHT }}>Largest transaction pattern:</span> The blue segment shows spending with{' '}
           <span className="font-medium">{topCounterpartyName}</span> (merchants matching the first 7 characters), 
-          which is the highest-spending counterparty pattern across all 13 months. The red segment shows all other spending.
+          which is the highest-spending counterparty pattern across all {viewMode === 'weekly' ? '13 weeks' : '13 months'}. The red segment shows all other spending.
         </p>
       )}
     </div>
@@ -547,7 +602,7 @@ export function MonthlyCategoryTrendsChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Monthly Category Trends</CardTitle>
+        <CardTitle>Trends by Category</CardTitle>
       </CardHeader>
       <CardContent>
         {chartContent}

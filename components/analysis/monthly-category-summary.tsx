@@ -9,8 +9,18 @@ import { TransactionLog } from '@/lib/types'
 import { buildGetRateForDate } from '@/lib/utils/fx-rates'
 import { cn } from '@/utils/cn'
 import { TrendingUp, TrendingDown, Calendar } from 'lucide-react'
+import type { ViewMode } from './monthly-category-trends-section'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
+
+/** Get the ISO week number and year for a date (Monday-based weeks) */
+function getISOWeek(date: Date): { year: number; week: number } {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return { year: d.getUTCFullYear(), week: weekNo }
+}
 
 interface MonthlyCategorySummaryProps {
   transactions: TransactionLog[]
@@ -18,6 +28,7 @@ interface MonthlyCategorySummaryProps {
   selectedCategory: string
   onCategoryChange: (category: string) => void
   getRateForDate: (dateStr: string) => number
+  viewMode?: ViewMode
   hideCard?: boolean
 }
 
@@ -35,6 +46,7 @@ export function MonthlyCategorySummary({
   selectedCategory,
   onCategoryChange,
   getRateForDate,
+  viewMode = 'monthly',
   hideCard = false,
 }: MonthlyCategorySummaryProps) {
   const { currency } = useCurrency()
@@ -50,21 +62,19 @@ export function MonthlyCategorySummary({
 
     if (categoryTransactions.length === 0) return null
 
-    // Calculate the expected 13-month range (same as chart)
-    const today = new Date()
-    const lastFullMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-    const endDate = new Date(today.getFullYear(), today.getMonth(), 0)
-    const startDate = new Date(lastFullMonth.getFullYear(), lastFullMonth.getMonth() - 12, 1)
+    // Helper to get tx amount
+    const getTxAmount = (tx: TransactionLog): number => {
+      const rate = getRateForDate(typeof tx.date === 'string' ? tx.date.split('T')[0] : tx.date)
+      return currency === 'USD'
+        ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
+        : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
+    }
 
-    // Find the top transaction across ALL months (first 7 letters)
+    // Find top counterparty across ALL transactions (first 7 letters)
     const allCounterpartyTotals = new Map<string, { total: number; fullName: string }>()
 
     categoryTransactions.forEach((tx) => {
-      const rate = getRateForDate(typeof tx.date === 'string' ? tx.date.split('T')[0] : tx.date)
-      const amount = currency === 'USD'
-        ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
-        : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
-
+      const amount = getTxAmount(tx)
       if (amount < 0) {
         const absAmount = Math.abs(amount)
         const counterparty = tx.counterparty || 'Unknown'
@@ -85,7 +95,6 @@ export function MonthlyCategorySummary({
       }
     })
 
-    // Find top counterparty
     let topCounterpartyKey = ''
     let topCounterpartyFullName = ''
     let topTotalAmount = 0
@@ -98,154 +107,193 @@ export function MonthlyCategorySummary({
       }
     })
 
-    // Group transactions by month
-    const monthlyGroups = new Map<string, { topAmount: number; otherAmount: number; total: number }>()
+    // Process a list of transactions into grouped amounts
+    const processTransactions = (txs: TransactionLog[]): { topAmount: number; otherAmount: number; total: number } => {
+      let topAmount = 0
+      let total = 0
 
-    // Generate all 13 months
+      txs.forEach((tx) => {
+        const amount = getTxAmount(tx)
+        if (amount < 0) {
+          const absAmount = Math.abs(amount)
+          total += absAmount
+          const counterparty = tx.counterparty || 'Unknown'
+          const counterpartyKey = counterparty.substring(0, 7).trim()
+          if (counterpartyKey === topCounterpartyKey) {
+            topAmount += absAmount
+          }
+        }
+      })
+
+      return { topAmount, otherAmount: total - topAmount, total }
+    }
+
+    // Helper to compute comparisons and percentages
+    const computeComparisons = (
+      periodGroups: Map<string, { topAmount: number; otherAmount: number; total: number }>,
+      allPeriods: string[],
+      currentIndex: number,
+      l3Count: number,
+      lyPeriodKey: string | null,
+    ) => {
+      const currentData = periodGroups.get(allPeriods[currentIndex])!
+
+      let l3TopSum = 0, l3OtherSum = 0, l3TotalSum = 0, l3Cnt = 0
+      let l12TopSum = 0, l12OtherSum = 0, l12TotalSum = 0, l12Cnt = 0
+
+      for (let i = Math.max(0, currentIndex - l3Count); i < currentIndex; i++) {
+        const d = periodGroups.get(allPeriods[i])
+        if (d && d.total > 0) { l3TopSum += d.topAmount; l3OtherSum += d.otherAmount; l3TotalSum += d.total; l3Cnt++ }
+      }
+      for (let i = 0; i < currentIndex; i++) {
+        const d = periodGroups.get(allPeriods[i])
+        if (d && d.total > 0) { l12TopSum += d.topAmount; l12OtherSum += d.otherAmount; l12TotalSum += d.total; l12Cnt++ }
+      }
+
+      const l3mTopAvg = l3Cnt > 0 ? l3TopSum / l3Cnt : null
+      const l3mOtherAvg = l3Cnt > 0 ? l3OtherSum / l3Cnt : null
+      const l3mTotalAvg = l3Cnt > 0 ? l3TotalSum / l3Cnt : null
+      const l12mTopAvg = l12Cnt > 0 ? l12TopSum / l12Cnt : null
+      const l12mOtherAvg = l12Cnt > 0 ? l12OtherSum / l12Cnt : null
+      const l12mTotalAvg = l12Cnt > 0 ? l12TotalSum / l12Cnt : null
+
+      const lyData = lyPeriodKey ? periodGroups.get(lyPeriodKey) : undefined
+
+      const calcDelta = (current: number, avg: number | null) => avg !== null ? current - avg : null
+      const calcPct = (current: number, avg: number | null) => avg !== null && avg !== 0 ? ((current - avg) / avg) * 100 : null
+
+      return {
+        absolute: {
+          top: { current: currentData.topAmount, vsL3M: calcDelta(currentData.topAmount, l3mTopAvg), vsL12M: calcDelta(currentData.topAmount, l12mTopAvg), vsLY: lyData ? currentData.topAmount - lyData.topAmount : null },
+          other: { current: currentData.otherAmount, vsL3M: calcDelta(currentData.otherAmount, l3mOtherAvg), vsL12M: calcDelta(currentData.otherAmount, l12mOtherAvg), vsLY: lyData ? currentData.otherAmount - lyData.otherAmount : null },
+          total: { current: currentData.total, vsL3M: calcDelta(currentData.total, l3mTotalAvg), vsL12M: calcDelta(currentData.total, l12mTotalAvg), vsLY: lyData ? currentData.total - lyData.total : null },
+        },
+        percentage: {
+          top: { current: currentData.topAmount, vsL3M: calcPct(currentData.topAmount, l3mTopAvg), vsL12M: calcPct(currentData.topAmount, l12mTopAvg), vsLY: lyData && lyData.topAmount !== 0 ? ((currentData.topAmount - lyData.topAmount) / lyData.topAmount) * 100 : null },
+          other: { current: currentData.otherAmount, vsL3M: calcPct(currentData.otherAmount, l3mOtherAvg), vsL12M: calcPct(currentData.otherAmount, l12mOtherAvg), vsLY: lyData && lyData.otherAmount !== 0 ? ((currentData.otherAmount - lyData.otherAmount) / lyData.otherAmount) * 100 : null },
+          total: { current: currentData.total, vsL3M: calcPct(currentData.total, l3mTotalAvg), vsL12M: calcPct(currentData.total, l12mTotalAvg), vsLY: lyData && lyData.total !== 0 ? ((currentData.total - lyData.total) / lyData.total) * 100 : null },
+        },
+      }
+    }
+
+    // Helper to parse tx date string
+    const parseDateStr = (tx: TransactionLog): string | null => {
+      if (!tx.date) return null
+      return typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
+    }
+
+    if (viewMode === 'weekly') {
+      // WEEKLY VIEW: 13 weeks ending at last full week
+      const today = new Date()
+      const dayOfWeek = today.getUTCDay() || 7
+      const lastSunday = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
+      lastSunday.setUTCDate(lastSunday.getUTCDate() - dayOfWeek)
+      const lastFullWeekMonday = new Date(lastSunday)
+      lastFullWeekMonday.setUTCDate(lastFullWeekMonday.getUTCDate() - 6)
+      const startMonday = new Date(lastFullWeekMonday)
+      startMonday.setUTCDate(startMonday.getUTCDate() - 12 * 7)
+
+      const allWeeks: string[] = []
+      const cursor = new Date(startMonday)
+      for (let i = 0; i < 13; i++) {
+        const { year, week } = getISOWeek(cursor)
+        allWeeks.push(`${year}-W${String(week).padStart(2, '0')}`)
+        cursor.setUTCDate(cursor.getUTCDate() + 7)
+      }
+
+      // Group transactions by week
+      const weeklyGroups = new Map<string, TransactionLog[]>()
+      allWeeks.forEach(w => weeklyGroups.set(w, []))
+
+      categoryTransactions.forEach((tx) => {
+        const dateStr = parseDateStr(tx)
+        if (!dateStr) return
+        const [y, m, d] = dateStr.split('-').map(Number)
+        const txDate = new Date(Date.UTC(y, m - 1, d))
+        const { year, week } = getISOWeek(txDate)
+        const weekKey = `${year}-W${String(week).padStart(2, '0')}`
+        if (weeklyGroups.has(weekKey)) {
+          weeklyGroups.get(weekKey)!.push(tx)
+        }
+      })
+
+      // Process each week
+      const periodGroups = new Map<string, { topAmount: number; otherAmount: number; total: number }>()
+      allWeeks.forEach((weekKey) => {
+        periodGroups.set(weekKey, processTransactions(weeklyGroups.get(weekKey) || []))
+      })
+
+      const mostRecentWeek = allWeeks[allWeeks.length - 1]
+      const currentWeekData = periodGroups.get(mostRecentWeek)
+      if (!currentWeekData || currentWeekData.total === 0) return null
+
+      const currentIndex = allWeeks.length - 1
+
+      // Format week label
+      const parts = mostRecentWeek.split('-W')
+      const weekStart = new Date(Date.UTC(parseInt(parts[0]), 0, 4))
+      const wd = weekStart.getUTCDay() || 7
+      weekStart.setUTCDate(weekStart.getUTCDate() - wd + 1 + (parseInt(parts[1]) - 1) * 7)
+      const periodLabel = `w/c ${weekStart.getUTCDate()} ${weekStart.toLocaleDateString('en-GB', { month: 'short' })}`
+
+      const comparisons = computeComparisons(periodGroups, allWeeks, currentIndex, 3, null)
+
+      return {
+        monthLabel: periodLabel,
+        topTransactionName: topCounterpartyFullName,
+        categoryName: selectedCategory,
+        ...comparisons,
+      }
+    }
+
+    // MONTHLY VIEW (existing logic)
+    const today = new Date()
+    const lastFullMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+    const startDate = new Date(lastFullMonth.getFullYear(), lastFullMonth.getMonth() - 12, 1)
+
     const allMonths: string[] = []
     const currentMonth = new Date(startDate)
     for (let i = 0; i < 13; i++) {
       const year = currentMonth.getFullYear()
       const month = currentMonth.getMonth() + 1
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`
-      allMonths.push(monthKey)
+      allMonths.push(`${year}-${String(month).padStart(2, '0')}`)
       currentMonth.setMonth(currentMonth.getMonth() + 1)
     }
 
-    // Process each month
-    allMonths.forEach((monthKey) => {
-      let topAmount = 0
-      let totalAmount = 0
+    // Group transactions by month
+    const monthlyTxGroups = new Map<string, TransactionLog[]>()
+    allMonths.forEach(m => monthlyTxGroups.set(m, []))
 
-      categoryTransactions.forEach((tx) => {
-        if (!tx.date) return
-
-        const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
-        const [yearStr, monthStr] = dateStr.split('-')
-
-        if (!yearStr || !monthStr) return
-
-        const year = parseInt(yearStr, 10)
-        const month = parseInt(monthStr, 10)
-
-        if (isNaN(year) || isNaN(month)) return
-
-        const txMonthKey = `${year}-${String(month).padStart(2, '0')}`
-
-        if (txMonthKey === monthKey) {
-          const rate = getRateForDate(dateStr)
-          const amount = currency === 'USD'
-            ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
-            : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
-
-          if (amount < 0) {
-            const absAmount = Math.abs(amount)
-            totalAmount += absAmount
-
-            const counterparty = tx.counterparty || 'Unknown'
-            const counterpartyKey = counterparty.substring(0, 7).trim()
-
-            if (counterpartyKey === topCounterpartyKey) {
-              topAmount += absAmount
-            }
-          }
-        }
-      })
-
-      const otherAmount = totalAmount - topAmount
-      monthlyGroups.set(monthKey, { topAmount, otherAmount, total: totalAmount })
+    categoryTransactions.forEach((tx) => {
+      const dateStr = parseDateStr(tx)
+      if (!dateStr) return
+      const [yearStr, monthStr] = dateStr.split('-')
+      if (!yearStr || !monthStr) return
+      const year = parseInt(yearStr, 10)
+      const month = parseInt(monthStr, 10)
+      if (isNaN(year) || isNaN(month)) return
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`
+      if (monthlyTxGroups.has(monthKey)) {
+        monthlyTxGroups.get(monthKey)!.push(tx)
+      }
     })
 
-    // Get the most recent month (last full month)
-    const mostRecentMonth = allMonths[allMonths.length - 1]
-    const currentMonthData = monthlyGroups.get(mostRecentMonth)
+    const periodGroups = new Map<string, { topAmount: number; otherAmount: number; total: number }>()
+    allMonths.forEach((monthKey) => {
+      periodGroups.set(monthKey, processTransactions(monthlyTxGroups.get(monthKey) || []))
+    })
 
+    const mostRecentMonth = allMonths[allMonths.length - 1]
+    const currentMonthData = periodGroups.get(mostRecentMonth)
     if (!currentMonthData || currentMonthData.total === 0) return null
 
-    // Calculate historical averages
     const currentMonthIndex = allMonths.indexOf(mostRecentMonth)
-    
-    // Calculate averages for top transaction, other, and total separately
-    let l3mTopSum = 0
-    let l3mOtherSum = 0
-    let l3mTotalSum = 0
-    let l3mCount = 0
-    
-    let l12mTopSum = 0
-    let l12mOtherSum = 0
-    let l12mTotalSum = 0
-    let l12mCount = 0
-
-    for (let i = Math.max(0, currentMonthIndex - 3); i < currentMonthIndex; i++) {
-      const monthData = monthlyGroups.get(allMonths[i])
-      if (monthData && monthData.total > 0) {
-        l3mTopSum += monthData.topAmount
-        l3mOtherSum += monthData.otherAmount
-        l3mTotalSum += monthData.total
-        l3mCount++
-      }
-    }
-
-    for (let i = 0; i < currentMonthIndex; i++) {
-      const monthData = monthlyGroups.get(allMonths[i])
-      if (monthData && monthData.total > 0) {
-        l12mTopSum += monthData.topAmount
-        l12mOtherSum += monthData.otherAmount
-        l12mTotalSum += monthData.total
-        l12mCount++
-      }
-    }
-
-    const l3mTopAvg = l3mCount > 0 ? l3mTopSum / l3mCount : null
-    const l3mOtherAvg = l3mCount > 0 ? l3mOtherSum / l3mCount : null
-    const l3mTotalAvg = l3mCount > 0 ? l3mTotalSum / l3mCount : null
-
-    const l12mTopAvg = l12mCount > 0 ? l12mTopSum / l12mCount : null
-    const l12mOtherAvg = l12mCount > 0 ? l12mOtherSum / l12mCount : null
-    const l12mTotalAvg = l12mCount > 0 ? l12mTotalSum / l12mCount : null
 
     // LY: Same month from previous year
     const [year, month] = mostRecentMonth.split('-')
     const lastYearMonth = `${parseInt(year) - 1}-${month}`
-    const lyData = monthlyGroups.get(lastYearMonth)
 
-    // Calculate comparisons for each row
-    const topComparisons = {
-      vsL3M: l3mTopAvg !== null ? currentMonthData.topAmount - l3mTopAvg : null,
-      vsL12M: l12mTopAvg !== null ? currentMonthData.topAmount - l12mTopAvg : null,
-      vsLY: lyData ? currentMonthData.topAmount - lyData.topAmount : null,
-    }
-
-    const otherComparisons = {
-      vsL3M: l3mOtherAvg !== null ? currentMonthData.otherAmount - l3mOtherAvg : null,
-      vsL12M: l12mOtherAvg !== null ? currentMonthData.otherAmount - l12mOtherAvg : null,
-      vsLY: lyData ? currentMonthData.otherAmount - lyData.otherAmount : null,
-    }
-
-    const totalComparisons = {
-      vsL3M: l3mTotalAvg !== null ? currentMonthData.total - l3mTotalAvg : null,
-      vsL12M: l12mTotalAvg !== null ? currentMonthData.total - l12mTotalAvg : null,
-      vsLY: lyData ? currentMonthData.total - lyData.total : null,
-    }
-
-    // Calculate percentage changes
-    const topPercentages = {
-      vsL3M: l3mTopAvg !== null && l3mTopAvg !== 0 ? ((currentMonthData.topAmount - l3mTopAvg) / l3mTopAvg) * 100 : null,
-      vsL12M: l12mTopAvg !== null && l12mTopAvg !== 0 ? ((currentMonthData.topAmount - l12mTopAvg) / l12mTopAvg) * 100 : null,
-      vsLY: lyData && lyData.topAmount !== 0 ? ((currentMonthData.topAmount - lyData.topAmount) / lyData.topAmount) * 100 : null,
-    }
-
-    const otherPercentages = {
-      vsL3M: l3mOtherAvg !== null && l3mOtherAvg !== 0 ? ((currentMonthData.otherAmount - l3mOtherAvg) / l3mOtherAvg) * 100 : null,
-      vsL12M: l12mOtherAvg !== null && l12mOtherAvg !== 0 ? ((currentMonthData.otherAmount - l12mOtherAvg) / l12mOtherAvg) * 100 : null,
-      vsLY: lyData && lyData.otherAmount !== 0 ? ((currentMonthData.otherAmount - lyData.otherAmount) / lyData.otherAmount) * 100 : null,
-    }
-
-    const totalPercentages = {
-      vsL3M: l3mTotalAvg !== null && l3mTotalAvg !== 0 ? ((currentMonthData.total - l3mTotalAvg) / l3mTotalAvg) * 100 : null,
-      vsL12M: l12mTotalAvg !== null && l12mTotalAvg !== 0 ? ((currentMonthData.total - l12mTotalAvg) / l12mTotalAvg) * 100 : null,
-      vsLY: lyData && lyData.total !== 0 ? ((currentMonthData.total - lyData.total) / lyData.total) * 100 : null,
-    }
+    const comparisons = computeComparisons(periodGroups, allMonths, currentMonthIndex, 3, lastYearMonth)
 
     // Format month label
     const [yearNum, monthNum] = mostRecentMonth.split('-')
@@ -256,36 +304,9 @@ export function MonthlyCategorySummary({
       monthLabel,
       topTransactionName: topCounterpartyFullName,
       categoryName: selectedCategory,
-      absolute: {
-        top: {
-          current: currentMonthData.topAmount,
-          ...topComparisons,
-        },
-        other: {
-          current: currentMonthData.otherAmount,
-          ...otherComparisons,
-        },
-        total: {
-          current: currentMonthData.total,
-          ...totalComparisons,
-        },
-      },
-      percentage: {
-        top: {
-          current: currentMonthData.topAmount,
-          ...topPercentages,
-        },
-        other: {
-          current: currentMonthData.otherAmount,
-          ...otherPercentages,
-        },
-        total: {
-          current: currentMonthData.total,
-          ...totalPercentages,
-        },
-      },
+      ...comparisons,
     }
-  }, [transactions, selectedCategory, currency, getRateForDate])
+  }, [transactions, selectedCategory, currency, getRateForDate, viewMode])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -312,7 +333,7 @@ export function MonthlyCategorySummary({
 
   const comparisonCards = [
     {
-      label: 'vs. L3M Avg',
+      label: viewMode === 'weekly' ? 'vs. L3W Avg' : 'vs. L3M Avg',
       absolute: {
         top: summaryData.absolute.top.vsL3M,
         other: summaryData.absolute.other.vsL3M,
@@ -325,7 +346,7 @@ export function MonthlyCategorySummary({
       },
     },
     {
-      label: 'vs. L12M Avg',
+      label: viewMode === 'weekly' ? 'vs. L12W Avg' : 'vs. L12M Avg',
       absolute: {
         top: summaryData.absolute.top.vsL12M,
         other: summaryData.absolute.other.vsL12M,
@@ -337,7 +358,7 @@ export function MonthlyCategorySummary({
         total: summaryData.percentage.total.vsL12M,
       },
     },
-    {
+    ...(viewMode === 'monthly' ? [{
       label: 'vs. LY',
       absolute: {
         top: summaryData.absolute.top.vsLY,
@@ -349,13 +370,13 @@ export function MonthlyCategorySummary({
         other: summaryData.percentage.other.vsLY,
         total: summaryData.percentage.total.vsLY,
       },
-    },
+    }] : []),
   ]
 
   // Get icon and color for each comparison type
   const getComparisonIcon = (label: string) => {
-    if (label.includes('L3M')) return { Icon: Calendar, color: 'text-indigo-600 dark:text-indigo-400' }
-    if (label.includes('L12M')) return { Icon: Calendar, color: 'text-purple-600 dark:text-purple-400' }
+    if (label.includes('L3')) return { Icon: Calendar, color: 'text-indigo-600 dark:text-indigo-400' }
+    if (label.includes('L12')) return { Icon: Calendar, color: 'text-purple-600 dark:text-purple-400' }
     if (label.includes('LY')) return { Icon: Calendar, color: 'text-orange-600 dark:text-orange-400' }
     return { Icon: Calendar, color: 'text-muted-foreground' }
   }
@@ -388,11 +409,15 @@ export function MonthlyCategorySummary({
     // Build the summary parts
     const parts: React.ReactNode[] = []
     
+    const periodDesc = viewMode === 'weekly' ? "Last week's spend" : "Last month's spend"
+    const shortAvgLabel = viewMode === 'weekly' ? '3-week average' : '3-month average'
+    const longAvgLabel = viewMode === 'weekly' ? '12-week average' : '12-month average'
+
     // First part: describe trend vs averages
     if (avgDirection === 'decreased' && shortTermTrends.length > 0) {
       parts.push(
         <>
-          Last month's spend{' '}
+          {periodDesc}{' '}
           <span className="font-bold text-green-600">decreased</span> relative to{' '}
           <span className="font-bold">recent short-term and long-term averages</span>
         </>
@@ -400,7 +425,7 @@ export function MonthlyCategorySummary({
     } else if (avgDirection === 'increased' && shortTermTrends.length > 0) {
       parts.push(
         <>
-          Last month's spend{' '}
+          {periodDesc}{' '}
           <span className="font-bold text-red-600">increased</span> relative to{' '}
           <span className="font-bold">recent short-term and long-term averages</span>
         </>
@@ -414,9 +439,9 @@ export function MonthlyCategorySummary({
         const color = vsL3M < 0 ? 'text-green-600' : 'text-red-600'
         parts.push(
           <>
-            Last month's spend{' '}
+            {periodDesc}{' '}
             <span className={cn('font-bold', color)}>{direction}</span> relative to the{' '}
-            <span className="font-bold">3-month average</span>
+            <span className="font-bold">{shortAvgLabel}</span>
           </>
         )
       } else if (vsL12M !== null) {
@@ -424,20 +449,20 @@ export function MonthlyCategorySummary({
         const color = vsL12M < 0 ? 'text-green-600' : 'text-red-600'
         parts.push(
           <>
-            Last month's spend{' '}
+            {periodDesc}{' '}
             <span className={cn('font-bold', color)}>{direction}</span> relative to the{' '}
-            <span className="font-bold">12-month average</span>
+            <span className="font-bold">{longAvgLabel}</span>
           </>
         )
       } else {
-        parts.push(`Last month's spend in ${monthLabel}`)
+        parts.push(`${periodDesc} in ${monthLabel}`)
       }
     } else {
-      parts.push(`Last month's spend in ${monthLabel}`)
+      parts.push(`${periodDesc} in ${monthLabel}`)
     }
     
-    // Second part: add year-over-year comparison if available and significant
-    if (longTermTrend && longTermTrend.value !== null && longTermTrend.pct !== null) {
+    // Second part: add year-over-year comparison if available and significant (monthly only)
+    if (viewMode === 'monthly' && longTermTrend && longTermTrend.value !== null && longTermTrend.pct !== null) {
       const lyPct = Math.abs(longTermTrend.pct)
       const lySign = longTermTrend.value > 0 ? 'up' : 'down'
       const lyDirection = longTermTrend.value > 0 ? 'significantly higher' : 'significantly lower'
@@ -521,7 +546,7 @@ export function MonthlyCategorySummary({
                   <h3 className="font-semibold text-sm uppercase tracking-wide">{comparison.label}</h3>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Latest Month</p>
+                  <p className="text-xs text-muted-foreground mb-1">{viewMode === 'weekly' ? 'Latest Week' : 'Latest Month'}</p>
                   {changeAmount !== null ? (
                     isSpendingLess ? (
                       <div className="flex items-center gap-1.5">
@@ -583,7 +608,7 @@ export function MonthlyCategorySummary({
       <CardHeader className="pb-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle className="text-base">
-            Monthly Category Summary - {summaryData.categoryName} ({summaryData.monthLabel})
+            {viewMode === 'weekly' ? 'Weekly' : 'Monthly'} Category Summary - {summaryData.categoryName} ({summaryData.monthLabel})
           </CardTitle>
           {categories.length > 0 && (
             <div className="flex items-center gap-2">
