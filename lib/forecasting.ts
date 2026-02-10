@@ -82,7 +82,7 @@ export async function fetchForecastSettingsMap(
     .eq('user_id', userId)
 
   const map = new Map<string, ForecastSettingRow>()
-  ;(data || []).forEach((row: ForecastSetting) => {
+  ;(data || []).forEach((row: { category: string; current_year_method?: YearMethod; current_month_method?: MonthMethod; manual_year_forecast?: number | null; manual_month_forecast?: number | null }) => {
     const defaults = getDefaultForecastMethods(row.category)
     map.set(row.category, {
       category: row.category,
