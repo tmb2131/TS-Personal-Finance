@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -23,6 +23,7 @@ const allNavigation = [
   { name: 'Kids Accounts', href: '/kids', icon: Baby },
   { name: 'Analysis', href: '/analysis', icon: TrendingUp },
   { name: 'Recurring', href: '/recurring', icon: Repeat },
+  { name: 'Import', href: '/import', icon: FileUp },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
