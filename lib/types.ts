@@ -83,6 +83,18 @@ export interface MonthlyTrend {
   delta_vs_l3m: number
 }
 
+export interface ForecastSetting {
+  id: string
+  user_id: string
+  category: string
+  current_year_method: 'Annual' | 'Linear' | 'Budget' | 'Manual'
+  current_month_method: 'Linear' | 'Average' | 'Manual'
+  manual_year_forecast?: number | null
+  manual_month_forecast?: number | null
+  created_at: string
+  updated_at: string
+}
+
 export interface YoYNetWorth {
   id: string
   category: string

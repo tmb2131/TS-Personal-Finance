@@ -15,6 +15,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
+import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts } from '@/lib/forecasting'
 import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, X, ChevronRight } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -60,6 +61,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
   const [forecastBridge, setForecastBridge] = useState<ForecastBridgeResponse | null>(null)
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
 
   // Reset state when modal closes
   useEffect(() => {
@@ -84,10 +86,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       const todayStr = new Date().toISOString().split('T')[0]
 
       try {
-        const [budgetResult, annualResult, monthlyResult, syncResult, bridgeResponse] = await Promise.all([
+        const [budgetResult, syncResult, bridgeResponse, { data: { user } }] = await Promise.all([
           supabase.from('budget_targets').select('*'),
-          supabase.from('annual_trends').select('*'),
-          supabase.from('monthly_trends').select('*'),
           supabase.from('sync_metadata').select('last_sync_at').single(),
           fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${todayStr}`)
             .then(async (r) => {
@@ -100,11 +100,17 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
               return r.json()
             })
             .catch(() => null),
+          supabase.auth.getUser(),
         ])
 
+        const annualResult = user ? await computeAnnualTrends(supabase, user.id) : []
+        const monthlyResult = user ? await computeMonthlyTrends(supabase, user.id) : []
+        const annualForecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
+
         if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
-        if (annualResult.data) setAnnualTrends(annualResult.data as AnnualTrend[])
-        if (monthlyResult.data) setMonthlyTrends(monthlyResult.data as MonthlyTrend[])
+        if (Array.isArray(annualResult)) setAnnualTrends(annualResult as AnnualTrend[])
+        if (Array.isArray(monthlyResult)) setMonthlyTrends(monthlyResult as MonthlyTrend[])
+        if (annualForecasts) setForecastByCategory(annualForecasts)
         if (syncResult.data?.last_sync_at) setLastSyncDate(syncResult.data.last_sync_at)
         if (bridgeResponse && !bridgeResponse.error) {
           setForecastBridge(bridgeResponse as ForecastBridgeResponse)
@@ -122,9 +128,12 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   // Calculate annual estimated spend (sum of tracking_est for expense categories)
   const annualEstimatedSpend = useMemo(() => {
     const expenses = budgetData.filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
-    const totalGBP = expenses.reduce((sum, b) => sum + Math.abs(b.tracking_est_gbp ?? 0), 0)
+    const totalGBP = expenses.reduce((sum, b) => {
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      return sum + Math.abs(forecast)
+    }, 0)
     return currency === 'USD' ? convertAmount(totalGBP, 'GBP', fxRate) : totalGBP
-  }, [budgetData, currency, fxRate, convertAmount])
+  }, [budgetData, currency, fxRate, convertAmount, forecastByCategory])
 
   // Last year total spend (from annual_trends) for comparison
   const annualVsLastYear = useMemo(() => {
@@ -142,10 +151,13 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const gapToBudget = useMemo(() => {
     const expenses = budgetData.filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
     const budgetTotalGBP = expenses.reduce((sum, b) => sum + Math.abs(b.annual_budget_gbp ?? 0), 0)
-    const forecastTotalGBP = expenses.reduce((sum, b) => sum + Math.abs(b.tracking_est_gbp ?? 0), 0)
+    const forecastTotalGBP = expenses.reduce((sum, b) => {
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      return sum + Math.abs(forecast)
+    }, 0)
     const gapGBP = budgetTotalGBP - forecastTotalGBP // Positive = under budget, negative = over budget
     return currency === 'USD' ? convertAmount(gapGBP, 'GBP', fxRate) : gapGBP
-  }, [budgetData, currency, fxRate, convertAmount])
+  }, [budgetData, currency, fxRate, convertAmount, forecastByCategory])
 
   // Change since yesterday (from forecast bridge)
   const yesterdayChange = useMemo(() => {

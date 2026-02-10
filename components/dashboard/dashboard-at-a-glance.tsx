@@ -7,6 +7,7 @@ import { LineChart, Receipt, Calendar, CalendarDays, ChevronRight } from 'lucide
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HistoricalNetWorth } from '@/lib/types'
+import { computeAnnualForecasts } from '@/lib/forecasting'
 import { cn } from '@/utils/cn'
 
 function scrollToSection(id: string) {
@@ -53,9 +54,10 @@ export function DashboardAtAGlance() {
     let cancelled = false
     async function fetchSummary() {
       const supabase = createClient()
-      const [nwRes, budgetRes] = await Promise.all([
+      const [nwRes, budgetRes, { data: { user } }] = await Promise.all([
         supabase.from('historical_net_worth').select('*').order('date', { ascending: false }).limit(500),
         supabase.from('budget_targets').select('category, annual_budget_gbp, tracking_est_gbp'),
+        supabase.auth.getUser(),
       ])
       if (cancelled) return
       let netWorth: number | null = null
@@ -79,9 +81,11 @@ export function DashboardAtAGlance() {
       let expensesTotal = 0
       let incomeBudget = 0
       let expensesBudget = 0
+      const forecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
       if (budgetRes.data?.length) {
         budgetRes.data.forEach((row: { category: string; annual_budget_gbp: number; tracking_est_gbp: number }) => {
-          const tracking = currency === 'USD' ? convertAmount(row.tracking_est_gbp, 'GBP', fxRate) : row.tracking_est_gbp
+          const forecast = forecasts?.get(row.category)?.forecast ?? row.tracking_est_gbp
+          const tracking = currency === 'USD' ? convertAmount(forecast, 'GBP', fxRate) : forecast
           const budget = currency === 'USD' ? convertAmount(row.annual_budget_gbp, 'GBP', fxRate) : row.annual_budget_gbp
           if (row.category === 'Income' || row.category === 'Gift Money') {
             incomeTotal += Math.abs(tracking)

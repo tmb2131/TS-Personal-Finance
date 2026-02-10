@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
+import { computeMonthlyTrends } from '@/lib/forecasting'
 import { MonthlyTrend } from '@/lib/types'
 import { endOfMonth, type RatesByMonthOffset } from '@/lib/utils/fx-rates'
 import { buildTransactionAnalysisUrl } from '@/lib/analysis-url'
@@ -71,8 +72,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
       const eom1 = monthAgo(1)
       const eom0 = endOfMonth(y, m)
 
-      const [trendsRes, fxRes] = await Promise.all([
-        supabase.from('monthly_trends').select('*').order('category'),
+      const [{ data: { user } }, fxRes] = await Promise.all([
+        supabase.auth.getUser(),
         supabase
           .from('fx_rates')
           .select('date, gbpusd_rate')
@@ -80,15 +81,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           .lte('date', eom0)
           .order('date', { ascending: true }),
       ])
-
-      if (trendsRes.error) {
-        console.error('Error fetching monthly trends:', trendsRes.error)
-        setError('Failed to load monthly trends data. Please try refreshing the page.')
-        setLoading(false)
-        return
-      }
+      const trendsRes = user ? await computeMonthlyTrends(supabase, user.id) : []
       setError(null)
-      setData(trendsRes.data as MonthlyTrend[])
+      setData(trendsRes as MonthlyTrend[])
 
       const rows = (fxRes.data || []) as { date: string; gbpusd_rate: number | null }[]
       const dateToRate = new Map<string, number>()

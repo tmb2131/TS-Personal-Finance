@@ -12,6 +12,7 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog, BudgetTarget, AnnualTrend } from '@/lib/types'
+import { computeAnnualTrends, computeAnnualForecasts } from '@/lib/forecasting'
 import { AlertCircle } from 'lucide-react'
 import {
   LineChart,
@@ -34,6 +35,7 @@ export function AnnualCumulativeSpendChart() {
   const [transactions, setTransactions] = useState<TransactionLog[]>([])
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // On mobile, default to only Current Year + Budget; on desktop show all years
@@ -51,10 +53,15 @@ export function AnnualCumulativeSpendChart() {
       const currentYear = new Date().getFullYear()
       
       // Fetch budget data and annual_trends in parallel with transactions
-      const [budgetsResult, annualTrendsResult] = await Promise.all([
+      const [{ data: { user } }, budgetsResult, annualTrendsComputed] = await Promise.all([
+        supabase.auth.getUser(),
         supabase.from('budget_targets').select('*'),
-        supabase.from('annual_trends').select('*').order('category'),
+        supabase.auth.getUser().then(({ data: { user } }) => user ? computeAnnualTrends(supabase, user.id) : []),
       ])
+      if (user) {
+        const forecasts = await computeAnnualForecasts(supabase, user.id)
+        setForecastByCategory(forecasts)
+      }
       
       // Fetch all transactions with pagination
       let allTransactions: TransactionLog[] = []
@@ -101,8 +108,8 @@ export function AnnualCumulativeSpendChart() {
         return
       }
 
-      if (!annualTrendsResult.error && annualTrendsResult.data) {
-        setAnnualTrends(annualTrendsResult.data as AnnualTrend[])
+      if (Array.isArray(annualTrendsComputed)) {
+        setAnnualTrends(annualTrendsComputed as AnnualTrend[])
       }
 
       setError(null)
@@ -189,8 +196,9 @@ export function AnnualCumulativeSpendChart() {
     const estimatedTotalSpend2026 = budgetData
       .filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
       .reduce((sum, b) => {
-        const tracking = currency === 'USD' ? (b.tracking_est_gbp ?? 0) * fxRate : (b.tracking_est_gbp ?? 0)
-        return sum + Math.abs(tracking) // Tracking values are stored as negative for expenses
+        const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+        const tracking = currency === 'USD' ? forecast * fxRate : forecast
+        return sum + Math.abs(tracking) // Forecast values are stored as negative for expenses
       }, 0)
 
     // Calculate cumulative spend by day of year for each year
@@ -457,7 +465,7 @@ export function AnnualCumulativeSpendChart() {
     })
 
     return chartDataPoints
-  }, [transactions, budgetData, annualTrends, currency, fxRate])
+  }, [transactions, budgetData, annualTrends, currency, fxRate, forecastByCategory])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

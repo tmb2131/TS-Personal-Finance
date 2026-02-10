@@ -13,6 +13,7 @@ import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
+import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts } from '@/lib/forecasting'
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
 import {
   LineChart,
@@ -39,6 +40,7 @@ export function KeyInsights() {
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
   const [historicalNetWorth, setHistoricalNetWorth] = useState<HistoricalNetWorth[]>([])
   const [accountBalances, setAccountBalances] = useState<AccountBalance[]>([])
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,19 +48,20 @@ export function KeyInsights() {
     async function fetchData() {
       const supabase = createClient()
       
-      const [budgetResult, annualResult, monthlyResult, netWorthResult, accountsResult] = await Promise.all([
+      const [budgetResult, netWorthResult, accountsResult, { data: { user } }] = await Promise.all([
         supabase.from('budget_targets').select('*'),
-        supabase.from('annual_trends').select('*'),
-        supabase.from('monthly_trends').select('*'),
         supabase.from('historical_net_worth').select('*').order('date', { ascending: false }),
         supabase.from('account_balances').select('*').order('date_updated', { ascending: false }),
+        supabase.auth.getUser(),
       ])
+
+      const annualResult = user ? await computeAnnualTrends(supabase, user.id) : []
+      const monthlyResult = user ? await computeMonthlyTrends(supabase, user.id) : []
+      const annualForecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
 
       // Check for errors
       const errors = [
         budgetResult.error,
-        annualResult.error,
-        monthlyResult.error,
         netWorthResult.error,
         accountsResult.error,
       ].filter(Boolean)
@@ -71,8 +74,9 @@ export function KeyInsights() {
       }
 
       if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
-      if (annualResult.data) setAnnualTrends(annualResult.data as AnnualTrend[])
-      if (monthlyResult.data) setMonthlyTrends(monthlyResult.data as MonthlyTrend[])
+      if (Array.isArray(annualResult)) setAnnualTrends(annualResult as AnnualTrend[])
+      if (Array.isArray(monthlyResult)) setMonthlyTrends(monthlyResult as MonthlyTrend[])
+      if (annualForecasts) setForecastByCategory(annualForecasts)
       if (netWorthResult.data) setHistoricalNetWorth(netWorthResult.data as HistoricalNetWorth[])
       if (accountsResult.data) {
         // Get most recent balance for each account
@@ -440,7 +444,8 @@ export function KeyInsights() {
     }, 0)
 
     const totalTracking = expenses.reduce((sum, b) => {
-      const trackingGbp = Math.abs(b.tracking_est_gbp)
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      const trackingGbp = Math.abs(forecast)
       const tracking = currency === 'USD' ? convertAmount(trackingGbp, 'GBP', fxRate) : trackingGbp
       return sum + tracking
     }, 0)
@@ -451,7 +456,8 @@ export function KeyInsights() {
     const categoryGaps = expenses
       .map((b) => {
         const budgetGbp = Math.abs(b.annual_budget_gbp)
-        const trackingGbp = Math.abs(b.tracking_est_gbp)
+        const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+        const trackingGbp = Math.abs(forecast)
         const budget = currency === 'USD' ? convertAmount(budgetGbp, 'GBP', fxRate) : budgetGbp
         const tracking = currency === 'USD' ? convertAmount(trackingGbp, 'GBP', fxRate) : trackingGbp
         const gap = tracking - budget
@@ -486,7 +492,7 @@ export function KeyInsights() {
       underBudget: underBudget.slice(0, 5), // Top 5
       overBudget: overBudget.slice(0, 5), // Top 5
     }
-  }, [budgetData, currency, expenseCategories, fxRate, convertAmount])
+  }, [budgetData, currency, expenseCategories, fxRate, convertAmount, forecastByCategory])
 
   // Annual Spend Insights — use same source as Daily Summary: budget_targets.tracking_est_gbp (est. annual spend)
   const annualSpendInsights = useMemo(() => {
@@ -494,7 +500,10 @@ export function KeyInsights() {
 
     // This year: from budget forecast (same as Daily Summary modal) so both places show the same number
     const budgetExpenses = budgetData.filter((b) => !EXCLUDED_ANNUAL_SPEND.includes(b.category))
-    const trackingEstTotalGbp = budgetExpenses.reduce((sum, b) => sum + Math.abs(b.tracking_est_gbp ?? 0), 0)
+    const trackingEstTotalGbp = budgetExpenses.reduce((sum, b) => {
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      return sum + Math.abs(forecast)
+    }, 0)
     const currentYearEstDisplay = trackingEstTotalGbp * mult
 
     // Historical comparison: from annual_trends (same category exclusions)
@@ -543,7 +552,7 @@ export function KeyInsights() {
       spendingLess,
       spendingMore,
     }
-  }, [annualTrends, budgetData, currency, fxRate])
+  }, [annualTrends, budgetData, currency, fxRate, forecastByCategory])
 
   // Monthly Spend Insights — values in GBP from monthly_trends; convert to USD with current FX when currency is USD
   const monthlySpendInsights = useMemo(() => {

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
+import { computeAnnualTrends } from '@/lib/forecasting'
 import { AnnualTrend } from '@/lib/types'
 import { endOfYear, type RatesByYear } from '@/lib/utils/fx-rates'
 import { buildTransactionAnalysisUrl } from '@/lib/analysis-url'
@@ -57,8 +58,8 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
     async function fetchData() {
       setLoading(true)
       const supabase = createClient()
-      const [trendsResult, fxRatesResult] = await Promise.all([
-        supabase.from('annual_trends').select('*').order('category'),
+      const [{ data: { user } }, fxRatesResult] = await Promise.all([
+        supabase.auth.getUser(),
         supabase
           .from('fx_rates')
           .select('date, gbpusd_rate')
@@ -66,13 +67,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
           .lte('date', endOfYear(currentYear))
           .order('date', { ascending: true }),
       ])
-
-      if (trendsResult.error) {
-        console.error('Error fetching annual trends:', trendsResult.error)
-        setError('Failed to load annual trends data. Please try refreshing the page.')
-        setLoading(false)
-        return
-      }
+      const trendsResult = user ? await computeAnnualTrends(supabase, user.id) : []
       setError(null)
 
       const rows = (fxRatesResult.data || []) as { date: string; gbpusd_rate: number | null }[]
@@ -92,7 +87,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
         for (let y = currentYear - 4; y <= currentYear; y++) byYear[y] = contextFxRate
       }
       setRatesByYear(byYear)
-      setData(trendsResult.data as AnnualTrend[])
+      setData(trendsResult as AnnualTrend[])
       setLoading(false)
     }
 

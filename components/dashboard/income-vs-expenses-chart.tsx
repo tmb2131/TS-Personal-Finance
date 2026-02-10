@@ -12,8 +12,8 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
+import { computeAnnualForecasts } from '@/lib/forecasting'
 import { AlertCircle } from 'lucide-react'
-import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
 import {
   BarChart,
   Bar,
@@ -48,6 +48,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   const [error, setError] = useState<string | null>(null)
   const [budgets, setBudgets] = useState<BudgetTarget[]>(initialData?.budgets ?? [])
   const [investmentReturns, setInvestmentReturns] = useState<InvestmentReturn[]>(initialData?.investmentReturns ?? [])
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
   const [mounted, setMounted] = useState(false)
@@ -70,9 +71,10 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     async function fetchData() {
       setLoading(true)
       const supabase = createClient()
-      const [budgetsRes, investmentRes] = await Promise.all([
+      const [budgetsRes, investmentRes, { data: { user } }] = await Promise.all([
         supabase.from('budget_targets').select('*'),
         supabase.from('investment_return').select('*'),
+        supabase.auth.getUser(),
       ])
       if (budgetsRes.error) {
         setError(budgetsRes.error.message)
@@ -88,6 +90,10 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
       const investmentList = (investmentRes.data as InvestmentReturn[]) || []
       setBudgets(budgetList)
       setInvestmentReturns(investmentList)
+      if (user) {
+        const forecasts = await computeAnnualForecasts(supabase, user.id)
+        setForecastByCategory(forecasts)
+      }
       setError(null)
       setLoading(false)
 
@@ -98,6 +104,17 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     }
     fetchData()
   }, [hasInitial, retryCount, initialData])
+
+  useEffect(() => {
+    async function fetchForecasts() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const forecasts = await computeAnnualForecasts(supabase, user.id)
+      setForecastByCategory(forecasts)
+    }
+    fetchForecasts()
+  }, [])
 
   const chartData = useMemo(() => {
     const toDisplay = (gbp: number) => (currency === 'USD' ? gbp * fxRate : gbp)
@@ -111,7 +128,8 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     let giftMoney = 0
     let expenses = 0
     budgets.forEach((b) => {
-      const tracking = currency === 'USD' ? (b.tracking_est_gbp ?? 0) * fxRate : (b.tracking_est_gbp ?? 0)
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      const tracking = currency === 'USD' ? forecast * fxRate : forecast
       if (b.category === 'Income') income += Math.abs(tracking)
       else if (b.category === 'Gift Money') giftMoney += Math.abs(tracking)
       else expenses += Math.abs(tracking)
@@ -132,7 +150,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
         'Expenses': Math.round(expenses),
       },
     ]
-  }, [budgets, investmentReturns, currency, fxRate, includeInvestmentIncome])
+  }, [budgets, investmentReturns, currency, fxRate, includeInvestmentIncome, forecastByCategory])
 
   if (loading) {
     return (
@@ -186,10 +204,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   return (
     <Card>
         <CardHeader className="bg-muted/50">
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
-            <AddTransactionDialog />
-          </div>
+          <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
       <CardContent className="pt-8">

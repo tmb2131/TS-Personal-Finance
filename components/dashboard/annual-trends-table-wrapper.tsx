@@ -2,13 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { AnnualTrendsTable } from '@/components/analysis/annual-trends-table'
 import { AnnualTrend } from '@/lib/types'
 import { endOfYear, type RatesByYear } from '@/lib/utils/fx-rates'
+import { computeAnnualTrends } from '@/lib/forecasting'
 
 async function fetchAnnualTrendsData() {
   const supabase = await createClient()
   const currentYear = new Date().getFullYear()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id ?? null
 
   const [trendsResult, fxRatesResult] = await Promise.all([
-    supabase.from('annual_trends').select('*').order('category'),
+    userId ? computeAnnualTrends(supabase, userId) : Promise.resolve([]),
     supabase
       .from('fx_rates')
       .select('date, gbpusd_rate')
@@ -17,10 +20,7 @@ async function fetchAnnualTrendsData() {
       .order('date', { ascending: true }),
   ])
 
-  if (trendsResult.error) {
-    console.error('Error fetching annual trends:', trendsResult.error)
-    throw new Error('Failed to load annual trends data')
-  }
+  const trends = Array.isArray(trendsResult) ? trendsResult : []
 
   // Build year -> rate (rate at end of that year: EoY date or most recent prior)
   const ratesByYear: RatesByYear = {}
@@ -43,7 +43,7 @@ async function fetchAnnualTrendsData() {
   }
 
   return {
-    trends: trendsResult.data as AnnualTrend[],
+    trends: trends as AnnualTrend[],
     ratesByYear,
   }
 }

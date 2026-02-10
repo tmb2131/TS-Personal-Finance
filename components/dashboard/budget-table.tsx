@@ -15,6 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget } from '@/lib/types'
+import { computeAnnualForecasts } from '@/lib/forecasting'
 import { cn } from '@/utils/cn'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
@@ -36,6 +37,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
   const [expenseSortField, setExpenseSortField] = useState<SortField>('gap')
   const [expenseSortDirection, setExpenseSortDirection] = useState<SortDirection>('desc')
   const [incomeSortField, setIncomeSortField] = useState<SortField>('category')
@@ -50,20 +52,23 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
 
   // Process data: always use GBP from data; convert to USD with current FX when currency is USD (matches Key Insights)
   const processData = useCallback(
-    (budgets: BudgetTarget[]) => {
+    (budgets: BudgetTarget[], forecastMap?: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null) => {
       return budgets.map((budget) => {
+        const forecastRow = (forecastMap ?? forecastByCategory)?.get(budget.category)
+        const trackingGbp = forecastRow?.forecast ?? budget.tracking_est_gbp
+        const ytdGbp = forecastRow?.ytd ?? budget.ytd_gbp
         const annualBudget =
           currency === 'USD'
             ? convertAmount(budget.annual_budget_gbp, 'GBP', fxRate)
             : budget.annual_budget_gbp
         const tracking =
           currency === 'USD'
-            ? convertAmount(budget.tracking_est_gbp, 'GBP', fxRate)
-            : budget.tracking_est_gbp
+            ? convertAmount(trackingGbp, 'GBP', fxRate)
+            : trackingGbp
         const ytd =
           currency === 'USD'
-            ? convertAmount(budget.ytd_gbp, 'GBP', fxRate)
-            : budget.ytd_gbp
+            ? convertAmount(ytdGbp, 'GBP', fxRate)
+            : ytdGbp
 
         // Gap = Tracking - Budget (for all categories)
         const gap = tracking - annualBudget
@@ -77,13 +82,13 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
         }
       })
     },
-    [currency, fxRate, convertAmount]
+    [currency, fxRate, convertAmount, forecastByCategory]
   )
 
   useEffect(() => {
     // If we have initial data, reprocess it when currency changes
     if (initialData) {
-      const joined = processData(initialData)
+      const joined = processData(initialData, forecastByCategory)
       setData(joined)
       setLoading(false)
       return
@@ -94,7 +99,10 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       setLoading(true)
       const supabase = createClient()
       
-      const budgetsResult = await supabase.from('budget_targets').select('*')
+      const [budgetsResult, { data: { user } }] = await Promise.all([
+        supabase.from('budget_targets').select('*'),
+        supabase.auth.getUser(),
+      ])
 
       if (budgetsResult.error) {
         console.error('Error fetching budget data:', budgetsResult.error)
@@ -106,13 +114,36 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       setError(null)
 
       const budgets = budgetsResult.data as BudgetTarget[]
-      const joined = processData(budgets)
+      let forecasts: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null = null
+      if (user) {
+        forecasts = await computeAnnualForecasts(supabase, user.id)
+        setForecastByCategory(forecasts)
+      }
+      const joined = processData(budgets, forecasts)
       setData(joined)
       setLoading(false)
     }
 
     fetchData()
   }, [currency, initialData, processData])
+
+  useEffect(() => {
+    if (!initialData || !forecastByCategory) return
+    const joined = processData(initialData, forecastByCategory)
+    setData(joined)
+  }, [forecastByCategory, initialData, processData])
+
+  useEffect(() => {
+    if (forecastByCategory) return
+    async function fetchForecasts() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const forecasts = await computeAnnualForecasts(supabase, user.id)
+      setForecastByCategory(forecasts)
+    }
+    fetchForecasts()
+  }, [forecastByCategory])
 
   // Fetch budget_history for 1d / 1w / 1mo ago for forecast evolution columns in full view.
   // Use latest snapshot on or before each target date (snapshots only exist when sync/cron ran).

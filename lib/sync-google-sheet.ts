@@ -21,7 +21,7 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 
 /** Tables that use delete-all-then-insert (no upsert key). */
 const DELETE_INSERT_TABLES = new Set([
-  'debt', 'budget_targets', 'annual_trends', 'monthly_trends',
+  'debt', 'budget_targets',
   'investment_return', 'yoy_net_worth', 'recurring_payments',
 ]);
 
@@ -185,35 +185,6 @@ const SHEET_CONFIGS: SheetConfig[] = [
         gbpusd_rate: parseFloat(row[1] || '0'),
       };
     },
-  },
-  {
-    name: 'Annual Trends',
-    range: 'A:G',
-    table: 'annual_trends',
-    transform: (row) => ({
-      category: row[0] || '',
-      cur_yr_minus_4: parseFloat(row[1] || '0'),
-      cur_yr_minus_3: parseFloat(row[2] || '0'),
-      cur_yr_minus_2: parseFloat(row[3] || '0'),
-      cur_yr_minus_1: parseFloat(row[4] || '0'),
-      cur_yr_est: parseFloat(row[5] || '0'),
-      cur_yr_est_vs_4yr_avg: parseFloat(row[6] || '0'),
-    }),
-  },
-  {
-    name: 'Monthly Trends',
-    range: 'A:H',
-    table: 'monthly_trends',
-    transform: (row) => ({
-      category: row[0] || '',
-      cur_month_minus_3: parseFloat(row[1] || '0'),
-      cur_month_minus_2: parseFloat(row[2] || '0'),
-      cur_month_minus_1: parseFloat(row[3] || '0'),
-      cur_month_est: parseFloat(row[4] || '0'),
-      ttm_avg: parseFloat(row[5] || '0'),
-      z_score: parseFloat(row[6] || '0'),
-      delta_vs_l3m: parseFloat(row[7] || '0'),
-    }),
   },
   {
     name: 'Investment Return',
@@ -598,7 +569,7 @@ export async function syncGoogleSheet(
             const { data, error } = await db.from(config.table).insert(mergedData);
             upsertResult = { data, error };
           } else {
-            // Simple delete-then-insert (debt, budget_targets, annual_trends, etc.)
+            // Simple delete-then-insert (debt, budget_targets, etc.)
             let deleteQuery = db
               .from(config.table)
               .delete()

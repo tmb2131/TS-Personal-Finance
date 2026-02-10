@@ -2,9 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { MonthlyTrendsTable } from './monthly-trends-table'
 import { MonthlyTrend } from '@/lib/types'
 import { endOfMonth, type RatesByMonthOffset } from '@/lib/utils/fx-rates'
+import { computeMonthlyTrends } from '@/lib/forecasting'
 
 async function fetchMonthlyTrendsData() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id ?? null
   const now = new Date()
   let y = now.getFullYear()
   let m = now.getMonth() + 1 // 1-based
@@ -24,7 +27,7 @@ async function fetchMonthlyTrendsData() {
   const eom0 = endOfMonth(y, m)
 
   const [trendsResult, fxRatesResult, currentResult] = await Promise.all([
-    supabase.from('monthly_trends').select('*').order('category'),
+    userId ? computeMonthlyTrends(supabase, userId) : Promise.resolve([]),
     supabase
       .from('fx_rates')
       .select('date, gbpusd_rate')
@@ -34,10 +37,7 @@ async function fetchMonthlyTrendsData() {
     supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single(),
   ])
 
-  if (trendsResult.error) {
-    console.error('Error fetching monthly trends:', trendsResult.error)
-    throw new Error('Failed to load monthly trends data')
-  }
+  const trends = Array.isArray(trendsResult) ? trendsResult : []
 
   const rows = (fxRatesResult.data || []) as { date: string; gbpusd_rate: number | null }[]
   const dateToRate = new Map<string, number>()
@@ -59,7 +59,7 @@ async function fetchMonthlyTrendsData() {
   }
 
   return {
-    data: trendsResult.data as MonthlyTrend[],
+    data: trends as MonthlyTrend[],
     ratesByMonth,
   }
 }

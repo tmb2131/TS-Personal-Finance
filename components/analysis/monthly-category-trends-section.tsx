@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
 import { fetchFxRatesUpTo, buildGetRateForDate } from '@/lib/utils/fx-rates'
+import { computeMonthlyTrends } from '@/lib/forecasting'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { MonthlyCategoryTrendsChart } from './monthly-category-trends-chart'
 import { MonthlyCategorySummary } from './monthly-category-summary'
@@ -95,6 +96,10 @@ export function MonthlyCategoryTrendsSection() {
         page++
       }
 
+      // Also fetch computed monthly trends for available categories (used for estimates and defaults)
+      const { data: { user } } = await supabase.auth.getUser()
+      const trends = user ? await computeMonthlyTrends(supabase, user.id) : []
+
       // Fetch FX rates for the date range
       const rates = await fetchFxRatesUpTo(supabase, endDateStr)
       setRatesByDate(rates)
@@ -113,6 +118,9 @@ export function MonthlyCategoryTrendsSection() {
       // Add "Total Expenses" as the first option
       setCategories(['Total Expenses', ...uniqueCategories])
       setTransactions(expenseTransactions as TransactionLog[])
+
+      // Preload trends (currently unused in chart, but helps keep behavior consistent with new source)
+      if (trends.length === 0) return
 
       setLoading(false)
     }

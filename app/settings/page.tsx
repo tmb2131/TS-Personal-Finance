@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SettingsForm } from '@/components/settings/settings-form'
 import { AppearanceForm } from '@/components/settings/appearance-form'
+import { ForecastSettingsSection } from '@/components/settings/forecast-settings-section'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -21,6 +22,11 @@ export default async function SettingsPage() {
 
   const defaultCurrency = profile?.default_currency === 'GBP' ? 'GBP' : 'USD'
 
+  const { data: forecastSettings } = await supabase
+    .from('forecast_settings')
+    .select('category, current_year_method, current_month_method, manual_year_forecast, manual_month_forecast')
+    .eq('user_id', user.id)
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div>
@@ -35,6 +41,7 @@ export default async function SettingsPage() {
         initialDefaultCurrency={defaultCurrency}
         serviceAccountEmail={process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? ''}
       />
+      <ForecastSettingsSection initialSettings={forecastSettings ?? []} />
       <AppearanceForm />
     </div>
   )
