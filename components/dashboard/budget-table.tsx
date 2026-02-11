@@ -34,6 +34,11 @@ interface BudgetTableProps {
   initialData?: BudgetTarget[]
 }
 
+type HistoricalSnapshot = {
+  forecast: number
+  annualBudget: number
+}
+
 export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const { currency, fxRate, convertAmount } = useCurrency()
   const [data, setData] = useState<any[]>([])
@@ -46,10 +51,10 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const [incomeSortDirection, setIncomeSortDirection] = useState<SortDirection>('asc')
   const [expensesExpanded, setExpensesExpanded] = useState(false)
   const [expenseFullView, setExpenseFullView] = useState(false)
-  const [historyForecastSpend, setHistoryForecastSpend] = useState<{
-    dayAgo: Record<string, number>
-    weekAgo: Record<string, number>
-    monthAgo: Record<string, number>
+  const [historySnapshots, setHistorySnapshots] = useState<{
+    dayAgo: Record<string, HistoricalSnapshot>
+    weekAgo: Record<string, HistoricalSnapshot>
+    monthAgo: Record<string, HistoricalSnapshot>
   }>({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
 
   // Process data: always use GBP from data; convert to USD with current FX when currency is USD (matches Key Insights)
@@ -147,7 +152,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     fetchForecasts()
   }, [forecastByCategory])
 
-  // Fetch computed historical forecasts for 1d / 1w / 1mo ago for forecast
+  // Fetch computed historical snapshots for 1d / 1w / 1mo ago for the gap
   // evolution columns in full view.
   useEffect(() => {
     if (!expenseFullView) return
@@ -167,7 +172,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
         const params = new URLSearchParams({ dates: dates.join(',') })
         const response = await fetch(`/api/forecast-snapshots?${params}`, { cache: 'no-store' })
         if (!response.ok) {
-          setHistoryForecastSpend({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
+          setHistorySnapshots({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
           return
         }
         const payload: {
@@ -178,25 +183,27 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
         } = await response.json()
 
         const byDate = payload.data ?? {}
-        // Store computed forecast values per category/date for change-in-gap columns:
-        // current Tracking - historical forecast.
-        const buildForecastMap = (dateKey: string) => {
+        // Store computed forecast + budget values per category/date for change-in-gap columns.
+        const buildSnapshotMap = (dateKey: string) => {
           const entries = byDate[dateKey] ?? {}
-          const map: Record<string, number> = {}
+          const map: Record<string, HistoricalSnapshot> = {}
           for (const [category, values] of Object.entries(entries)) {
             if (EXCLUDED.includes(category)) continue
-            map[category] = toNum(values.forecast)
+            map[category] = {
+              forecast: toNum(values.forecast),
+              annualBudget: toNum(values.annualBudget),
+            }
           }
           return map
         }
 
-        setHistoryForecastSpend({
-          dayAgo: buildForecastMap(dayAgoStr),
-          weekAgo: buildForecastMap(weekAgoStr),
-          monthAgo: buildForecastMap(monthAgoStr),
+        setHistorySnapshots({
+          dayAgo: buildSnapshotMap(dayAgoStr),
+          weekAgo: buildSnapshotMap(weekAgoStr),
+          monthAgo: buildSnapshotMap(monthAgoStr),
         })
       } catch {
-        setHistoryForecastSpend({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
+        setHistorySnapshots({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
       }
     }
     fetchHistory()
@@ -828,9 +835,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         </button>
                       </TableHead>
                       <TableHead className="w-16 bg-muted"></TableHead>
-                      <TableHead className="text-right bg-muted whitespace-nowrap">1 day ago</TableHead>
-                      <TableHead className="text-right bg-muted whitespace-nowrap">1 week ago</TableHead>
-                      <TableHead className="text-right bg-muted whitespace-nowrap">1 month ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">Gap change vs 1 day ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">Gap change vs 1 week ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">Gap change vs 1 month ago</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -838,13 +845,21 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       const gap = row.tracking - row.annualBudget
                       const gapPercent = (Math.abs(gap) / maxGap) * 100
                       const isPositive = gap >= 0
-                      const forecastDay = historyForecastSpend.dayAgo[row.category]
-                      const forecastWeek = historyForecastSpend.weekAgo[row.category]
-                      const forecastMonth = historyForecastSpend.monthAgo[row.category]
-                      const changeInGap = (historicalForecastGbp: number | undefined) => {
-                        if (historicalForecastGbp === undefined) return undefined
-                        const historicalInDisplayCurrency = currency === 'USD' ? convertAmount(historicalForecastGbp, 'GBP', fxRate) : historicalForecastGbp
-                        return row.tracking - historicalInDisplayCurrency
+                      const snapshotDay = historySnapshots.dayAgo[row.category]
+                      const snapshotWeek = historySnapshots.weekAgo[row.category]
+                      const snapshotMonth = historySnapshots.monthAgo[row.category]
+                      const changeInGap = (historical: HistoricalSnapshot | undefined) => {
+                        if (!historical) return undefined
+                        const historicalForecast =
+                          currency === 'USD'
+                            ? convertAmount(historical.forecast, 'GBP', fxRate)
+                            : historical.forecast
+                        const historicalBudget =
+                          currency === 'USD'
+                            ? convertAmount(historical.annualBudget, 'GBP', fxRate)
+                            : historical.annualBudget
+                        const historicalGap = historicalForecast - historicalBudget
+                        return gap - historicalGap
                       }
                       const renderChangeInGap = (delta: number | undefined) => {
                         if (delta === undefined || delta === 0) return '–'
@@ -885,9 +900,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">{renderChangeInGap(changeInGap(forecastDay))}</TableCell>
-                          <TableCell className="text-right">{renderChangeInGap(changeInGap(forecastWeek))}</TableCell>
-                          <TableCell className="text-right">{renderChangeInGap(changeInGap(forecastMonth))}</TableCell>
+                          <TableCell className="text-right">{renderChangeInGap(changeInGap(snapshotDay))}</TableCell>
+                          <TableCell className="text-right">{renderChangeInGap(changeInGap(snapshotWeek))}</TableCell>
+                          <TableCell className="text-right">{renderChangeInGap(changeInGap(snapshotMonth))}</TableCell>
                         </TableRow>
                       )
                     })}

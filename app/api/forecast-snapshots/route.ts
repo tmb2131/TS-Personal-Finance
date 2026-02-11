@@ -4,20 +4,13 @@ import { NextResponse } from 'next/server'
 
 const MAX_DATES = 60
 
-const parseDateParams = (value: string | null, all: string[]): string[] => {
+const parseDateParams = (all: string[]): string[] => {
   const values: string[] = []
 
-  if (value) {
-    value
-      .split(',')
-      .map((v) => v.trim())
-      .filter(Boolean)
-      .forEach((v) => values.push(v))
-  }
-
   all
+    .flatMap((v) => v.split(','))
     .map((v) => v.trim())
-    .filter(Boolean)
+    .filter((v) => v.length > 0)
     .forEach((v) => values.push(v))
 
   return Array.from(new Set(values))
@@ -26,7 +19,7 @@ const parseDateParams = (value: string | null, all: string[]): string[] => {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const dates = parseDateParams(searchParams.get('dates'), searchParams.getAll('dates'))
+    const dates = parseDateParams(searchParams.getAll('dates'))
 
     if (dates.length === 0) {
       return NextResponse.json(
@@ -73,4 +66,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: message }, { status })
   }
 }
-
