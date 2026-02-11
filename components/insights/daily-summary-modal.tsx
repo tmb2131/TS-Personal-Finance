@@ -15,12 +15,65 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
-import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts } from '@/lib/forecasting'
-import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, AlertCircle, X, ChevronRight } from 'lucide-react'
+import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts, getDefaultForecastMethods } from '@/lib/forecasting'
+import { isExpenseCategory } from '@/lib/category-filters'
+import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
+import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 const SESSION_KEY = 'findash_daily_summary_shown'
+
+type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
+
+type ForecastSettingsRow = {
+  category: string
+  current_year_method: YearMethod | null
+  manual_year_forecast: number | null
+}
+
+type TransactionForDayRow = {
+  date: string
+  category: string
+  amount_gbp: number | null
+  amount_usd: number | null
+}
+
+function toLocalDateString(value: Date): string {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getDayOfYear(value: Date): number {
+  const start = new Date(value.getFullYear(), 0, 0)
+  const msPerDay = 24 * 60 * 60 * 1000
+  return Math.floor((Number(value) - Number(start)) / msPerDay)
+}
+
+function getDaysInYear(year: number): number {
+  return new Date(year, 1, 29).getMonth() === 1 ? 366 : 365
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function inferSpendDirection(
+  annualBudget: number,
+  ytdYesterday: number,
+  todaySpend: number,
+  fallbackDirection: 1 | -1
+): 1 | -1 {
+  const candidates = [annualBudget, ytdYesterday, todaySpend]
+  for (const value of candidates) {
+    if (Math.abs(value) > 1e-9) return value >= 0 ? 1 : -1
+  }
+  return fallbackDirection
+}
 
 interface ForecastBridgeResponse {
   startDate: string
@@ -62,6 +115,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const [forecastBridge, setForecastBridge] = useState<ForecastBridgeResponse | null>(null)
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
   const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
+  const [forecastSettings, setForecastSettings] = useState<ForecastSettingsRow[]>([])
+  const [todayTransactions, setTodayTransactions] = useState<TransactionForDayRow[]>([])
 
   // Reset state when modal closes
   useEffect(() => {
@@ -72,6 +127,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       setMonthlyTrends([])
       setForecastBridge(null)
       setLastSyncDate(null)
+      setForecastSettings([])
+      setTodayTransactions([])
       return
     }
 
@@ -80,16 +137,19 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       const supabase = createClient()
       
       // Get yesterday's date
-      const yesterday = new Date()
+      const now = new Date()
+      const yesterday = new Date(now)
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = yesterday.toISOString().split('T')[0]
-      const todayStr = new Date().toISOString().split('T')[0]
+      const utcTodayStr = now.toISOString().split('T')[0]
+      const localTodayStr = toLocalDateString(now)
+      const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
 
       try {
-        const [budgetResult, syncResult, bridgeResponse, { data: { user } }] = await Promise.all([
+        const [budgetResult, syncResult, bridgeResponse, settingsResult, todayTxResult, { data: { user } }] = await Promise.all([
           supabase.from('budget_targets').select('*'),
           supabase.from('sync_metadata').select('last_sync_at').single(),
-          fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${todayStr}`)
+          fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${utcTodayStr}`)
             .then(async (r) => {
               if (!r.ok) {
                 const errorData = await r.json().catch(() => ({}))
@@ -100,6 +160,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
               return r.json()
             })
             .catch(() => null),
+          supabase.from('forecast_settings').select('category, current_year_method, manual_year_forecast'),
+          supabase.from('transaction_log').select('date, category, amount_gbp, amount_usd').in('date', todayDateCandidates),
           supabase.auth.getUser(),
         ])
 
@@ -112,6 +174,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
         if (Array.isArray(monthlyResult)) setMonthlyTrends(monthlyResult as MonthlyTrend[])
         if (annualForecasts) setForecastByCategory(annualForecasts)
         if (syncResult.data?.last_sync_at) setLastSyncDate(syncResult.data.last_sync_at)
+        if (Array.isArray(settingsResult.data)) setForecastSettings(settingsResult.data as ForecastSettingsRow[])
+        if (Array.isArray(todayTxResult.data)) setTodayTransactions(todayTxResult.data as TransactionForDayRow[])
         if (bridgeResponse && !bridgeResponse.error) {
           setForecastBridge(bridgeResponse as ForecastBridgeResponse)
         }
@@ -191,6 +255,149 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
     
     return { underBudgetDrivers, overBudgetDrivers }
   }, [forecastBridge, currency, fxRate, convertAmount])
+
+  // Daily forecast-neutral budget: spend amount that leaves next-day forecast gap unchanged.
+  const dailyNeutralInsights = useMemo(() => {
+    if (!forecastByCategory) return null
+
+    const now = new Date()
+    const localTodayStr = toLocalDateString(now)
+    const utcTodayStr = now.toISOString().split('T')[0]
+
+    const txRowsByDate = new Map<string, TransactionForDayRow[]>()
+    todayTransactions.forEach((row) => {
+      const dateKey = String(row.date || '')
+      if (!dateKey) return
+      const list = txRowsByDate.get(dateKey) ?? []
+      list.push(row)
+      txRowsByDate.set(dateKey, list)
+    })
+
+    const effectiveTodayRows =
+      (txRowsByDate.get(localTodayStr)?.length ?? 0) > 0
+        ? txRowsByDate.get(localTodayStr) || []
+        : txRowsByDate.get(utcTodayStr) || []
+
+    const effectiveRate = fxRate > 0 ? fxRate : 1.27
+    const todaySpendByCategory = new Map<string, number>()
+    effectiveTodayRows.forEach((row) => {
+      if (!row.category || !isExpenseCategory(row.category)) return
+      const amountGbp =
+        row.amount_gbp != null
+          ? toNumber(row.amount_gbp)
+          : row.amount_usd != null
+            ? toNumber(row.amount_usd) / effectiveRate
+            : 0
+      if (!Number.isFinite(amountGbp) || amountGbp === 0) return
+      todaySpendByCategory.set(row.category, (todaySpendByCategory.get(row.category) ?? 0) + amountGbp)
+    })
+
+    const settingsByCategory = new Map<string, ForecastSettingsRow>()
+    forecastSettings.forEach((row) => {
+      if (!row.category) return
+      settingsByCategory.set(row.category, row)
+    })
+
+    const dayOfYear = getDayOfYear(now)
+    const daysInYear = getDaysInYear(now.getFullYear())
+
+    const categoryBaseRows = Array.from(forecastByCategory.entries())
+      .filter(([category]) => isExpenseCategory(category))
+      .map(([category, values]) => {
+        const todaySpend = todaySpendByCategory.get(category) ?? 0
+        const ytdYesterday = values.ytd - todaySpend
+        const settingsRow = settingsByCategory.get(category)
+        const method = settingsRow?.current_year_method ?? getDefaultForecastMethods(category).year
+        return {
+          category,
+          annualBudget: values.annualBudget,
+          ytdYesterday,
+          method,
+          manualYearForecast: settingsRow?.manual_year_forecast ?? null,
+          todaySpend,
+        }
+      })
+
+    if (categoryBaseRows.length === 0) return null
+
+    const directionScore = categoryBaseRows.reduce((sum, row) => {
+      const anchor = Math.abs(row.annualBudget) > 1e-9 ? row.annualBudget : row.ytdYesterday
+      if (Math.abs(anchor) <= 1e-9) return sum
+      return sum + Math.sign(anchor) * Math.abs(anchor)
+    }, 0)
+    const globalDirection: 1 | -1 = directionScore > 0 ? 1 : -1
+
+    const categories = categoryBaseRows.map((row) => ({
+      category: row.category,
+      annualBudget: row.annualBudget,
+      ytdYesterday: row.ytdYesterday,
+      method: row.method,
+      manualYearForecast: row.manualYearForecast,
+      spendDirection: inferSpendDirection(
+        row.annualBudget,
+        row.ytdYesterday,
+        row.todaySpend,
+        globalDirection
+      ),
+    }))
+
+    const spendWeightByCategory = new Map<string, number>()
+    let hasPositiveWeights = false
+    categories.forEach((row) => {
+      const todaySpend = (todaySpendByCategory.get(row.category) ?? 0) * row.spendDirection
+      if (todaySpend > 0) {
+        spendWeightByCategory.set(row.category, todaySpend)
+        hasPositiveWeights = true
+      }
+    })
+
+    if (!hasPositiveWeights) {
+      categories.forEach((row) => {
+        const weight = Math.abs(row.annualBudget)
+        if (weight > 0) {
+          spendWeightByCategory.set(row.category, weight)
+          hasPositiveWeights = true
+        }
+      })
+    }
+
+    if (!hasPositiveWeights) {
+      categories.forEach((row) => {
+        const weight = Math.abs(row.ytdYesterday)
+        if (weight > 0) {
+          spendWeightByCategory.set(row.category, weight)
+          hasPositiveWeights = true
+        }
+      })
+    }
+
+    const neutralResult = computeForecastNeutralDailyBudget({
+      dayOfYear,
+      daysInYear,
+      categories,
+      todaySpendByCategory,
+      spendWeightByCategory,
+    })
+
+    const toDisplayCurrency = (value: number) =>
+      currency === 'USD' ? convertAmount(value, 'GBP', fxRate) : value
+
+    const neutralSpend =
+      neutralResult.neutralSpend != null
+        ? Math.max(0, toDisplayCurrency(neutralResult.neutralSpend))
+        : null
+    const usedSpend = toDisplayCurrency(neutralResult.usedSpend)
+    let direction: 'improving' | 'worsening' | 'flat' = 'flat'
+    if (neutralResult.deltaAtUsed < -0.5) direction = 'improving'
+    else if (neutralResult.deltaAtUsed > 0.5) direction = 'worsening'
+
+    return {
+      neutralSpend,
+      usedSpend,
+      usedPercent: neutralResult.usedPercent,
+      direction,
+    }
+  }, [forecastByCategory, forecastSettings, todayTransactions, currency, fxRate, convertAmount])
 
   // Current monthly spend
   const currentMonthlySpend = useMemo(() => {
@@ -345,7 +552,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             {/* Annual Spend & Gap to Budget */}
             <div className="grid grid-cols-2 gap-3">
               <Card>
-                <CardContent className="pt-4 pb-4">
+                <CardContent className="pt-5 md:pt-5 pb-4">
                   <Link
                     href="/#expenses-table"
                     onClick={() => { onOpenChange(false); applyHashAfterNav('/#expenses-table') }}
@@ -377,7 +584,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
               </Card>
 
               <Card>
-                <CardContent className="pt-4 pb-4">
+                <CardContent className="pt-5 md:pt-5 pb-4">
                   <button
                     onClick={() => handleNavigate('/insights#annual-budget')}
                     className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
@@ -398,142 +605,242 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
               </Card>
             </div>
 
-            {/* Change Since Yesterday */}
-            {yesterdayChange !== null && (
-              <Card>
-                <CardContent className="pt-4 pb-4">
-                  <button
-                    onClick={() => handleNavigate('/analysis#forecast-evolution')}
-                    className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">Change Since Yesterday</span>
-                    </div>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                  <div className={cn(
-                    'text-lg font-bold tabular-nums mb-2',
-                    yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
-                  )}>
-                    {yesterdayChange < 0 ? (
-                      <span className="flex items-center gap-1.5">
-                        <TrendingDown className="h-4 w-4" />
-                        Gap improved by {formatCurrency(Math.abs(yesterdayChange))}
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5">
-                        <TrendingUp className="h-4 w-4" />
-                        Gap worsened by {formatCurrency(Math.abs(yesterdayChange))}
-                      </span>
-                    )}
-                  </div>
-                  {(topDrivers.underBudgetDrivers.length > 0 || topDrivers.overBudgetDrivers.length > 0) && (
-                    <div className="space-y-0.5">
-                      {gapToBudget >= 0 ? (
-                        <div className="grid grid-cols-2 gap-3 mb-1.5">
-                          {/* When gap worsened, show Over Budget on left; when gap improved, show Under Budget on left */}
-                          {(() => {
-                            const allDrivers = [
-                              ...topDrivers.overBudgetDrivers,
-                              ...topDrivers.underBudgetDrivers,
-                            ]
-                            const maxDelta = allDrivers.length > 0
-                              ? Math.max(...allDrivers.map((d) => Math.abs(d.delta)), 1)
-                              : 1
-                            return (yesterdayChange !== null && yesterdayChange > 0
-                              ? [topDrivers.overBudgetDrivers, topDrivers.underBudgetDrivers]
-                              : [topDrivers.underBudgetDrivers, topDrivers.overBudgetDrivers]
-                            ).map((drivers, idx) => {
-                              if (drivers.length === 0) return null
-                              const isOverBudget = idx === 0
-                                ? yesterdayChange !== null && yesterdayChange > 0
-                                : yesterdayChange === null || yesterdayChange <= 0
-                              return (
-                                <div key={idx}>
-                                  <div className={cn(
-                                    'text-[10px] font-bold mb-1',
-                                    isOverBudget ? 'text-red-600' : 'text-green-600'
-                                  )}>
-                                    {isOverBudget ? 'Top Drivers of Worsening Gap:' : 'Top Drivers of Improving Gap:'}
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    {drivers.map((driver) => {
-                                      const pct = (Math.abs(driver.delta) / maxDelta) * 100
-                                      return (
-                                        <div key={driver.category} className="flex items-center gap-1.5">
-                                          <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
-                                          <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
-                                            <div
-                                              className={cn('h-full rounded', isOverBudget ? 'bg-red-500' : 'bg-green-500')}
-                                              style={{ width: `${pct}%` }}
-                                            />
-                                          </div>
-                                          <span className={cn(
-                                            'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
-                                            isOverBudget ? 'text-red-600' : 'text-green-600'
-                                          )}>
-                                            {formatCurrency(Math.abs(driver.delta))}
-                                          </span>
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              )
-                            })
-                          })()}
+            {/* Change Since Yesterday + Forecast-Neutral Today */}
+            {(yesterdayChange !== null || dailyNeutralInsights !== null) && (
+              <div className="grid grid-cols-2 gap-3">
+                {yesterdayChange !== null ? (
+                  <Card>
+                    <CardContent className="pt-5 md:pt-5 pb-4">
+                      <button
+                        onClick={() => handleNavigate('/analysis#forecast-evolution')}
+                        className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs font-medium text-muted-foreground">Change Since Yesterday</span>
                         </div>
-                      ) : (
-                        <>
-                          {(() => {
-                            const combined = [...topDrivers.underBudgetDrivers, ...topDrivers.overBudgetDrivers]
-                              .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
-                              .slice(0, 3)
-                            const maxDelta = combined.length > 0
-                              ? Math.max(...combined.map((d) => Math.abs(d.delta)), 1)
-                              : 1
-                            return (
-                              <>
-                                <div className="text-[10px] font-bold text-muted-foreground mb-1.5">Top Drivers:</div>
-                                <div className="space-y-1.5">
-                                  {combined.map((driver) => {
-                                    const pct = (Math.abs(driver.delta) / maxDelta) * 100
-                                    const isWorsening = driver.delta > 0
-                                    return (
-                                      <div key={driver.category} className="flex items-center gap-1.5">
-                                        <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
-                                        <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
-                                          <div
-                                            className={cn('h-full rounded', isWorsening ? 'bg-red-500' : 'bg-green-500')}
-                                            style={{ width: `${pct}%` }}
-                                          />
-                                        </div>
-                                        <span className={cn(
-                                          'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
-                                          isWorsening ? 'text-red-600' : 'text-green-600'
-                                        )}>
-                                          {formatCurrency(Math.abs(driver.delta))}
-                                        </span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                      <div className={cn(
+                        'text-lg font-bold tabular-nums mb-2',
+                        yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
+                      )}>
+                        {yesterdayChange < 0 ? (
+                          <span className="flex items-center gap-1.5">
+                            <TrendingDown className="h-4 w-4" />
+                            Gap improved by {formatCurrency(Math.abs(yesterdayChange))}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <TrendingUp className="h-4 w-4" />
+                            Gap worsened by {formatCurrency(Math.abs(yesterdayChange))}
+                          </span>
+                        )}
+                      </div>
+                      {(topDrivers.underBudgetDrivers.length > 0 || topDrivers.overBudgetDrivers.length > 0) && (
+                        <div className="space-y-0.5">
+                          {gapToBudget >= 0 ? (
+                            <div className="grid grid-cols-2 gap-3 mb-1.5">
+                              {/* When gap worsened, show Over Budget on left; when gap improved, show Under Budget on left */}
+                              {(() => {
+                                const allDrivers = [
+                                  ...topDrivers.overBudgetDrivers,
+                                  ...topDrivers.underBudgetDrivers,
+                                ]
+                                const maxDelta = allDrivers.length > 0
+                                  ? Math.max(...allDrivers.map((d) => Math.abs(d.delta)), 1)
+                                  : 1
+                                return (yesterdayChange !== null && yesterdayChange > 0
+                                  ? [topDrivers.overBudgetDrivers, topDrivers.underBudgetDrivers]
+                                  : [topDrivers.underBudgetDrivers, topDrivers.overBudgetDrivers]
+                                ).map((drivers, idx) => {
+                                  if (drivers.length === 0) return null
+                                  const isOverBudget = idx === 0
+                                    ? yesterdayChange !== null && yesterdayChange > 0
+                                    : yesterdayChange === null || yesterdayChange <= 0
+                                  return (
+                                    <div key={idx}>
+                                      <div className={cn(
+                                        'text-[10px] font-bold mb-1',
+                                        isOverBudget ? 'text-red-600' : 'text-green-600'
+                                      )}>
+                                        {isOverBudget ? 'Top Drivers of Worsening Gap:' : 'Top Drivers of Improving Gap:'}
                                       </div>
-                                    )
-                                  })}
-                                </div>
-                              </>
-                            )
-                          })()}
-                        </>
+                                      <div className="space-y-1.5">
+                                        {drivers.map((driver) => {
+                                          const pct = (Math.abs(driver.delta) / maxDelta) * 100
+                                          return (
+                                            <div key={driver.category} className="flex items-center gap-1.5">
+                                              <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                              <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
+                                                <div
+                                                  className={cn('h-full rounded', isOverBudget ? 'bg-red-500' : 'bg-green-500')}
+                                                  style={{ width: `${pct}%` }}
+                                                />
+                                              </div>
+                                              <span className={cn(
+                                                'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
+                                                isOverBudget ? 'text-red-600' : 'text-green-600'
+                                              )}>
+                                                {formatCurrency(Math.abs(driver.delta))}
+                                              </span>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    </div>
+                                  )
+                                })
+                              })()}
+                            </div>
+                          ) : (
+                            <>
+                              {(() => {
+                                const combined = [...topDrivers.underBudgetDrivers, ...topDrivers.overBudgetDrivers]
+                                  .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+                                  .slice(0, 3)
+                                const maxDelta = combined.length > 0
+                                  ? Math.max(...combined.map((d) => Math.abs(d.delta)), 1)
+                                  : 1
+                                return (
+                                  <>
+                                    <div className="text-[10px] font-bold text-muted-foreground mb-1.5">Top Drivers:</div>
+                                    <div className="space-y-1.5">
+                                      {combined.map((driver) => {
+                                        const pct = (Math.abs(driver.delta) / maxDelta) * 100
+                                        const isWorsening = driver.delta > 0
+                                        return (
+                                          <div key={driver.category} className="flex items-center gap-1.5">
+                                            <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                            <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
+                                              <div
+                                                className={cn('h-full rounded', isWorsening ? 'bg-red-500' : 'bg-green-500')}
+                                                style={{ width: `${pct}%` }}
+                                              />
+                                            </div>
+                                            <span className={cn(
+                                              'text-[10px] font-medium tabular-nums w-11 text-right shrink-0',
+                                              isWorsening ? 'text-red-600' : 'text-green-600'
+                                            )}>
+                                              {formatCurrency(Math.abs(driver.delta))}
+                                            </span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </>
+                                )
+                              })()}
+                            </>
+                          )}
+                        </div>
                       )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div />
+                )}
+
+                <Card>
+                  <CardContent className="pt-5 md:pt-5 pb-4">
+                    <button
+                      onClick={() => handleNavigate('/analysis#forecast-evolution')}
+                      className="flex items-center justify-between w-full gap-1.5 mb-1.5 group hover:opacity-70 transition-opacity"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground">Forecast-Neutral Today</span>
+                      </div>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                    {dailyNeutralInsights?.neutralSpend != null ? (
+                      <>
+                        {(() => {
+                          const percentRaw = dailyNeutralInsights.usedPercent ?? 0
+                          const percentClamped = Math.min(Math.max(percentRaw, 0), 100)
+                          const size = 86
+                          const stroke = 10
+                          const radius = (size - stroke) / 2
+                          const circumference = 2 * Math.PI * radius
+                          const dash = (percentClamped / 100) * circumference
+                          const usageColor =
+                            percentRaw < 85 ? 'text-green-500' : percentRaw <= 100 ? 'text-amber-500' : 'text-red-500'
+                          const ringStroke =
+                            percentRaw < 85 ? '#22c55e' : percentRaw <= 100 ? '#f59e0b' : '#ef4444'
+
+                          return (
+                            <div className="mt-1 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-xl font-bold tabular-nums">
+                                  {formatCurrency(dailyNeutralInsights.neutralSpend)}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                                  Used {formatCurrency(dailyNeutralInsights.usedSpend)}
+                                </div>
+                                <div className={cn('text-[10px] font-semibold mt-0.5', usageColor)}>
+                                  {percentRaw.toFixed(Math.abs(percentRaw) >= 100 ? 0 : 1)}% of neutral
+                                </div>
+                              </div>
+                              <div className="shrink-0">
+                                <div className="relative" style={{ width: size, height: size }}>
+                                  <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+                                    <circle
+                                      cx={size / 2}
+                                      cy={size / 2}
+                                      r={radius}
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth={stroke}
+                                      className="text-muted/35"
+                                    />
+                                    <circle
+                                      cx={size / 2}
+                                      cy={size / 2}
+                                      r={radius}
+                                      fill="none"
+                                      stroke={ringStroke}
+                                      strokeWidth={stroke}
+                                      strokeLinecap="round"
+                                      strokeDasharray={`${dash} ${circumference - dash}`}
+                                    />
+                                  </svg>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className={cn('text-xs font-semibold tabular-nums', usageColor)}>
+                                      {Math.round(percentRaw)}%
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                        <div className={cn(
+                          'text-[10px] font-medium mt-0.5',
+                          dailyNeutralInsights.direction === 'improving'
+                            ? 'text-green-600'
+                            : dailyNeutralInsights.direction === 'worsening'
+                              ? 'text-red-600'
+                              : 'text-muted-foreground'
+                        )}>
+                          {dailyNeutralInsights.direction === 'improving'
+                            ? 'Projected next-day forecast: improving'
+                            : dailyNeutralInsights.direction === 'worsening'
+                              ? 'Projected next-day forecast: worsening'
+                              : 'Projected next-day forecast: flat'}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">Not enough data</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             {/* Monthly Spend & 3M Comparison */}
             <div className="grid grid-cols-2 gap-3">
               <Card>
-                <CardContent className="pt-4 pb-4">
+                <CardContent className="pt-5 md:pt-5 pb-4">
                   <Link
                     href="/#monthly-trends"
                     onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
@@ -552,7 +859,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
               </Card>
 
               <Card>
-                <CardContent className="pt-4 pb-4">
+                <CardContent className="pt-5 md:pt-5 pb-4">
                   <Link
                     href="/#monthly-trends"
                     onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
@@ -586,7 +893,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             {/* Monthly Spend Drivers */}
             {(monthlyDrivers.spendingMore.length > 0 || monthlyDrivers.spendingLess.length > 0) && (
               <Card>
-                <CardContent className="pt-4 pb-4">
+                <CardContent className="pt-5 md:pt-5 pb-4">
                   <Link
                     href="/#monthly-trends"
                     onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
