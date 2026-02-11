@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
+import { InsightsNavigation } from '@/components/insights/insights-navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
@@ -726,81 +727,82 @@ export function KeyInsights() {
 
   return (
     <div className="space-y-8">
-      {/* Executive Summary */}
-      <Card id="executive-summary" className="border-2 scroll-mt-24">
-        <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
-          <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance — click a card to jump to the section</p>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className={isMobile
-            ? 'flex gap-4 overflow-x-auto pt-2 pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
-            : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
-          }>
-            {/* Net Worth Summary — clickable to scroll to section */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('net-worth')}
-              className={cn(
-                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
-                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-                isMobile && 'min-w-[85%] max-w-[85%] snap-center'
-              )}
-              aria-label="Net worth summary, jump to Net Worth section"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-semibold text-sm uppercase tracking-wide">Net Worth</h3>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">
-                    Current Value {hasTrustData && <span className="text-[11px]">(Trust excluded)</span>}
-                  </p>
-                  <p className="text-2xl font-bold tabular-nums">{formatCurrencyLarge(netWorthInsights.currentTotal)}</p>
-                </div>
-                <div className="space-y-1 pt-2 border-t">
+      <div className="space-y-2">
+        {/* Executive Summary */}
+        <Card id="executive-summary" className="border-2 scroll-mt-24">
+          <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
+            <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance — click a card to jump to the section</p>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className={isMobile
+              ? 'flex gap-4 overflow-x-auto pt-2 pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
+              : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
+            }>
+              {/* Net Worth Summary — clickable to scroll to section */}
+              <button
+                type="button"
+                onClick={() => scrollToSection('net-worth')}
+                className={cn(
+                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                  isMobile && 'min-w-[85%] max-w-[85%] snap-center'
+                )}
+                aria-label="Net worth summary, jump to Net Worth section"
+              >
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {netWorthInsights.vsLastYear > 0 ? (
-                      <>
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-semibold text-green-600">
-                          +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                        <span className="text-sm font-semibold text-red-600">
-                          {formatCurrencyLarge(netWorthInsights.vsLastYear)}
-                        </span>
-                      </>
-                    )}
+                    <DollarSign className="h-5 w-5 text-blue-600" />
+                    <h3 className="font-semibold text-sm uppercase tracking-wide">Net Worth</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-medium ${netWorthInsights.vsLastYear > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatPercent(netWorthInsights.vsLastYearPercent)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">vs year-end {previousYear}</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                </div>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Current Value {hasTrustData && <span className="text-[11px]">(Trust excluded)</span>}
+                    </p>
+                    <p className="text-2xl font-bold tabular-nums">{formatCurrencyLarge(netWorthInsights.currentTotal)}</p>
+                  </div>
+                  <div className="space-y-1 pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      {netWorthInsights.vsLastYear > 0 ? (
+                        <>
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-semibold text-green-600">
+                            +{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <TrendingDown className="h-4 w-4 text-red-600" />
+                          <span className="text-sm font-semibold text-red-600">
+                            {formatCurrencyLarge(netWorthInsights.vsLastYear)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium ${netWorthInsights.vsLastYear > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatPercent(netWorthInsights.vsLastYearPercent)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">vs year-end {previousYear}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
+              </button>
 
-            {/* Annual Budget Summary — clickable to scroll to section */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('annual-budget')}
-              className={cn(
-                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
-                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-                isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
-              )}
-              aria-label="Annual budget summary, jump to Annual Budget section"
-            >
+              {/* Annual Budget Summary — clickable to scroll to section */}
+              <button
+                type="button"
+                onClick={() => scrollToSection('annual-budget')}
+                className={cn(
+                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                  isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+                )}
+                aria-label="Annual budget summary, jump to Annual Budget section"
+              >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -842,19 +844,19 @@ export function KeyInsights() {
                   </p>
                 </div>
               </div>
-            </button>
+              </button>
 
-            {/* Annual Spend Summary — clickable to scroll to section */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('annual-spend')}
-              className={cn(
-                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
-                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-                isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
-              )}
-              aria-label="Annual spend summary, jump to Annual Spend section"
-            >
+              {/* Annual Spend Summary — clickable to scroll to section */}
+              <button
+                type="button"
+                onClick={() => scrollToSection('annual-spend')}
+                className={cn(
+                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                  isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+                )}
+                aria-label="Annual spend summary, jump to Annual Spend section"
+              >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
@@ -896,19 +898,19 @@ export function KeyInsights() {
                   </p>
                 </div>
               </div>
-            </button>
+              </button>
 
-            {/* Monthly Spend Summary — clickable to scroll to section */}
-            <button
-              type="button"
-              onClick={() => scrollToSection('monthly-spend')}
-              className={cn(
-                'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
-                'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
-                isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
-              )}
-              aria-label="Monthly spend summary, jump to Monthly Spend section"
-            >
+              {/* Monthly Spend Summary — clickable to scroll to section */}
+              <button
+                type="button"
+                onClick={() => scrollToSection('monthly-spend')}
+                className={cn(
+                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                  isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+                )}
+                aria-label="Monthly spend summary, jump to Monthly Spend section"
+              >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -950,10 +952,16 @@ export function KeyInsights() {
                   </p>
                 </div>
               </div>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Jump to section</p>
+          <InsightsNavigation />
+        </div>
+      </div>
 
       {/* Net Worth Section */}
       <Card id="net-worth" className="scroll-mt-24">

@@ -1,10 +1,9 @@
 'use client'
 
-import { LayoutDashboard, Wallet, Target, Calendar, TrendingUp } from 'lucide-react'
+import { Wallet, Target, Calendar, TrendingUp } from 'lucide-react'
 import { SectionNavigation, type SectionNavigationItem } from '@/components/ui/section-navigation'
 
 const navigationItems: SectionNavigationItem[] = [
-  { id: 'executive-summary', label: 'Executive Summary', labelShort: 'Summary', icon: LayoutDashboard },
   { id: 'net-worth', label: 'Net Worth', icon: Wallet },
   { id: 'annual-budget', label: 'Annual Budget', labelShort: 'Budget', icon: Target },
   { id: 'annual-spend', label: 'Annual Spend', labelShort: 'Annual', icon: Calendar },
@@ -15,7 +14,7 @@ export function InsightsNavigation() {
   return (
     <SectionNavigation
       items={navigationItems}
-      containerClassName="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-5"
+      containerClassName="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-4"
     />
   )
 }
