@@ -6,6 +6,7 @@ import { DummyDataMessage } from '@/components/insights/dummy-data-message'
 import { AutoSyncOnMount } from '@/components/insights/auto-sync-on-mount'
 import { DailySummaryOnMount } from '@/components/insights/daily-summary-on-mount'
 import { InsightsHashScroll } from '@/components/insights/insights-hash-scroll'
+import { InsightsNavigation } from '@/components/insights/insights-navigation'
 
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
@@ -40,6 +41,10 @@ export default async function InsightsPage() {
         <p className="text-sm md:text-base text-muted-foreground">
           Quick overview of your financial performance and trends
         </p>
+      </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Jump to section</p>
+        <InsightsNavigation />
       </div>
       <KeyInsights />
     </div>

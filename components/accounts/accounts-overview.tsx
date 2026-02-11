@@ -17,16 +17,11 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { AccountBalance } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { AlertCircle, Maximize2, Pencil } from 'lucide-react'
+import { AlertCircle, Pencil } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { EditAccountDialog } from '@/components/accounts/edit-account-dialog'
+import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
+import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 
 const CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Taconic', 'House', 'Trust']
 
@@ -598,82 +593,22 @@ export function AccountsOverview() {
       <Card className="hidden md:block">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Accounts</CardTitle>
-          <Dialog open={fullTableOpen} onOpenChange={setFullTableOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Maximize2 className="h-4 w-4 mr-2" />
-                View Full Table
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>All Accounts</DialogTitle>
-              </DialogHeader>
-              <div className="mt-4 [&_table]:text-[11px] [&_th]:h-7 [&_td]:h-7 [&_th]:py-0.5 [&_td]:py-0.5 [&_th]:px-2 [&_td]:px-2 [&_th]:text-[11px] [&_td]:tabular-nums">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted">
-                      <TableHead className="font-bold">Category</TableHead>
-                      <TableHead>Institution</TableHead>
-                      <TableHead>Account Name</TableHead>
-                      <TableHead>Currency</TableHead>
-                      <TableHead className="text-right font-bold">Balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow className="bg-muted/70 font-semibold">
-                      <TableCell>Grand Total</TableCell>
-                      <TableCell colSpan={3}></TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatCurrency(totalNetWorth)}
-                      </TableCell>
-                    </TableRow>
-                    {groupedByCategory.map((group) => (
-                      <Fragment key={`dialog-${group.category}`}>
-                        {group.accounts.map((account) => {
-                          const convertedBalance = convertAmount(
-                            account.balance_total_local,
-                            account.currency,
-                            fxRate
-                          )
-                          return (
-                            <TableRow key={`dialog-${account.institution}-${account.account_name}`}>
-                              <TableCell className="font-medium">{account.category}</TableCell>
-                              <TableCell>{account.institution}</TableCell>
-                              <TableCell>{account.account_name}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="text-[10px] px-1 py-0">
-                                  {account.currency}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right font-medium tabular-nums">
-                                {formatCurrency(convertedBalance)}
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                        <TableRow className="bg-muted/50">
-                          <TableCell colSpan={4} className="font-semibold">
-                            {group.category} Subtotal
-                          </TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums">
-                            {formatCurrency(group.subtotal)}
-                          </TableCell>
-                        </TableRow>
-                      </Fragment>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <FullTableViewToggle
+            fullView={fullTableOpen}
+            onToggle={() => setFullTableOpen((v) => !v)}
+            aria-label="Toggle full table view for Accounts"
+          />
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className={`relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}>
+          <FullTableViewWrapper
+            fullView={fullTableOpen}
+            onClose={() => setFullTableOpen(false)}
+            className={`relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}
+          >
             <table className="w-full caption-bottom text-sm">
               <TableHeader>
                 <TableRow className="border-b bg-muted">
-                  <TableHead className="sticky top-0 z-20 bg-muted">Category</TableHead>
+                  <TableHead className="sticky left-0 top-0 z-30 bg-muted">Category</TableHead>
                   <TableHead className="sticky top-0 z-20 bg-muted">Institution</TableHead>
                   <TableHead className="sticky top-0 z-20 bg-muted">Account Name</TableHead>
                   <TableHead className="sticky top-0 z-20 bg-muted">Currency</TableHead>
@@ -694,7 +629,9 @@ export function AccountsOverview() {
                       )
                       return (
                         <TableRow key={`${account.institution}-${account.account_name}`}>
-                          <TableCell className="font-medium">{account.category}</TableCell>
+                          <TableCell className="sticky left-0 z-20 bg-background font-medium">
+                            {account.category}
+                          </TableCell>
                           <TableCell>{account.institution}</TableCell>
                           <TableCell>{account.account_name}</TableCell>
                           <TableCell>
@@ -730,7 +667,7 @@ export function AccountsOverview() {
                       )
                     })}
                     <TableRow key={`subtotal-${group.category}`} className="bg-muted/50">
-                      <TableCell colSpan={4} className="font-semibold">
+                      <TableCell colSpan={4} className="sticky left-0 z-20 bg-muted/50 font-semibold">
                         {group.category} Subtotal
                       </TableCell>
                       <TableCell className="text-right font-semibold">
@@ -753,7 +690,7 @@ export function AccountsOverview() {
                 ))}
               </TableBody>
             </table>
-          </div>
+          </FullTableViewWrapper>
         </CardContent>
       </Card>
 

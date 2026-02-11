@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
@@ -44,6 +45,8 @@ export function KeyInsights() {
   const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAnnualSpendBreakdownMobile, setShowAnnualSpendBreakdownMobile] = useState(false)
+  const [showMonthlySpendBreakdownMobile, setShowMonthlySpendBreakdownMobile] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -102,6 +105,9 @@ export function KeyInsights() {
   const expenseCategories = useMemo(() => {
     return ['Income', 'Gift Money', EXCLUDED_CATEGORY]
   }, [])
+
+  const showAnnualSpendBreakdown = !isMobile || showAnnualSpendBreakdownMobile
+  const showMonthlySpendBreakdown = !isMobile || showMonthlySpendBreakdownMobile
 
   // Same exclusions as Daily Summary modal for "annual spend" (est. spend from budget forecast)
   const EXCLUDED_ANNUAL_SPEND = ['Income', 'Gift Money', 'Other Income', 'Excluded']
@@ -1434,24 +1440,36 @@ export function KeyInsights() {
       {/* Annual Spend Section */}
       <Card id="annual-spend" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
-          <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div>
               <CardTitle className="text-xl">Annual Spend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Est. this year (<span className="font-semibold">{formatCurrencyLarge(annualSpendInsights.currentYearEstDisplay)}</span>) vs 4-year average.
               </p>
             </div>
-            <Link
-              href="/#annual-trends"
-              className={cn(
-                'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
-                'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+            <div className="flex items-center gap-2">
+              <Link
+                href="/#annual-trends"
+                className={cn(
+                  'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
+                  'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                )}
+                aria-label="View Annual Trends on Dashboard"
+              >
+                Annual Trends
+                <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              </Link>
+              {isMobile && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAnnualSpendBreakdownMobile((v) => !v)}
+                >
+                  {showAnnualSpendBreakdownMobile ? 'Hide details' : 'Show details'}
+                </Button>
               )}
-              aria-label="View Annual Trends on Dashboard"
-            >
-              Annual Trends
-              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
@@ -1491,8 +1509,8 @@ export function KeyInsights() {
             </div>
           </div>
 
-          {/* Order tables dynamically: if spending less overall, show "Spending less" on left */}
-          <div className="grid md:grid-cols-2 gap-6">
+          {showAnnualSpendBreakdown ? (
+            <div className="grid md:grid-cols-2 gap-6">
             {/* Spending less vs average — show first if overall spending is less */}
             {annualSpendInsights.vsFourYearAvg > 0 ? (
               <div>
@@ -1633,31 +1651,50 @@ export function KeyInsights() {
                 )}
               </div>
             )}
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed bg-muted/20 p-3">
+              <p className="text-sm text-muted-foreground">
+                Showing summary only. Tap <span className="font-medium text-foreground">Show details</span> to view category-level annual spend drivers.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Monthly Spend Section */}
       <Card id="monthly-spend" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
-          <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
+          <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div>
               <CardTitle className="text-xl">Monthly Spend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 This month (<span className="font-semibold">{formatCurrencyLarge(monthlySpendInsights.currentMonthEstDisplay)}</span>) vs trailing 12‑month average.
               </p>
             </div>
-            <Link
-              href="/#monthly-trends"
-              className={cn(
-                'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
-                'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+            <div className="flex items-center gap-2">
+              <Link
+                href="/#monthly-trends"
+                className={cn(
+                  'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
+                  'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                )}
+                aria-label="View Monthly Trends on Dashboard"
+              >
+                Monthly Trends
+                <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              </Link>
+              {isMobile && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMonthlySpendBreakdownMobile((v) => !v)}
+                >
+                  {showMonthlySpendBreakdownMobile ? 'Hide details' : 'Show details'}
+                </Button>
               )}
-              aria-label="View Monthly Trends on Dashboard"
-            >
-              Monthly Trends
-              <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-4 space-y-4">
@@ -1699,7 +1736,8 @@ export function KeyInsights() {
 
           {/* Categories driving delta — same style as Annual Budget (shared scale) */}
           {/* Order tables dynamically: if spending less overall, show "Spending less" on left */}
-          <div className="grid md:grid-cols-2 gap-6">
+          {showMonthlySpendBreakdown ? (
+            <div className="grid md:grid-cols-2 gap-6">
             {/* Spending less vs average — show first if overall spending is less */}
             {monthlySpendInsights.vsTtmAvg > 0 ? (
               <div>
@@ -1840,7 +1878,14 @@ export function KeyInsights() {
                 )}
               </div>
             )}
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed bg-muted/20 p-3">
+              <p className="text-sm text-muted-foreground">
+                Showing summary only. Tap <span className="font-medium text-foreground">Show details</span> to view category-level monthly spend drivers.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

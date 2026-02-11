@@ -15,11 +15,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (isLogin) {
     return (
       <>
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <div className="flex min-h-screen flex-col bg-background">
           <LoginHeader />
-          <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex flex-1 flex-col items-center justify-center px-4 py-8"
+          >
             {children}
-          </div>
+          </main>
         </div>
         <Toaster position="top-right" richColors />
       </>
@@ -28,11 +35,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="flex h-screen overflow-hidden">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      <div className="flex h-dvh overflow-hidden bg-background">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />
-          <main className="main-content flex-1 overflow-y-auto p-4 md:p-6 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-6">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="main-content flex-1 overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:p-6 md:pb-6"
+          >
             {children}
           </main>
         </div>

@@ -201,10 +201,10 @@ export default function DebtOverview() {
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <ListIcon className="h-4 w-4 mr-2" />
-              View Details
+              {isMobile ? 'Details' : 'View Details'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-h-[80vh] w-[95vw] max-w-3xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Debt Line Items</DialogTitle>
             </DialogHeader>
@@ -214,10 +214,10 @@ export default function DebtOverview() {
                   No debt items found
                 </p>
               ) : (
-                <Table>
+                <Table className="[&_th]:text-[11px] [&_td]:text-[13px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Type</TableHead>
+                      <TableHead className="sticky left-0 z-10 bg-background">Type</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Purpose</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
@@ -233,7 +233,7 @@ export default function DebtOverview() {
                           : item.amount_gbp) ?? 0
                       return (
                         <TableRow key={index}>
-                          <TableCell className="font-medium">
+                          <TableCell className="sticky left-0 z-10 bg-background font-medium">
                             {item.type}
                           </TableCell>
                           <TableCell>{item.name}</TableCell>

@@ -7,6 +7,7 @@ import { BudgetTableWrapper } from '@/components/dashboard/budget-table-wrapper'
 import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-table-wrapper'
 import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
 import { DashboardAtAGlance } from '@/components/dashboard/dashboard-at-a-glance'
+import { DashboardNavigation } from '@/components/dashboard/dashboard-navigation'
 import { DashboardBackToTop } from '@/components/dashboard/dashboard-back-to-top'
 import { DashboardHashScroll } from '@/components/dashboard/dashboard-hash-scroll'
 import {
@@ -40,6 +41,11 @@ export default async function DashboardPage() {
 
       <div className="max-md:order-1">
         <DashboardAtAGlance />
+      </div>
+
+      <div className="max-md:order-2 space-y-2">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Jump to section</p>
+        <DashboardNavigation />
       </div>
 
       {/* Section 1: Net Worth + Income vs Expenses */}

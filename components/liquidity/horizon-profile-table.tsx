@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { AlertCircle, ListIcon } from 'lucide-react'
 
 const HORIZON_COLORS: Record<string, string> = {
@@ -39,6 +40,7 @@ interface HorizonGroup {
 
 export default function HorizonProfileTable() {
   const { currency, convertAmount, fxRate } = useCurrency()
+  const isMobile = useIsMobile()
   const [loading, setLoading] = useState(true)
   const [groups, setGroups] = useState<HorizonGroup[]>([])
   const [grandTotal, setGrandTotal] = useState(0)
@@ -153,10 +155,10 @@ export default function HorizonProfileTable() {
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <ListIcon className="h-4 w-4 mr-2" />
-              View Details
+              {isMobile ? 'Details' : 'View Details'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-h-[80vh] w-[95vw] max-w-3xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Accounts by Horizon Profile</DialogTitle>
             </DialogHeader>
@@ -173,10 +175,10 @@ export default function HorizonProfileTable() {
                       {formatCurrency(group.total)}
                     </span>
                   </div>
-                  <Table>
+                  <Table className="[&_th]:text-[11px] [&_td]:text-[13px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Institution</TableHead>
+                        <TableHead className="sticky left-0 z-10 bg-background">Institution</TableHead>
                         <TableHead>Account</TableHead>
                         <TableHead>Currency</TableHead>
                         <TableHead className="text-right">Balance</TableHead>
@@ -197,7 +199,9 @@ export default function HorizonProfileTable() {
                           )
                           return (
                             <TableRow key={idx}>
-                              <TableCell className="font-medium">{account.institution}</TableCell>
+                              <TableCell className="sticky left-0 z-10 bg-background font-medium">
+                                {account.institution}
+                              </TableCell>
                               <TableCell>{account.account_name}</TableCell>
                               <TableCell>
                                 <Badge variant="outline">{account.currency}</Badge>
@@ -217,48 +221,89 @@ export default function HorizonProfileTable() {
         </Dialog>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Horizon Profile</TableHead>
-              <TableHead className="text-right"># Accounts</TableHead>
-              <TableHead className="text-right">Total Value</TableHead>
-              <TableHead className="text-right">% of Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {groups.map((group) => (
-              <TableRow key={group.profile}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: HORIZON_COLORS[group.profile] || HORIZON_COLORS.Unknown }}
-                    />
-                    <span className="font-medium">{group.profile}</span>
+        {isMobile ? (
+          <div className="space-y-2">
+            {groups.map((group) => {
+              const pct = grandTotal > 0 ? (group.total / grandTotal) * 100 : 0
+              return (
+                <div key={group.profile} className="rounded-lg border p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: HORIZON_COLORS[group.profile] || HORIZON_COLORS.Unknown }}
+                      />
+                      <span className="text-sm font-medium">{group.profile}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{group.accounts.length} accounts</span>
                   </div>
-                </TableCell>
-                <TableCell className="text-right">{group.accounts.length}</TableCell>
-                <TableCell className="text-right tabular-nums font-medium">
-                  {formatCurrency(group.total)}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold tabular-nums">{formatCurrency(group.total)}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">{pct.toFixed(1)}%</span>
+                  </div>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-muted">
+                    <div
+                      className="h-full rounded"
+                      style={{
+                        width: `${Math.min(pct, 100)}%`,
+                        backgroundColor: HORIZON_COLORS[group.profile] || HORIZON_COLORS.Unknown,
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+            <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">Total</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Horizon Profile</TableHead>
+                <TableHead className="text-right"># Accounts</TableHead>
+                <TableHead className="text-right">Total Value</TableHead>
+                <TableHead className="text-right">% of Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {groups.map((group) => (
+                <TableRow key={group.profile}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: HORIZON_COLORS[group.profile] || HORIZON_COLORS.Unknown }}
+                      />
+                      <span className="font-medium">{group.profile}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">{group.accounts.length}</TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {formatCurrency(group.total)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {grandTotal > 0 ? `${((group.total / grandTotal) * 100).toFixed(1)}%` : '–'}
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="bg-muted/50 font-semibold">
+                <TableCell>Total</TableCell>
+                <TableCell className="text-right">
+                  {groups.reduce((sum, g) => sum + g.accounts.length, 0)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {grandTotal > 0 ? `${((group.total / grandTotal) * 100).toFixed(1)}%` : '–'}
+                  {formatCurrency(grandTotal)}
                 </TableCell>
+                <TableCell className="text-right">100%</TableCell>
               </TableRow>
-            ))}
-            <TableRow className="bg-muted/50 font-semibold">
-              <TableCell>Total</TableCell>
-              <TableCell className="text-right">
-                {groups.reduce((sum, g) => sum + g.accounts.length, 0)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatCurrency(grandTotal)}
-              </TableCell>
-              <TableCell className="text-right">100%</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   )

@@ -385,13 +385,14 @@ export function TransactionAnalysis({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Filters */}
-        <div className="flex flex-wrap gap-4 items-end">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Period Type</label>
+            <label htmlFor="period-type-select" className="text-sm font-medium">Period Type</label>
             <select
+              id="period-type-select"
               value={periodType}
               onChange={(e) => setPeriodType(e.target.value as 'YTD' | 'MTD')}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <option value="YTD">YTD</option>
               <option value="MTD">MTD</option>
@@ -399,11 +400,12 @@ export function TransactionAnalysis({
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Year</label>
+            <label htmlFor="year-select" className="text-sm font-medium">Year</label>
             <select
+              id="year-select"
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {availableYears.map((year) => (
                 <option key={year} value={year}>
@@ -415,11 +417,12 @@ export function TransactionAnalysis({
 
           {periodType === 'MTD' && (
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Month</label>
+              <label htmlFor="month-select" className="text-sm font-medium">Month</label>
               <select
+                id="month-select"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                   <option key={month} value={month}>
@@ -431,11 +434,12 @@ export function TransactionAnalysis({
           )}
 
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Category</label>
+            <label htmlFor="category-select" className="text-sm font-medium">Category</label>
             <select
+              id="category-select"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm min-w-[200px]"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:min-w-[200px]"
             >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
@@ -503,10 +507,10 @@ export function TransactionAnalysis({
               onClose={() => setFullView(false)}
               className="hidden md:block relative max-h-[600px] overflow-auto border rounded-md"
             >
-              <table className="w-full caption-bottom text-[13px] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium">
+              <table className="w-full caption-bottom text-[13px] [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_th]:py-2 [&_td]:py-2">
                 <TableHeader>
                   <TableRow className="border-b bg-muted">
-                    <TableHead className="sticky top-0 z-20 bg-muted">Counterparty</TableHead>
+                    <TableHead className="sticky left-0 top-0 z-30 bg-muted">Counterparty</TableHead>
                     <TableHead className="sticky top-0 z-20 text-right bg-muted">Amount</TableHead>
                     <TableHead className="sticky top-0 z-20 text-right bg-muted">Transactions</TableHead>
                     <TableHead className="sticky top-0 z-20 text-right bg-muted">Cumulative</TableHead>
@@ -525,7 +529,7 @@ export function TransactionAnalysis({
                           tx.isTop80Percent && 'bg-yellow-50 dark:bg-yellow-950/20'
                         )}
                       >
-                        <TableCell className="font-medium">
+                        <TableCell className="sticky left-0 z-20 bg-background font-medium">
                           {tx.counterparty}
                           {tx.isTop80Percent && (
                             <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400 font-semibold">

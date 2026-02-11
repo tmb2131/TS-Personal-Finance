@@ -6,10 +6,12 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { LineChart, Receipt, Calendar, CalendarDays, ChevronRight } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { HistoricalNetWorth } from '@/lib/types'
 import { computeAnnualForecasts } from '@/lib/forecasting'
 import { isExcludedCategory } from '@/lib/category-filters'
 import { cn } from '@/utils/cn'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 
 function scrollToSection(id: string) {
   const el = document.getElementById(id)
@@ -41,6 +43,8 @@ const SECTIONS_BASE: Section[] = [
 
 export function DashboardAtAGlance() {
   const { currency, fxRate, convertAmount } = useCurrency()
+  const isMobile = useIsMobile()
+  const [showTrendShortcuts, setShowTrendShortcuts] = useState(false)
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<{
     netWorth: number | null
@@ -142,17 +146,45 @@ export function DashboardAtAGlance() {
       }
       return <span className="text-sm text-muted-foreground">—</span>
     }
+    if (sectionId === 'income-vs-expenses') {
+      if (loading) return <Skeleton className="h-6 w-28" />
+      if (data.incomeTotal != null && data.expensesTotal != null) {
+        return (
+          <span className="text-2xl font-bold tabular-nums">
+            {symbol}{formatCompact(data.incomeTotal - data.expensesTotal)}
+          </span>
+        )
+      }
+      return <span className="text-sm text-muted-foreground">—</span>
+    }
     if (sectionId === 'annual-trends' || sectionId === 'monthly-trends') {
       return <span className="text-sm text-muted-foreground">View section</span>
     }
     return null
   }
 
+  const primarySections = [
+    { id: 'net-worth-chart', label: data.hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
+    { id: 'budget-table', label: 'Budget (Net Income)', labelShort: 'Budget', icon: Receipt },
+    { id: 'income-vs-expenses', label: 'Income vs Expenses', labelShort: 'Cash Flow', icon: Receipt },
+  ]
+
+  const trendSections = SECTIONS_BASE.filter((section) => section.id !== 'budget-table')
+
+  const sectionsToRender = isMobile
+    ? [...primarySections, ...(showTrendShortcuts ? trendSections : [])]
+    : [
+        { id: 'net-worth-chart', label: data.hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
+        ...SECTIONS_BASE,
+      ]
+
   return (
     <Card className="border-2">
       <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
         <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance — click a card to jump to the section</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Key takeaways at a glance. On mobile, detailed trend shortcuts are optional.
+        </p>
       </CardHeader>
       <CardContent className="pt-6">
         <div className={cn(
@@ -160,16 +192,13 @@ export function DashboardAtAGlance() {
           'md:grid-cols-2 lg:grid-cols-4',
           'max-md:flex max-md:gap-4 max-md:overflow-x-auto max-md:pb-2 max-md:snap-x max-md:snap-mandatory max-md:-mx-1 max-md:px-1'
         )}>
-          {[
-            { id: 'net-worth-chart', label: data.hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
-            ...SECTIONS_BASE
-          ].map((section) => {
+          {sectionsToRender.map((section) => {
             const Icon = section.icon
             return (
               <button
                 key={section.id}
                 type="button"
-                onClick={() => scrollToSection(section.id)}
+                onClick={() => scrollToSection(section.id === 'income-vs-expenses' ? 'net-worth-chart' : section.id)}
                 className={cn(
                   'flex flex-col items-start gap-2 p-4 rounded-lg border bg-card text-left w-full min-w-0 transition-all',
                   'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
@@ -195,11 +224,30 @@ export function DashboardAtAGlance() {
                 </div>
                 <div className="w-full">
                   {getCardContent(section.id)}
+                  {section.id === 'income-vs-expenses' && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {loading || data.incomeTotal == null || data.expensesTotal == null
+                        ? ''
+                        : `${symbol}${formatCompact(data.incomeTotal)} income vs ${symbol}${formatCompact(data.expensesTotal)} expenses`}
+                    </p>
+                  )}
                 </div>
               </button>
             )
           })}
         </div>
+        {isMobile && (
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTrendShortcuts((v) => !v)}
+            >
+              {showTrendShortcuts ? 'Hide trend shortcuts' : 'Show trend shortcuts'}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

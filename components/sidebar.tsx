@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,6 +26,11 @@ const allNavigation = [
   { name: 'Import', href: '/import', icon: FileUp },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
+
+function isRouteActive(pathname: string, href: string) {
+  if (href === '/') return pathname === '/'
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -56,22 +61,29 @@ export function Sidebar() {
     // so the sidebar always opens when entering the app
   }
 
+  const openMobileAssistant = () => {
+    setMoreOpen(false)
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event('findash:open-chat-widget'))
+    }, 120)
+  }
+
   return (
     <>
       {/* Desktop Sidebar - Left */}
       <div className={cn(
-        'hidden md:flex h-full flex-col border-r bg-background transition-all duration-300',
+        'hidden h-full flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:flex transition-all duration-300',
         collapsed ? 'w-20' : 'w-64'
       )}>
         <div className="flex h-16 items-center justify-between border-b px-4">
           {!collapsed && (
-            <h1 className="text-xl font-bold whitespace-nowrap">TS Personal Finance</h1>
+            <h1 className="whitespace-nowrap text-lg font-semibold tracking-tight">TS Personal Finance</h1>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleCollapse}
-            className="ml-auto h-8 w-8"
+            className="ml-auto h-9 w-9"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? (
@@ -83,18 +95,20 @@ export function Sidebar() {
         </div>
         <nav className="flex-1 space-y-1 px-3 py-4">
           {navigation.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = isRouteActive(pathname, item.href)
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors group',
+                  'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-[color,background-color,transform] duration-150',
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                   collapsed && 'justify-center'
                 )}
+                aria-current={isActive ? 'page' : undefined}
                 title={collapsed ? item.name : undefined}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -110,23 +124,25 @@ export function Sidebar() {
       {/* Mobile Bottom Navigation - hidden on login page */}
       {pathname !== '/login' && (
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 shadow-[0_-10px_30px_-24px_hsl(var(--foreground)/0.5)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
         suppressHydrationWarning
       >
         <div className="grid grid-cols-4 gap-1.5 sm:gap-2 px-2 sm:px-3 py-2">
           {mobilePrimaryNav.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = isRouteActive(pathname, item.href)
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   isActive
                     ? 'bg-primary text-primary-foreground border-primary font-semibold'
                     : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
                 )}
+                aria-current={isActive ? 'page' : undefined}
               >
                 <item.icon className={cn('h-5 w-5 flex-shrink-0 transition-transform duration-100', isActive && 'scale-110')} />
                 <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
@@ -139,10 +155,14 @@ export function Sidebar() {
                 type="button"
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
-                  mobileMoreNav.some((item) => pathname === item.href)
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                  mobileMoreNav.some((item) => isRouteActive(pathname, item.href))
                     ? 'bg-primary text-primary-foreground border-primary font-semibold'
                     : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
                 )}
+                aria-label="Open more navigation"
+                aria-haspopup="dialog"
+                aria-expanded={moreOpen}
               >
                 <MoreHorizontal className="h-5 w-5 flex-shrink-0" />
                 <span className="text-xs font-medium text-center leading-tight">More</span>
@@ -154,8 +174,16 @@ export function Sidebar() {
               </DialogHeader>
               <div className="overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
                 <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={openMobileAssistant}
+                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-[transform,color,background-color] duration-100 ease-out active:scale-[0.98] hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <MessageCircle className="h-5 w-5 flex-shrink-0" />
+                    AI Assistant
+                  </button>
                   {mobileMoreNav.map((item) => {
-                    const isActive = pathname === item.href
+                    const isActive = isRouteActive(pathname, item.href)
                     return (
                       <Link
                         key={item.name}
@@ -163,10 +191,12 @@ export function Sidebar() {
                         onClick={() => setMoreOpen(false)}
                         className={cn(
                           'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-[transform,color,background-color] duration-100 ease-out active:scale-[0.98]',
+                          'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                           isActive
                             ? 'bg-primary text-primary-foreground'
                             : 'hover:bg-muted'
                         )}
+                        aria-current={isActive ? 'page' : undefined}
                       >
                         <item.icon className="h-5 w-5 flex-shrink-0" />
                         {item.name}

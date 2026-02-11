@@ -146,6 +146,13 @@ export function ChatWidget() {
     }
   }, [isOpen])
 
+  // Allow mobile navigation to open chat without relying on a floating FAB.
+  useEffect(() => {
+    const handleOpenFromNav = () => setIsOpen(true)
+    window.addEventListener('findash:open-chat-widget', handleOpenFromNav)
+    return () => window.removeEventListener('findash:open-chat-widget', handleOpenFromNav)
+  }, [])
+
   // Track active tools from messages
   useEffect(() => {
     const tools = new Set<string>()
@@ -613,7 +620,7 @@ export function ChatWidget() {
       {/* Floating Action Button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 md:bottom-4 h-14 w-14 rounded-full shadow-lg z-50 bg-primary hover:bg-primary/90"
+        className="fixed bottom-4 right-6 z-50 hidden h-14 w-14 rounded-full bg-primary shadow-lg hover:bg-primary/90 md:inline-flex"
         size="icon"
         aria-label="Open the AI Financial Assistant"
       >

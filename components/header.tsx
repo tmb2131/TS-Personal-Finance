@@ -248,22 +248,22 @@ export function Header() {
   return (
     <header
       className={cn(
-        'flex h-16 items-center justify-between border-b px-4 md:px-6 bg-background z-40 transition-transform duration-200 ease-out',
+        'z-40 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6 transition-transform duration-200 ease-out',
         isMobile && !headerVisible && '-translate-y-full -mt-16'
       )}
     >
-      <div className="flex items-center gap-2 md:gap-4 flex-wrap">
+      <div className="flex min-w-0 items-center gap-1.5 md:gap-4">
         {dailySummary && (
           <Button
             variant="outline"
             size="sm"
             onClick={dailySummary.openModal}
-            className="flex items-center gap-2 text-xs md:text-sm"
+            className="h-9 gap-1.5 px-2 text-xs md:px-3 md:text-sm"
             title="View daily financial summary"
           >
             <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
-            <span className="hidden sm:inline">Daily Summary</span>
-            <span className="sm:hidden">Summary</span>
+            <span className="hidden md:inline">Daily Summary</span>
+            <span className="md:hidden">Summary</span>
           </Button>
         )}
         <Button
@@ -271,13 +271,13 @@ export function Header() {
           size="sm"
           onClick={handleSync}
           disabled={syncing}
-          className="flex items-center gap-2 text-xs md:text-sm"
+          className="h-9 gap-1.5 px-2 text-xs md:px-3 md:text-sm"
         >
           <RefreshCw className={`h-3 w-3 md:h-4 md:w-4 ${syncing ? 'animate-spin' : ''}`} />
           {mounted ? (
             <>
-              <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Refresh Data'}</span>
-              <span className="sm:hidden">{syncing ? 'Sync...' : 'Refresh'}</span>
+              <span className="hidden md:inline">{syncing ? 'Syncing...' : 'Refresh Data'}</span>
+              <span className="md:hidden">{syncing ? 'Sync...' : 'Refresh'}</span>
             </>
           ) : (
             <span>Refresh Data</span>
@@ -285,7 +285,7 @@ export function Header() {
         </Button>
         
         {mounted && (
-          <div className="flex items-center gap-2 md:gap-3 lg:gap-4 text-xs text-muted-foreground flex-wrap">
+          <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground md:flex md:gap-3 lg:gap-4">
             <div className="hidden md:block">
               <span className="font-medium">Last Refresh:</span>{' '}
               <span className="text-foreground">{formatDate(lastRefreshDate)}</span>
@@ -301,16 +301,16 @@ export function Header() {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 md:gap-2">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleLogout}
-          className="flex items-center gap-2 text-xs md:text-sm"
+          className="h-9 gap-1.5 px-2 text-xs md:px-3 md:text-sm"
           aria-label="Log out"
         >
           <LogOut className="h-3 w-3 md:h-4 md:w-4" />
-          <span className="hidden sm:inline">Log out</span>
+          <span className="hidden md:inline">Log out</span>
         </Button>
         <CurrencyToggle />
       </div>

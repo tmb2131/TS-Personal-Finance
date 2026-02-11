@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils/cn'
@@ -25,6 +26,28 @@ export function FullTableViewWrapper({
   children,
   className,
 }: FullTableViewWrapperProps) {
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    if (!fullView) return
+
+    const previousActive = document.activeElement as HTMLElement | null
+    closeButtonRef.current?.focus()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      previousActive?.focus()
+    }
+  }, [fullView, onClose])
+
   if (!fullView) {
     return <div className={className}>{children}</div>
   }
@@ -42,6 +65,7 @@ export function FullTableViewWrapper({
         type="button"
         variant="secondary"
         size="icon"
+        ref={closeButtonRef}
         onClick={onClose}
         className="absolute top-4 right-4 z-10 h-9 w-9 shrink-0 rounded-full border bg-background/95 shadow-md backdrop-blur sm:h-10 sm:w-10"
         aria-label="Close full table view"
@@ -51,7 +75,7 @@ export function FullTableViewWrapper({
       {/* Floating card: clearly separated from backdrop */}
       <div
         className={cn(
-          'relative flex max-h-[95vh] max-w-[95vw] flex-col rounded-xl border bg-background shadow-2xl',
+          'relative flex w-[95vw] max-h-[95vh] max-w-[1200px] flex-col rounded-xl border bg-background shadow-2xl',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           /* Denser table in full view: smaller font and row height, keep widths/styles */
           '[&_table]:text-[11px] [&_th]:h-7 [&_td]:h-7 [&_th]:py-0.5 [&_td]:py-0.5 [&_th]:px-2 [&_td]:px-2 [&_th]:text-[11px] [&_td]:tabular-nums'
