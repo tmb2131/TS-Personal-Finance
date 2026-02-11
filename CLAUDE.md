@@ -8,12 +8,17 @@ Always edit files in `/Users/tombrosens/findash`. Never use git worktrees or wor
 
 ## Project Overview
 
-**Findash** (displayed as "TS Personal Finance") is a Next.js 16 personal finance dashboard that syncs data from Google Sheets and displays net worth tracking, budget analysis, spending trends, liquidity monitoring, recurring payment detection, and includes an AI financial assistant powered by Google Gemini.
+**Findash** (in-app: **TS Personal Finance**) is a Next.js 16 personal finance app with:
+- Google Sheets sync for selected source tabs
+- In-app manual CRUD for key financial datasets
+- CSV transaction import
+- Derived calculations for trends, forecast evolution, historical net worth, and YoY net worth
+- AI assistant powered by Gemini with tool-calling + telemetry
 
 ## Development Commands
 
 ```bash
-# Development server (uses webpack instead of turbopack)
+# Development server (webpack mode)
 npm run dev
 
 # Production build
@@ -22,122 +27,131 @@ npm run build
 # Start production server
 npm start
 
-# Linting
+# Lint
 npm run lint
+
+# Evaluate app instruction quality dataset
+npm run eval:app-instructions
 ```
 
-## Tech Stack & Architecture
+## Tech Stack
 
-- **Framework**: Next.js 16+ with App Router (TypeScript)
-- **UI**: Tailwind CSS + Shadcn/UI (Radix primitives)
-- **Charts**: Recharts
-- **Database**: Supabase (PostgreSQL) with Row Level Security (RLS)
-- **Auth**: Supabase Auth (Google OAuth)
-- **AI**: Google Gemini 2.5 Flash (via @ai-sdk/google)
-- **Data Source**: Google Sheets API v4 (source of truth)
-- **Analytics**: Vercel Analytics
-- **Dates**: date-fns
-- **Toasts**: Sonner
-- **Markdown**: react-markdown + remark-gfm (used in AI chat)
+- Framework: Next.js 16+ (App Router, TypeScript)
+- UI: Tailwind CSS + Shadcn/UI (Radix primitives)
+- Charts: Recharts
+- Theme: `next-themes` (light/dark/system)
+- Database/Auth: Supabase (PostgreSQL + RLS, Google OAuth)
+- AI: Gemini 2.5 Flash via `@ai-sdk/google`
+- Data sync: Google Sheets API v4 (`googleapis`)
+- CSV import: `papaparse`
+- Markdown rendering: `react-markdown` + `remark-gfm`
+- Analytics: Vercel Analytics
 
 ## Key Architecture Patterns
 
-### Data Flow
-1. **Source of Truth**: Google Sheets → contains all financial data (accounts, transactions, budgets, etc.)
-2. **Sync Service**: `lib/sync-google-sheet.ts` pulls data from Google Sheets
-3. **Database**: Supabase stores synced data with user isolation via RLS
-4. **Components**: Server Components fetch data directly from Supabase; Client Components use hooks/contexts
+### Hybrid Data Flow
 
-### User Data Isolation
-- Each user's data is isolated using `user_id` foreign keys in most tables
-- Exception: `fx_rates` and `fx_rate_current` are global tables (no user_id)
-- RLS policies enforce per-user access
-- User can connect their own Google Sheet via Settings page
+1. Google Sheets sync populates source-backed tables (accounts, transactions, FX, kids, recurring, investment return)
+2. App-managed flows handle manual CRUD (budgets, debt, net worth overrides, and manual rows across multiple tables)
+3. CSV imports append `transaction_log` rows with `data_source='csv'`
+4. Derived rebuilds compute:
+   - `historical_net_worth` (`app_generated`) from account history
+   - `yoy_net_worth` bridge from forecasts + snapshots + FX
+   - annual/monthly trends in-memory via `computeAnnualTrends` / `computeMonthlyTrends`
 
-### Multi-Currency Support
-- Global `CurrencyContext` (GBP/USD toggle) persists in localStorage
-- All financial displays respect current currency selection
-- FX rates stored in database for historical conversions
+### Data Source Guardrails
 
-### Google Sheets Sync
-- **Manual**: User clicks "Sync Data" button → calls `syncData()` server action
-- **Automatic**: Optional cron jobs (6am & 11:30pm UTC) via `/api/cron/refresh`
-- **Batching**: Large tables (transaction_log, fx_rates) processed sequentially in 1000-row chunks
-- **Transform Functions**: Each sheet tab has a transform function in SHEET_CONFIGS array
+- Many CRUD routes enforce `data_source === 'manual'` for edit/delete.
+- Sync deletes/replaces only `google_sheet` scoped rows where appropriate.
+- Derived builders preserve manual overrides (for historical net worth).
 
-### AI Assistant
-- Chat widget (floating button) streams responses from `/api/chat/route.ts`
-- Uses Google Gemini with structured tool calling (Zod schemas)
-- Tools fetch live data from Supabase and can optionally search web (Serper API)
-- Date context is computed server-side to handle relative dates ("last month", "this year")
+### Forecast Evolution (Latest Build)
+
+- Uses rollback computation from:
+  - `forecast_settings_history`
+  - `budget_targets_history`
+  - `transaction_log`
+- Implemented in `lib/forecast-evolution.ts`.
+- APIs:
+  - `GET /api/forecast-bridge`
+  - `GET /api/forecast-gap-over-time`
+  - `GET /api/forecast-snapshots`
+
+### Sync Lifecycle
+
+- Manual sync: `POST /api/sync`
+- Cron sync: `GET|POST /api/cron/refresh` (CRON_SECRET required)
+- On success, server rebuilds historical net worth + YoY net worth and records `sync_metadata.last_sync_at`.
 
 ## Database Tables
 
-Core tables (user-scoped):
-- `account_balances`: Current account balances by institution/category with liquidity/risk/horizon profiles
-- `transaction_log`: Historical transactions (income/expenses)
-- `budget_targets`: Annual budget targets by category
-- `budget_history`: Historical budget snapshots
-- `historical_net_worth`: Net worth snapshots over time
-- `yoy_net_worth`: Year-over-year net worth comparisons
-- `annual_trends`: Year-over-year spending patterns
-- `monthly_trends`: Month-over-month spending with Z-scores
-- `kids_accounts`: Children's account balances
-- `debt`: Debt tracking (mortgages, loans, credit cards) with dual currency amounts
-- `recurring_payments`: Detected recurring payment patterns
-- `recurring_preferences`: User preferences for recurring payment detection
-- `investment_return`: Investment return tracking
-- `sync_metadata`: Sync operation metadata and tracking
-- `user_profiles`: Stores user's Google Sheet ID and settings
+### User-Scoped Core Tables
 
-Global tables (no user_id):
-- `fx_rates`: Historical FX rates
-- `fx_rate_current`: Current FX rate
+- `user_profiles`
+- `sync_metadata`
+- `account_balances` (`data_source`)
+- `transaction_log` (`data_source`)
+- `budget_targets` (`data_source`, app-managed)
+- `forecast_settings`
+- `forecast_settings_history`
+- `budget_targets_history`
+- `budget_history` (legacy snapshot table)
+- `historical_net_worth` (`data_source`: `app_generated` or `manual`)
+- `yoy_net_worth` (derived)
+- `debt` (app-only, manual)
+- `kids_accounts` (`data_source`)
+- `recurring_payments` (`data_source`)
+- `recurring_preferences`
+- `investment_return` (`data_source`)
+- `ai_chat_telemetry`
 
-## Google Sheet Structure
+### Global Tables
 
-Expected tabs:
-1. **Account Balances**: Institution, Account Name, Category, Currency, Balances (Personal/Family/Total), Profiles (Liquidity/Risk/Horizon)
-2. **Transaction Log**: Date, Category, Counterparty, Amounts (USD/GBP), Currency
-3. **Budget Targets**: Category, Annual Budgets (GBP/USD), YTD tracking
-4. **Historical Net Worth**: Date, Category, Amounts (USD/GBP)
-5. **FX Rates**: Historical exchange rates
-6. **FX Rate Current**: Current GBP/USD rate
-7. **Annual Trends**: 5-year spending patterns by category
-8. **Monthly Trends**: Last 3 months + current month estimates with Z-scores
-9. **Kids**: Children's accounts (name, type, balance, notes)
-10. **Debt**: Type, Name, Purpose, Amounts (GBP/USD), Date Updated
-11. **Budget History**: Historical budget snapshots
-12. **YoY Net Worth**: Year-over-year net worth comparisons
-13. **Investment Return**: Investment return data
-14. **Recurring Payments**: Detected recurring payment patterns
+- `fx_rates`
+- `fx_rate_current`
+- `ai_quality_reports` (service-generated weekly reports)
+
+### Removed Legacy Tables
+
+- `annual_trends` and `monthly_trends` were dropped in migration `029`; trends are now computed from transactions/forecast logic.
+
+## Google Sheet Structure (Current Sync Tabs)
+
+Expected tabs in current build:
+1. `Account Balances`
+2. `Transaction Log`
+3. `FX Rates`
+4. `FX Rate Current`
+5. `Kids`
+6. `Investment Return`
+7. `Recurring Payments`
+
+Not synced from sheet anymore:
+- `Budget Targets`
+- `Debt`
+- `Historical Net Worth`
+- `Annual Trends`
+- `Monthly Trends`
+- `YoY Net Worth`
 
 ## Key Files
 
-- `lib/sync-google-sheet.ts`: Google Sheets sync service (transform functions, batching logic)
-- `lib/sync-metadata.ts`: Sync metadata tracking
-- `lib/types.ts`: TypeScript interfaces for all data models
-- `lib/allowed-emails.ts`: Email allowlist for auth (if used)
-- `lib/analysis-url.ts`: Analysis URL utilities
-- `lib/snapshot-budget-history.ts`: Budget history snapshot logic
-- `lib/chart-styles.ts`: Consistent chart color palette for Recharts
-- `lib/utils/detect-recurring-payments.ts`: Recurring payment detection logic
-- `lib/utils/fx-rates.ts`: FX rate utilities
-- `lib/utils/chart-format.ts`: Chart formatting utilities
-- `lib/contexts/currency-context.tsx`: Global currency state (GBP/USD)
-- `lib/contexts/auth-timeout-provider.tsx`: Auth timeout provider
-- `lib/hooks/use-is-mobile.ts`: Mobile detection hook
-- `app/actions.ts`: Server actions (syncData)
-- `app/manifest.ts`: PWA manifest configuration
-- `app/api/chat/route.ts`: AI assistant streaming endpoint
-- `app/api/cron/refresh/route.ts`: Scheduled sync endpoint
-- `app/api/sync/route.ts`: Sync API endpoint
-- `app/api/forecast-bridge/route.ts`: Budget forecast bridge/waterfall analysis
-- `app/api/cash-runway/route.ts`: Cash runway calculation
-- `app/api/forecast-gap-over-time/route.ts`: Forecast gap timeline data
-- `proxy.ts`: Middleware/proxy configuration
-- `components/app-shell.tsx`: Main layout wrapper with sidebar/header
-- `supabase/migrations/`: 22 migration files (001 through 022)
+- `lib/sync-google-sheet.ts`: Google Sheets sync mappings + per-table merge strategy
+- `lib/forecasting.ts`: Annual/monthly trend + forecast computation
+- `lib/forecast-evolution.ts`: rollback-based forecast snapshots and gap series
+- `lib/snapshot-historical-net-worth.ts`: rebuild app-generated historical net worth
+- `lib/yoy-net-worth.ts`: rebuild YoY bridge rows with FX impact logic
+- `lib/csv-parser.ts`: CSV detection/parsing helpers
+- `app/api/chat/route.ts`: AI tools + telemetry logging + optional web search tool
+- `app/api/import/csv/route.ts`: CSV import endpoint
+- `app/api/category-planning/route.ts`: budget + forecast settings editor API
+- `app/api/net-worth-history/route.ts`: manual historical net worth overrides
+- `app/api/cron/refresh/route.ts`: scheduled sync + derived rebuilds
+- `app/api/cron/ai-quality-report/route.ts`: scheduled AI quality report generation
+- `components/settings/category-planning-section.tsx`: category planning UI
+- `components/import/csv-upload.tsx`: CSV import flow UI
+- `components/dashboard/edit-net-worth-history-dialog.tsx`: yearly net worth editor
+- `proxy.ts`: auth + cron authorization middleware
 
 ## Environment Variables
 
@@ -145,6 +159,7 @@ Required:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=         # required for admin cron/report routes
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=
 GOOGLE_GENERATIVE_AI_API_KEY=
@@ -152,148 +167,134 @@ GOOGLE_GENERATIVE_AI_API_KEY=
 
 Optional:
 ```bash
-CRON_SECRET=  # For scheduled sync (Bearer auth)
-SERPER_API_KEY=  # For AI web search
+CRON_SECRET=                       # required to authorize cron endpoints
+SERPER_API_KEY=                    # enables chat search_web tool
+ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 ```
 
 ## Database Migrations
 
-Run migrations in Supabase SQL Editor. There are currently 22 migrations (001 through 022):
-```sql
--- Copy contents from supabase/migrations/00N_description.sql
-```
+There are currently **35** migrations (`001` through `035`).
 
-New migrations should follow the pattern `00N_description.sql` (next: `023_*.sql`).
+Next migration should be `036_*.sql`.
 
 ## Deployment
 
-Configured for Vercel:
-1. Push to GitHub
-2. Import in Vercel
-3. Add environment variables
-4. Set `CRON_SECRET` for scheduled syncs (cron runs at 6am & 11:30pm UTC)
+Configured for Vercel.
 
-`vercel.json` contains cron configuration for automatic data refresh.
+Current cron jobs in `vercel.json`:
+- `0 6 * * *` -> `/api/cron/refresh`
+- `30 23 * * *` -> `/api/cron/refresh`
+- `0 9 * * 1` -> `/api/cron/ai-quality-report`
+
+All cron routes require `Authorization: Bearer <CRON_SECRET>` and are enforced in `proxy.ts`.
 
 ## Pages & Navigation
 
-The sidebar navigation order (defined in `components/sidebar.tsx`):
-1. **Key Insights** (`/insights`) — Primary landing page with KPIs, daily summary, sheet connection
-2. **Dashboard** (`/`) — Net worth charts, budget overview, spending trends
-3. **Accounts** (`/accounts`) — Account balances by institution/category
-4. **Liquidity** (`/liquidity`) — Cash position, debt tracking, liquidity distribution, committed capital vs liquidity
-5. **Kids Accounts** (`/kids`) — Children's account balances
-6. **Analysis** (`/analysis`) — Detailed spending analysis, forecast bridge, category breakdowns
-7. **Recurring** (`/recurring`) — Detected recurring payments and subscriptions
-8. **Settings** (`/settings`) — Google Sheet connection, sync preferences
+Sidebar order (`components/sidebar.tsx`):
+1. `Key Insights` (`/insights`)
+2. `Dashboard` (`/`)
+3. `Accounts` (`/accounts`)
+4. `Liquidity` (`/liquidity`)
+5. `Kids Accounts` (`/kids`) - hidden if no kids data
+6. `Analysis` (`/analysis`)
+7. `Recurring` (`/recurring`)
+8. `Import` (`/import`)
+9. `Settings` (`/settings`)
 
 ## API Routes
 
-- `POST /api/chat` — AI assistant streaming endpoint (Gemini + tool calling)
-- `GET /api/cron/refresh` — Scheduled sync endpoint (Bearer auth via CRON_SECRET)
-- `POST /api/sync` — Manual sync endpoint
-- `GET /api/forecast-bridge` — Budget forecast bridge/waterfall analysis
-- `GET /api/cash-runway` — Cash runway calculation (net burn last 3 months)
-- `GET /api/forecast-gap-over-time` — Forecast gap timeline data
+### Core
+- `POST /api/chat`
+- `POST /api/sync`
+- `GET|POST /api/cron/refresh`
+- `GET|POST /api/cron/ai-quality-report`
+- `GET /api/ai/quality-report`
+
+### Forecast/Analysis
+- `GET /api/cash-runway`
+- `GET /api/forecast-bridge`
+- `GET /api/forecast-gap-over-time`
+- `GET /api/forecast-snapshots`
+- `POST /api/yoy-net-worth/rebuild`
+
+### Data Management
+- `POST /api/accounts`, `PATCH|DELETE /api/accounts/[id]`
+- `POST /api/transactions`, `PATCH|DELETE /api/transactions/[id]`
+- `GET|POST /api/budgets`, `PATCH|DELETE /api/budgets/[id]`
+- `GET|PUT /api/category-planning`
+- `POST /api/debt`, `PATCH|DELETE /api/debt/[id]`
+- `POST /api/kids`, `PATCH|DELETE /api/kids/[id]`
+- `POST /api/recurring`, `PATCH|DELETE /api/recurring/[id]`
+- `GET|POST /api/investment-returns`, `PATCH|DELETE /api/investment-returns/[id]`
+- `GET|PUT /api/net-worth-history`
+- `POST /api/import/csv`
 
 ## Component Organization
 
-```
-components/
-├── ui/              # Shadcn/UI primitives (button, dialog, card, empty-state, etc.)
-├── dashboard/       # Dashboard page components (charts, tables) — 19 files
-├── accounts/        # Accounts page components
-├── analysis/        # Analysis page components — 16 files
-├── insights/        # Key Insights page (KPIs, daily summary, navigation, connect-sheet modal)
-├── liquidity/       # Liquidity page (KPIs, committed capital vs liquidity, monthly expenses vs liquidity, debt overview, distribution)
-├── kids/            # Kids accounts page
-├── recurring/       # Recurring payments page (detection, table)
-├── settings/        # Settings page components
-├── ai-assistant/    # AI chat widget
-├── app-shell.tsx    # Main layout with sidebar
-├── header.tsx       # Top header with sync button
-├── sidebar.tsx      # Navigation sidebar
-├── kpi-card.tsx     # Reusable KPI card component
-├── currency-toggle.tsx  # GBP/USD currency switcher
-└── login-header.tsx # Login page header
-```
+Key folders:
+- `components/dashboard/`
+- `components/analysis/`
+- `components/insights/`
+- `components/liquidity/`
+- `components/accounts/`
+- `components/budgets/`
+- `components/transactions/`
+- `components/kids/`
+- `components/recurring/`
+- `components/import/`
+- `components/settings/`
+- `components/ai-assistant/`
+- `components/ui/`
 
 ## Authentication Flow
 
-1. User clicks "Sign in with Google" on `/login`
-2. Supabase Auth redirects to Google OAuth
-3. Callback at `/auth/callback` exchanges code for session
-4. RLS policies filter all queries by authenticated user ID
-5. Email restrictions can be enforced in `lib/allowed-emails.ts`
+1. User signs in at `/login` via Google OAuth.
+2. `/auth/callback` exchanges auth code for session.
+3. Profile row is upserted in `user_profiles`.
+4. New users are seeded with dummy sheet ID and background sync starts.
+5. Middleware (`proxy.ts`) protects routes and redirects signed-in users away from `/login`.
 
 ## Styling Conventions
 
-- Tailwind CSS with custom HSL-based color system (defined in globals.css)
-- Dark mode support via `class` strategy (toggle not yet implemented in UI)
-- Responsive: mobile-first with `md:` and `lg:` breakpoints
-- Chart colors: Defined in `lib/chart-styles.ts` (consistent palette across Recharts)
-- Chart formatting: Shared utilities in `lib/utils/chart-format.ts`
-
-## Other Directories
-
-- `utils/cn.ts`: Tailwind `cn()` merge utility (clsx + tailwind-merge)
-- `docs/`: Planning documents and PRDs (`PRD.md`, mobile UI recommendations, scaling notes, etc.)
-
-## Liquidity Page Definitions
-
-The Liquidity page uses two different classification systems from `account_balances`:
-
-### Category-based (from `category` column)
-- **Cash**: `category === 'Cash'`
-- **Liquid Assets**: `category === 'Cash' || category === 'Brokerage'`
-
-### Liquidity profile-based (from `liquidity_profile` column)
-- **Instant**: `liquidity_profile === 'Instant'`
-- **Within 6 Months**: `liquidity_profile === 'Within 6 Months'`
-- **Locked Up**: `liquidity_profile === 'Locked Up'`
-
-Note: Cash (category-based) may overlap with Instant (profile-based). Instant and Within 6 Months do not overlap.
-
-### Charts
-- **KPIs**: Total Cash, Liquid Assets (Cash + Brokerage), Instant Liquidity
-- **Committed Capital vs. Liquidity**: 4 bars — Committed Capital (from `debt` table), Cash, Instant, Within 6 Months
-- **Monthly Expenses vs. Liquidity**: 4 bars — Monthly Expenses (avg net spend over last 3 full months, excl. income & gifts), Cash, Instant, Liquid
-- **Liquidity Distribution**: Pie chart by `liquidity_profile` (color-coded: Instant=emerald, Within 6 Months=blue, Locked Up=slate)
-- **Debt vs Assets**: Total debt vs total assets (excludes Trust category from assets; shows "Assets exclude Trust" subtext when Trust exists)
+- Tailwind CSS with custom tokens in `app/globals.css`
+- Theme support via `next-themes` (`system`/`light`/`dark`)
+- Mobile-first responsive layout
+- Shared chart styles in `lib/chart-styles.ts`
 
 ## Common Tasks
 
-### Adding a new data table
-1. Add sheet config to SHEET_CONFIGS array in `lib/sync-google-sheet.ts`
-2. Add interface to `lib/types.ts`
-3. Create migration in `supabase/migrations/`
-4. Add user_id column and RLS policies (unless global table)
+### Add a New App-Managed Dataset
+1. Create migration (`036_*.sql` onward).
+2. Add RLS policies (`user_id` scoped unless global).
+3. Add TypeScript types in `lib/types.ts`.
+4. Add API route(s) under `app/api/...` as needed.
+5. Add UI components and wire into pages/sidebar.
+6. Decide `data_source` semantics and edit/delete guardrails.
 
-### Adding a new page
-1. Create route in `app/[page-name]/page.tsx`
-2. Add navigation link in `components/sidebar.tsx`
-3. Follow pattern: server component for data fetching, client components for interactivity
+### Add a New Sync Tab
+1. Add mapping in `SHEET_CONFIGS` (`lib/sync-google-sheet.ts`).
+2. Add transform + upsert/delete strategy.
+3. Confirm table constraints/indexes support sync behavior.
+4. Update docs (CLAUDE.md and PRD.md).
 
-### Modifying AI assistant tools
-1. Edit tool schemas in `/api/chat/route.ts` (Zod definitions)
-2. Update system prompt to guide tool usage
-3. Test with various natural language queries
+### Modify AI Assistant Tools
+1. Edit `app/api/chat/route.ts` tool schemas and execute handlers.
+2. Update system prompt tool instructions.
+3. Ensure telemetry quality flags still classify outcomes correctly.
 
-### Debugging sync issues
-1. Check browser console for sync errors
-2. Verify Google Sheet ID in Settings
-3. Confirm service account has access to sheet
-4. Check Supabase logs for database errors
-5. Review transform functions in sync-google-sheet.ts for data parsing issues
+### Debug Sync Issues
+1. Verify `google_spreadsheet_id` in `user_profiles`.
+2. Confirm service account has Viewer access to the sheet.
+3. Inspect `/api/sync` response and server logs.
+4. Validate tab names match `SHEET_CONFIGS` exactly.
+5. Check derived rebuild logs for historical/yoy recomputation.
 
 ## Automation Shortcuts
 
 ### shipit
 1. Run `npm run build`.
-2. If the build fails:
-   - Analyze the error logs and fix the source code.
-   - Repeat the build and fix loop until the build succeeds.
-3. Once the build is successful:
-   - Stage all changes.
-   - Commit with a concise, descriptive message.
-   - Push directly to the `main` branch.
+2. If build fails, fix errors and re-run until green.
+3. Stage changes.
+4. Commit with concise message.
+5. Push directly to `main`.

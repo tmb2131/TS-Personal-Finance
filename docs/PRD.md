@@ -4,11 +4,23 @@
 
 ### What is this app?
 
-**Findash** (branded in-app as **TS Personal Finance**) is a personal finance dashboard that aggregates account balances, transactions, budgets, and net worth from a Google Sheet (one per user), syncs them into Supabase, and presents them via a multi-page web app with charts, trend analysis, forecast evolution, and an AI assistant for natural-language queries. The app is **multi-tenant**: each user has isolated data and optionally their own Google Sheet.
+**Findash** (branded in-app as **TS Personal Finance**) is a multi-tenant personal finance dashboard built on Next.js + Supabase.
+
+The latest build uses a **hybrid data model**:
+- Google Sheets sync for selected source tabs (accounts, transactions, FX, kids, recurring, investment return)
+- In-app manual CRUD for key datasets (budgets, debt, account/transaction overrides, recurring, kids, investment return)
+- CSV import for transactions
+- Derived app-computed datasets (annual/monthly trends, historical net worth snapshots, YoY net worth bridge, forecast evolution snapshots)
+
+The app provides dashboards, insights, liquidity monitoring, transaction analysis, forecast evolution, and an AI assistant with tool-calling.
 
 ### Who is the primary user?
 
-The primary user is an individual or household (e.g. family/trust) who maintains financial data in a Google Sheet and wants a single place to view net worth, budget vs actual, spending trends, cash runway, year-over-year net worth changes, and “why did my forecast change?”—with optional chat-based analysis. **Any** Google account can sign in; data is isolated per user via Row Level Security (RLS). New users connect their sheet in Settings before syncing.
+Individuals/families who want one place to monitor net worth, budget vs actuals, spending trends, liquidity, and forecast deltas.
+
+Any Google account can sign in. Data isolation is enforced by Supabase RLS per `user_id`.
+
+On first login, the app seeds users with a dummy sheet ID and kicks off a background sync so users can explore immediately, then switch to their own sheet in Settings.
 
 ---
 
@@ -16,148 +28,74 @@ The primary user is an individual or household (e.g. family/trust) who maintains
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | Next.js 16 (App Router), React 18, Tailwind CSS |
-| **Backend / Data** | Supabase (PostgreSQL), server-side Supabase client via `@supabase/ssr` |
-| **Auth** | Supabase Auth with Google OAuth; post-login redirect to `/insights`; auth callback creates/upserts `user_profiles` (id, email). No allowlist—any Google user can sign in; RLS isolates data per user. |
-| **Routing / Middleware** | Next.js middleware (`proxy.ts`) enforces auth on all routes except `/login` and `/api/cron/*`; cron routes require `Authorization: Bearer <CRON_SECRET>`. Signed-in users visiting `/login` are redirected to `/insights`. |
+| Frontend | Next.js 16 (App Router), React 18, Tailwind CSS |
+| Backend/Data | Supabase PostgreSQL, `@supabase/ssr`, service-role admin client for cron |
+| Auth | Supabase Auth (Google OAuth) |
+| Routing/Middleware | `proxy.ts` enforces auth on app/API routes; `/api/cron/*` requires `Authorization: Bearer <CRON_SECRET>` |
+| AI | AI SDK + Gemini 2.5 Flash, server tool-calling via `/api/chat` |
 
-### Key libraries
+### Key Libraries
 
-1. **AI SDK (`ai`, `@ai-sdk/react`, `@ai-sdk/google`)** – Streaming chat with tool use; model: Gemini 2.5 Flash. Powers the in-app “The AI Financial Assistant” chat widget with tools for snapshots, spending, budget vs actual, and forecast evolution.
-2. **Recharts** – All charts: net worth over time, income vs expenses, cumulative spend, annual cumulative spend, YoY net worth waterfall, forecast evolution (bridge) waterfall, forecast gap over time (line).
-3. **googleapis** – Google Sheets API; used by `lib/sync-google-sheet.ts` to pull data into Supabase (account balances, transactions, budget targets, historical net worth, FX rates, trends, recurring payments, kids accounts, investment return, YoY net worth).
-4. **Supabase (`@supabase/supabase-js`, `@supabase/ssr`)** – Database client, auth, and cookie-based session handling in server and client components.
-5. **Zod** – Input validation and schema for AI tool parameters (chat API) and type-safe config.
-
-Other notable deps: `lucide-react` (icons), `react-markdown` + `remark-gfm` (chat responses), `date-fns`, `sonner` (toasts), Radix UI primitives (dialog, checkbox, progress, etc.).
-
----
-
-## 2.1 Design System & Chart Standards
-
-### Chart Typography
-- **Standard font sizes:** Defined in `lib/chart-styles.ts`
-  - Desktop: 12px (matches `text-xs`)
-  - Mobile: 11px (global floor)
-- **Usage:** All charts use `getChartFontSizes(isMobile)` for consistent typography
-- **Components:** Applied to axis ticks, legends, tooltips, and icon sizes
-
-### Chart Responsive Patterns
-- **Mobile detection:** All charts use `useIsMobile()` hook from `lib/hooks/use-is-mobile` (breakpoint: 768px)
-- **Chart heights:**
-  - **Standard charts:** `height={isMobile ? 260 : 320}` (most line/bar charts)
-  - **Complex waterfalls:** `height={isMobile ? 260 : 360}` (Forecast Bridge, YoY Net Worth Waterfall - requires extra space for angled labels)
-- **Responsive margins:**
-  - Mobile: `{ top: 10, right: 10, left: 0, bottom: 5 }`
-  - Desktop: `{ top: 20, right: 30, left: 20, bottom: 5 }`
-  - **Exception:** Complex waterfalls may use larger margins (e.g., `{ top: 44, right: 30, left: 20, bottom: 72 }`) for angled X-axis labels
-
-### Chart Color Palette
-- **App design system colors** (not generic Recharts defaults):
-  - **Green (positive/growth):** `#22c55e` (Green-500), `#16a34a` (Green-600 for emphasis)
-  - **Red (negative/decline):** `#ef4444` (Red-500), `#dc2626` (Red-600 for emphasis)
-  - **Blue:** `#3b82f6` (Blue-500), `#1e40af` (Blue-800 for emphasis)
-  - **Violet:** `#8b5cf6` (Violet-500)
-  - **Neutral/Gray:** `#6b7280` (Gray-500), `#64748b` (Slate-500)
-- **Grid/axis strokes:** `#e5e7eb` (grid), `#6b7280` (axes)
-- **Bar strokes:** White (`#fff`) with `strokeWidth={1}` for better separation
-
-### Chart Component Standards
-- **Card structure:** All charts use `Card` with `CardHeader className="bg-muted/50"` and `CardTitle className="text-xl"`
-- **Tooltip styling:**
-  - Responsive padding: `isMobile ? '6px 10px' : '8px 12px'`
-  - Border: `1px solid #e5e7eb`
-  - Background: `white`
-  - Border radius: `6px`
-  - Font size: `${fontSizes.tooltipMin}px` (with `px` suffix)
-- **Bar styling:** `radius={[4, 4, 0, 0]}` for rounded top corners
-- **Loading states:** Use `Skeleton` components matching chart structure
-- **Error states:** Use `EmptyState` component with appropriate icon and message
-
-### Number abbreviation (thousands / millions)
-- **Thousands:** Abbreviate with **lowercase k** (e.g. £10k, $12.5k). Used in tables, charts, tooltips, and AI responses.
-- **Millions:** Abbreviate with **uppercase M** (e.g. £1.2M, $2M). Keeps M visually distinct from k.
-- **Scope:** All display formatting (formatCurrencyCompact, formatChartNumber, axis ticks, call-out boxes, chat prompts). Input parsing (e.g. Google Sheet values) may accept either k or K.
-
-### Call-Out Box Pattern
-- **Usage:** Summary call-out boxes in `CardHeader` for key metrics (Forecast Evolution, YoY Net Worth Change)
-- **Styling:** `rounded-lg border border-border bg-background p-3 shadow-sm`
-- **Content:** Main metric with color-coded monetary values (green for positive, red for negative, bold font)
-- **Layout:** Positioned in `CardHeader` with `flex flex-col gap-3` layout
-
-### Chart-Specific Notes
-- **Forecast Evolution:** Includes call-out box showing gap change and key drivers; uses 360px height for waterfall complexity
-- **YoY Net Worth Change:** Includes call-out box showing net worth change with percentage; uses 360px height for waterfall complexity
-- **Net Worth Start/End:** Simple bar chart, uses standard 320px height
-- **Forecast Gap Over Time:** Simple line chart, uses standard 320px height
-
-### Data Filtering Requirements
-- **Monthly data completeness:** Charts and tables must only display data for months with full historical coverage. If the minimum date of the transaction dataset (or other relevant dataset) falls within a month, that month should be excluded from display. For example, if the first historical transaction is December 30, 2024, only show data starting from January 1, 2025 (since December 2024 would not have complete month data). This ensures accurate monthly comparisons and prevents misleading partial-month aggregations.
-- **Historical net worth years:** For historical net worth charts and tables, only display years where the total net worth value is greater than 0. Years with zero or null values should be excluded to avoid cluttering the visualization with empty periods.
+1. `ai`, `@ai-sdk/react`, `@ai-sdk/google` for streaming chat + tool orchestration
+2. `recharts` for all charts (dashboard/analysis/insights/liquidity)
+3. `googleapis` for Google Sheets batch sync
+4. `papaparse` for CSV import parsing
+5. `next-themes` for light/dark/system appearance
+6. `zod` for route/tool input validation
 
 ---
 
 ## 3. Data Model & Schema
 
-Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**: all user-specific tables include `user_id` (UUID, references `auth.users`). RLS policies restrict access to `user_id = current_user_id()`. FX tables (`fx_rates`, `fx_rate_current`) are global (no `user_id`).
+Migrations currently run through **035** (`supabase/migrations/001` ... `035`).
 
-### User & config
-
-| Table | Purpose |
-|-------|--------|
-| **user_profiles** | One row per user: `id` (PK, references `auth.users`), `email`, `google_spreadsheet_id`, `display_name`, `default_currency`, `created_at`, `updated_at`. Created/updated on login; user sets `google_spreadsheet_id` and optional `display_name`/`default_currency` in Settings. `default_currency` (USD/GBP, default USD) is the display currency the app opens with; CurrencyProvider loads from localStorage then profile. Cron and manual sync use `google_spreadsheet_id` to know which sheet to sync per user. |
-
-### Transactions & spending
+### User & Config
 
 | Table | Purpose |
-|-------|--------|
-| **transaction_log** | Per-user transactions: `user_id`, `date`, `category`, `counterparty`, `amount_usd`, `amount_gbp`, `currency`, `counterparty_dedup`. Unique per user; RLS by `user_id`. |
-| **fx_rates** | Historical FX (global): `date` (PK), `gbpusd_rate`, `eurusd_rate`. |
-| **fx_rate_current** | Current GBP/USD (global): single row per date. |
+|-------|---------|
+| `user_profiles` | Per-user profile + settings: `google_spreadsheet_id`, `display_name`, `default_currency` |
+| `sync_metadata` | Per-user `last_sync_at` used by header refresh status |
 
-### Budgets & forecast
-
-| Table | Purpose |
-|-------|--------|
-| **budget_targets** | Per-user, one row per category: `user_id`, `category`, `annual_budget_gbp/usd`, `tracking_est_gbp/usd`, `ytd_gbp/usd`. Unique on `(user_id, category)`. |
-| **budget_history** | Per-user daily snapshots: `user_id`, `date`, `category`, `annual_budget`, `forecast_spend`, `actual_ytd`; unique on `(user_id, date, category)`. |
-
-### Net worth & balances
+### Core Financial Data (User-Scoped)
 
 | Table | Purpose |
-|-------|--------|
-| **account_balances** | Per-user: `user_id`, `date_updated`, `institution`, `account_name`, `category`, `currency`, balance columns. Unique on `(user_id, institution, account_name, date_updated)`. |
-| **historical_net_worth** | Per-user: `user_id`, `date`, `category`, `amount_usd`, `amount_gbp`; unique on `(user_id, date, category)`. |
-| **yoy_net_worth** | Per-user: `user_id`, `category`, `amount_usd`, `amount_gbp`; unique on `(user_id, category)`. |
+|-------|---------|
+| `account_balances` | Account snapshots with liquidity/risk/horizon profiles + `data_source` |
+| `transaction_log` | Transactions with currency + `data_source` (`google_sheet`, `csv`, `manual`, `plaid`) |
+| `budget_targets` | App-managed budgets by category (`data_source` normalized to manual) |
+| `forecast_settings` | Forecast methods per category (Annual/Linear/Budget/Manual, plus monthly method) |
+| `forecast_settings_history` | Daily effective history for rollback-based forecast evolution |
+| `budget_targets_history` | Daily effective history of annual budgets |
+| `budget_history` | Legacy snapshot table retained for compatibility |
+| `historical_net_worth` | Derived from account history (`app_generated`) plus manual yearly overrides |
+| `yoy_net_worth` | App-computed YoY bridge rows (`Year Start`, `Income`, `Gift Money`, `Expenses`, optional `FX Impact`, `Investment Return YTD`, `Year End`) |
+| `debt` | App-only debt tracking (`data_source` default/manual) |
+| `kids_accounts` | Kids balances + notes (`google_sheet` and `manual` rows) |
+| `recurring_payments` | Recurring obligations (`google_sheet` and `manual` rows) |
+| `recurring_preferences` | Ignore patterns for recurring detection |
+| `investment_return` | Investment return rows (`google_sheet` and `manual`) |
 
-### Trends & derived
-
-| Table | Purpose |
-|-------|--------|
-| **annual_trends** | Per-user: `user_id`, `category`, `cur_yr_minus_4` … `cur_yr_est`, `cur_yr_est_vs_4yr_avg`; unique on `(user_id, category)`. |
-| **monthly_trends** | Per-user: `user_id`, `category`, monthly columns; unique on `(user_id, category)`. |
-| **investment_return** | Per-user: `user_id`, `income_source`, `amount_gbp`; unique on `(user_id, income_source)`. |
-
-### Recurring & kids
-
-| Table | Purpose |
-|-------|--------|
-| **recurring_payments** | Per-user: `user_id`, `name`, annualized amounts, `needs_review`; unique on `(user_id, name)`. |
-| **recurring_preferences** | Per-user: `user_id`, `counterparty_pattern`, `is_ignored`; unique on `(user_id, counterparty_pattern)`. |
-| **kids_accounts** | Per-user: `user_id`, `child_name`, `account_type`, `balance_usd`, `date_updated`, `notes`, `purpose`; unique on `(user_id, child_name, account_type, date_updated, notes)`. |
-
-### Sync metadata
+### AI Quality & Telemetry
 
 | Table | Purpose |
-|-------|--------|
-| **sync_metadata** | One row per user: `user_id` (unique), `last_sync_at` (timestamptz). Updated via `recordLastSync(supabase, userId)` after each successful sync. Header “Last Refresh” reads the current user’s row (RLS scopes to `user_id`). |
+|-------|---------|
+| `ai_chat_telemetry` | Per-chat intent/tool/quality flags |
+| `ai_quality_reports` | Weekly cron-generated aggregate quality reports |
 
-### RPCs & RLS
+### Global Tables
+
+| Table | Purpose |
+|-------|---------|
+| `fx_rates` | Historical FX rates |
+| `fx_rate_current` | Latest GBP/USD rate |
+
+### RPCs
 
 | Function | Purpose |
-|----------|--------|
-| **get_cash_runway_net_burn(p_start, p_end)** | Returns `gbp_net`, `usd_net`: net burn per currency for date range. RLS on `transaction_log` restricts to current user’s rows. Used by `GET /api/cash-runway`. |
-| **current_user_id()** | STABLE SECURITY DEFINER function returning `auth.uid()`; used in RLS policies so the planner evaluates it once per query (Performance Advisor–friendly). |
+|----------|---------|
+| `get_cash_runway_net_burn(p_start, p_end)` | Net burn in GBP/USD over date range |
+| `distinct_categories()` | Distinct categories from budgets + transactions for current user |
+| `current_user_id()` | Auth helper used by RLS policies |
 
 ---
 
@@ -165,91 +103,92 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ### 4.0 Login (`/login`)
 
-- **Purpose:** Unauthenticated users are redirected here by middleware; after sign-in, auth callback redirects to `/insights` (or back to `/login` with an error).
-- **Flow:** Google sign-in button; redirects to Supabase OAuth then `/auth/callback`. Callback exchanges code for session, then upserts `user_profiles` (id, email). No allowlist—any Google user can sign in. If code exchange fails, redirect to `/login?error=auth_code_error`.
-- **Already signed in:** If any signed-in user visits `/login`, middleware redirects to `/insights`.
-
----
+- Google OAuth via Supabase.
+- Callback at `/auth/callback` exchanges code, upserts `user_profiles`, and redirects to `/insights`.
+- New users get dummy sheet ID + background sync.
+- Signed-in users visiting `/login` are redirected to `/insights`.
 
 ### 4.1 Dashboard (`/`)
 
-- **At a glance:** Executive summary (e.g. net worth, budget gap, key KPIs); mobile uses horizontal scroll carousel.
-- **Net worth chart:** Line chart of historical net worth (with optional entity filters: Personal/Family/Trust); mobile: reduced ticks and compact Y-axis. Only displays years where total net worth > 0 (see Data Filtering Requirements in Section 2.1).
-- **Income vs expenses chart:** Budget vs tracking vs YTD; all amounts are after tax; optional investment return; mobile: toggles can be hidden. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
-- **Budget table:** Categories with annual budget, tracking (forecast), YTD actual; variance and over/under budget. Optional **Full table view** toggle on Expenses: opens the expense tables in a full-screen overlay scaled to fit. See `docs/COMPACT-DATA-GRID.md`.
-- **Annual trends table:** Current year vs prior years by category (GBP/USD via FX). Optional **Full table view** toggle: opens the table in a full-screen overlay scaled to fit (no scrolling).
-- **Monthly trends table:** Current month vs prior months, TTM avg, z-score, delta vs last 3 months. Optional **Full table view** toggle (same behavior as Annual). Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
-- **Navigation:** In-page anchors (Net Worth, Budget Table, Annual Trends, Monthly Trends) and “Back to top.”
+- At-a-glance cards + section navigation.
+- Net worth chart (historical, Trust-aware handling).
+- Income vs Expenses chart.
+- Budget table with in-app editing entry points (budget + category planning).
+- Annual and Monthly trends tables are computed from app logic (`lib/forecasting.ts`) rather than legacy trends tables.
+- Supports full-table view overlays.
 
 ### 4.2 Key Insights (`/insights`)
 
-- **Key Insights:** Combined view of budget targets, annual/monthly trends, historical net worth, and latest account balances. Includes charts (e.g. net worth over time, pie by category), progress indicators, and “at a glance” style cards. Currency toggle (GBP/USD) and mobile-friendly layout. All charts and tables follow Data Filtering Requirements (see Section 2.1): only months with full historical coverage and years with net worth > 0 are displayed.
-- **Net worth pie chart:** 
-  - **Personal/Family split:** If account data includes both Personal and Family balances (Family > 0), displays a pie chart showing "Personal vs Family" breakdown.
-  - **Category breakdown:** If all accounts are Personal (Family = 0), displays a pie chart showing "Net Worth by Category" breakdown by account category (Cash, Brokerage, Alt Inv, Retirement, Taconic, House). Trust category is excluded from the category breakdown; if Trust data exists, displays "(Trust excluded)" text next to the title.
-- **Conditional Trust display:** All Trust-related UI elements (filters, labels, references) are conditionally hidden when no Trust data exists. If Trust data is present, Trust is excluded from Family calculations and category breakdowns, with appropriate exclusion text displayed.
+- KPI/summary cards built from budgets, computed trends, historical net worth, and latest balances.
+- Daily Summary modal (on-mount + header-triggered).
+- Connect Sheet modal when sheet setup is missing.
+- Dummy-data banner shown when using seeded sample sheet.
 
 ### 4.3 Accounts (`/accounts`)
 
-- **Accounts overview:** List/cards of account balances (by institution, account name, category, currency). Latest balance per account; optional grouping. Mobile: card layout instead of table.
+- Account listing with latest per account.
+- Add/Edit/Delete manual account rows.
+- Non-manual rows are read-only in edit/delete APIs.
 
-### 4.3.1 Liquidity (`/liquidity`)
+### 4.4 Liquidity (`/liquidity`)
 
-- **Purpose:** Monitor cash position, liquidity tiers, committed capital exposure, and debt-to-asset ratios.
-- **Liquidity definitions:** The page uses two classification systems from `account_balances`:
-  - **Category-based** (from `category` column): Cash = Cash category; Liquid Assets = Cash + Brokerage categories.
-  - **Profile-based** (from `liquidity_profile` column): Instant, Within 6 Months, Locked Up. These do not overlap. Cash (category-based) may overlap with Instant (profile-based).
-- **KPIs:** Three cards — Total Cash (Cash category), Liquid Assets (Cash + Brokerage), Instant Liquidity (Instant profile).
-- **Committed Capital vs. Liquidity:** Bar chart with 4 bars — Committed Capital (from `debt` table where `type = 'Committed Capital'`), Cash, Instant, Within 6 Months. Includes definition text explaining category vs profile overlap.
-- **Monthly Expenses vs. Liquidity:** Bar chart with 4 bars — Monthly Expenses (avg net spend over last 3 full months via `/api/cash-runway`, excl. income & gifts), Cash, Instant, Liquid. Includes definition text for Monthly Expenses.
-- **Liquidity Distribution:** Pie chart grouped by `liquidity_profile` values. Color-coded: Instant (emerald `#10b981`), Within 6 Months (blue `#3b82f6`), Locked Up (slate `#64748b`).
-- **Debt vs Assets:** Bar chart comparing total debt (from `debt` table, excluding Committed Capital) vs total assets (from `account_balances`, excluding Trust category). Shows "Assets exclude Trust" subtext when Trust accounts exist. Includes debt ratio percentage and a "View Details" dialog listing individual debt line items.
+- KPIs: Total Cash, Liquid Assets, Instant Liquidity.
+- Committed capital vs liquidity chart.
+- Monthly expenses vs liquidity chart.
+- Debt overview + distribution/risk/horizon views.
+- Debt is app-managed (manual source).
 
-### 4.4 Kids Accounts (`/kids`)
+### 4.5 Kids Accounts (`/kids`)
 
-- **Kids accounts overview:** Balances by child and account type (USD), with notes and purpose. Data sourced from Google Sheet and synced into `kids_accounts`.
+- Kids balances + notes/purpose.
+- Supports sheet-synced rows plus manual rows.
+- Sidebar hides Kids nav when no kids data exists.
 
-### 4.5 Recurring (`/recurring`)
+### 4.6 Recurring (`/recurring`)
 
-- **Recurring payments:** Table and cards of recurring items (name, annualized amount, needs review). Data from sheet `recurring_payments`.
-- **Detected recurring payments:** Automatically detects recurring payments from transaction history. Analysis window: **30 months (2.5 years)** of transaction history to ensure annual recurring payments can be detected (requires at least 2 transactions to identify a yearly pattern). Monthly patterns require 2+ transactions in the last 4 months. Only includes series with transactions in the last 60 days (live check). See `lib/utils/detect-recurring-payments.ts` for full detection logic.
-- **Recurring preferences:** Support for marking counterparty patterns as ignored (not recurring).
+- Recurring table + detection summary.
+- Recurring detection from transaction history (`lib/utils/detect-recurring-payments.ts`).
+- Supports manual recurring entries while preserving synced rows.
 
-### 4.6 Settings (`/settings`)
+### 4.7 Import (`/import`)
 
-- **Connect your sheet:** User sets `google_spreadsheet_id` (and optional `display_name`) in `user_profiles`. Required before manual sync or cron can pull data for that user. Sidebar link to Settings.
-- **Default currency:** User can set display currency (GBP or USD) in Settings; stored in `user_profiles.default_currency`. The app opens with this currency on login (CurrencyProvider loads from localStorage, then user profile); new users default to USD. Changing the currency toggle elsewhere in the app persists the choice to `user_profiles` and localStorage.
-- **Manual sync:** If `google_spreadsheet_id` is null, `POST /api/sync` returns 400 with “Connect your sheet first”; user is directed to Settings. Saving settings with a spreadsheet ID triggers a sync after save.
+- CSV upload, column mapping, preview, import summary.
+- API route: `POST /api/import/csv`.
+- Dedup key: `date + normalized counterparty + amount`.
+- Imported rows use `data_source = 'csv'`.
 
-### 4.7 Analysis (`/analysis`)
+### 4.8 Settings (`/settings`)
 
-- **Navigation:** In-page navigation (AnalysisNavigation) with anchor links to: Cash Runway, Transaction Analysis, Forecast Evolution, YTD Spend Over Time, Annual Cumulative Spend, YoY Net Worth Change, Monthly Trends by Category. Hash or `section` query param scrolls to the section (AnalysisHashScroll), e.g. `/analysis#forecast-evolution` or `/analysis?section=transaction-analysis`. Supports deep links from Dashboard (e.g. trends links with `section`, `period`, `year`, `month`, `category`). Transaction Analysis accepts optional URL params: `section`, `period` (YTD/MTD), `year`, `month`, `category` to pre-fill filters.
-- **Cash runway:** Cards/metrics showing how long funds last at current burn (based on balances and spending). Net burn (last 3 full calendar months) from `GET /api/cash-runway`, which calls RPC `get_cash_runway_net_burn` (expenses + refunds by currency; category excludes Income, Excluded, Gift Money).
-- **Transaction analysis:** Filter by period (YTD/month) and category; view transactions and category totals.
-- **Forecast evolution:**  
-  - **Compare to:** Dropdown (Yesterday, Last Week, Last Month) to choose start date; end date defaults to today.  
-  - **Forecast bridge chart:** Waterfall (stacked bar “invisible spacer” technique): Start total → category-level drivers (forecast deltas) → End total. Green = forecast down (gap improved), red = forecast up (gap worsened). Data from `budget_history` via `/api/forecast-bridge`.  
-  - **Forecast gap over time:** Line chart of total budget gap (annual_budget − forecast_spend, expense categories only) over the selected date range. Data from `budget_history` via `GET /api/forecast-gap-over-time?startDate=&endDate=`. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).  
-  - **Logic:** For start date and end date, load snapshots from `budget_history`; compute per-category `Spend_Delta = End_Forecast - Start_Forecast`; sort by absolute delta; top drivers (e.g. top 5 + Other) drive the waterfall.
-- **YTD spend over time:** Cumulative spend chart (e.g. by category) over the year. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
-- **Annual cumulative spend:** Multi-year cumulative spend vs budget (optional year toggles; mobile may show fewer lines by default). Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
-- **YoY net worth change:** Start/end chart and YoY net worth waterfall (income, expenses, transfers, etc.) from `yoy_net_worth`. Only displays years where total net worth > 0 (see Data Filtering Requirements in Section 2.1).
-- **Monthly Trends by Category:** 
-  - **Monthly Category Summary:** Summary cards showing latest month spending vs. L3M Avg, L12M Avg, and LY (Last Year) for the selected category, broken down by top transaction and other spending. Includes a category selector dropdown to choose which category to analyze.
-  - **Monthly Trends Chart:** Stacked bar chart showing monthly spending trends for the selected category. Each bar represents a month and is split into two segments: the top transaction (counterparty with highest spending) for that month, and the rest of the category ("Other"). Highlights the latest month. Data from `transaction_log`; shows last 13 months of trends. Category selection is controlled by the selector in the Monthly Category Summary section above. Only displays months with full historical coverage (see Data Filtering Requirements in Section 2.1).
+- Google Sheet connection + template copy workflow.
+- Default currency preference (`user_profiles.default_currency`).
+- Category Planning section to manage annual budget + forecast methods + manual overrides by category.
+- Appearance (Light/Dark/System) via `next-themes`.
+- Saving settings with a sheet ID triggers sync.
 
-### 4.8 Chat / AI Assistant
+### 4.9 Analysis (`/analysis`)
 
-- **Entry:** Floating chat button (mobile: above bottom nav); opens modal “The AI Financial Assistant.” Auth timeout: `AuthTimeoutProvider` (inactivity 5 min or tab hidden 5 min) signs out and redirects to `/login`.
-- **API:** `POST /api/chat` with AI SDK `streamText`, model Gemini 2.5 Flash; multi-step tool use (`maxSteps: 5`).
-- **Tools:**
-  1. **get_financial_snapshot** – Current or historical (`asOfDate`) net worth/balances; optional groupBy (currency, category, entity) and entity filter (Personal/Family/Trust). Uses `historical_net_worth` or `account_balances`.
-  2. **analyze_spending** – Transactions over a date range; optional merchant, category, type (expenses/income/all), groupBy (category, merchant, month). Uses `transaction_log`; excludes non-expense categories unless requested.
-  3. **get_budget_vs_actual** – Budget vs actual (YTD or annual) by category; over/under budget. Uses `budget_targets` and `transaction_log`.
-  4. **analyze_forecast_evolution** – How forecasted annual spend (and thus budget gap) changed between two dates. Uses `budget_history` (with fallback: latest date ≤ endDate, then `budget_targets`). Computes per-category `Spend_Delta = End_Forecast - Start_Forecast`; sorts by |delta|; returns total forecast change, gap impact direction, and drivers (all in GBP); summary can be in GBP or USD via current FX.
-  5. **search_web** (optional/future) – Query external web sources for comparative data, benchmarks, or market information. Enables questions like "How does my Uber spending compare to average Londoners?" or "What's the typical cost of X in Y location?" Implementation would use a web search API (e.g., Google Custom Search, Serper, Tavily) to fetch relevant data, then synthesize with user's financial data for comparative insights. Considerations: API costs, rate limits, data accuracy/recency, privacy (user data not sent to search APIs), and clear disclaimers about external data sources.
-- **System prompt:** Date context (today, “last month”, “this year”, etc.), capabilities (snapshots, spending, budget performance, forecast evolution), and rules (always use tools, format currency, no raw JSON).
-- **UX:** Markdown responses, loading states, clear chat; errors surfaced in UI.
+- Sections: Cash Runway, Transaction Analysis, Forecast Evolution, YTD Cumulative, Annual Cumulative, YoY Net Worth, Monthly Category Trends.
+- Deep-link support via hash and query params.
+- Add Transaction dialog (manual transaction CRUD).
+- Forecast evolution endpoints use rollback history computation (`forecast_settings_history`, `budget_targets_history`) via `lib/forecast-evolution.ts`.
+
+### 4.10 AI Assistant
+
+- Chat widget available in app shell.
+- Route: `POST /api/chat`.
+- Model: `gemini-2.5-flash`.
+- Tooling currently includes:
+  1. `get_app_instructions`
+  2. `get_financial_snapshot`
+  3. `analyze_spending`
+  4. `get_budget_vs_actual`
+  5. `get_financial_health_summary`
+  6. `analyze_forecast_evolution`
+  7. `get_net_worth_trend`
+  8. `analyze_monthly_category_trends`
+  9. `get_cash_runway`
+  10. `search_web` (enabled when `SERPER_API_KEY` is configured)
+- Logs AI quality telemetry into `ai_chat_telemetry`.
 
 ---
 
@@ -257,64 +196,80 @@ Core entities are defined in `supabase/migrations/`. The app is **multi-tenant**
 
 ### 5.1 Google Sheets
 
-- **Role:** Per-user source of truth for balances, transactions, budgets, net worth, FX, trends, recurring, kids, investment return, YoY net worth. Each user’s sheet ID is stored in `user_profiles.google_spreadsheet_id` (set in Settings). No direct user editing in the app; data is read from the sheet via Google Sheets API.
-- **Config:** Google API credentials (service account) for the Sheets API. Spreadsheet ID is per-user from `user_profiles`, not from env.
-- **Flow:**  
-  - **Sync:** `syncGoogleSheet(supabase, { spreadsheetId, userId })` reads the given sheet’s ranges/tabs, maps rows to table columns, and upserts into Supabase with `user_id` on every row (except global `fx_rates`, `fx_rate_current`). After a successful sync, `recordLastSync(supabase, userId)` updates `sync_metadata` for that user; `snapshotBudgetHistory(date, supabase, userId)` snapshots that user’s `budget_targets` into `budget_history`.  
-  - **Triggers:** (1) **Cron:** `GET|POST /api/cron/refresh` (06:00 UTC and 23:30 UTC, `CRON_SECRET`) lists `user_profiles` where `google_spreadsheet_id IS NOT NULL`, then for each user runs sync, snapshot, and `recordLastSync(admin, user.id)`. (2) **Manual:** `POST /api/sync` (auth required) reads current user’s `google_spreadsheet_id`; if null, returns 400 “Connect your sheet first”. Otherwise runs sync, snapshot, and `recordLastSync(supabase, user.id)`.  
-- **Sheets → tables:** Same mapping as before (Account Balances → `account_balances`, etc.); all user tables receive `user_id` on each row.
+- Per-user sheet ID in `user_profiles.google_spreadsheet_id`.
+- Synced tabs in current build:
+  - `Account Balances`
+  - `Transaction Log`
+  - `FX Rates`
+  - `FX Rate Current`
+  - `Kids`
+  - `Investment Return`
+  - `Recurring Payments`
+- No longer synced from sheet: budgets, debt, annual/monthly trends, historical net worth, YoY net worth.
 
-### 5.2 Supabase
+### 5.2 Sync Flow
 
-- **Auth:** Google OAuth; session in cookies; middleware requires authenticated user on protected routes; auth callback creates/upserts `user_profiles` and redirects to `/insights`. No allowlist.
-- **Database:** All user-specific tables have RLS with `user_id = current_user_id()` (see migration 018/019). Cron and sync use service role (admin) client to write for any user; app reads use anon key with session so RLS scopes to current user.
+- Manual sync: `POST /api/sync`.
+- Scheduled sync: `GET|POST /api/cron/refresh` (CRON_SECRET protected).
+- After successful sync, app rebuilds:
+  - historical net worth snapshots (`rebuildHistoricalNetWorthFromAccountHistory`)
+  - YoY net worth bridge (`rebuildYoYNetWorthFromAppData`)
+  - sync timestamp (`recordLastSync`)
 
-### 5.3 Google AI (Gemini)
+### 5.3 Supabase
 
-- **Role:** Chat model for the AI Financial Assistant (`@ai-sdk/google`, `google('gemini-2.5-flash')`).
-- **Flow:** User message → `/api/chat` → `streamText` with tools → tool executions (Supabase reads) → model summarizes in natural language; response streamed to the client.
+- RLS on user-scoped tables.
+- Service-role client used by cron jobs and global report generation.
 
-### 5.4 Web Search API (optional/future)
+### 5.4 AI + Web Search
 
-- **Role:** Enable comparative analysis by querying external web sources for benchmarks, averages, or market data (e.g., "average Uber spending in London", "typical cost of groceries in NYC").
-- **Options:** Google Custom Search API, Serper API, Tavily Search API, or similar. Each has different pricing, rate limits, and result formats.
-- **Implementation considerations:**
-  - **Privacy:** User's financial data (amounts, categories) should only be used to construct search queries, not sent as context to search APIs.
-  - **Cost:** Web search APIs typically charge per query (e.g., $0.001–$0.01 per search). Consider rate limiting or user opt-in for web search features.
-  - **Accuracy:** External data may be outdated, region-specific, or from varying sources. Always cite sources and include disclaimers.
-  - **Tool design:** Add `search_web` tool to chat route that accepts a search query string, calls the chosen API, extracts relevant data, and returns structured results. The AI model then synthesizes user's data with external benchmarks.
-  - **Example flow:** User asks "How does my Uber spending compare to average in London?" → AI calls `analyze_spending` for user's Uber data → AI calls `search_web` with query "average Uber spending per month London UK" → AI synthesizes comparison in response.
+- Gemini via AI SDK for core analysis.
+- Optional Serper integration for benchmark-style external comparisons (`search_web`).
 
-### 5.5 Vercel (or similar)
+### 5.5 Deployment/Cron (Vercel)
 
-- **Cron:** `vercel.json` defines daily crons for `/api/cron/refresh` at `0 6 * * *` (06:00 UTC) and `30 23 * * *` (23:30 UTC). Caller must send `Authorization: Bearer <CRON_SECRET>`.
+`vercel.json` cron schedules:
+- `0 6 * * *` → `/api/cron/refresh`
+- `30 23 * * *` → `/api/cron/refresh`
+- `0 9 * * 1` → `/api/cron/ai-quality-report`
 
-### 5.6 API routes summary
+### 5.6 API Surface (Current Build)
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/chat` | POST | The AI Financial Assistant; AI SDK `streamText`, tools, Gemini 2.5 Flash. |
-| `/api/cron/refresh` | GET/POST | Cron-only; loops `user_profiles` with non-null `google_spreadsheet_id`, runs sync + snapshot + `recordLastSync` per user. Secured by `CRON_SECRET`. |
-| `/api/sync` | POST | Manual refresh; reads current user’s `google_spreadsheet_id` from `user_profiles`; if null returns 400. Otherwise runs sync, snapshot, `recordLastSync` for that user. Requires auth. |
-| `/api/forecast-bridge` | GET | Forecast evolution waterfall data; query params for start/end dates. |
-| `/api/forecast-gap-over-time` | GET | Forecast gap (annual_budget − forecast_spend) per date in range; `startDate`, `endDate`. |
-| `/api/cash-runway` | GET | Net burn (GBP/USD) for last 3 full calendar months via RPC `get_cash_runway_net_burn`. Requires auth. |
+Core endpoints:
+- `POST /api/chat`
+- `POST /api/sync`
+- `GET|POST /api/cron/refresh`
+- `GET|POST /api/cron/ai-quality-report`
+- `GET /api/ai/quality-report`
+
+Forecast/analysis endpoints:
+- `GET /api/cash-runway`
+- `GET /api/forecast-bridge`
+- `GET /api/forecast-gap-over-time`
+- `GET /api/forecast-snapshots`
+
+Data-management endpoints:
+- `POST /api/accounts`, `PATCH|DELETE /api/accounts/[id]`
+- `POST /api/transactions`, `PATCH|DELETE /api/transactions/[id]`
+- `GET|POST /api/budgets`, `PATCH|DELETE /api/budgets/[id]`
+- `GET|PUT /api/category-planning`
+- `POST /api/debt`, `PATCH|DELETE /api/debt/[id]`
+- `POST /api/kids`, `PATCH|DELETE /api/kids/[id]`
+- `POST /api/recurring`, `PATCH|DELETE /api/recurring/[id]`
+- `GET|POST /api/investment-returns`, `PATCH|DELETE /api/investment-returns/[id]`
+- `GET|PUT /api/net-worth-history`
+- `POST /api/yoy-net-worth/rebuild`
+- `POST /api/import/csv`
 
 ---
 
-## 6. Unknowns / Areas for Improvement
+## 6. Known Gaps / Follow-Ups
 
-- **Allowlist (optional):** `lib/allowed-emails.ts` reads `ALLOWED_EMAILS` (comma-separated) from env but is **not** used by the app today; any Google user can sign in and RLS isolates data. Optional allowlist behavior for a closed beta is described in `docs/SCALING-MULTI-USER.md`.
-- **FX fallbacks:** Multiple places use a hardcoded GBP/USD fallback when `fx_rate_current` is missing or zero (e.g. `1.27` in chat route and currency context, `1.25` in some trend wrappers). Consider a single shared constant or config and document the source (e.g. “last known rate” or “default for display only”).
-- **Google Spreadsheet ID:** Per-user in `user_profiles.google_spreadsheet_id`; set in Settings. If unset, sync returns 400 and user is directed to Settings.
-- **Cron secret:** If `CRON_SECRET` is not set, all cron requests are rejected (401). Document in README/deploy docs so Vercel (or other) cron is configured with the header.
-- **Budget history coverage:** Forecast Evolution and chat “forecast evolution” depend on `budget_history` being populated (cron or manual refresh). If the sheet is never synced or history is sparse, comparisons may fail or return “no data”; consider empty-state messaging and prompting user to run Refresh Data.
-- **sync_metadata:** Per-user; if no sync has run yet for that user, no row exists; header “Last Refresh” uses `.maybeSingle()` and should handle empty state (e.g. “Never” or hide the label).
-- **Mobile layout:** Several charts and tables switch to card layout or hide toggles on small screens; regression testing on real devices is recommended.
-- **Error handling:** Some API and sync paths return generic messages; consider structured error codes or user-facing messages for quota, auth, and “no data” cases.
-- **Types:** Some Supabase responses are cast (e.g. `as BudgetTarget[]`); shared types or codegen from schema could reduce drift.
-- **No automated tests referenced in repo:** Adding unit tests for sync mapping, forecast-bridge logic, and chat tool execution would help prevent regressions.
+- `lib/allowed-emails.ts` exists but is not wired into auth flow.
+- `snapshotBudgetHistory` utility remains in repo but is no longer part of primary sync/forecast evolution path.
+- FX fallback constants (e.g. `1.25` / `1.27`) are still distributed across modules.
+- No comprehensive automated test suite yet for sync mappings, history rollback logic, and AI tool orchestration.
 
 ---
 
-*Document generated from codebase scan. Last updated: Chart style standardization (responsive heights/margins, app color palette, typography standards, call-out box pattern); default_currency (user_profiles, migration 020), Settings default currency and post-save sync; Analysis in-page navigation (AnalysisNavigation), hash/query scroll (AnalysisHashScroll), and URL params for transaction analysis; allowlist noted as optional/unused.*
+*Last updated: February 11, 2026. Synced with build including app-managed budgets/debt/history, rollback-based forecast evolution, import flow, and AI telemetry/reporting.*
