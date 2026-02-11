@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { computeAnnualForecasts } from '@/lib/forecasting'
 import { google } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { z } from 'zod'
@@ -687,18 +688,17 @@ If the user asks something you cannot answer with the available data (e.g., "How
               .single()
             
             const fxRate = fxRateData?.gbpusd_rate || 1.27
+            const forecasts = await computeAnnualForecasts(supabase, user.id)
             
             const EXCLUDED_CATEGORIES = ['Excluded', 'Income', 'Gift Money', 'Other Income']
             
-            // For annual period, use tracking_est_gbp (forecasted annual spend) instead of actual transactions
-            // This matches the UI calculation and provides a meaningful comparison
+            // For annual period, use computed annual forecasts from transactions + settings.
             let actualByCategory: Record<string, { gbp: number; usd: number }> = {}
             
             if (period === 'annual') {
-              // Use forecasted annual spend (tracking_est_gbp) for annual comparisons
               budgets.forEach((budget) => {
                 if (!EXCLUDED_CATEGORIES.includes(budget.category)) {
-                  const trackingGbp = Math.abs(budget.tracking_est_gbp || 0)
+                  const trackingGbp = Math.abs(forecasts.get(budget.category)?.forecast ?? budget.annual_budget_gbp ?? 0)
                   const trackingUsd = trackingGbp * fxRate
                   actualByCategory[budget.category] = { gbp: trackingGbp, usd: trackingUsd }
                 }
@@ -747,18 +747,25 @@ If the user asks something you cannot answer with the available data (e.g., "How
               })
             }
             
+            const totalDaysInYear = (yearNum: number) => (new Date(yearNum, 1, 29).getMonth() === 1 ? 366 : 365)
+            const dayOfYear = Math.floor(
+              (Number(today) - Number(new Date(currentYear, 0, 0))) / (24 * 60 * 60 * 1000)
+            )
+            const pctYearElapsed = Math.min(Math.max(dayOfYear / totalDaysInYear(currentYear), 0), 1)
+
             // Calculate variance for each budget category. Use GBP as source of truth, convert to USD with current FX rate.
             const comparisons = budgets.map((budget) => {
               const actual = actualByCategory[budget.category] || { gbp: 0, usd: 0 }
+              const annualBudgetAbs = Math.abs(budget.annual_budget_gbp || 0)
               
-              // Use YTD or annual budget based on period parameter
+              // Use prorated annual budget for YTD and full annual budget for annual view.
               const budgetGBP = period === 'ytd' 
-                ? (budget.ytd_gbp || 0) 
-                : Math.abs(budget.annual_budget_gbp || 0) // Annual budgets are stored as negative, convert to positive
-              const budgetUSD = (period === 'ytd' ? (budget.ytd_gbp ?? 0) : Math.abs(budget.annual_budget_gbp ?? 0)) * fxRate
+                ? annualBudgetAbs * pctYearElapsed
+                : annualBudgetAbs
+              const budgetUSD = budgetGBP * fxRate
               
               // Calculate variance (Budget - Actual, positive = under budget, negative = over budget)
-              // For annual period, this compares annual_budget vs tracking_est (forecasted annual spend)
+              // For annual period, this compares annual budget vs computed forecasted annual spend.
               const varianceGBP = budgetGBP - actual.gbp
               const varianceUSD = budgetUSD - actual.usd
               
@@ -936,7 +943,12 @@ If the user asks something you cannot answer with the available data (e.g., "How
 
             // 2) Budget (net income: income - expenses from budget_targets)
             const EXCLUDED = ['Excluded', 'Income', 'Gift Money', 'Other Income']
-            const { data: budgetRows, error: budgetErr } = await supabase.from('budget_targets').select('category, annual_budget_gbp, tracking_est_gbp').eq('user_id', user.id)
+            const [budgetRowsRes, annualForecasts] = await Promise.all([
+              supabase.from('budget_targets').select('category, annual_budget_gbp').eq('user_id', user.id),
+              computeAnnualForecasts(supabase, user.id),
+            ])
+            const budgetRows = budgetRowsRes.data
+            const budgetErr = budgetRowsRes.error
             if (budgetErr) throw new Error(budgetErr.message)
 
             let incomeBudget = 0
@@ -945,9 +957,9 @@ If the user asks something you cannot answer with the available data (e.g., "How
             let expensesTracking = 0
             const expenseCategories: { category: string; trackingGbp: number }[] = []
 
-            ;(budgetRows || []).forEach((row: { category: string; annual_budget_gbp?: number | null; tracking_est_gbp?: number | null }) => {
+            ;(budgetRows || []).forEach((row: { category: string; annual_budget_gbp?: number | null }) => {
               const budget = Math.abs(Number(row.annual_budget_gbp ?? 0))
-              const tracking = Math.abs(Number(row.tracking_est_gbp ?? 0))
+              const tracking = Math.abs(Number(annualForecasts.get(row.category)?.forecast ?? row.annual_budget_gbp ?? 0))
               if (row.category === 'Income' || row.category === 'Gift Money') {
                 incomeBudget += budget
                 incomeTracking += tracking
@@ -1096,16 +1108,17 @@ If the user asks something you cannot answer with the available data (e.g., "How
               } else {
                 const { data: targets, error: targetsError } = await supabase
                   .from('budget_targets')
-                  .select('category, annual_budget_gbp, tracking_est_gbp, ytd_gbp')
+                  .select('category, annual_budget_gbp')
                   .eq('user_id', user.id)
 
                 if (targetsError || !targets?.length) {
                   return { error: 'No end snapshot available (no budget_history and no budget_targets).' }
                 }
+                const forecasts = await computeAnnualForecasts(supabase, user.id)
                 targets
                   .filter((r: { category: string }) => isExpense(r.category))
-                  .forEach((row: { category: string; annual_budget_gbp: unknown; tracking_est_gbp: unknown }) => {
-                    const gap = toNum(row.annual_budget_gbp) - toNum(row.tracking_est_gbp)
+                  .forEach((row: { category: string; annual_budget_gbp: unknown }) => {
+                    const gap = toNum(row.annual_budget_gbp) - toNum(forecasts.get(row.category)?.forecast ?? 0)
                     endGapMap.set(row.category, gap)
                   })
               }

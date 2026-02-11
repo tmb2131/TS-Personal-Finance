@@ -10,7 +10,7 @@ export async function syncData() {
     if (!user) return { success: false, error: 'Unauthorized' }
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('google_spreadsheet_id')
+      .select('google_spreadsheet_id, budget_input_mode')
       .eq('id', user.id)
       .single()
     if (!profile?.google_spreadsheet_id) {
@@ -19,6 +19,7 @@ export async function syncData() {
     const result = await syncGoogleSheet(supabase, {
       spreadsheetId: profile.google_spreadsheet_id,
       userId: user.id,
+      budgetInputMode: (profile.budget_input_mode as 'app' | 'sheet' | null) ?? 'app',
     })
     return { success: result.success, results: result.results }
   } catch (error: any) {

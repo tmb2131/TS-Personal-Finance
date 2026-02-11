@@ -196,7 +196,7 @@ export function AnnualCumulativeSpendChart() {
     const estimatedTotalSpend2026 = budgetData
       .filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
       .reduce((sum, b) => {
-        const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+        const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
         const tracking = currency === 'USD' ? forecast * fxRate : forecast
         return sum + Math.abs(tracking) // Forecast values are stored as negative for expenses
       }, 0)

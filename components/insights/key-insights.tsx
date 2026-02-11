@@ -444,7 +444,7 @@ export function KeyInsights() {
     }, 0)
 
     const totalTracking = expenses.reduce((sum, b) => {
-      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
       const trackingGbp = Math.abs(forecast)
       const tracking = currency === 'USD' ? convertAmount(trackingGbp, 'GBP', fxRate) : trackingGbp
       return sum + tracking
@@ -456,7 +456,7 @@ export function KeyInsights() {
     const categoryGaps = expenses
       .map((b) => {
         const budgetGbp = Math.abs(b.annual_budget_gbp)
-        const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+        const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
         const trackingGbp = Math.abs(forecast)
         const budget = currency === 'USD' ? convertAmount(budgetGbp, 'GBP', fxRate) : budgetGbp
         const tracking = currency === 'USD' ? convertAmount(trackingGbp, 'GBP', fxRate) : trackingGbp
@@ -494,14 +494,14 @@ export function KeyInsights() {
     }
   }, [budgetData, currency, expenseCategories, fxRate, convertAmount, forecastByCategory])
 
-  // Annual Spend Insights — use same source as Daily Summary: budget_targets.tracking_est_gbp (est. annual spend)
+  // Annual Spend Insights — estimate from computed forecast map; fallback to annual budget.
   const annualSpendInsights = useMemo(() => {
     const mult = currency === 'USD' ? fxRate : 1
 
     // This year: from budget forecast (same as Daily Summary modal) so both places show the same number
     const budgetExpenses = budgetData.filter((b) => !EXCLUDED_ANNUAL_SPEND.includes(b.category))
     const trackingEstTotalGbp = budgetExpenses.reduce((sum, b) => {
-      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
       return sum + Math.abs(forecast)
     }, 0)
     const currentYearEstDisplay = trackingEstTotalGbp * mult

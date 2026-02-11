@@ -280,6 +280,7 @@ const SHEET_CONFIGS: SheetConfig[] = [
 export interface SyncGoogleSheetOptions {
   spreadsheetId: string;
   userId: string;
+  budgetInputMode?: 'app' | 'sheet';
 }
 
 /**
@@ -292,7 +293,7 @@ export async function syncGoogleSheet(
   supabase: SupabaseClient | undefined,
   options: SyncGoogleSheetOptions
 ) {
-  const { spreadsheetId, userId } = options;
+  const { spreadsheetId, userId, budgetInputMode } = options;
   try {
     if (!spreadsheetId) {
       throw new Error('spreadsheetId is required')
@@ -318,6 +319,14 @@ export async function syncGoogleSheet(
 
     const sheets = google.sheets({ version: 'v4', auth });
     const db = supabase ?? (await createClient());
+    const syncBudgetTargetsFromSheet = budgetInputMode !== 'app';
+    const effectiveConfigs = syncBudgetTargetsFromSheet
+      ? SHEET_CONFIGS
+      : SHEET_CONFIGS.filter((config) => config.table !== 'budget_targets');
+
+    if (!syncBudgetTargetsFromSheet) {
+      console.log('Budget Targets sync skipped because budget_input_mode is app');
+    }
 
     // First, get the list of sheets to verify they exist
     let availableSheets: string[] = [];
@@ -335,7 +344,7 @@ export async function syncGoogleSheet(
     // Filter to only configs whose sheet tab exists in the spreadsheet
     const presentConfigs: SheetConfig[] = [];
     const missingConfigs: SheetConfig[] = [];
-    for (const config of SHEET_CONFIGS) {
+    for (const config of effectiveConfigs) {
       if (availableSheets.includes(config.name)) {
         presentConfigs.push(config);
       } else {

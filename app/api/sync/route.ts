@@ -18,7 +18,7 @@ export async function POST() {
 
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('google_spreadsheet_id')
+      .select('google_spreadsheet_id, budget_input_mode')
       .eq('id', user.id)
       .single()
 
@@ -33,6 +33,7 @@ export async function POST() {
     const result = await syncGoogleSheet(supabase, {
       spreadsheetId: profile.google_spreadsheet_id,
       userId: user.id,
+      budgetInputMode: (profile.budget_input_mode as 'app' | 'sheet' | null) ?? 'app',
     })
     console.log('Sync API: Sync completed', { success: result.success, resultsCount: result.results?.length })
 

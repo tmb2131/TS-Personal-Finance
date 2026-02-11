@@ -129,7 +129,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const annualEstimatedSpend = useMemo(() => {
     const expenses = budgetData.filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
     const totalGBP = expenses.reduce((sum, b) => {
-      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
       return sum + Math.abs(forecast)
     }, 0)
     return currency === 'USD' ? convertAmount(totalGBP, 'GBP', fxRate) : totalGBP
@@ -152,7 +152,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
     const expenses = budgetData.filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
     const budgetTotalGBP = expenses.reduce((sum, b) => sum + Math.abs(b.annual_budget_gbp ?? 0), 0)
     const forecastTotalGBP = expenses.reduce((sum, b) => {
-      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
       return sum + Math.abs(forecast)
     }, 0)
     const gapGBP = budgetTotalGBP - forecastTotalGBP // Positive = under budget, negative = over budget

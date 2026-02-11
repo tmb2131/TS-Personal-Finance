@@ -24,6 +24,7 @@ import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wra
 import { cn } from '@/utils/cn'
 import { AlertCircle, TrendingUp, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import { CategoryPlanningDialog } from '@/components/category-planning/category-planning-dialog'
 
 type SortField = 'category' | 'cur_month_minus_3' | 'cur_month_minus_2' | 'cur_month_minus_1' | 'cur_month_est' | 'ttm_avg' | 'z_score' | 'delta_last_month' | 'delta_l3m' | 'delta_l12m'
 type SortDirection = 'asc' | 'desc' | null
@@ -662,11 +663,14 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Monthly Trends</CardTitle>
-          <FullTableViewToggle
-            fullView={fullView}
-            onToggle={() => setFullView((v) => !v)}
-            aria-label="Toggle full table view for Monthly Trends"
-          />
+          <div className="flex items-center gap-2">
+            <CategoryPlanningDialog triggerLabel="Edit Planning" title="Edit Category Planning" />
+            <FullTableViewToggle
+              fullView={fullView}
+              onToggle={() => setFullView((v) => !v)}
+              aria-label="Toggle full table view for Monthly Trends"
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-2">

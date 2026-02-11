@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const admin = createAdminClient()
     const { data: profiles, error: listError } = await admin
       .from('user_profiles')
-      .select('id, google_spreadsheet_id')
+      .select('id, google_spreadsheet_id, budget_input_mode')
       .not('google_spreadsheet_id', 'is', null)
 
     if (listError) {
@@ -38,6 +38,7 @@ export async function GET(request: Request) {
       const result = await syncGoogleSheet(admin, {
         spreadsheetId: profile.google_spreadsheet_id,
         userId: profile.id,
+        budgetInputMode: (profile.budget_input_mode as 'app' | 'sheet' | null) ?? 'app',
       })
       allResults.push(...(result.results ?? []))
       if (!result.success) anySuccess = false

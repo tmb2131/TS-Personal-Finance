@@ -128,7 +128,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     let giftMoney = 0
     let expenses = 0
     budgets.forEach((b) => {
-      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.tracking_est_gbp ?? 0
+      const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
       const tracking = currency === 'USD' ? forecast * fxRate : forecast
       if (b.category === 'Income') income += Math.abs(tracking)
       else if (b.category === 'Gift Money') giftMoney += Math.abs(tracking)

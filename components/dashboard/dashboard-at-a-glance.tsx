@@ -56,7 +56,7 @@ export function DashboardAtAGlance() {
       const supabase = createClient()
       const [nwRes, budgetRes, { data: { user } }] = await Promise.all([
         supabase.from('historical_net_worth').select('*').order('date', { ascending: false }).limit(500),
-        supabase.from('budget_targets').select('category, annual_budget_gbp, tracking_est_gbp'),
+        supabase.from('budget_targets').select('category, annual_budget_gbp'),
         supabase.auth.getUser(),
       ])
       if (cancelled) return
@@ -83,8 +83,8 @@ export function DashboardAtAGlance() {
       let expensesBudget = 0
       const forecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
       if (budgetRes.data?.length) {
-        budgetRes.data.forEach((row: { category: string; annual_budget_gbp: number; tracking_est_gbp: number }) => {
-          const forecast = forecasts?.get(row.category)?.forecast ?? row.tracking_est_gbp
+        budgetRes.data.forEach((row: { category: string; annual_budget_gbp: number }) => {
+          const forecast = forecasts?.get(row.category)?.forecast ?? row.annual_budget_gbp
           const tracking = currency === 'USD' ? convertAmount(forecast, 'GBP', fxRate) : forecast
           const budget = currency === 'USD' ? convertAmount(row.annual_budget_gbp, 'GBP', fxRate) : row.annual_budget_gbp
           if (row.category === 'Income' || row.category === 'Gift Money') {

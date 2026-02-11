@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { computeAnnualForecasts } from '@/lib/forecasting'
 
 /**
  * Snapshot current budget_targets into budget_history for the given date and user.
@@ -28,7 +29,7 @@ export async function snapshotBudgetHistory(
   
   const { data: rows, error: selectError } = await db
     .from('budget_targets')
-    .select('category, annual_budget_gbp, tracking_est_gbp, ytd_gbp')
+    .select('category, annual_budget_gbp')
     .eq('user_id', userId)
 
   if (selectError) {
@@ -40,14 +41,19 @@ export async function snapshotBudgetHistory(
     return
   }
 
-  const historyRows = rows.map((row: { category: string; annual_budget_gbp: number; tracking_est_gbp: number; ytd_gbp: number }) => ({
-    user_id: userId,
-    date,
-    category: row.category,
-    annual_budget: row.annual_budget_gbp ?? null,
-    forecast_spend: row.tracking_est_gbp ?? null,
-    actual_ytd: row.ytd_gbp ?? null,
-  }))
+  const forecasts = await computeAnnualForecasts(db, userId)
+
+  const historyRows = rows.map((row: { category: string; annual_budget_gbp: number | null }) => {
+    const forecast = forecasts.get(row.category)
+    return {
+      user_id: userId,
+      date,
+      category: row.category,
+      annual_budget: row.annual_budget_gbp ?? forecast?.annualBudget ?? null,
+      forecast_spend: forecast?.forecast ?? null,
+      actual_ytd: forecast?.ytd ?? null,
+    }
+  })
 
   console.log(`[snapshotBudgetHistory] Upserting ${historyRows.length} rows for user ${userId}, date ${date}`)
   

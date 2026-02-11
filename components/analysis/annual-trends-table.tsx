@@ -24,6 +24,7 @@ import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wra
 import { cn } from '@/utils/cn'
 import { AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
+import { CategoryPlanningDialog } from '@/components/category-planning/category-planning-dialog'
 
 type SortField = 'category' | 'cur_yr_minus_4' | 'cur_yr_minus_3' | 'cur_yr_minus_2' | 'cur_yr_minus_1' | 'cur_yr_est' | 'cur_yr_est_vs_last_yr' | 'cur_yr_est_vs_4yr_avg'
 type SortDirection = 'asc' | 'desc' | null
@@ -488,11 +489,14 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Annual Trends</CardTitle>
-          <FullTableViewToggle
-            fullView={fullView}
-            onToggle={() => setFullView((v) => !v)}
-            aria-label="Toggle full table view for Annual Trends"
-          />
+          <div className="flex items-center gap-2">
+            <CategoryPlanningDialog triggerLabel="Edit Planning" title="Edit Category Planning" />
+            <FullTableViewToggle
+              fullView={fullView}
+              onToggle={() => setFullView((v) => !v)}
+              aria-label="Toggle full table view for Annual Trends"
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-2">

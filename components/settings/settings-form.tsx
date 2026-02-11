@@ -22,7 +22,12 @@ interface SettingsFormProps {
   serviceAccountEmail: string
 }
 
-export function SettingsForm({ initialSpreadsheetId, initialDisplayName, initialDefaultCurrency, serviceAccountEmail }: SettingsFormProps) {
+export function SettingsForm({
+  initialSpreadsheetId,
+  initialDisplayName,
+  initialDefaultCurrency,
+  serviceAccountEmail,
+}: SettingsFormProps) {
   const [copiedEmail, setCopiedEmail] = useState(false)
 
   const [spreadsheetId, setSpreadsheetId] = useState(initialSpreadsheetId)

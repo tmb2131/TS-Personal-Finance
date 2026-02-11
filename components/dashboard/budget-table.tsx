@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { BudgetSummaryTable } from './budget-summary-table'
 import { BudgetIncomeTable } from './budget-income-table'
 import { EditBudgetDialog } from '@/components/budgets/edit-budget-dialog'
+import { CategoryPlanningDialog } from '@/components/category-planning/category-planning-dialog'
 
 type SortField = 'category' | 'annualBudget' | 'tracking' | 'ytd' | 'gap'
 type SortDirection = 'asc' | 'desc' | null
@@ -55,8 +56,8 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     (budgets: BudgetTarget[], forecastMap?: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null) => {
       return budgets.map((budget) => {
         const forecastRow = (forecastMap ?? forecastByCategory)?.get(budget.category)
-        const trackingGbp = forecastRow?.forecast ?? budget.tracking_est_gbp
-        const ytdGbp = forecastRow?.ytd ?? budget.ytd_gbp
+        const trackingGbp = forecastRow?.forecast ?? budget.annual_budget_gbp
+        const ytdGbp = forecastRow?.ytd ?? 0
         const annualBudget =
           currency === 'USD'
             ? convertAmount(budget.annual_budget_gbp, 'GBP', fxRate)
@@ -503,7 +504,10 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Budget Tracker</h2>
-        <EditBudgetDialog />
+        <div className="flex items-center gap-2">
+          <CategoryPlanningDialog triggerLabel="Plan Categories" title="Edit Category Planning" />
+          <EditBudgetDialog />
+        </div>
       </div>
       {/* Summary Table */}
       <BudgetSummaryTable incomeData={incomeData} expenseData={expenseData} />
