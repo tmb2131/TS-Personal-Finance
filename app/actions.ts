@@ -11,7 +11,7 @@ export async function syncData() {
     if (!user) return { success: false, error: 'Unauthorized' }
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('google_spreadsheet_id, budget_input_mode')
+      .select('google_spreadsheet_id')
       .eq('id', user.id)
       .single()
     if (!profile?.google_spreadsheet_id) {
@@ -20,7 +20,6 @@ export async function syncData() {
     const result = await syncGoogleSheet(supabase, {
       spreadsheetId: profile.google_spreadsheet_id,
       userId: user.id,
-      budgetInputMode: (profile.budget_input_mode as 'app' | 'sheet' | null) ?? 'app',
     })
     if (result.success) {
       await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)

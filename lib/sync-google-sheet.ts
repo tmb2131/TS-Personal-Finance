@@ -21,13 +21,13 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 
 /** Tables that use delete-all-then-insert (no upsert key). */
 const DELETE_INSERT_TABLES = new Set([
-  'debt', 'budget_targets',
+  'debt',
   'investment_return', 'yoy_net_worth', 'recurring_payments',
 ]);
 
 /** Tables that have a data_source column (scoped deletes during sync). */
 const DATA_SOURCE_TABLES = new Set([
-  'account_balances', 'transaction_log', 'budget_targets', 'debt', 'kids_accounts', 'investment_return',
+  'account_balances', 'transaction_log', 'debt', 'kids_accounts', 'investment_return',
 ]);
 
 interface SheetConfig {
@@ -119,28 +119,6 @@ const SHEET_CONFIGS: SheetConfig[] = [
         currency: currency || null,
       };
     },
-  },
-  {
-    name: 'Budget Targets',
-    range: 'A:I',
-    table: 'budget_targets',
-    transform: (row) => ({
-      category: row[0] || '',
-      // Column B: Annual Budget GBP
-      annual_budget_gbp: parseFloat(row[1] || '0'),
-      // Column C: Tracking GBP (Est)
-      tracking_est_gbp: parseFloat(row[2] || '0'),
-      // Column D: YTD GBP
-      ytd_gbp: parseFloat(row[3] || '0'),
-      // Column E: Gap GBP — skipped (computed field)
-      // Column F: Annual Budget USD
-      annual_budget_usd: parseFloat(row[5] || '0'),
-      // Column G: Tracking USD (Est)
-      tracking_est_usd: parseFloat(row[6] || '0'),
-      // Column H: YTD USD
-      ytd_usd: parseFloat(row[7] || '0'),
-      // Column I: Gap USD — skipped (computed field)
-    }),
   },
   {
     name: 'FX Rates',
@@ -265,7 +243,6 @@ const SHEET_CONFIGS: SheetConfig[] = [
 export interface SyncGoogleSheetOptions {
   spreadsheetId: string;
   userId: string;
-  budgetInputMode?: 'app' | 'sheet';
 }
 
 /**
@@ -278,7 +255,7 @@ export async function syncGoogleSheet(
   supabase: SupabaseClient | undefined,
   options: SyncGoogleSheetOptions
 ) {
-  const { spreadsheetId, userId, budgetInputMode } = options;
+  const { spreadsheetId, userId } = options;
   try {
     if (!spreadsheetId) {
       throw new Error('spreadsheetId is required')
@@ -304,14 +281,7 @@ export async function syncGoogleSheet(
 
     const sheets = google.sheets({ version: 'v4', auth });
     const db = supabase ?? (await createClient());
-    const syncBudgetTargetsFromSheet = budgetInputMode !== 'app';
-    const effectiveConfigs = syncBudgetTargetsFromSheet
-      ? SHEET_CONFIGS
-      : SHEET_CONFIGS.filter((config) => config.table !== 'budget_targets');
-
-    if (!syncBudgetTargetsFromSheet) {
-      console.log('Budget Targets sync skipped because budget_input_mode is app');
-    }
+    const effectiveConfigs = SHEET_CONFIGS;
 
     // First, get the list of sheets to verify they exist
     let availableSheets: string[] = [];
@@ -603,7 +573,7 @@ export async function syncGoogleSheet(
             const { data, error } = await db.from(config.table).insert(mergedData);
             upsertResult = { data, error };
           } else {
-            // Simple delete-then-insert (debt, budget_targets, etc.)
+            // Simple delete-then-insert (debt and other small tables)
             let deleteQuery = db
               .from(config.table)
               .delete()

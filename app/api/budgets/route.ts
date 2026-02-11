@@ -56,14 +56,6 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('budget_input_mode')
-      .eq('id', user.id)
-      .single()
-
-    const dataSource = profile?.budget_input_mode === 'sheet' ? 'google_sheet' : 'manual'
-
     const { data, error } = await supabase.from('budget_targets').insert({
       user_id: user.id,
       category: parsed.data.category,
@@ -73,7 +65,7 @@ export async function POST(request: Request) {
       ytd_gbp: 0,
       tracking_est_usd: 0,
       ytd_usd: 0,
-      data_source: dataSource,
+      data_source: 'manual',
     }).select().single()
 
     if (error) {

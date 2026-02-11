@@ -14,7 +14,6 @@ import { isExcludedCategory, isIncomeCategory } from '@/lib/category-filters'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
 type MonthMethod = 'Linear' | 'Average' | 'Manual'
-type BudgetInputMode = 'app' | 'sheet'
 
 interface RowState {
   category: string
@@ -24,7 +23,6 @@ interface RowState {
   current_month_method: MonthMethod
   manual_year_forecast?: number | null
   manual_month_forecast?: number | null
-  budget_data_source?: 'google_sheet' | 'plaid' | 'csv' | 'manual' | null
 }
 
 const yearMethodHelp: Record<YearMethod, string> = {
@@ -40,17 +38,9 @@ const monthMethodHelp: Record<MonthMethod, string> = {
   Manual: 'Use your manual monthly override',
 }
 
-const sourceLabels: Record<NonNullable<RowState['budget_data_source']>, string> = {
-  google_sheet: 'Sheet',
-  plaid: 'Plaid',
-  csv: 'CSV',
-  manual: 'In-app',
-}
-
 export function CategoryPlanningSection() {
   const { currency, fxRate } = useCurrency()
   const [rows, setRows] = useState<RowState[]>([])
-  const [budgetInputMode, setBudgetInputMode] = useState<BudgetInputMode>('app')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
@@ -66,7 +56,6 @@ export function CategoryPlanningSection() {
           throw new Error(result.error || 'Failed to load category planning data')
         }
         setRows(result.rows ?? [])
-        setBudgetInputMode(result.budget_input_mode === 'sheet' ? 'sheet' : 'app')
       } catch (error: any) {
         console.error('CategoryPlanningSection load error', error)
         toast.error(error.message || 'Failed to load category planning data')
@@ -159,7 +148,6 @@ export function CategoryPlanningSection() {
         current_month_method: defaults.month,
         manual_year_forecast: null,
         manual_month_forecast: null,
-        budget_data_source: 'manual' as const,
       },
     ].sort((a, b) => a.category.localeCompare(b.category)))
     setNewCategory('')
@@ -174,7 +162,6 @@ export function CategoryPlanningSection() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          budget_input_mode: budgetInputMode,
           rows: rows.map((row) => ({
             category: row.category,
             annual_budget_gbp: row.annual_budget_gbp,
@@ -192,9 +179,6 @@ export function CategoryPlanningSection() {
       }
 
       toast.success('Category planning saved')
-      if (budgetInputMode === 'app') {
-        toast.message('Google sync will now ignore the Budget Targets sheet tab.')
-      }
     } catch (error: any) {
       console.error('CategoryPlanningSection save error', error)
       toast.error(error.message || 'Failed to save category planning')
@@ -225,28 +209,14 @@ export function CategoryPlanningSection() {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-[1fr_260px]">
-          <div className="space-y-2">
-            <Label htmlFor="category-search">Search categories</Label>
-            <Input
-              id="category-search"
-              placeholder="Search category..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="budget-input-mode">Budget source</Label>
-            <select
-              id="budget-input-mode"
-              value={budgetInputMode}
-              onChange={(e) => setBudgetInputMode(e.target.value as BudgetInputMode)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <option value="app">In-app (recommended)</option>
-              <option value="sheet">Google Sheet Budget Targets tab</option>
-            </select>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="category-search">Search categories</Label>
+          <Input
+            id="category-search"
+            placeholder="Search category..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
         <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
@@ -272,14 +242,13 @@ export function CategoryPlanningSection() {
         </div>
 
         <div className="overflow-auto rounded-md border">
-          <Table className="min-w-[980px]">
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="w-52">Category</TableHead>
                 <TableHead className="w-36 text-right">Annual Budget ({currency})</TableHead>
                 <TableHead className="w-56">Annual Forecast Method</TableHead>
                 <TableHead className="w-56">Monthly Forecast Method</TableHead>
-                <TableHead className="w-28">Source</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -345,11 +314,6 @@ export function CategoryPlanningSection() {
                       />
                     )}
                   </TableCell>
-                  <TableCell>
-                    <span className="inline-flex h-7 items-center rounded-md border px-2 text-xs text-muted-foreground">
-                      {row.budget_data_source ? sourceLabels[row.budget_data_source] : 'None'}
-                    </span>
-                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -358,9 +322,7 @@ export function CategoryPlanningSection() {
 
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
-            {budgetInputMode === 'app'
-              ? 'In-app mode keeps category budgets editable in Findash and skips Budget Targets sync from Google Sheets.'
-              : 'Sheet mode refreshes category budgets from the Google Sheet Budget Targets tab when you sync.'}
+            Budgets are app-managed only. Google sync does not import Budget Targets.
           </p>
           <Button onClick={handleSave} disabled={saving} className="min-w-[120px]">
             {saving ? (
