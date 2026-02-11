@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "eval:app-instructions": "node --experimental-strip-types scripts/eval-app-instructions.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.16",

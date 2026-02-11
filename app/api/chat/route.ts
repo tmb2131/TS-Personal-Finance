@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { computeAnnualForecasts } from '@/lib/forecasting'
 import { computeForecastSnapshotsForDates } from '@/lib/forecast-evolution'
+import { APP_PAGE_KNOWLEDGE_INDEX, buildAppKnowledgePromptContext, findRelevantAppKnowledgeEntries, inferRouteHintFromQuery } from '@/lib/ai/app-knowledge'
+import { buildIntentRoutingPromptContext, classifyQueryIntent } from '@/lib/ai/intent-routing'
+import { deriveTelemetryFlags } from '@/lib/ai/telemetry'
 import { google } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { z } from 'zod'
@@ -74,6 +77,83 @@ export async function POST(req: Request) {
 - "This year" = ${currentYear}-01-01 to ${todayISO}
 - "This month" = first day of current month to ${todayISO}
 When the user says "last month", "this year", "this month", or similar, you MUST pass the corresponding startDate and endDate (YYYY-MM-DD) to the tool using this context. Do not guess or use a different date.`
+  const appKnowledgeContext = buildAppKnowledgePromptContext()
+  const latestUserMessage = [...modelMessages].reverse().find((m) => m.role === 'user')?.content || ''
+  const inferredRouteHint = inferRouteHintFromQuery(latestUserMessage)
+  const intentResult = classifyQueryIntent(latestUserMessage)
+  const intentRoutingContext = buildIntentRoutingPromptContext(intentResult)
+  console.log('[chat] Intent routing:', {
+    intent: intentResult.intent,
+    financeScore: intentResult.financeScore,
+    appScore: intentResult.appScore,
+    inferredRouteHint,
+    latestUserMessagePreview: latestUserMessage.substring(0, 120),
+  })
+
+  let telemetryLogged = false
+  const logChatTelemetry = async ({
+    responseText,
+    finishReason,
+    toolCalls,
+    toolResults,
+    extraIssueLabels = [],
+  }: {
+    responseText: string
+    finishReason?: string | null
+    toolCalls?: Array<{ toolName?: string }>
+    toolResults?: Array<{ toolName?: string; result?: unknown }>
+    extraIssueLabels?: string[]
+  }) => {
+    if (telemetryLogged) return
+    telemetryLogged = true
+
+    try {
+      const uniqueToolNames = Array.from(
+        new Set(
+          (toolCalls || [])
+            .map((toolCall) => toolCall?.toolName)
+            .filter((name): name is string => typeof name === 'string' && name.length > 0)
+        )
+      )
+      const flags = deriveTelemetryFlags({
+        intent: intentResult.intent,
+        responseText,
+        finishReason: finishReason || null,
+        toolNames: uniqueToolNames,
+        toolResults: toolResults || [],
+      })
+      const issueLabels = Array.from(new Set([...(flags.issueLabels || []), ...extraIssueLabels]))
+      const responseLength = (responseText || '').trim().length
+
+      const { error: telemetryError } = await supabase.from('ai_chat_telemetry').insert({
+        user_id: user.id,
+        intent: intentResult.intent,
+        user_query: latestUserMessage,
+        route_hint: inferredRouteHint || null,
+        tool_calls_count: uniqueToolNames.length,
+        tool_names: uniqueToolNames,
+        finish_reason: finishReason || null,
+        response_text: responseText || null,
+        response_length: responseLength,
+        is_unanswered: flags.isUnanswered,
+        is_low_confidence: flags.isLowConfidence,
+        issue_labels: issueLabels,
+        model: 'gemini-2.5-flash',
+        metadata: {
+          intentScores: {
+            finance: intentResult.financeScore,
+            app: intentResult.appScore,
+          },
+        },
+      })
+
+      if (telemetryError) {
+        console.error('[chat] telemetry insert error:', telemetryError)
+      }
+    } catch (telemetryInsertError) {
+      console.error('[chat] telemetry logging failed:', telemetryInsertError)
+    }
+  }
 
   let result
   try {
@@ -83,6 +163,10 @@ When the user says "last month", "this year", "this month", or similar, you MUST
       system: `You are a Senior Financial Analyst AI Assistant with deep expertise in personal finance analysis. You have access to comprehensive financial data including account balances, transaction history, budget targets, and historical net worth trends.
 
 ${dateContext}
+
+${appKnowledgeContext}
+
+${intentRoutingContext}
 
 YOUR CAPABILITIES:
 1. **Financial health perspective**: Synthesise account values, allocation, budget status, and spending/income trends into a short narrative (e.g. "Here's where you stand and how things are trending"). Use get_financial_health_summary when the user asks for an overall picture of their financial health, a summary of where they stand, or how they're doing (accounts, allocation, budget, spending trends).
@@ -108,6 +192,8 @@ YOUR CAPABILITIES:
    - "How does my budget compare to others?"
    When using search_web, first get the user's data using appropriate financial tools (e.g., analyze_spending), then search for external benchmarks, and finally synthesize a comparison. Always include disclaimers about external data sources and their limitations.
 
+8. **App instruction support**: Use get_app_instructions for "how do I use the app?" questions. Help users navigate pages, explain where actions live (for example sync, import, settings, add/edit flows), and give concise step-by-step guidance.
+
 DATA CONTEXT:
 - The user has accounts in multiple currencies (primarily GBP and USD)
 - Accounts are categorized by type (Cash, Brokerage, Alt Inv, Retirement, Taconic, House, Trust, etc.)
@@ -116,15 +202,17 @@ DATA CONTEXT:
 - Budget targets are set annually and tracked YTD
 
 CRITICAL INSTRUCTIONS:
-1. **Always use tools** - Never guess or make up financial data. Always call the appropriate tool to get accurate information.
+1. **Always use tools for financial numbers** - Never guess or make up financial data. Any financial figure or comparison must come from tools.
 2. **Provide comprehensive summaries** - When you call a tool and receive results, you MUST immediately provide a clear, human-readable summary. Expand on the summary field provided by tools with context and insights.
-3. **Multi-step analysis** - You can call multiple tools in sequence to answer complex questions. For example, use get_financial_snapshot for balances, then analyze_spending for spending patterns, then get_budget_vs_actual for budget context. For comparative questions, first get the user's data, then use search_web for external benchmarks, then synthesize the comparison.
-4. **Currency handling** - Always format currency appropriately: £ for GBP, $ for USD, € for EUR. When comparing amounts, convert to a single currency or show both. For readability, do not show decimal points in currency or other numbers unless the user explicitly asks for them (e.g. show £1,234 not £1,234.56).
-5. **Entity distinction** - Clearly distinguish between Personal, Family, and Trust entities when relevant. Personal balances are in balance_personal_local, Family in balance_family_local.
-6. **Net worth default** - When describing net worth (e.g. from get_financial_health_summary), show the value excluding Trust as the main figure and, when different, add subtext for "Incl. Trust: £X" so the default view is excl. Trust.
-7. **Date intelligence** - Use the CURRENT DATE CONTEXT above for ALL relative date phrases ("last month", "this year", "this month", "last week"). When calling analyze_spending for "last month", pass startDate and endDate from that context (the exact YYYY-MM-DD range given). For historical queries use get_financial_snapshot with asOfDate. For current data, omit asOfDate or use 'current'.
-8. **Never output raw JSON** - Always format results in natural language with proper context and insights.
-9. **Be analytical** - Provide insights, trends, and context. Don't just report numbers - explain what they mean.
+3. **Use app knowledge for how-to questions** - For product/navigation/instruction questions, use APP PAGE KNOWLEDGE and do not invent controls or pages that are not listed.
+4. **Multi-step analysis** - You can call multiple tools in sequence to answer complex questions. For example, use get_financial_snapshot for balances, then analyze_spending for spending patterns, then get_budget_vs_actual for budget context. For comparative questions, first get the user's data, then use search_web for external benchmarks, then synthesize the comparison.
+5. **Currency handling** - Always format currency appropriately: £ for GBP, $ for USD, € for EUR. When comparing amounts, convert to a single currency or show both. For readability, do not show decimal points in currency or other numbers unless the user explicitly asks for them (e.g. show £1,234 not £1,234.56).
+6. **Entity distinction** - Clearly distinguish between Personal, Family, and Trust entities when relevant. Personal balances are in balance_personal_local, Family in balance_family_local.
+7. **Net worth default** - When describing net worth (e.g. from get_financial_health_summary), show the value excluding Trust as the main figure and, when different, add subtext for "Incl. Trust: £X" so the default view is excl. Trust.
+8. **Date intelligence** - Use the CURRENT DATE CONTEXT above for ALL relative date phrases ("last month", "this year", "this month", "last week"). When calling analyze_spending for "last month", pass startDate and endDate from that context (the exact YYYY-MM-DD range given). For historical queries use get_financial_snapshot with asOfDate. For current data, omit asOfDate or use 'current'.
+9. **Never output raw JSON** - Always format results in natural language with proper context and insights.
+10. **Be analytical** - Provide insights, trends, and context. Don't just report numbers - explain what they mean.
+11. **Forecast evolution sign rule** - For analyze_forecast_evolution, negative change in gap = improved, positive change in gap = worsened (must match Analysis > Forecast Evolution chart).
 
 EXAMPLE QUERIES YOU CAN HANDLE:
 - "Summarise my financial health"
@@ -148,6 +236,11 @@ EXAMPLE QUERIES YOU CAN HANDLE:
 - "How does my Uber spending compare to average Londoners?"
 - "What's the typical grocery budget for a family of 4 in NYC?"
 - "How does my spending on restaurants compare to the average person in London?"
+- "How do I connect my Google Sheet?"
+- "Where do I import a CSV and which columns are required?"
+- "Where can I change my default currency?"
+- "What does the Liquidity page show?"
+- "How do I refresh data from the header?"
 
 GUARDRAILS:
 - This is analysis of your data, not financial advice. Only describe and interpret; never suggest specific investments or actions.
@@ -161,7 +254,8 @@ If the user asks something you cannot answer with the available data (e.g., "How
 - Budget vs actual (over/under budget by category, YTD, annual)
 - Income vs expenses and trends
 - Net worth over time and cash runway
-- Comparative analysis with external benchmarks and averages (e.g., "How does my spending compare to average?")`,
+- Comparative analysis with external benchmarks and averages (e.g., "How does my spending compare to average?")
+- App usage instructions (for example: connect sheet, import CSV, navigate pages, refresh data, settings)`,
       messages: modelMessages,
       maxSteps: 5, // CRITICAL: Allow multiple steps so AI can call tool AND generate response
       stopWhen: () => false, // CRITICAL: Never stop early - allow all steps up to maxSteps
@@ -185,6 +279,13 @@ If the user asks something you cannot answer with the available data (e.g., "How
       } else {
         console.error('[chat] Error details (non-Error object):', error)
       }
+      void logChatTelemetry({
+        responseText: '',
+        finishReason: 'error',
+        toolCalls: [],
+        toolResults: [],
+        extraIssueLabels: ['stream_error'],
+      })
     },
     onFinish: async ({ text, toolCalls, toolResults, finishReason, response, steps }) => {
       // Check all steps for text content
@@ -221,8 +322,84 @@ If the user asks something you cannot answer with the available data (e.g., "How
           toolResults: s.toolResults?.length
         })), null, 2))
       }
+
+      const stepToolCalls = (steps || []).flatMap((step: any) => step?.toolCalls || [])
+      const mergedToolCalls = [...(toolCalls || []), ...stepToolCalls]
+      const stepToolResults = (steps || []).flatMap((step: any) => step?.toolResults || [])
+      const mergedToolResults = [...(toolResults || []), ...stepToolResults]
+      await logChatTelemetry({
+        responseText: (allText || responseText || text || '').toString(),
+        finishReason: finishReason || null,
+        toolCalls: mergedToolCalls as Array<{ toolName?: string }>,
+        toolResults: mergedToolResults as Array<{ toolName?: string; result?: unknown }>,
+      })
     },
     tools: {
+      get_app_instructions: {
+        description: `Get grounded instructions for using app pages and features. Use this for questions like:
+        - "How do I connect my Google Sheet?"
+        - "Where do I import a CSV?"
+        - "How do I refresh data?"
+        - "What does the Liquidity page show?"
+        - "Where can I change default currency?"
+        This tool returns route-specific guidance, actions, and source-backed page context.`,
+        inputSchema: z.object({
+          query: z.string().describe('The user question about app usage, navigation, or settings.'),
+          routeHint: z.string().optional().describe('Optional route hint if user mentions a page (e.g., /settings, /import, /analysis).'),
+          maxResults: z.number().optional().default(3).describe('Maximum number of matched page entries to return (1-6).'),
+        }),
+        execute: async ({ query, routeHint, maxResults = 3 }) => {
+          try {
+            console.log('[chat] get_app_instructions: Starting', { query, routeHint, maxResults })
+
+            const normalizedRouteHint =
+              routeHint && APP_PAGE_KNOWLEDGE_INDEX.some((entry) => entry.route === routeHint)
+                ? routeHint
+                : inferRouteHintFromQuery(query)
+
+            const matches = findRelevantAppKnowledgeEntries({
+              query,
+              routeHint: normalizedRouteHint,
+              maxResults,
+            })
+
+            if (!matches.length) {
+              return {
+                guidance: null,
+                summary: 'I could not find a matching app instruction in the current page knowledge.',
+              }
+            }
+
+            const primary = matches[0]
+            const summary = [
+              `${primary.pageName}: ${primary.purpose}`,
+              `Key actions: ${primary.keyActions.slice(0, 3).join('; ')}`,
+            ].join(' ')
+
+            return {
+              guidance: {
+                query,
+                routeHint: normalizedRouteHint || null,
+                matchedRoutes: matches.map((entry) => entry.route),
+                entries: matches.map((entry) => ({
+                  route: entry.route,
+                  pageName: entry.pageName,
+                  purpose: entry.purpose,
+                  keyActions: entry.keyActions,
+                  primaryContent: entry.primaryContent,
+                  commonQuestions: entry.commonQuestions,
+                  sourceFiles: entry.sourceFiles,
+                })),
+                source: 'lib/ai/app-knowledge.ts',
+              },
+              summary,
+            }
+          } catch (err) {
+            console.error('[chat] get_app_instructions: Execution error', err)
+            return { error: err instanceof Error ? err.message : 'Unknown error' }
+          }
+        },
+      },
       get_financial_snapshot: {
         description: `Get financial snapshot including net worth, account balances, and historical trends. 
         Use this for questions about:
@@ -1014,7 +1191,10 @@ If the user asks something you cannot answer with the available data (e.g., "How
         },
       },
       analyze_forecast_evolution: {
-        description: `Analyze how the expenses gap to budget (budget minus tracking) has changed over time. Use when the user asks about changes in the forecast/gap (e.g., 'vs last week'). Uses expense categories only (excludes Income, Gift Money, Other Income, Excluded).`,
+        description: `Analyze how the expenses gap to budget (budget minus tracking) has changed over time. Use when the user asks about changes in the forecast/gap (e.g., 'vs last week'). Uses expense categories only (excludes Income, Gift Money, Other Income, Excluded).
+        IMPORTANT SIGN CONVENTION (must match Analysis > Forecast Evolution): for expense gap, negative values are better (under budget), positive values are worse (over budget). Therefore:
+        - Negative change in gap (end - start < 0) = Improved
+        - Positive change in gap (end - start > 0) = Worsened`,
         inputSchema: z.object({
           startDate: z.string().describe('Start date for comparison (YYYY-MM-DD). Use CURRENT DATE CONTEXT for "last month", "last week", etc.'),
           endDate: z.string().optional().describe('End date for comparison (YYYY-MM-DD). Defaults to today if omitted.'),
@@ -1049,7 +1229,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
             }
 
             const allCategories = new Set([...startGapMap.keys(), ...endGapMap.keys()])
-            const drivers: { category: string; change_gbp: number; impact: 'Positive' | 'Negative' | 'Neutral' }[] = []
+            const drivers: { category: string; change_gbp: number; impact: 'Improved' | 'Worsened' | 'Neutral' }[] = []
             let totalGapChangeGBP = 0
 
             for (const category of allCategories) {
@@ -1057,15 +1237,17 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const endGap = endGapMap.get(category) ?? 0
               const changeGbp = endGap - startGap
               totalGapChangeGBP += changeGbp
-              const impact: 'Positive' | 'Negative' | 'Neutral' =
-                changeGbp > 0 ? 'Positive' : changeGbp < 0 ? 'Negative' : 'Neutral'
+              // Sign convention aligns with Forecast Evolution chart:
+              // negative delta = improved, positive delta = worsened.
+              const impact: 'Improved' | 'Worsened' | 'Neutral' =
+                changeGbp < 0 ? 'Improved' : changeGbp > 0 ? 'Worsened' : 'Neutral'
               drivers.push({ category, change_gbp: changeGbp, impact })
             }
 
             drivers.sort((a, b) => Math.abs(b.change_gbp) - Math.abs(a.change_gbp))
 
-            const gapImpactDirection: 'Positive' | 'Negative' | 'Neutral' =
-              totalGapChangeGBP > 0 ? 'Positive' : totalGapChangeGBP < 0 ? 'Negative' : 'Neutral'
+            const gapImpactDirection: 'Improved' | 'Worsened' | 'Neutral' =
+              totalGapChangeGBP < 0 ? 'Improved' : totalGapChangeGBP > 0 ? 'Worsened' : 'Neutral'
 
             let summary: string
             const fmtGbp = (n: number) => `£${Math.round(n).toLocaleString('en-GB')}`
@@ -1079,20 +1261,32 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const fxRate = fxRow?.gbpusd_rate ?? 1.27
               const fmtUsd = (n: number) => `$${Math.round(n * fxRate).toLocaleString('en-US')}`
               const direction =
-                totalGapChangeGBP > 0 ? 'improved' : totalGapChangeGBP < 0 ? 'worsened' : 'stayed flat'
+                totalGapChangeGBP < 0 ? 'improved' : totalGapChangeGBP > 0 ? 'worsened' : 'stayed flat'
               const topDrivers = drivers.slice(0, 5)
-              const driverParts = topDrivers
-                .filter((d) => d.change_gbp !== 0)
-                .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtUsd(d.change_gbp)})`)
-              summary = `The expenses gap to budget ${direction} by ${fmtUsd(Math.abs(totalGapChangeGBP))} between ${startDate} and ${end}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              const worsenedDrivers = topDrivers
+                .filter((d) => d.change_gbp > 0)
+                .map((d) => `${d.category} (+${fmtUsd(d.change_gbp)})`)
+              const improvedDrivers = topDrivers
+                .filter((d) => d.change_gbp < 0)
+                .map((d) => `${d.category} (${fmtUsd(d.change_gbp)})`)
+              const parts: string[] = []
+              if (worsenedDrivers.length) parts.push(`Worsening drivers: ${worsenedDrivers.join(', ')}`)
+              if (improvedDrivers.length) parts.push(`Improving drivers: ${improvedDrivers.join(', ')}`)
+              summary = `The expenses gap to budget ${direction} by ${fmtUsd(Math.abs(totalGapChangeGBP))} between ${startDate} and ${end}. ${parts.join('. ')}${parts.length ? '.' : ''}`
             } else {
               const direction =
-                totalGapChangeGBP > 0 ? 'improved' : totalGapChangeGBP < 0 ? 'worsened' : 'stayed flat'
+                totalGapChangeGBP < 0 ? 'improved' : totalGapChangeGBP > 0 ? 'worsened' : 'stayed flat'
               const topDrivers = drivers.slice(0, 5)
-              const driverParts = topDrivers
-                .filter((d) => d.change_gbp !== 0)
-                .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtGbp(d.change_gbp)})`)
-              summary = `The expenses gap to budget ${direction} by ${fmtGbp(Math.abs(totalGapChangeGBP))} between ${startDate} and ${end}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              const worsenedDrivers = topDrivers
+                .filter((d) => d.change_gbp > 0)
+                .map((d) => `${d.category} (+${fmtGbp(d.change_gbp)})`)
+              const improvedDrivers = topDrivers
+                .filter((d) => d.change_gbp < 0)
+                .map((d) => `${d.category} (${fmtGbp(d.change_gbp)})`)
+              const parts: string[] = []
+              if (worsenedDrivers.length) parts.push(`Worsening drivers: ${worsenedDrivers.join(', ')}`)
+              if (improvedDrivers.length) parts.push(`Improving drivers: ${improvedDrivers.join(', ')}`)
+              summary = `The expenses gap to budget ${direction} by ${fmtGbp(Math.abs(totalGapChangeGBP))} between ${startDate} and ${end}. ${parts.join('. ')}${parts.length ? '.' : ''}`
             }
 
             return {
@@ -1101,6 +1295,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
                 endDate: end,
                 total_gap_change: totalGapChangeGBP,
                 gap_impact_direction: gapImpactDirection,
+                sign_convention: 'Negative change in gap = Improved; positive change in gap = Worsened',
                 drivers,
               },
               summary,
@@ -1780,6 +1975,13 @@ If the user asks something you cannot answer with the available data (e.g., "How
       message: streamError instanceof Error ? streamError.message : String(streamError),
       name: streamError instanceof Error ? streamError.name : 'Unknown',
       stack: streamError instanceof Error ? streamError.stack : undefined,
+    })
+    await logChatTelemetry({
+      responseText: '',
+      finishReason: 'error',
+      toolCalls: [],
+      toolResults: [],
+      extraIssueLabels: ['stream_create_error'],
     })
     // Re-throw to be caught by outer catch
     throw streamError

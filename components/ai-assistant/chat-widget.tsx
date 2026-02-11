@@ -51,6 +51,7 @@ function getDisplayNameForEmail(email: string | undefined): string | null {
 
 // Tool name to display name mapping
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  'get_app_instructions': 'Looking up app instructions',
   'get_financial_snapshot': 'Fetching financial snapshot',
   'analyze_spending': 'Analyzing spending data',
   'get_budget_vs_actual': 'Calculating budget comparison',
@@ -722,6 +723,15 @@ export function ChatWidget() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   {[
                     {
+                      id: 'using-app',
+                      title: 'Using the App',
+                      items: [
+                        { prompt: 'How do I connect my Google Sheet?', label: 'Connect my Google Sheet' },
+                        { prompt: 'Where do I import a CSV and which columns are required?', label: 'Import CSV and required columns' },
+                        { prompt: 'Where can I change my default currency?', label: 'Change default currency' },
+                      ],
+                    },
+                    {
                       id: 'financial-health',
                       title: 'Financial Health',
                       items: [
@@ -831,7 +841,7 @@ export function ChatWidget() {
                     {[
                       { prompt: "What's my net worth?", title: 'Net Worth', desc: 'View current balances' },
                       { prompt: 'How much did I spend last month?', title: 'Spending', desc: 'Analyze expenses' },
-                      { prompt: 'What is my current annual spend gap to budget?', title: 'Budget', desc: 'Check budget status' },
+                      { prompt: 'Where do I import a CSV and which columns are required?', title: 'Using the App', desc: 'How-to guidance' },
                       { prompt: 'Summarise my financial health', title: 'Overview', desc: 'Financial summary' },
                     ].map((card, idx) => (
                       <button

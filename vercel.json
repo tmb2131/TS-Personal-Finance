@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/refresh",
       "schedule": "30 23 * * *"
+    },
+    {
+      "path": "/api/cron/ai-quality-report",
+      "schedule": "0 9 * * 1"
     }
   ]
 }
