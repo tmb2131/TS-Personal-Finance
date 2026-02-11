@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { normalizeCounterparty } from '@/lib/csv-parser'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
 const CsvTransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -107,6 +108,14 @@ export async function POST(request: Request) {
         errors += chunk.length
       } else {
         imported += chunk.length
+      }
+    }
+
+    if (imported > 0) {
+      try {
+        await rebuildYoYNetWorthFromAppData(supabase, user.id)
+      } catch (rebuildError) {
+        console.error('CSV import: failed to rebuild YoY net worth data', rebuildError)
       }
     }
 

@@ -75,12 +75,10 @@ export function YoYNetWorthWaterfall() {
     const orderedCategories = [
       'Year Start',
       'Income',
-      'Other Income',
       'Gift Money',
       'Expenses',
+      'FX Impact',
       'Investment Return YTD',
-      'Transfer to Kiran',
-      'Transfer to HMRC',
       'Year End',
     ]
 

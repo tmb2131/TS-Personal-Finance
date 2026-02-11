@@ -3,6 +3,7 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
 import { createClient } from '@/lib/supabase/server'
 import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
 export async function syncData() {
   try {
@@ -23,6 +24,7 @@ export async function syncData() {
     })
     if (result.success) {
       await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
     }
     return { success: result.success, results: result.results }
   } catch (error: any) {

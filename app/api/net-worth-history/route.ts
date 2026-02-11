@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
 const MAX_ROWS = 200
 const PAGE_SIZE = 1000
@@ -240,6 +241,7 @@ export async function PUT(request: Request) {
     }
 
     await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
+    await rebuildYoYNetWorthFromAppData(supabase, user.id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Net-worth-history PUT error:', error)

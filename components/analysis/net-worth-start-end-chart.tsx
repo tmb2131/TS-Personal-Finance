@@ -60,9 +60,6 @@ export function NetWorthStartEndChart() {
   const chartData = useMemo(() => {
     if (data.length === 0) return []
 
-    const currentYear = new Date().getFullYear()
-    const priorYear = currentYear - 1
-
     const yearStartItem = data.find((item) => item.category === YEAR_START)
     const yearEndItem = data.find((item) => item.category === YEAR_END)
 
@@ -75,16 +72,16 @@ export function NetWorthStartEndChart() {
 
     if (yearStartItem) {
       rows.push({
-        name: `Dec 31, ${priorYear}`,
+        name: 'Year Start',
         value: getAmount(yearStartItem),
-        label: `Year start (Dec 31, ${priorYear})`,
+        label: 'Prior year-end net worth',
       })
     }
     if (yearEndItem) {
       rows.push({
-        name: `Dec 31, ${currentYear}`,
+        name: 'Current',
         value: getAmount(yearEndItem),
-        label: `Year end (Dec 31, ${currentYear})`,
+        label: 'Current net worth',
       })
     }
 
@@ -154,7 +151,7 @@ export function NetWorthStartEndChart() {
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Net Worth: Year Start vs Year End</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
-          Starting (prior year-end) and ending net worth for the current year
+          Prior year-end net worth compared with current net worth
         </p>
       </CardHeader>
       <CardContent>

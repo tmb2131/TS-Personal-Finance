@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
 const CreateTransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -47,6 +48,12 @@ export async function POST(request: Request) {
     if (error) {
       console.error('Error creating transaction:', error)
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+
+    try {
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
+    } catch (rebuildError) {
+      console.error('Transaction create: failed to rebuild YoY net worth data', rebuildError)
     }
 
     return NextResponse.json({ success: true, data })

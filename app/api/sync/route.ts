@@ -1,6 +1,7 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
 import { recordLastSync } from '@/lib/sync-metadata'
 import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
@@ -38,6 +39,7 @@ export async function POST() {
 
     if (result.success) {
       await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
       await recordLastSync(supabase, user.id)
     }
 

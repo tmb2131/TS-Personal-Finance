@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
 const UpdateTransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -65,6 +66,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
+    try {
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
+    } catch (rebuildError) {
+      console.error('Transaction update: failed to rebuild YoY net worth data', rebuildError)
+    }
+
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Transaction PATCH error:', error)
@@ -107,6 +114,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (error) {
       console.error('Error deleting transaction:', error)
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+
+    try {
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
+    } catch (rebuildError) {
+      console.error('Transaction delete: failed to rebuild YoY net worth data', rebuildError)
     }
 
     return NextResponse.json({ success: true })

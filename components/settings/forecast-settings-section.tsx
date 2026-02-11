@@ -126,6 +126,16 @@ export function ForecastSettingsSection({ initialSettings }: ForecastSettingsSec
         onConflict: 'user_id,category',
       })
       if (error) throw error
+
+      try {
+        const rebuildRes = await fetch('/api/yoy-net-worth/rebuild', { method: 'POST' })
+        if (!rebuildRes.ok) {
+          console.error('Forecast settings save: YoY rebuild request failed', await rebuildRes.text())
+        }
+      } catch (rebuildError) {
+        console.error('Forecast settings save: failed to trigger YoY rebuild', rebuildError)
+      }
+
       toast.success('Forecasting settings saved')
     } catch (err: any) {
       console.error('Save forecast settings error', err)

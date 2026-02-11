@@ -21,7 +21,7 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 
 /** Tables that use delete-all-then-insert (no upsert key). */
 const DELETE_INSERT_TABLES = new Set([
-  'investment_return', 'yoy_net_worth', 'recurring_payments',
+  'investment_return', 'recurring_payments',
 ]);
 
 /** Tables that have a data_source column (scoped deletes during sync). */
@@ -151,16 +151,6 @@ const SHEET_CONFIGS: SheetConfig[] = [
         amount_gbp: amount,
       }
     },
-  },
-  {
-    name: 'YoY Net Worth',
-    range: 'A:C',
-    table: 'yoy_net_worth',
-    transform: (row) => ({
-      category: row[0] || '',
-      amount_usd: row[1] ? parseFloat(row[1]) : null,
-      amount_gbp: row[2] ? parseFloat(row[2]) : null,
-    }),
   },
   {
     name: 'Recurring Payments',

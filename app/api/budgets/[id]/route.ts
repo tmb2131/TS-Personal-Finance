@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
 const UpdateBudgetSchema = z.object({
   annual_budget_gbp: z.number().optional(),
@@ -49,6 +50,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
+    try {
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
+    } catch (rebuildError) {
+      console.error('Budget update: failed to rebuild YoY net worth data', rebuildError)
+    }
+
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Budget PATCH error:', error)
@@ -89,6 +96,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (error) {
       console.error('Error deleting budget:', error)
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+
+    try {
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
+    } catch (rebuildError) {
+      console.error('Budget delete: failed to rebuild YoY net worth data', rebuildError)
     }
 
     return NextResponse.json({ success: true })

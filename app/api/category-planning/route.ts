@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExcludedCategory } from '@/lib/category-filters'
+import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -226,6 +227,12 @@ export async function PUT(request: Request) {
     }
     if (forecastUpsertRes.error) {
       return NextResponse.json({ success: false, error: forecastUpsertRes.error.message }, { status: 500 })
+    }
+
+    try {
+      await rebuildYoYNetWorthFromAppData(supabase, user.id)
+    } catch (rebuildError) {
+      console.error('Category planning save: failed to rebuild YoY net worth data', rebuildError)
     }
 
     return NextResponse.json({ success: true })
