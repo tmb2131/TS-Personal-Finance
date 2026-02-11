@@ -285,55 +285,51 @@ export function KeyInsights() {
       .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
       .slice(0, 6) // Top 6 accounts
 
-    // Net worth over time: last 12 months by month (exclude Trust)
-    const byMonth = historicalNetWorth.reduce<Record<string, { personal: number; family: number }>>((acc, item) => {
-      const d = new Date(item.date)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    // Net worth over time: use Dashboard-style yearly snapshots, but exclude Trust for Insights
+    const latestByYearCategory = new Map<string, { date: string; amount: number }>()
+    historicalNetWorth.forEach((item: HistoricalNetWorth) => {
+      const date = new Date(item.date)
+      const year = date.getFullYear()
+      if (Number.isNaN(year) || !Number.isFinite(year)) return
+
+      const category = item.category === 'Personal' || item.category === 'Family'
+        ? item.category
+        : null
+      if (!category) return
+
       const amount = currency === 'USD' ? (item.amount_usd || 0) : (item.amount_gbp || 0)
-      if (!acc[key]) acc[key] = { personal: 0, family: 0 }
-      if (item.category === 'Personal') acc[key].personal += amount
-      else if (item.category === 'Family') acc[key].family += amount
-      return acc
-    }, {})
-    const netWorthChartData = Object.entries(byMonth)
-      .map(([month, v]) => ({
-        month,
-        total: v.personal + v.family,
-        Personal: v.personal,
-        Family: v.family,
+      const dateKey = date.toISOString().slice(0, 10)
+      const key = `${year}|${category}`
+      const existing = latestByYearCategory.get(key)
+      if (!existing || dateKey > existing.date) {
+        latestByYearCategory.set(key, { date: dateKey, amount })
+      }
+    })
+
+    const groupedByYear: Record<number, { year: number; Personal: number; Family: number }> = {}
+    latestByYearCategory.forEach((entry, key) => {
+      const [yearStr, category] = key.split('|')
+      const year = Number(yearStr)
+      if (!groupedByYear[year]) {
+        groupedByYear[year] = { year, Personal: 0, Family: 0 }
+      }
+      if (category === 'Personal' || category === 'Family') {
+        groupedByYear[year][category] = entry.amount
+      }
+    })
+
+    const netWorthChartData = Object.values(groupedByYear)
+      .map((item) => ({
+        ...item,
+        total: (item.Personal || 0) + (item.Family || 0),
       }))
-      .filter((d) => d.total > 0) // Only display months/years where total net worth > 0 (per PRD requirement)
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .slice(-12)
-      .map((d, idx, arr) => {
-        // Format label: show year for January months (start of year) and for first item, abbreviated month for others
-        const [year, month] = d.month.split('-')
-        const monthNum = parseInt(month, 10)
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        
-        // Track previous year to detect year changes
-        const prevItem = idx > 0 ? arr[idx - 1] : null
-        const prevYear = prevItem ? prevItem.month.split('-')[0] : null
-        const isYearStart = monthNum === 1 || year !== prevYear
-        const isFirst = idx === 0
-        
-        let label: string
-        if (isYearStart || isFirst) {
-          // Show year for January months (start of year) and first item
-          label = year
-        } else {
-          // Show abbreviated month for other months
-          label = monthNames[monthNum - 1]
-        }
-        
-        return {
-          ...d,
-          label,
-          year, // Keep year for reference
-          monthNum, // Keep month number for reference
-          isYearTick: isYearStart || isFirst, // Flag to identify year ticks
-        }
-      })
+      .filter((item) => Number.isFinite(item.year) && item.total > 0) // Only display years where total net worth > 0 (per PRD requirement)
+      .sort((a, b) => a.year - b.year)
+      .map((item) => ({
+        ...item,
+        label: String(item.year),
+        isYearTick: true,
+      }))
 
     // Check if there's a Personal/Family split
     const hasPersonalFamilySplit = currentFamily > 0
