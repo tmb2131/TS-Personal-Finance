@@ -249,16 +249,14 @@ export default function DebtOverview() {
                               : '-'}
                           </TableCell>
                           <TableCell>
-                            {item.data_source === 'manual' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => setEditingDebt(item)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setEditingDebt(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       )

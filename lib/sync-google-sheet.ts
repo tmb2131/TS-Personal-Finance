@@ -21,13 +21,12 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 
 /** Tables that use delete-all-then-insert (no upsert key). */
 const DELETE_INSERT_TABLES = new Set([
-  'debt',
   'investment_return', 'yoy_net_worth', 'recurring_payments',
 ]);
 
 /** Tables that have a data_source column (scoped deletes during sync). */
 const DATA_SOURCE_TABLES = new Set([
-  'account_balances', 'transaction_log', 'debt', 'kids_accounts', 'investment_return',
+  'account_balances', 'transaction_log', 'kids_accounts', 'investment_return',
 ]);
 
 interface SheetConfig {
@@ -75,25 +74,6 @@ const SHEET_CONFIGS: SheetConfig[] = [
         date_updated: date,
         notes: (row[4] && row[4].trim()) || null,
         purpose: (row[5] && row[5].trim()) || null,
-      };
-    },
-  },
-  {
-    name: 'Debt',
-    range: 'A:F',
-    table: 'debt',
-    transform: (row) => {
-      // Skip rows missing essential fields (name and at least one amount)
-      if (!row[1] || (!row[3] && !row[4])) return null;
-      const date = row[5] ? new Date(row[5]) : null;
-      if (!date || isNaN(date.getTime())) return null;
-      return {
-        type: row[0] || '',
-        name: row[1] || '',
-        purpose: (row[2] && row[2].trim()) || null,
-        amount_gbp: row[3] ? parseFloat(row[3]) : null,
-        amount_usd: row[4] ? parseFloat(row[4]) : null,
-        date_updated: date,
       };
     },
   },
@@ -573,7 +553,7 @@ export async function syncGoogleSheet(
             const { data, error } = await db.from(config.table).insert(mergedData);
             upsertResult = { data, error };
           } else {
-            // Simple delete-then-insert (debt and other small tables)
+            // Simple delete-then-insert for remaining small tables
             let deleteQuery = db
               .from(config.table)
               .delete()

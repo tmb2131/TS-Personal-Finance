@@ -25,19 +25,12 @@ export async function PATCH(
 
     const { data: existing } = await supabase
       .from('debt')
-      .select('data_source')
+      .select('id')
       .eq('id', id)
       .single()
 
     if (!existing) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
-    }
-
-    if (existing.data_source !== 'manual') {
-      return NextResponse.json(
-        { success: false, error: 'Can only edit manually entered data' },
-        { status: 403 }
-      )
     }
 
     const body = await request.json()
@@ -90,19 +83,12 @@ export async function DELETE(
 
     const { data: existing } = await supabase
       .from('debt')
-      .select('data_source')
+      .select('id')
       .eq('id', id)
       .single()
 
     if (!existing) {
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
-    }
-
-    if (existing.data_source !== 'manual') {
-      return NextResponse.json(
-        { success: false, error: 'Can only delete manually entered data' },
-        { status: 403 }
-      )
     }
 
     const { error } = await supabase.from('debt').delete().eq('id', id)
