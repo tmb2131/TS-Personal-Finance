@@ -146,76 +146,57 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
     fetchForecasts()
   }, [forecastByCategory])
 
-  // Fetch budget_history for 1d / 1w / 1mo ago for forecast evolution columns in full view.
-  // Use latest snapshot on or before each target date (snapshots only exist when sync/cron ran).
-  // Refetch when full view opens so we run after auth is ready and get fresh data.
+  // Fetch computed historical forecasts for 1d / 1w / 1mo ago for forecast
+  // evolution columns in full view.
   useEffect(() => {
     if (!expenseFullView) return
 
     const EXCLUDED = ['Income', 'Gift Money', 'Other Income', 'Excluded']
     const toNum = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0)
     const toDateStr = (d: Date) => d.toISOString().split('T')[0]
-    const normalizeDate = (v: unknown) => (typeof v === 'string' ? v.split('T')[0] : String(v).split('T')[0])
 
     async function fetchHistory() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       const today = new Date()
+      const dayAgoStr = toDateStr(new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000))
       const weekAgoStr = toDateStr(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000))
       const monthAgoStr = toDateStr(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000))
-      const monthAgoDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const dates = [dayAgoStr, weekAgoStr, monthAgoStr]
 
-      // Fetch all snapshots in the last 30 days; we'll pick the latest on or before each target
-      const { data: rows, error } = await supabase
-        .from('budget_history')
-        .select('category, annual_budget, forecast_spend, date')
-        .eq('user_id', user.id)
-        .gte('date', toDateStr(monthAgoDate))
-        .lte('date', toDateStr(today))
+      try {
+        const params = new URLSearchParams({ dates: dates.join(',') })
+        const response = await fetch(`/api/forecast-snapshots?${params}`, { cache: 'no-store' })
+        if (!response.ok) {
+          setHistoryForecastSpend({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
+          return
+        }
+        const payload: {
+          data?: Record<
+            string,
+            Record<string, { annualBudget: number; forecast: number; gap: number; ytd: number }>
+          >
+        } = await response.json()
 
-      if (error || !rows?.length) {
-        setHistoryForecastSpend({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
-        return
-      }
+        const byDate = payload.data ?? {}
+        // Store computed forecast values per category/date for change-in-gap columns:
+        // current Tracking - historical forecast.
+        const buildForecastMap = (dateKey: string) => {
+          const entries = byDate[dateKey] ?? {}
+          const map: Record<string, number> = {}
+          for (const [category, values] of Object.entries(entries)) {
+            if (EXCLUDED.includes(category)) continue
+            map[category] = toNum(values.forecast)
+          }
+          return map
+        }
 
-      const byDate = new Map<string, { category: string; annual_budget: unknown; forecast_spend: unknown }[]>()
-      for (const r of rows as { category: string; annual_budget: unknown; forecast_spend: unknown; date: unknown }[]) {
-        const d = normalizeDate(r.date)
-        if (!byDate.has(d)) byDate.set(d, [])
-        byDate.get(d)!.push({ category: r.category, annual_budget: r.annual_budget, forecast_spend: r.forecast_spend })
-      }
-      const sortedDates = Array.from(byDate.keys()).sort()
-      const todayStr = toDateStr(today)
-
-      const latestOnOrBefore = (target: string) => {
-        const idx = sortedDates.findIndex((d) => d > target)
-        if (idx === 0) return null
-        if (idx === -1) return sortedDates[sortedDates.length - 1]
-        return sortedDates[idx - 1]
-      }
-
-      // "1 day ago" must use a snapshot strictly before today (never today's snapshot)
-      const datesBeforeToday = sortedDates.filter((d) => d < todayStr)
-      const dayAgoDate = datesBeforeToday.length > 0 ? datesBeforeToday[datesBeforeToday.length - 1] : null
-
-      // Store forecast_spend (tracking) per category for each date — used to show change in gap (current Tracking − historical forecast_spend)
-      const buildForecastMap = (dateKey: string | null) => {
-        const map: Record<string, number> = {}
-        if (!dateKey) return map
-        const list = byDate.get(dateKey) ?? []
-        list.filter((r) => !EXCLUDED.includes(r.category)).forEach((r) => {
-          map[r.category] = toNum(r.forecast_spend)
+        setHistoryForecastSpend({
+          dayAgo: buildForecastMap(dayAgoStr),
+          weekAgo: buildForecastMap(weekAgoStr),
+          monthAgo: buildForecastMap(monthAgoStr),
         })
-        return map
+      } catch {
+        setHistoryForecastSpend({ dayAgo: {}, weekAgo: {}, monthAgo: {} })
       }
-
-      setHistoryForecastSpend({
-        dayAgo: buildForecastMap(dayAgoDate),
-        weekAgo: buildForecastMap(latestOnOrBefore(weekAgoStr)),
-        monthAgo: buildForecastMap(latestOnOrBefore(monthAgoStr)),
-      })
     }
     fetchHistory()
   }, [expenseFullView])

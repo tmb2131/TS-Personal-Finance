@@ -2,7 +2,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
-import { snapshotBudgetHistory } from '@/lib/snapshot-budget-history'
 import { recordLastSync } from '@/lib/sync-metadata'
 
 const POST_LOGIN_REDIRECT = '/insights'
@@ -72,8 +71,6 @@ export async function GET(request: Request) {
         })
           .then(async (result) => {
             if (result.success) {
-              const today = new Date().toISOString().split('T')[0]
-              await snapshotBudgetHistory(today, supabase, data.user.id)
               await recordLastSync(supabase, data.user.id)
               console.log(`[auth/callback] Successfully synced dummy data for user ${data.user.id}`)
             } else {

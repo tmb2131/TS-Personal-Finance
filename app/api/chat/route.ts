@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { computeAnnualForecasts } from '@/lib/forecasting'
+import { computeForecastSnapshotsForDates } from '@/lib/forecast-evolution'
 import { google } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { z } from 'zod'
@@ -1025,106 +1026,28 @@ If the user asks something you cannot answer with the available data (e.g., "How
             console.log('[chat] analyze_forecast_evolution: Starting', { startDate, endDate: end, currency })
 
             const EXCLUDED = ['Income', 'Gift Money', 'Other Income', 'Excluded']
-            const toNum = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0)
             const isExpense = (c: string) => !EXCLUDED.includes(c)
 
-            // Step A: Fetch start snapshot (with fallback to closest available date)
-            let startRows: any[] | null = null
-            let startDateUsed = startDate
-            
-            const { data: startRowsExact, error: startExactError } = await supabase
-              .from('budget_history')
-              .select('category, forecast_spend, annual_budget')
-              .eq('user_id', user.id)
-              .eq('date', startDate)
-
-            if (!startExactError && startRowsExact && startRowsExact.length > 0) {
-              startRows = startRowsExact
-            } else {
-              // Fallback: find closest date <= startDate
-              const { data: startRowsLatest, error: startLatestError } = await supabase
-                .from('budget_history')
-                .select('date, category, forecast_spend, annual_budget')
-                .eq('user_id', user.id)
-                .lte('date', startDate)
-                .order('date', { ascending: false })
-                .limit(500)
-
-              if (!startLatestError && startRowsLatest && startRowsLatest.length > 0) {
-                const latestDate = startRowsLatest[0].date
-                startDateUsed = latestDate
-                startRows = startRowsLatest.filter((r: { date: string }) => r.date === latestDate)
-              } else {
-                return { error: `No historical data found for ${startDate} or earlier. Budget history snapshots may not exist for this date range.` }
-              }
-            }
+            const snapshots = await computeForecastSnapshotsForDates(supabase, user.id, [startDate, end])
+            const startSnapshot = snapshots.get(startDate) ?? new Map()
+            const endSnapshot = snapshots.get(end) ?? new Map()
 
             const startGapMap = new Map<string, number>()
-            if (startRows) {
-              startRows
-                .filter((r: { category: string }) => isExpense(r.category))
-                .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
-                  const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
-                  startGapMap.set(row.category, gap)
-                })
+            for (const [category, values] of startSnapshot.entries()) {
+              if (!isExpense(category)) continue
+              startGapMap.set(category, values.gap)
             }
 
-            // Step B: Fetch end snapshot (with fallback)
             const endGapMap = new Map<string, number>()
-            let endDateUsed = end
-
-            const { data: endRowsExact, error: endExactError } = await supabase
-              .from('budget_history')
-              .select('category, forecast_spend, annual_budget')
-              .eq('user_id', user.id)
-              .eq('date', end)
-
-            if (!endExactError && endRowsExact && endRowsExact.length > 0) {
-              endRowsExact
-                .filter((r: { category: string }) => isExpense(r.category))
-                .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
-                  const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
-                  endGapMap.set(row.category, gap)
-                })
-            } else {
-              const { data: endRowsLatest, error: endLatestError } = await supabase
-                .from('budget_history')
-                .select('date, category, forecast_spend, annual_budget')
-                .eq('user_id', user.id)
-                .lte('date', end)
-                .order('date', { ascending: false })
-                .limit(500)
-
-              if (!endLatestError && endRowsLatest && endRowsLatest.length > 0) {
-                const latestDate = endRowsLatest[0].date
-                endDateUsed = latestDate
-                endRowsLatest
-                  .filter((r: { date: string }) => r.date === latestDate)
-                  .filter((r: { category: string }) => isExpense(r.category))
-                  .forEach((row: { category: string; annual_budget: unknown; forecast_spend: unknown }) => {
-                    const gap = toNum(row.annual_budget) - toNum(row.forecast_spend)
-                    endGapMap.set(row.category, gap)
-                  })
-              } else {
-                const { data: targets, error: targetsError } = await supabase
-                  .from('budget_targets')
-                  .select('category, annual_budget_gbp')
-                  .eq('user_id', user.id)
-
-                if (targetsError || !targets?.length) {
-                  return { error: 'No end snapshot available (no budget_history and no budget_targets).' }
-                }
-                const forecasts = await computeAnnualForecasts(supabase, user.id)
-                targets
-                  .filter((r: { category: string }) => isExpense(r.category))
-                  .forEach((row: { category: string; annual_budget_gbp: unknown }) => {
-                    const gap = toNum(row.annual_budget_gbp) - toNum(forecasts.get(row.category)?.forecast ?? 0)
-                    endGapMap.set(row.category, gap)
-                  })
-              }
+            for (const [category, values] of endSnapshot.entries()) {
+              if (!isExpense(category)) continue
+              endGapMap.set(category, values.gap)
             }
 
-            // Step C: Gap deltas (positive = gap improved)
+            if (startGapMap.size === 0 && endGapMap.size === 0) {
+              return { error: `No forecast evolution data available between ${startDate} and ${end}.` }
+            }
+
             const allCategories = new Set([...startGapMap.keys(), ...endGapMap.keys()])
             const drivers: { category: string; change_gbp: number; impact: 'Positive' | 'Negative' | 'Neutral' }[] = []
             let totalGapChangeGBP = 0
@@ -1161,7 +1084,7 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const driverParts = topDrivers
                 .filter((d) => d.change_gbp !== 0)
                 .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtUsd(d.change_gbp)})`)
-              summary = `The expenses gap to budget ${direction} by ${fmtUsd(Math.abs(totalGapChangeGBP))} between ${startDateUsed}${startDateUsed !== startDate ? ` (closest available date to ${startDate})` : ''} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              summary = `The expenses gap to budget ${direction} by ${fmtUsd(Math.abs(totalGapChangeGBP))} between ${startDate} and ${end}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
             } else {
               const direction =
                 totalGapChangeGBP > 0 ? 'improved' : totalGapChangeGBP < 0 ? 'worsened' : 'stayed flat'
@@ -1169,13 +1092,13 @@ If the user asks something you cannot answer with the available data (e.g., "How
               const driverParts = topDrivers
                 .filter((d) => d.change_gbp !== 0)
                 .map((d) => `${d.category} (${d.change_gbp >= 0 ? '+' : ''}${fmtGbp(d.change_gbp)})`)
-              summary = `The expenses gap to budget ${direction} by ${fmtGbp(Math.abs(totalGapChangeGBP))} between ${startDateUsed}${startDateUsed !== startDate ? ` (closest available date to ${startDate})` : ''} and ${endDateUsed}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
+              summary = `The expenses gap to budget ${direction} by ${fmtGbp(Math.abs(totalGapChangeGBP))} between ${startDate} and ${end}. ${driverParts.length ? 'Main drivers: ' + driverParts.join(', ') + '.' : ''}`
             }
 
             return {
               evolution: {
-                startDate: startDateUsed,
-                endDate: endDateUsed,
+                startDate,
+                endDate: end,
                 total_gap_change: totalGapChangeGBP,
                 gap_impact_direction: gapImpactDirection,
                 drivers,

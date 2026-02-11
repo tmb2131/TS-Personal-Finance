@@ -216,7 +216,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
           <EmptyState
             icon={TrendingUp}
             title="No forecast history yet"
-            description="Budget history is recorded daily. Run a sync or wait for the next daily snapshot to see how your annual forecast changes over time."
+            description="No forecast evolution data is available for this period yet. Add budget categories or transactions to start tracking changes."
           />
         </CardContent>
       </Card>

@@ -1,11 +1,10 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
-import { snapshotBudgetHistory } from '@/lib/snapshot-budget-history'
 import { recordLastSync } from '@/lib/sync-metadata'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 /**
- * Cron endpoint: run data sync per user (each user's sheet) and snapshot budget_history.
+ * Cron endpoint: run data sync per user (each user's sheet).
  * Secured by CRON_SECRET. Loops over user_profiles with non-null google_spreadsheet_id.
  */
 export async function GET(request: Request) {
@@ -30,7 +29,6 @@ export async function GET(request: Request) {
       )
     }
 
-    const today = new Date().toISOString().split('T')[0]
     const allResults: { sheet: string; success: boolean; error?: string; rowsProcessed: number }[] = []
     let anySuccess = true
 
@@ -42,7 +40,6 @@ export async function GET(request: Request) {
       })
       allResults.push(...(result.results ?? []))
       if (!result.success) anySuccess = false
-      await snapshotBudgetHistory(today, admin, profile.id)
       if (result.success) {
         await recordLastSync(admin, profile.id)
       }

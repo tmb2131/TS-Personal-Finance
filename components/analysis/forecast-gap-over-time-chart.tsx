@@ -126,7 +126,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
           <EmptyState
             icon={AlertCircle}
             title="No data for this period"
-            description="Budget history is recorded daily. Run a sync or wait for the next daily snapshot to see gap over time."
+            description="No forecast gap data is available for this period yet. Add budget categories or transactions to start tracking the trend."
           />
         </CardContent>
       </Card>

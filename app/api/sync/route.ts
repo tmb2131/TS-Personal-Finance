@@ -1,5 +1,4 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
-import { snapshotBudgetHistory } from '@/lib/snapshot-budget-history'
 import { recordLastSync } from '@/lib/sync-metadata'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
@@ -36,10 +35,6 @@ export async function POST() {
       budgetInputMode: (profile.budget_input_mode as 'app' | 'sheet' | null) ?? 'app',
     })
     console.log('Sync API: Sync completed', { success: result.success, resultsCount: result.results?.length })
-
-    const today = new Date().toISOString().split('T')[0]
-    await snapshotBudgetHistory(today, supabase, user.id)
-    console.log('Sync API: budget_history snapshot for', today, 'completed')
 
     if (result.success) {
       await recordLastSync(supabase, user.id)
