@@ -421,10 +421,16 @@ export function EditBudgetDialog() {
   const renderInvestmentRow = (ir: InvestmentReturn) => {
     const isEditing = editingInvestmentId === ir.id
     const displayAmount = getInvestmentDisplayAmount(ir)
+    const isManual = ir.data_source === 'manual'
 
     return (
       <TableRow key={ir.id}>
-        <TableCell className="font-medium">{ir.income_source}</TableCell>
+        <TableCell className="font-medium">
+          {ir.income_source}
+          {!isManual && (
+            <span className="ml-2 text-xs text-muted-foreground">(Sheet)</span>
+          )}
+        </TableCell>
         <TableCell className="text-right">
           {isEditing ? (
             <Input
@@ -471,18 +477,21 @@ export function EditBudgetDialog() {
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => startInvestmentEdit(ir)}
+                disabled={!isManual}
               >
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0"
-                onClick={() => deleteInvestmentReturn(ir)}
-                disabled={saving}
-              >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
-              </Button>
+              {isManual && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => deleteInvestmentReturn(ir)}
+                  disabled={saving}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              )}
             </div>
           )}
         </TableCell>

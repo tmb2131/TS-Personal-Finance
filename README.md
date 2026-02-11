@@ -84,11 +84,11 @@ The app expects a Google Sheet with the following tabs:
 1. **Account Balances**: Institution, Account Name, Category, Currency, Balances
 2. **Transaction Log**: Date, Category, Counterparty, Amounts (USD/GBP)
 3. **Budget Targets**: Category, Annual Budgets (GBP/USD)
-4. **Historical Net Worth**: Date, Category, Amounts (USD/GBP)
+4. **Historical Net Worth**: No longer required from sheet; generated in-app from account balance history
 5. **FX Rates**: Date, GBP/USD Rate, EUR/USD Rate
 6. **FX Rate Current**: Date, GBP/USD Rate
-7. **Annual Trends**: Category, Historical years, Current year estimate
-8. **Monthly Trends**: Category, Last 3 months, Current month estimate, TTM avg, Z-score
+7. **Annual Trends**: No longer required from sheet; computed in-app from transactions
+8. **Monthly Trends**: No longer required from sheet; computed in-app from transactions
 
 ## Trying it out (for testers)
 

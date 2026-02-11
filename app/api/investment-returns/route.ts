@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       income_source: parsed.data.income_source,
       amount_gbp: parsed.data.amount_gbp,
+      data_source: 'manual',
     }).select().single()
 
     if (error) {

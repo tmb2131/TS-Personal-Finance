@@ -19,6 +19,23 @@ export async function PATCH(
     }
 
     const { id } = await params
+    const { data: existing } = await supabase
+      .from('investment_return')
+      .select('data_source')
+      .eq('id', id)
+      .single()
+
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
+    }
+
+    if (existing.data_source !== 'manual') {
+      return NextResponse.json(
+        { success: false, error: 'Can only edit manually entered data' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const parsed = UpdateSchema.safeParse(body)
 
@@ -64,6 +81,22 @@ export async function DELETE(
     }
 
     const { id } = await params
+    const { data: existing } = await supabase
+      .from('investment_return')
+      .select('data_source')
+      .eq('id', id)
+      .single()
+
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
+    }
+
+    if (existing.data_source !== 'manual') {
+      return NextResponse.json(
+        { success: false, error: 'Can only delete manually entered data' },
+        { status: 403 }
+      )
+    }
 
     const { error } = await supabase
       .from('investment_return')

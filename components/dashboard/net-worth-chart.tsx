@@ -12,6 +12,7 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { HistoricalNetWorth } from '@/lib/types'
+import { EditNetWorthHistoryDialog } from './edit-net-worth-history-dialog'
 import { TrendingUp, AlertCircle } from 'lucide-react'
 import {
   ComposedChart,
@@ -54,32 +55,48 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
 
   // Process data function - use useCallback to memoize with currency dependency
   const processData = useCallback((netWorthData: HistoricalNetWorth[]) => {
-    const grouped = netWorthData.reduce((acc: any, item: HistoricalNetWorth) => {
+    const latestByYearCategory = new Map<string, { date: string; amount: number }>()
+
+    netWorthData.forEach((item: HistoricalNetWorth) => {
       const date = new Date(item.date)
       const year = date.getFullYear()
       
       // Skip invalid dates or NaN years
       if (isNaN(year) || !isFinite(year)) {
-        return acc
+        return
       }
       
       const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
+      const amountValue = amount || 0
+      const category = item.category === 'Personal' || item.category === 'Family' || item.category === 'Trust'
+        ? item.category
+        : null
 
-      if (!acc[year]) {
-        acc[year] = { year, Personal: 0, Family: 0, Trust: 0, Total: 0 }
+      if (!category) return
+
+      const dateKey = date.toISOString().slice(0, 10)
+      const key = `${year}|${category}`
+      const existing = latestByYearCategory.get(key)
+      if (!existing || dateKey > existing.date) {
+        latestByYearCategory.set(key, { date: dateKey, amount: amountValue })
       }
+    })
 
-      if (item.category === 'Personal') {
-        acc[year].Personal += amount || 0
-      } else if (item.category === 'Family') {
-        acc[year].Family += amount || 0
-      } else if (item.category === 'Trust') {
-        acc[year].Trust += amount || 0
+    const grouped: Record<number, { year: number; Personal: number; Family: number; Trust: number; Total: number }> = {}
+    latestByYearCategory.forEach((entry, key) => {
+      const [yearStr, category] = key.split('|')
+      const year = Number(yearStr)
+      if (!grouped[year]) {
+        grouped[year] = { year, Personal: 0, Family: 0, Trust: 0, Total: 0 }
       }
-      acc[year].Total += amount || 0
+      if (category === 'Personal' || category === 'Family' || category === 'Trust') {
+        grouped[year][category] = entry.amount
+      }
+    })
 
-      return acc
-    }, {})
+    Object.values(grouped).forEach((row) => {
+      row.Total = (row.Personal || 0) + (row.Family || 0) + (row.Trust || 0)
+    })
 
     return Object.values(grouped)
       .filter((item: any) => item.year != null && !isNaN(item.year) && isFinite(item.year) && item.Total > 0) // Only display years where total net worth > 0 (per PRD requirement)
@@ -176,11 +193,18 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
       })
   }, [displayData, showPersonal, showFamily, showTrust])
 
+  const chartHeader = (
+    <div className="flex items-center justify-between gap-3">
+      <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
+      <EditNetWorthHistoryDialog />
+    </div>
+  )
+
   if (loading) {
     return (
       <Card>
         <CardHeader className="bg-muted/50">
-          <Skeleton className="h-6 w-48" />
+          {chartHeader}
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -203,7 +227,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
     return (
       <Card>
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
+          {chartHeader}
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -220,7 +244,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
     return (
       <Card>
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
+          {chartHeader}
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -238,7 +262,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
     return (
       <Card>
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
+          {chartHeader}
         </CardHeader>
         <CardContent className="pt-8">
           <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
@@ -268,7 +292,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   return (
     <Card>
       <CardHeader className="bg-muted/50">
-        <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
+        {chartHeader}
       </CardHeader>
       <CardContent className="pt-8">
         {/* Category Filters — hidden on mobile to free space for chart */}

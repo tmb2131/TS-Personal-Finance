@@ -2,6 +2,7 @@
 
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
 import { createClient } from '@/lib/supabase/server'
+import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
 
 export async function syncData() {
   try {
@@ -21,6 +22,9 @@ export async function syncData() {
       userId: user.id,
       budgetInputMode: (profile.budget_input_mode as 'app' | 'sheet' | null) ?? 'app',
     })
+    if (result.success) {
+      await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
+    }
     return { success: result.success, results: result.results }
   } catch (error: any) {
     console.error('Sync action error:', error)

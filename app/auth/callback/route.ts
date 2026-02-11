@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
 import { recordLastSync } from '@/lib/sync-metadata'
+import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
 
 const POST_LOGIN_REDIRECT = '/insights'
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
@@ -71,6 +72,7 @@ export async function GET(request: Request) {
         })
           .then(async (result) => {
             if (result.success) {
+              await rebuildHistoricalNetWorthFromAccountHistory(supabase, data.user.id)
               await recordLastSync(supabase, data.user.id)
               console.log(`[auth/callback] Successfully synced dummy data for user ${data.user.id}`)
             } else {

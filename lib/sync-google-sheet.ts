@@ -27,7 +27,7 @@ const DELETE_INSERT_TABLES = new Set([
 
 /** Tables that have a data_source column (scoped deletes during sync). */
 const DATA_SOURCE_TABLES = new Set([
-  'account_balances', 'transaction_log', 'budget_targets', 'debt', 'kids_accounts',
+  'account_balances', 'transaction_log', 'budget_targets', 'debt', 'kids_accounts', 'investment_return',
 ]);
 
 interface SheetConfig {
@@ -141,21 +141,6 @@ const SHEET_CONFIGS: SheetConfig[] = [
       ytd_usd: parseFloat(row[7] || '0'),
       // Column I: Gap USD — skipped (computed field)
     }),
-  },
-  {
-    name: 'Historical Net Worth',
-    range: 'A:D',
-    table: 'historical_net_worth',
-    transform: (row) => {
-      const date = row[0] ? new Date(row[0]) : null;
-      if (!date || isNaN(date.getTime())) return null;
-      return {
-        date,
-        category: row[1] || '',
-        amount_usd: row[2] ? parseFloat(row[2]) : null,
-        amount_gbp: row[3] ? parseFloat(row[3]) : null,
-      };
-    },
   },
   {
     name: 'FX Rates',
@@ -527,7 +512,47 @@ export async function syncGoogleSheet(
           upsertResult = { data, error };
         } else if (DELETE_INSERT_TABLES.has(config.table)) {
           // Generic delete-then-insert for all tables using this pattern
-          if (config.table === 'recurring_payments') {
+          if (config.table === 'investment_return') {
+            // Preserve manual investment-return entries and only refresh sheet-sourced rows.
+            const { data: manualRecords } = await db
+              .from(config.table)
+              .select('income_source')
+              .eq('user_id', uid)
+              .eq('data_source', 'manual');
+
+            const manualSources = new Set<string>(
+              (manualRecords || [])
+                .map((record: any) => (record.income_source || '').toLowerCase().trim())
+                .filter((value: string) => value.length > 0)
+            );
+
+            // Clear prior sheet rows for this user.
+            await db.from(config.table).delete().eq('user_id', uid).eq('data_source', 'google_sheet');
+
+            // Keep last row per normalized source and skip manual overrides.
+            const bySource = new Map<string, any>();
+            for (const item of dataWithUser) {
+              const source = (item.income_source || '').toString().trim();
+              const normalized = source.toLowerCase();
+              if (!source || manualSources.has(normalized)) {
+                continue;
+              }
+              bySource.set(normalized, {
+                ...item,
+                income_source: source,
+                data_source: 'google_sheet',
+              });
+            }
+
+            const mergedData = Array.from(bySource.values());
+            const chunks = chunkArray(mergedData, BATCH_SIZE);
+            let lastError: any = null;
+            for (const chunk of chunks) {
+              const { error } = await db.from(config.table).insert(chunk);
+              if (error) lastError = error;
+            }
+            upsertResult = { data: null, error: lastError };
+          } else if (config.table === 'recurring_payments') {
             // Preserve needs_review flags from existing records before deleting
             const { data: existingRecords } = await db
               .from(config.table)
@@ -636,13 +661,6 @@ export async function syncGoogleSheet(
             if (error) fxLastError = error;
           }
           upsertResult = { data: null, error: fxLastError };
-        } else if (config.table === 'historical_net_worth') {
-          const { data, error } = await db
-            .from(config.table)
-            .upsert(dataWithUser, {
-              onConflict: 'user_id,date,category',
-            });
-          upsertResult = { data, error };
         } else if (config.table === 'transaction_log') {
           // Delete only google_sheet rows, then chunked insert
           const { error: delErr } = await db

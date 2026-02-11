@@ -46,6 +46,7 @@ export interface HistoricalNetWorth {
   category: string
   amount_usd: number | null
   amount_gbp: number | null
+  data_source?: 'app_generated' | 'manual'
 }
 
 export interface FXRate {
@@ -106,6 +107,7 @@ export interface InvestmentReturn {
   id: string
   income_source: string
   amount_gbp: number
+  data_source?: DataSource
 }
 
 export interface RecurringPreference {
