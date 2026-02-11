@@ -12,6 +12,7 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { createClient } from '@/lib/supabase/client'
+import { EXCLUDED_CATEGORY } from '@/lib/category-filters'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
 import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts } from '@/lib/forecasting'
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
@@ -99,7 +100,7 @@ export function KeyInsights() {
 
   // Filter out income categories (for budget and trends)
   const expenseCategories = useMemo(() => {
-    return ['Income', 'Gift Money']
+    return ['Income', 'Gift Money', EXCLUDED_CATEGORY]
   }, [])
 
   // Same exclusions as Daily Summary modal for "annual spend" (est. spend from budget forecast)

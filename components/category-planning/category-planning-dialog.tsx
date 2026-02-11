@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { isExcludedCategory, isIncomeCategory } from '@/lib/category-filters'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
 type MonthMethod = 'Linear' | 'Average' | 'Manual'
@@ -28,17 +29,11 @@ interface RowState {
   manual_month_forecast?: number | null
 }
 
-const INCOME_CATEGORIES = new Set(['Income', 'Gift Money', 'Other Income'])
-
 interface CategoryPlanningDialogProps {
   category?: string
   triggerLabel?: string
   title?: string
   onSaved?: () => void
-}
-
-function isIncomeCategory(category: string) {
-  return INCOME_CATEGORIES.has(category)
 }
 
 export function CategoryPlanningDialog({
@@ -66,10 +61,11 @@ export function CategoryPlanningDialog({
           throw new Error(result.error || 'Failed to load category planning data')
         }
 
-        const loadedRows = (result.rows ?? []) as RowState[]
+        const loadedRows = ((result.rows ?? []) as RowState[])
+          .filter((row) => !isExcludedCategory(row.category))
         setRows(loadedRows)
 
-        if (category) {
+        if (category && !isExcludedCategory(category)) {
           setSelectedCategory(category)
         } else {
           setSelectedCategory((current) => current || loadedRows[0]?.category || '')
@@ -85,7 +81,10 @@ export function CategoryPlanningDialog({
     load()
   }, [open, category])
 
-  const categories = useMemo(() => rows.map((row) => row.category), [rows])
+  const categories = useMemo(
+    () => rows.map((row) => row.category).filter((item) => !isExcludedCategory(item)),
+    [rows]
+  )
 
   const selectedRow = useMemo(() => {
     return rows.find((row) => row.category === selectedCategory) ?? null

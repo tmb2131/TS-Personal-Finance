@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { getDefaultForecastMethods } from '@/lib/forecasting'
+import { isExcludedCategory } from '@/lib/category-filters'
 import { Loader2 } from 'lucide-react'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
@@ -57,14 +58,19 @@ export function ForecastSettingsSection({ initialSettings }: ForecastSettingsSec
       const { data: categoriesRes } = await supabase.rpc('distinct_categories')
       // Fallback: if RPC missing, derive from budgets + transactions
       let categories: string[] = Array.isArray(categoriesRes) ? categoriesRes : []
+      categories = categories.filter((category) => !isExcludedCategory(category))
       if (categories.length === 0) {
         const [budgets, tx] = await Promise.all([
           supabase.from('budget_targets').select('category'),
           supabase.from('transaction_log').select('category'),
         ])
         const set = new Set<string>()
-        budgets.data?.forEach((b: any) => b.category && set.add(b.category))
-        tx.data?.forEach((t: any) => t.category && set.add(t.category))
+        budgets.data?.forEach((b: any) => {
+          if (b.category && !isExcludedCategory(b.category)) set.add(b.category)
+        })
+        tx.data?.forEach((t: any) => {
+          if (t.category && !isExcludedCategory(t.category)) set.add(t.category)
+        })
         categories = Array.from(set).sort()
       }
 
@@ -106,7 +112,9 @@ export function ForecastSettingsSection({ initialSettings }: ForecastSettingsSec
         setLoading(false)
         return
       }
-      const payload = rows.map((r) => ({
+      const payload = rows
+        .filter((r) => !isExcludedCategory(r.category))
+        .map((r) => ({
         user_id: user.id,
         category: r.category,
         current_year_method: r.current_year_method,

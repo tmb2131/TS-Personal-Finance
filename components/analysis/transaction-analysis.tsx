@@ -15,6 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
+import { isExcludedCategory } from '@/lib/category-filters'
 import { fetchFxRatesUpTo, buildGetRateForDate } from '@/lib/utils/fx-rates'
 import { Receipt, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -117,7 +118,7 @@ export function TransactionAnalysis({
           new Set(
             categoriesResult.data
               .map((row) => row.category)
-              .filter((cat): cat is string => Boolean(cat))
+              .filter((cat): cat is string => Boolean(cat) && !isExcludedCategory(cat))
           )
         ).sort()
         
@@ -146,7 +147,7 @@ export function TransactionAnalysis({
 
   // Fetch transactions based on filters
   useEffect(() => {
-    if (!selectedCategory) return
+    if (!selectedCategory || isExcludedCategory(selectedCategory)) return
 
     async function fetchTransactions() {
       const supabase = createClient()

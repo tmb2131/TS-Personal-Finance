@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { Loader2, Plus } from 'lucide-react'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { getDefaultForecastMethods } from '@/lib/forecasting'
+import { isExcludedCategory, isIncomeCategory } from '@/lib/category-filters'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
 type MonthMethod = 'Linear' | 'Average' | 'Manual'
@@ -25,8 +26,6 @@ interface RowState {
   manual_month_forecast?: number | null
   budget_data_source?: 'google_sheet' | 'plaid' | 'csv' | 'manual' | null
 }
-
-const INCOME_CATEGORIES = new Set(['Income', 'Gift Money', 'Other Income'])
 
 const yearMethodHelp: Record<YearMethod, string> = {
   Annual: 'YTD + (Annual Budget × % year remaining)',
@@ -46,10 +45,6 @@ const sourceLabels: Record<NonNullable<RowState['budget_data_source']>, string> 
   plaid: 'Plaid',
   csv: 'CSV',
   manual: 'In-app',
-}
-
-function isIncomeCategory(category: string) {
-  return INCOME_CATEGORIES.has(category)
 }
 
 export function CategoryPlanningSection() {
@@ -85,8 +80,9 @@ export function CategoryPlanningSection() {
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter((row) => row.category.toLowerCase().includes(q))
+    const visibleRows = rows.filter((row) => !isExcludedCategory(row.category))
+    if (!q) return visibleRows
+    return visibleRows.filter((row) => row.category.toLowerCase().includes(q))
   }, [rows, search])
 
   const getDisplayBudget = (row: RowState) => {
@@ -141,6 +137,10 @@ export function CategoryPlanningSection() {
   const addCategory = () => {
     const category = newCategory.trim()
     if (!category) return
+    if (isExcludedCategory(category)) {
+      toast.error('Excluded category is hidden from planning.')
+      return
+    }
 
     const exists = rows.some((row) => row.category.toLowerCase() === category.toLowerCase())
     if (exists) {

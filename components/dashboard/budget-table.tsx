@@ -25,6 +25,7 @@ import { BudgetSummaryTable } from './budget-summary-table'
 import { BudgetIncomeTable } from './budget-income-table'
 import { EditBudgetDialog } from '@/components/budgets/edit-budget-dialog'
 import { CategoryPlanningDialog } from '@/components/category-planning/category-planning-dialog'
+import { isExcludedCategory } from '@/lib/category-filters'
 
 type SortField = 'category' | 'annualBudget' | 'tracking' | 'ytd' | 'gap'
 type SortDirection = 'asc' | 'desc' | null
@@ -221,6 +222,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       (row) =>
         row.category !== 'Income' &&
         row.category !== 'Gift Money' &&
+        !isExcludedCategory(row.category) &&
         (row.annualBudget !== 0 || row.ytd !== 0 || row.gap !== 0)
     )
 

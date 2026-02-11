@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getDefaultForecastMethods } from '@/lib/forecasting'
+import { isExcludedCategory } from '@/lib/category-filters'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -80,17 +81,21 @@ export async function GET() {
         supabase.from('transaction_log').select('category').eq('user_id', user.id),
       ])
       const set = new Set<string>()
-      ;(budgetCats.data || []).forEach((row: { category: string }) => row.category && set.add(row.category))
-      ;(txCats.data || []).forEach((row: { category: string }) => row.category && set.add(row.category))
+      ;(budgetCats.data || []).forEach((row: { category: string }) => {
+        if (row.category && !isExcludedCategory(row.category)) set.add(row.category)
+      })
+      ;(txCats.data || []).forEach((row: { category: string }) => {
+        if (row.category && !isExcludedCategory(row.category)) set.add(row.category)
+      })
       categories = Array.from(set)
     }
 
-    const categorySet = new Set<string>(categories)
+    const categorySet = new Set<string>(categories.filter((category) => !isExcludedCategory(category)))
     ;(budgetsRes.data || []).forEach((row: { category: string }) => {
-      if (row.category) categorySet.add(row.category)
+      if (row.category && !isExcludedCategory(row.category)) categorySet.add(row.category)
     })
     ;(settingsRes.data || []).forEach((row: { category: string }) => {
-      if (row.category) categorySet.add(row.category)
+      if (row.category && !isExcludedCategory(row.category)) categorySet.add(row.category)
     })
 
     const budgetByCategory = new Map<string, BudgetRow>()
@@ -160,7 +165,7 @@ export async function PUT(request: Request) {
         ...row,
         category: row.category.trim(),
       }))
-      .filter((row) => row.category.length > 0)
+      .filter((row) => row.category.length > 0 && !isExcludedCategory(row.category))
 
     if (!normalizedRows.length) {
       return NextResponse.json({ success: false, error: 'At least one valid category is required' }, { status: 400 })

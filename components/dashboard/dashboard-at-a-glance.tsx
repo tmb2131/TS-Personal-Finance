@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HistoricalNetWorth } from '@/lib/types'
 import { computeAnnualForecasts } from '@/lib/forecasting'
+import { isExcludedCategory } from '@/lib/category-filters'
 import { cn } from '@/utils/cn'
 
 function scrollToSection(id: string) {
@@ -84,6 +85,7 @@ export function DashboardAtAGlance() {
       const forecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
       if (budgetRes.data?.length) {
         budgetRes.data.forEach((row: { category: string; annual_budget_gbp: number }) => {
+          if (isExcludedCategory(row.category)) return
           const forecast = forecasts?.get(row.category)?.forecast ?? row.annual_budget_gbp
           const tracking = currency === 'USD' ? convertAmount(forecast, 'GBP', fxRate) : forecast
           const budget = currency === 'USD' ? convertAmount(row.annual_budget_gbp, 'GBP', fxRate) : row.annual_budget_gbp

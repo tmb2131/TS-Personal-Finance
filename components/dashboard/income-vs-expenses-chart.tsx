@@ -13,6 +13,7 @@ import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
 import { computeAnnualForecasts } from '@/lib/forecasting'
+import { isExcludedCategory } from '@/lib/category-filters'
 import { AlertCircle } from 'lucide-react'
 import {
   BarChart,
@@ -128,6 +129,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     let giftMoney = 0
     let expenses = 0
     budgets.forEach((b) => {
+      if (isExcludedCategory(b.category)) return
       const forecast = forecastByCategory?.get(b.category)?.forecast ?? b.annual_budget_gbp ?? 0
       const tracking = currency === 'USD' ? forecast * fxRate : forecast
       if (b.category === 'Income') income += Math.abs(tracking)
