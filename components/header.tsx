@@ -1,9 +1,9 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { CurrencyToggle } from './currency-toggle'
+import { ThemeToggle } from './theme-toggle'
 import { Button } from './ui/button'
-import { RefreshCw, LogOut, BarChart3 } from 'lucide-react'
+import { RefreshCw, BarChart3 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -26,7 +26,6 @@ const BOTTOM_BOUNDARY_PX = 100
 const HIDE_MIN_DISTANCE_FROM_BOTTOM_PX = 180
 
 export function Header() {
-  const router = useRouter()
   const isMobile = useIsMobile()
   const dailySummary = useDailySummarySafe()
   const [syncing, setSyncing] = useState(false)
@@ -239,12 +238,6 @@ export function Header() {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.replace('/login')
-  }
-
   return (
     <header
       className={cn(
@@ -302,16 +295,7 @@ export function Header() {
         )}
       </div>
       <div className="flex items-center gap-1.5 md:gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleLogout}
-          className="h-9 gap-1.5 px-2 text-xs md:px-3 md:text-sm"
-          aria-label="Log out"
-        >
-          <LogOut className="h-3 w-3 md:h-4 md:w-4" />
-          <span className="hidden md:inline">Log out</span>
-        </Button>
+        <ThemeToggle />
         <CurrencyToggle />
       </div>
     </header>

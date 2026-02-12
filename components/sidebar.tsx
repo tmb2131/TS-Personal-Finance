@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp, MessageCircle } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp, MessageCircle, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -34,6 +34,7 @@ function isRouteActive(pathname: string, href: string) {
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [hasKidsData, setHasKidsData] = useState(true) // default true to avoid flash
@@ -66,6 +67,13 @@ export function Sidebar() {
     window.setTimeout(() => {
       window.dispatchEvent(new Event('findash:open-chat-widget'))
     }, 120)
+  }
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setMoreOpen(false)
+    router.replace('/login')
   }
 
   return (
@@ -119,6 +127,22 @@ export function Sidebar() {
             )
           })}
         </nav>
+        <div className="border-t px-3 py-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className={cn(
+              'h-10 w-full gap-2.5 text-sm',
+              collapsed ? 'justify-center px-0' : 'justify-start px-3'
+            )}
+            aria-label="Log out"
+            title={collapsed ? 'Log out' : undefined}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Log out</span>}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Bottom Navigation - hidden on login page */}
@@ -203,6 +227,14 @@ export function Sidebar() {
                       </Link>
                     )
                   })}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="mt-2 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-red-600 transition-[transform,color,background-color] duration-100 ease-out active:scale-[0.98] hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:text-red-400"
+                  >
+                    <LogOut className="h-5 w-5 flex-shrink-0" />
+                    Log out
+                  </button>
                 </div>
               </div>
             </DialogContent>
