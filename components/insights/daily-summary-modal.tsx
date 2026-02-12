@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -18,7 +19,7 @@ import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
 import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts, getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExpenseCategory } from '@/lib/category-filters'
 import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
-import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
@@ -575,8 +576,18 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
   return (
     <Dialog key={modalKey} open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none border-0 p-0 sm:left-[50%] sm:top-[50%] sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-5xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:gap-5 sm:overflow-y-auto sm:rounded-xl sm:border sm:p-6 [&>button]:z-20 [&>button]:h-11 [&>button]:w-11 [&>button]:rounded-full [&>button]:border [&>button]:border-border/70 [&>button]:bg-background/90 [&>button]:p-0 [&>button]:right-3 [&>button]:top-[calc(env(safe-area-inset-top)+0.5rem)] [&>button]:text-muted-foreground [&>button]:opacity-100 [&>button]:!backdrop-blur-none [&>button[data-state=open]]:!bg-background/90 [&>button>svg]:h-5 [&>button>svg]:w-5 sm:[&>button]:h-9 sm:[&>button]:w-9 sm:[&>button]:rounded-md sm:[&>button]:border-0 sm:[&>button]:!bg-transparent sm:[&>button[data-state=open]]:!bg-transparent sm:[&>button]:right-4 sm:[&>button]:top-4">
-        <div className="flex h-full flex-col">
+      <DialogContent
+        showCloseButton={false}
+        className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-0 p-0 sm:left-[50%] sm:top-[50%] sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-5xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:gap-5 sm:rounded-xl sm:border sm:p-6"
+      >
+        <DialogClose
+          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:right-4 sm:top-4 sm:h-9 sm:w-9 sm:rounded-md sm:border sm:border-border/60 sm:bg-background/80"
+        >
+          <X className="h-5 w-5 sm:h-4 sm:w-4" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
+
+        <div className="flex h-full min-h-0 flex-col">
           <DialogHeader className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] text-left sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:pb-3 sm:pt-0">
             <DialogTitle className="pr-12 text-2xl font-bold sm:text-xl">Daily Financial Summary</DialogTitle>
             <DialogDescription className="text-sm sm:text-xs">
@@ -584,7 +595,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 sm:px-0 sm:pb-0 sm:pt-0">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 sm:px-0 sm:pb-0 sm:pt-0">
             {loading ? (
               <div className="space-y-4 py-3 sm:py-4">
                 <Skeleton className="h-28 w-full" />
