@@ -194,7 +194,7 @@ export function Sidebar() {
                 <span className="text-xs font-medium text-center leading-tight">More</span>
               </button>
             </DialogTrigger>
-            <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-50 max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg data-[state=open]:slide-in-from-right-96 data-[state=closed]:slide-out-to-right-96 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-top-0">
+            <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-[130] max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg data-[state=open]:slide-in-from-right-96 data-[state=closed]:slide-out-to-right-96 data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-top-0">
               <DialogHeader className="px-4 pt-4 pb-2">
                 <DialogTitle>More</DialogTitle>
               </DialogHeader>
