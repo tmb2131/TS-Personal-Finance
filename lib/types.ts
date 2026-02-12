@@ -128,7 +128,7 @@ export interface RecurringPayment {
   data_source?: DataSource
 }
 
-// Kids Accounts - simplified structure matching Google Sheet
+// Kids Accounts
 export interface KidsAccount {
   id: string
   child_name: string

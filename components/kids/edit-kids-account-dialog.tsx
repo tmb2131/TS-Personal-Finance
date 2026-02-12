@@ -16,6 +16,11 @@ import { KidsAccount } from '@/lib/types'
 
 const COMMON_ACCOUNT_TYPES = ['529', 'UGMA', 'Savings', 'Checking', 'Trust', 'Other']
 
+function toDateInputValue(value: string | null | undefined) {
+  if (!value) return new Date().toISOString().slice(0, 10)
+  return value.slice(0, 10)
+}
+
 interface EditKidsAccountDialogProps {
   account: KidsAccount
   open: boolean
@@ -29,6 +34,7 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
 
   const [childName, setChildName] = useState(account.child_name)
   const [accountType, setAccountType] = useState(account.account_type)
+  const [lastUpdated, setLastUpdated] = useState(toDateInputValue(account.date_updated))
   const [balanceUsd, setBalanceUsd] = useState(String(account.balance_usd))
   const [notes, setNotes] = useState(account.notes ?? '')
   const [purpose, setPurpose] = useState(account.purpose ?? '')
@@ -38,6 +44,11 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
 
     if (!childName.trim() || !accountType.trim()) {
       toast.error('Please fill in child name and account type')
+      return
+    }
+
+    if (!lastUpdated) {
+      toast.error('Please select a last updated date')
       return
     }
 
@@ -55,6 +66,7 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
         body: JSON.stringify({
           child_name: childName.trim(),
           account_type: accountType.trim(),
+          date_updated: lastUpdated,
           balance_usd: balance,
           notes: notes.trim() || null,
           purpose: purpose.trim() || null,
@@ -142,6 +154,16 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
                 required
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-kids-date-updated">Last Updated</Label>
+            <Input
+              id="edit-kids-date-updated"
+              type="date"
+              value={lastUpdated}
+              onChange={(e) => setLastUpdated(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-kids-purpose">Purpose</Label>

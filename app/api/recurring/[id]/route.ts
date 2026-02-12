@@ -9,6 +9,8 @@ const UpdateRecurringSchema = z.object({
   needs_review: z.boolean().optional(),
 })
 
+const EDITABLE_DATA_SOURCES = new Set(['manual', 'csv'])
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -32,9 +34,9 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 
-    if (existing.data_source !== 'manual') {
+    if (!EDITABLE_DATA_SOURCES.has(existing.data_source)) {
       return NextResponse.json(
-        { success: false, error: 'Can only edit manually entered data' },
+        { success: false, error: 'Can only edit app-managed data' },
         { status: 403 }
       )
     }
@@ -97,9 +99,9 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
     }
 
-    if (existing.data_source !== 'manual') {
+    if (!EDITABLE_DATA_SOURCES.has(existing.data_source)) {
       return NextResponse.json(
-        { success: false, error: 'Can only delete manually entered data' },
+        { success: false, error: 'Can only delete app-managed data' },
         { status: 403 }
       )
     }

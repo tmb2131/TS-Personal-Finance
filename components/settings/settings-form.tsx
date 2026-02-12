@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { ExternalLink, Copy } from 'lucide-react'
+import { ExternalLink, Copy, FileUp } from 'lucide-react'
 
 const TEMPLATE_SHEET_ID = '1LsbT4ahDlq7Lyf04d5nyr4bsjqmkDq-kqQoA2t66Kgg'
 const TEMPLATE_COPY_URL = `https://docs.google.com/spreadsheets/d/${TEMPLATE_SHEET_ID}/copy`
@@ -66,11 +67,11 @@ export function SettingsForm({
 
       const savedSpreadsheetId = spreadsheetId.trim()
       if (savedSpreadsheetId) {
-        toast.info('Syncing data from your sheet…')
+        toast.info('Syncing Transaction Log from your sheet...')
         const response = await fetch('/api/sync', { method: 'POST' })
         const result = await response.json().catch(() => ({}))
         if (response.ok && result.success) {
-          toast.success('Data synced successfully')
+          toast.success('Transaction Log synced successfully')
           window.location.reload()
         } else if (!response.ok) {
           toast.error(result.error || 'Sync failed')
@@ -100,9 +101,9 @@ export function SettingsForm({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Get Started with Google Sheets</CardTitle>
+          <CardTitle>Google Sheet Setup (Transaction Log Only)</CardTitle>
           <CardDescription>
-            Don&apos;t have a spreadsheet yet? Copy our template to your Google Drive, then paste the new spreadsheet ID below.
+            Use Google Sheets only for Transaction Log sync. Accounts, Kids, Recurring, and Investment Return are managed in-app.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -116,6 +117,12 @@ export function SettingsForm({
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Copy Template to My Drive
               </a>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/import">
+                <FileUp className="mr-2 h-4 w-4" />
+                Open CSV Import
+              </Link>
             </Button>
           </div>
           <div className="rounded-md bg-muted p-3 text-sm space-y-2">
@@ -143,15 +150,15 @@ export function SettingsForm({
 
     <Card>
       <CardHeader>
-        <CardTitle>Connect your Google Sheet</CardTitle>
+        <CardTitle>Connect Transaction Log Sheet</CardTitle>
         <CardDescription>
-          Paste your Google Spreadsheet ID so the app can sync your data. Find it in the sheet URL:
+          Paste your spreadsheet ID to sync Transaction Log rows. Find it in the sheet URL:
           https://docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="spreadsheet-id">Google Spreadsheet ID</Label>
+          <Label htmlFor="spreadsheet-id">Transaction Log Spreadsheet ID</Label>
           <Input
             id="spreadsheet-id"
             placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
@@ -184,7 +191,7 @@ export function SettingsForm({
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving & syncing…' : 'Save'}
+          {saving ? 'Saving & syncing...' : 'Save'}
         </Button>
       </CardContent>
     </Card>

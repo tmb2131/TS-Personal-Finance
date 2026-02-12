@@ -11,12 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 import { KidsAccount } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { AlertCircle, Pencil } from 'lucide-react'
+import { AlertCircle, Loader2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/utils/cn'
 import { EditKidsAccountDialog } from '@/components/kids/edit-kids-account-dialog'
+import { toast } from 'sonner'
 
 interface ChildSummary {
   childName: string
@@ -25,53 +29,79 @@ interface ChildSummary {
   accountTypeCount: number
 }
 
+function getSourceLabel(source: KidsAccount['data_source']) {
+  if (source === 'csv') return 'CSV'
+  if (source === 'plaid') return 'Plaid'
+  if (source === 'google_sheet') return 'Sheet'
+  return 'Manual'
+}
+
+function getSourceClass(source: KidsAccount['data_source']) {
+  if (source === 'csv') return 'bg-amber-50 text-amber-700 border-amber-200'
+  if (source === 'plaid') return 'bg-cyan-50 text-cyan-700 border-cyan-200'
+  if (source === 'google_sheet') return 'bg-slate-50 text-slate-700 border-slate-200'
+  return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+}
+
+function toDateInputValue(value: string | null | undefined) {
+  if (!value) return new Date().toISOString().slice(0, 10)
+  return value.slice(0, 10)
+}
+
+function isEditableSource(source: KidsAccount['data_source']) {
+  return source === 'manual' || source === 'csv'
+}
+
 export function KidsAccountsOverview() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const [accounts, setAccounts] = useState<KidsAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingAccount, setEditingAccount] = useState<KidsAccount | null>(null)
+  const [bulkEditMode, setBulkEditMode] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
+  const [bulkDrafts, setBulkDrafts] = useState<Record<string, { balance_usd: string; date_updated: string }>>({})
+
+  const loadKidsAccounts = useCallback(async () => {
+    const supabase = createClient()
+    
+    const accountsResult = await supabase
+      .from('kids_accounts')
+      .select('*')
+      .order('child_name')
+      .order('account_type')
+      .order('date_updated', { ascending: false })
+
+    if (accountsResult.error) {
+      console.error('Error fetching kids accounts:', accountsResult.error)
+      setError('Failed to load kids account data. Please try refreshing the page.')
+      setLoading(false)
+      return
+    }
+    
+    setError(null)
+
+    // Get the most recent balance for each account (grouped by child_name, account_type, and notes)
+    // This allows multiple accounts of the same type for the same child if they have different notes
+    const accountsMap = new Map<string, KidsAccount>()
+    const data = accountsResult.data ?? []
+    data.forEach((account: KidsAccount) => {
+      if (!account?.child_name || account.account_type == null) return
+      const notesKey = account.notes ?? 'no-notes'
+      const key = `${account.child_name}-${account.account_type}-${notesKey}`
+      const existing = accountsMap.get(key)
+      if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
+        accountsMap.set(key, account)
+      }
+    })
+
+    setAccounts(Array.from(accountsMap.values()))
+    setLoading(false)
+  }, [])
 
   useEffect(() => {
-    async function fetchData() {
-      const supabase = createClient()
-      
-      const accountsResult = await supabase
-        .from('kids_accounts')
-        .select('*')
-        .order('child_name')
-        .order('account_type')
-        .order('date_updated', { ascending: false })
-
-      if (accountsResult.error) {
-        console.error('Error fetching kids accounts:', accountsResult.error)
-        setError('Failed to load kids account data. Please try refreshing the page.')
-        setLoading(false)
-        return
-      }
-      
-      setError(null)
-
-      // Get the most recent balance for each account (grouped by child_name, account_type, and notes)
-      // This allows multiple accounts of the same type for the same child if they have different notes
-      const accountsMap = new Map<string, KidsAccount>()
-      const data = accountsResult.data ?? []
-      data.forEach((account: KidsAccount) => {
-        if (!account?.child_name || account.account_type == null) return
-        const notesKey = account.notes ?? 'no-notes'
-        const key = `${account.child_name}-${account.account_type}-${notesKey}`
-        const existing = accountsMap.get(key)
-        if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
-          accountsMap.set(key, account)
-        }
-      })
-
-      setAccounts(Array.from(accountsMap.values()))
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [])
+    loadKidsAccounts()
+  }, [loadKidsAccounts])
 
   const formatCurrency = useCallback((value: number) => {
     const num = Number(value)
@@ -88,6 +118,104 @@ export function KidsAccountsOverview() {
     if (!dateString) return 'N/A'
     const date = new Date(dateString)
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const beginBulkEdit = () => {
+    const nextDrafts: Record<string, { balance_usd: string; date_updated: string }> = {}
+    accounts.forEach((account) => {
+      if (!isEditableSource(account.data_source)) return
+      nextDrafts[account.id] = {
+        balance_usd: String(account.balance_usd ?? 0),
+        date_updated: toDateInputValue(account.date_updated),
+      }
+    })
+    setBulkDrafts(nextDrafts)
+    setBulkEditMode(true)
+  }
+
+  const cancelBulkEdit = () => {
+    setBulkEditMode(false)
+    setBulkDrafts({})
+  }
+
+  const updateBulkDraft = (accountId: string, field: 'balance_usd' | 'date_updated', value: string) => {
+    setBulkDrafts((current) => ({
+      ...current,
+      [accountId]: {
+        balance_usd: current[accountId]?.balance_usd ?? '',
+        date_updated: current[accountId]?.date_updated ?? toDateInputValue(null),
+        [field]: value,
+      },
+    }))
+  }
+
+  const saveBulkChanges = async () => {
+    const changedAccounts = accounts.filter((account) => {
+      if (!isEditableSource(account.data_source)) return false
+      const draft = bulkDrafts[account.id]
+      if (!draft) return false
+      const currentDate = toDateInputValue(account.date_updated)
+      const currentBalance = Number(account.balance_usd ?? 0)
+      const draftBalance = Number(draft.balance_usd)
+      return currentDate !== draft.date_updated || currentBalance !== draftBalance
+    })
+
+    if (changedAccounts.length === 0) {
+      toast.info('No kids account changes to save')
+      setBulkEditMode(false)
+      return
+    }
+
+    for (const account of changedAccounts) {
+      const draft = bulkDrafts[account.id]
+      if (!Number.isFinite(Number(draft.balance_usd))) {
+        toast.error(`Invalid balance for ${account.child_name} - ${account.account_type}`)
+        return
+      }
+      if (!draft.date_updated) {
+        toast.error(`Missing date for ${account.child_name} - ${account.account_type}`)
+        return
+      }
+    }
+
+    setBulkSaving(true)
+    try {
+      const results = await Promise.all(
+        changedAccounts.map(async (account) => {
+          const draft = bulkDrafts[account.id]
+          const res = await fetch(`/api/kids/${account.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              balance_usd: Number(draft.balance_usd),
+              date_updated: draft.date_updated,
+            }),
+          })
+
+          const payload = await res.json().catch(() => ({}))
+          return res.ok && payload?.success === true
+        })
+      )
+
+      const successCount = results.filter(Boolean).length
+      const failedCount = results.length - successCount
+
+      if (successCount > 0) {
+        toast.success(`Saved ${successCount} kids account ${successCount === 1 ? 'update' : 'updates'}`)
+      }
+      if (failedCount > 0) {
+        toast.error(`${failedCount} kids account ${failedCount === 1 ? 'update failed' : 'updates failed'}`)
+      }
+
+      await loadKidsAccounts()
+      setBulkEditMode(false)
+      setBulkDrafts({})
+    } catch (error) {
+      console.error('Bulk kids account save error:', error)
+      toast.error('Failed to save kids account changes')
+    } finally {
+      setBulkSaving(false)
+    }
   }
 
   // Group accounts by child
@@ -200,7 +328,7 @@ export function KidsAccountsOverview() {
           <EmptyState
             icon={AlertCircle}
             title="No kids accounts found"
-            description="No kids account data available. Please sync your Google Sheet."
+            description="No kids account data available yet."
           />
         </CardContent>
       </Card>
@@ -209,6 +337,24 @@ export function KidsAccountsOverview() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end gap-2">
+        {!bulkEditMode ? (
+          <Button variant="outline" size="sm" onClick={beginBulkEdit}>
+            Edit All
+          </Button>
+        ) : (
+          <>
+            <Button variant="outline" size="sm" onClick={cancelBulkEdit} disabled={bulkSaving}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={saveBulkChanges} disabled={bulkSaving}>
+              {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save All
+            </Button>
+          </>
+        )}
+      </div>
+
       {/* Executive Summary Cards - One per child */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {childSummaries.map((summary) => (
@@ -384,20 +530,52 @@ export function KidsAccountsOverview() {
                             <div className="flex justify-between items-center gap-2">
                               <span className="font-medium text-sm truncate">{account.account_type ?? '–'}</span>
                               <div className="flex items-center gap-1 shrink-0">
-                                <span className="font-semibold tabular-nums text-sm">{formatCurrency(convertedBalance)}</span>
-                                {account.data_source === 'manual' && (
+                                {bulkEditMode && isEditableSource(account.data_source) ? (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={bulkDrafts[account.id]?.balance_usd ?? ''}
+                                    onChange={(e) => updateBulkDraft(account.id, 'balance_usd', e.target.value)}
+                                    className="h-8 w-28 text-right text-sm"
+                                  />
+                                ) : (
+                                  <span className="font-semibold tabular-nums text-sm">{formatCurrency(convertedBalance)}</span>
+                                )}
+                                <Badge variant="outline" className={cn('text-[11px] px-1.5 py-0', getSourceClass(account.data_source))}>
+                                  {getSourceLabel(account.data_source)}
+                                </Badge>
+                                {!bulkEditMode && isEditableSource(account.data_source) && (
                                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingAccount(account)}>
                                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                   </Button>
                                 )}
                               </div>
                             </div>
-                            <div className="mt-2 pt-2 border-t text-xs text-muted-foreground space-y-0.5">
-                              <div>Updated {formatDate(account.date_updated ?? null)}</div>
-                              {(account.purpose ?? account.notes) && (
-                                <div className="truncate">{[account.purpose, account.notes].filter(Boolean).join(' · ')}</div>
-                              )}
-                            </div>
+                            {bulkEditMode && isEditableSource(account.data_source) ? (
+                              <div className="mt-2 grid grid-cols-2 gap-2 border-t pt-2">
+                                <div className="space-y-1">
+                                  <span className="text-[11px] text-muted-foreground">Last Updated</span>
+                                  <Input
+                                    type="date"
+                                    value={bulkDrafts[account.id]?.date_updated ?? toDateInputValue(account.date_updated)}
+                                    onChange={(e) => updateBulkDraft(account.id, 'date_updated', e.target.value)}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                <div className="space-y-1 text-xs text-muted-foreground">
+                                  {(account.purpose ?? account.notes) && (
+                                    <div className="pt-2 truncate">{[account.purpose, account.notes].filter(Boolean).join(' · ')}</div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-2 pt-2 border-t text-xs text-muted-foreground space-y-0.5">
+                                <div>Updated {formatDate(account.date_updated ?? null)}</div>
+                                {(account.purpose ?? account.notes) && (
+                                  <div className="truncate">{[account.purpose, account.notes].filter(Boolean).join(' · ')}</div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )
                       })}
@@ -422,6 +600,7 @@ export function KidsAccountsOverview() {
                     <TableHeader>
                       <TableRow className="border-b bg-muted">
                         <TableHead className="sticky top-0 z-20 bg-muted">Account Type</TableHead>
+                        <TableHead className="sticky top-0 z-20 bg-muted">Source</TableHead>
                         <TableHead className="sticky top-0 z-20 text-right bg-muted">Balance ({currency})</TableHead>
                         <TableHead className="sticky top-0 z-20 w-24 bg-muted"></TableHead>
                         <TableHead className="sticky top-0 z-20 bg-muted">As of Date</TableHead>
@@ -438,8 +617,25 @@ export function KidsAccountsOverview() {
                             return (
                               <TableRow key={account.id ?? `${account.account_type}-${account.date_updated}-${account.notes ?? ''}`}>
                                 <TableCell className="font-medium">{account.account_type ?? '-'}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={cn('text-[11px]', getSourceClass(account.data_source))}>
+                                    {getSourceLabel(account.data_source)}
+                                  </Badge>
+                                </TableCell>
                                 <TableCell className="text-right font-medium">
-                                  {formatCurrency(convertedBalance)}
+                                  {bulkEditMode && isEditableSource(account.data_source) ? (
+                                    <div className="flex justify-end">
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={bulkDrafts[account.id]?.balance_usd ?? ''}
+                                        onChange={(e) => updateBulkDraft(account.id, 'balance_usd', e.target.value)}
+                                        className="h-8 w-32 text-right"
+                                      />
+                                    </div>
+                                  ) : (
+                                    formatCurrency(convertedBalance)
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   <div className="relative h-4 w-20">
@@ -451,7 +647,18 @@ export function KidsAccountsOverview() {
                                     />
                                   </div>
                                 </TableCell>
-                                <TableCell>{formatDate(account.date_updated ?? null)}</TableCell>
+                                <TableCell>
+                                  {bulkEditMode && isEditableSource(account.data_source) ? (
+                                    <Input
+                                      type="date"
+                                      value={bulkDrafts[account.id]?.date_updated ?? toDateInputValue(account.date_updated)}
+                                      onChange={(e) => updateBulkDraft(account.id, 'date_updated', e.target.value)}
+                                      className="h-8"
+                                    />
+                                  ) : (
+                                    formatDate(account.date_updated ?? null)
+                                  )}
+                                </TableCell>
                                 <TableCell className="text-sm text-muted-foreground">
                                   {account.purpose ?? '-'}
                                 </TableCell>
@@ -459,7 +666,7 @@ export function KidsAccountsOverview() {
                                   {account.notes ?? '-'}
                                 </TableCell>
                                 <TableCell>
-                                  {account.data_source === 'manual' && (
+                                  {!bulkEditMode && isEditableSource(account.data_source) && (
                                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingAccount(account)}>
                                       <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                     </Button>
@@ -469,7 +676,7 @@ export function KidsAccountsOverview() {
                             )
                           })}
                           <TableRow key={`subtotal-${String(group.accountType)}`} className="bg-muted/50">
-                            <TableCell colSpan={1} className="font-semibold">
+                            <TableCell colSpan={2} className="font-semibold">
                               {group.accountType} Subtotal
                             </TableCell>
                             <TableCell className="text-right font-semibold">
@@ -498,7 +705,7 @@ export function KidsAccountsOverview() {
         )
       })}
 
-      {/* Edit dialog for manual accounts */}
+      {/* Edit dialog for app-managed accounts */}
       {editingAccount && (
         <EditKidsAccountDialog
           account={editingAccount}

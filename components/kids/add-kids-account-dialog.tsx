@@ -17,13 +17,30 @@ import {
 
 const COMMON_ACCOUNT_TYPES = ['529', 'UGMA', 'Savings', 'Checking', 'Trust', 'Other']
 
-export function AddKidsAccountDialog() {
+function getTodayDateString() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+interface AddKidsAccountDialogProps {
+  triggerLabel?: string
+  triggerVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  triggerSize?: 'default' | 'sm' | 'lg' | 'icon'
+  triggerClassName?: string
+}
+
+export function AddKidsAccountDialog({
+  triggerLabel = 'Add Account',
+  triggerVariant = 'outline',
+  triggerSize = 'sm',
+  triggerClassName,
+}: AddKidsAccountDialogProps = {}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const [childName, setChildName] = useState('')
   const [accountType, setAccountType] = useState('Savings')
+  const [lastUpdated, setLastUpdated] = useState(getTodayDateString())
   const [balanceUsd, setBalanceUsd] = useState('')
   const [notes, setNotes] = useState('')
   const [purpose, setPurpose] = useState('')
@@ -31,6 +48,7 @@ export function AddKidsAccountDialog() {
   const resetForm = () => {
     setChildName('')
     setAccountType('Savings')
+    setLastUpdated(getTodayDateString())
     setBalanceUsd('')
     setNotes('')
     setPurpose('')
@@ -41,6 +59,11 @@ export function AddKidsAccountDialog() {
 
     if (!childName.trim() || !accountType.trim()) {
       toast.error('Please fill in child name and account type')
+      return
+    }
+
+    if (!lastUpdated) {
+      toast.error('Please select a last updated date')
       return
     }
 
@@ -58,6 +81,7 @@ export function AddKidsAccountDialog() {
         body: JSON.stringify({
           child_name: childName.trim(),
           account_type: accountType.trim(),
+          date_updated: lastUpdated,
           balance_usd: balance || 0,
           notes: notes.trim() || null,
           purpose: purpose.trim() || null,
@@ -87,9 +111,9 @@ export function AddKidsAccountDialog() {
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm() }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
           <Plus className="h-4 w-4 mr-1" />
-          Add Account
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -132,6 +156,16 @@ export function AddKidsAccountDialog() {
                 onChange={(e) => setBalanceUsd(e.target.value)}
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="kids-date-updated">Last Updated</Label>
+            <Input
+              id="kids-date-updated"
+              type="date"
+              value={lastUpdated}
+              onChange={(e) => setLastUpdated(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="kids-purpose">Purpose</Label>

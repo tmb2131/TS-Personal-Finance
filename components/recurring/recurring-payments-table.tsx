@@ -29,8 +29,8 @@ interface AggregatedRecurringPayment {
   annualizedAmount: number
   ids: string[]
   needsReview: boolean
-  /** If this aggregated row has exactly one underlying manual payment, store it for editing */
-  manualPayment: RecurringPayment | null
+  /** If this aggregated row has exactly one app-managed payment, store it for editing. */
+  editablePayment: RecurringPayment | null
 }
 
 export function RecurringPaymentsTable() {
@@ -96,15 +96,18 @@ export function RecurringPaymentsTable() {
         if (payment.needs_review) {
           existing.needsReview = true
         }
-        // If multiple payments aggregated, can't edit as single manual entry
-        existing.manualPayment = null
+        // If multiple payments aggregated, we can't edit as a single row.
+        existing.editablePayment = null
       } else {
         grouped.set(normalizedName, {
           name: payment.name.trim(), // Use original casing from first occurrence
           annualizedAmount: amount,
           ids: [payment.id],
           needsReview: payment.needs_review || false,
-          manualPayment: payment.data_source === 'manual' ? payment : null,
+          editablePayment:
+            payment.data_source === 'manual' || payment.data_source === 'csv'
+              ? payment
+              : null,
         })
       }
     })
@@ -202,9 +205,9 @@ export function RecurringPaymentsTable() {
     return (
       <Card>
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-          <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
+          <CardTitle className="text-base">Recurring Payments</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
+            Manually tracked recurring payments. All amounts shown are annualized values.
           </p>
         </CardHeader>
         <CardContent>
@@ -222,9 +225,9 @@ export function RecurringPaymentsTable() {
     return (
       <Card>
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-          <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
+          <CardTitle className="text-base">Recurring Payments</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
+            Manually tracked recurring payments. All amounts shown are annualized values.
           </p>
         </CardHeader>
         <CardContent>
@@ -239,9 +242,9 @@ export function RecurringPaymentsTable() {
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <CardTitle className="text-base">Recurring Payments (Google Sheet)</CardTitle>
+            <CardTitle className="text-base">Recurring Payments</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Manually tracked recurring payments from Google Sheet. All amounts shown are annualized values.
+              Manually tracked recurring payments. All amounts shown are annualized values.
             </p>
           </div>
           <FullTableViewToggle
@@ -309,12 +312,12 @@ export function RecurringPaymentsTable() {
                         </>
                       )}
                     </Button>
-                    {payment.manualPayment && (
+                    {payment.editablePayment && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-9 min-h-[44px] text-xs"
-                        onClick={() => setEditingPayment(payment.manualPayment)}
+                        onClick={() => setEditingPayment(payment.editablePayment)}
                       >
                         <Pencil className="h-3.5 w-3.5 mr-1.5" />
                         Edit
@@ -384,12 +387,12 @@ export function RecurringPaymentsTable() {
                               </>
                             )}
                           </Button>
-                          {payment.manualPayment && (
+                          {payment.editablePayment && (
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => setEditingPayment(payment.manualPayment)}
+                              onClick={() => setEditingPayment(payment.editablePayment)}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -407,7 +410,7 @@ export function RecurringPaymentsTable() {
           <EmptyState
             icon={AlertCircle}
             title="No recurring payments found"
-            description="No recurring payments data found in the Google Sheet."
+            description="No recurring payments data found yet."
           />
         )}
       </CardContent>

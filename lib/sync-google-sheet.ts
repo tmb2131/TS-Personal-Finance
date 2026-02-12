@@ -20,14 +20,10 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 }
 
 /** Tables that use delete-all-then-insert (no upsert key). */
-const DELETE_INSERT_TABLES = new Set([
-  'investment_return', 'recurring_payments',
-]);
+const DELETE_INSERT_TABLES = new Set<string>();
 
 /** Tables that have a data_source column (scoped deletes during sync). */
-const DATA_SOURCE_TABLES = new Set([
-  'account_balances', 'transaction_log', 'kids_accounts', 'investment_return',
-]);
+const DATA_SOURCE_TABLES = new Set<string>();
 
 interface SheetConfig {
   name: string;
@@ -38,45 +34,6 @@ interface SheetConfig {
 
 // Configure sheet ranges and table mappings
 const SHEET_CONFIGS: SheetConfig[] = [
-  {
-    name: 'Account Balances',
-    range: 'A:K',
-    table: 'account_balances',
-    transform: (row) => {
-      const date = row[0] ? new Date(row[0]) : null;
-      if (!date || isNaN(date.getTime())) return null;
-      return {
-        date_updated: date,
-        institution: row[1] || '',
-        account_name: row[2] || '',
-        category: row[3] || '',
-        currency: row[4] || 'USD',
-        balance_personal_local: parseFloat(row[5] || '0'),
-        balance_family_local: parseFloat(row[6] || '0'),
-        balance_total_local: parseFloat(row[7] || '0'),
-        liquidity_profile: (row[8] && row[8].trim()) || null,
-        risk_profile: (row[9] && row[9].trim()) || null,
-        horizon_profile: (row[10] && row[10].trim()) || null,
-      };
-    },
-  },
-  {
-    name: 'Kids',
-    range: 'A:F',
-    table: 'kids_accounts',
-    transform: (row) => {
-      const date = row[3] ? new Date(row[3]) : null;
-      if (!date || isNaN(date.getTime())) return null;
-      return {
-        child_name: row[0] || '',
-        account_type: row[1] || '',
-        balance_usd: parseFloat(row[2] || '0'),
-        date_updated: date,
-        notes: (row[4] && row[4].trim()) || null,
-        purpose: (row[5] && row[5].trim()) || null,
-      };
-    },
-  },
   {
     name: 'Transaction Log',
     range: 'A:F',
@@ -129,85 +86,8 @@ const SHEET_CONFIGS: SheetConfig[] = [
       };
     },
   },
-  {
-    name: 'Investment Return',
-    range: 'A:B',
-    table: 'investment_return',
-    transform: (row) => {
-      const source = (row[0] ?? '').toString().trim()
-      if (!source || source.toLowerCase() === 'income sources') return null
-      const raw = (row[1] ?? '').toString().trim()
-      let amount = 0
-      if (raw) {
-        const num = parseFloat(raw.replace(/[£$,\s]/g, ''))
-        if (!isNaN(num)) {
-          if (raw.toUpperCase().endsWith('K')) amount = num * 1000
-          else if (raw.toUpperCase().endsWith('M')) amount = num * 1e6
-          else amount = num
-        }
-      }
-      return {
-        income_source: source,
-        amount_gbp: amount,
-      }
-    },
-  },
-  {
-    name: 'Recurring Payments',
-    range: 'A:I', // Read columns A through I to get Name (B), Annual (E), and CCY (H)
-    table: 'recurring_payments',
-    transform: (row) => {
-      // Column structure:
-      // A: % of Total
-      // B: Name
-      // C: Category
-      // D: Monthly
-      // E: Annual (annualized amount)
-      // F: Periodicity
-      // G: Date
-      // H: CCY (currency)
-      // I: Notes
-
-      const colB = (row[1] || '').toString().trim() // Name
-      const colE = (row[4] || '').toString().trim() // Annual amount
-      const colH = (row[7] || '').toString().trim().toUpperCase() // Currency (CCY)
-
-      // Skip empty rows or header rows
-      if (!colB || colB.toLowerCase() === 'name' || colB.toLowerCase().includes('annualized')) {
-        return null
-      }
-
-      // Parse the annual amount (remove commas, currency symbols, etc.)
-      const amount = colE ? parseFloat(colE.replace(/[£$,\s]/g, '')) : null
-
-      if (!amount || isNaN(amount)) {
-        return null // Skip rows without valid amounts
-      }
-
-      // Store amount in the appropriate currency column based on CCY
-      let amountGbp: number | null = null
-      let amountUsd: number | null = null
-
-      if (colH === 'GBP' || !colH) {
-        // Default to GBP if no currency specified
-        amountGbp = amount
-        amountUsd = null
-      } else if (colH === 'USD') {
-        amountGbp = null
-        amountUsd = amount
-      } else {
-        // Unknown currency, default to GBP
-        amountGbp = amount
-        amountUsd = null
-      }
-
-      return {
-        name: colB,
-        annualized_amount_gbp: amountGbp,
-        annualized_amount_usd: amountUsd,
-      }
-    },
-  },
+  // Account Balances, Kids, Recurring Payments, and Investment Return are app-managed inputs and no
+  // longer synced from Google Sheets.
 ];
 
 export interface SyncGoogleSheetOptions {

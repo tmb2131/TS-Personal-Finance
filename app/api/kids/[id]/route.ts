@@ -5,10 +5,13 @@ import { z } from 'zod'
 const UpdateKidsAccountSchema = z.object({
   child_name: z.string().min(1).optional(),
   account_type: z.string().min(1).optional(),
+  date_updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   balance_usd: z.number().optional(),
   notes: z.string().nullable().optional(),
   purpose: z.string().nullable().optional(),
 })
+
+const EDITABLE_DATA_SOURCES = new Set(['manual', 'csv'])
 
 export async function PATCH(
   request: Request,
@@ -33,9 +36,9 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 })
     }
 
-    if (existing.data_source !== 'manual') {
+    if (!EDITABLE_DATA_SOURCES.has(existing.data_source)) {
       return NextResponse.json(
-        { success: false, error: 'Can only edit manually entered data' },
+        { success: false, error: 'Can only edit app-managed data' },
         { status: 403 }
       )
     }
@@ -51,7 +54,6 @@ export async function PATCH(
     }
 
     const updates: Record<string, any> = { ...parsed.data }
-    updates.date_updated = new Date().toISOString().split('T')[0]
 
     const { data, error } = await supabase
       .from('kids_accounts')
@@ -98,9 +100,9 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 })
     }
 
-    if (existing.data_source !== 'manual') {
+    if (!EDITABLE_DATA_SOURCES.has(existing.data_source)) {
       return NextResponse.json(
-        { success: false, error: 'Can only delete manually entered data' },
+        { success: false, error: 'Can only delete app-managed data' },
         { status: 403 }
       )
     }

@@ -32,6 +32,10 @@ const PROFILE_DESCRIPTIONS = {
   horizon: 'What is the intended duration? Short-Term (e.g., checking/savings), Medium-Term (e.g., brokerage accounts for longer-term growth), Long-Term (e.g., retirement accounts, home, trusts).',
 }
 
+function getTodayDateString() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 function ProfileLabel({ htmlFor, label, description }: { htmlFor: string; label: string; description: string }) {
   return (
     <div className="flex items-center gap-1">
@@ -50,7 +54,19 @@ function ProfileLabel({ htmlFor, label, description }: { htmlFor: string; label:
   )
 }
 
-export function AddAccountDialog() {
+interface AddAccountDialogProps {
+  triggerLabel?: string
+  triggerVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  triggerSize?: 'default' | 'sm' | 'lg' | 'icon'
+  triggerClassName?: string
+}
+
+export function AddAccountDialog({
+  triggerLabel = 'Add Account',
+  triggerVariant = 'outline',
+  triggerSize = 'sm',
+  triggerClassName,
+}: AddAccountDialogProps = {}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -59,6 +75,7 @@ export function AddAccountDialog() {
   const [accountName, setAccountName] = useState('')
   const [category, setCategory] = useState('Cash')
   const [currency, setCurrency] = useState<'USD' | 'GBP' | 'EUR'>('USD')
+  const [lastUpdated, setLastUpdated] = useState(getTodayDateString())
   const [balance, setBalance] = useState('')
   const [liquidityProfile, setLiquidityProfile] = useState('')
   const [riskProfile, setRiskProfile] = useState('')
@@ -69,6 +86,7 @@ export function AddAccountDialog() {
     setAccountName('')
     setCategory('Cash')
     setCurrency('USD')
+    setLastUpdated(getTodayDateString())
     setBalance('')
     setLiquidityProfile('')
     setRiskProfile('')
@@ -80,6 +98,11 @@ export function AddAccountDialog() {
 
     if (!institution || !accountName || !balance) {
       toast.error('Please fill in institution, account name, and balance')
+      return
+    }
+
+    if (!lastUpdated) {
+      toast.error('Please select a last updated date')
       return
     }
 
@@ -99,6 +122,7 @@ export function AddAccountDialog() {
           account_name: accountName,
           category,
           currency,
+          date_updated: lastUpdated,
           balance_total_local: numBalance,
           balance_personal_local: numBalance,
           balance_family_local: 0,
@@ -129,9 +153,9 @@ export function AddAccountDialog() {
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm() }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
           <Plus className="h-4 w-4 mr-1" />
-          Add Account
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -186,6 +210,16 @@ export function AddAccountDialog() {
                 <option value="EUR">EUR</option>
               </select>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="acc-date-updated">Last Updated</Label>
+            <Input
+              id="acc-date-updated"
+              type="date"
+              value={lastUpdated}
+              onChange={(e) => setLastUpdated(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="acc-balance">Balance</Label>

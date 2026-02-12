@@ -16,7 +16,19 @@ import {
 } from '@/components/ui/dialog'
 import { useCurrency } from '@/lib/contexts/currency-context'
 
-export function AddRecurringPaymentDialog() {
+interface AddRecurringPaymentDialogProps {
+  triggerLabel?: string
+  triggerVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  triggerSize?: 'default' | 'sm' | 'lg' | 'icon'
+  triggerClassName?: string
+}
+
+export function AddRecurringPaymentDialog({
+  triggerLabel = 'Add Payment',
+  triggerVariant = 'outline',
+  triggerSize = 'sm',
+  triggerClassName,
+}: AddRecurringPaymentDialogProps = {}) {
   const router = useRouter()
   const { currency, fxRate } = useCurrency()
   const [open, setOpen] = useState(false)
@@ -81,9 +93,9 @@ export function AddRecurringPaymentDialog() {
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm() }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant={triggerVariant} size={triggerSize} className={triggerClassName}>
           <Plus className="h-4 w-4 mr-1" />
-          Add Payment
+          {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent>

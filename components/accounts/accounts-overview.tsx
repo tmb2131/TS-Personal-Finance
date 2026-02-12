@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Fragment, useMemo } from 'react'
+import { useEffect, useState, Fragment, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import {
@@ -12,16 +12,18 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { KPICard } from '@/components/kpi-card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { AccountBalance } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, Pencil } from 'lucide-react'
+import { AlertCircle, Loader2, Pencil } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { EditAccountDialog } from '@/components/accounts/edit-account-dialog'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
+import { toast } from 'sonner'
 
 const CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Taconic', 'House', 'Trust']
 
@@ -63,6 +65,19 @@ const normalizeCategory = (category: string): string => {
   return normalized
 }
 
+function toDateInputValue(value: string | null | undefined) {
+  if (!value) return new Date().toISOString().slice(0, 10)
+  return value.slice(0, 10)
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100
+}
+
+function isEditableSource(source: AccountBalance['data_source']) {
+  return source === 'manual' || source === 'csv'
+}
+
 export function AccountsOverview() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const [accounts, setAccounts] = useState<AccountBalance[]>([])
@@ -70,47 +85,50 @@ export function AccountsOverview() {
   const [error, setError] = useState<string | null>(null)
   const [fullTableOpen, setFullTableOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<AccountBalance | null>(null)
+  const [bulkEditMode, setBulkEditMode] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
+  const [bulkDrafts, setBulkDrafts] = useState<Record<string, { balance_total_local: string; date_updated: string }>>({})
+
+  const loadAccounts = useCallback(async () => {
+    const supabase = createClient()
+    
+    const accountsResult = await supabase
+      .from('account_balances')
+      .select('*')
+      .order('category')
+      .order('institution')
+
+    if (accountsResult.error) {
+      console.error('Error fetching accounts:', accountsResult.error)
+      setError('Failed to load account data. Please try refreshing the page.')
+      setLoading(false)
+      return
+    }
+    
+    setError(null)
+
+    // Get the most recent balance for each account and normalize categories
+    const accountsMap = new Map<string, AccountBalance>()
+    ;(accountsResult.data ?? []).forEach((account: AccountBalance) => {
+      const key = `${account.institution}-${account.account_name}`
+      const existing = accountsMap.get(key)
+      if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
+        // Normalize the category before storing
+        const normalizedAccount = {
+          ...account,
+          category: normalizeCategory(account.category),
+        }
+        accountsMap.set(key, normalizedAccount)
+      }
+    })
+
+    setAccounts(Array.from(accountsMap.values()))
+    setLoading(false)
+  }, [])
 
   useEffect(() => {
-    async function fetchData() {
-      const supabase = createClient()
-      
-      const accountsResult = await supabase
-        .from('account_balances')
-        .select('*')
-        .order('category')
-        .order('institution')
-
-      if (accountsResult.error) {
-        console.error('Error fetching accounts:', accountsResult.error)
-        setError('Failed to load account data. Please try refreshing the page.')
-        setLoading(false)
-        return
-      }
-      
-      setError(null)
-
-      // Get the most recent balance for each account and normalize categories
-      const accountsMap = new Map<string, AccountBalance>()
-      ;(accountsResult.data ?? []).forEach((account: AccountBalance) => {
-        const key = `${account.institution}-${account.account_name}`
-        const existing = accountsMap.get(key)
-        if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
-          // Normalize the category before storing
-          const normalizedAccount = {
-            ...account,
-            category: normalizeCategory(account.category),
-          }
-          accountsMap.set(key, normalizedAccount)
-        }
-      })
-
-      setAccounts(Array.from(accountsMap.values()))
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [])
+    loadAccounts()
+  }, [loadAccounts])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -143,6 +161,120 @@ export function AccountsOverview() {
     if (!dateString) return 'N/A'
     const date = new Date(dateString)
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const beginBulkEdit = () => {
+    const nextDrafts: Record<string, { balance_total_local: string; date_updated: string }> = {}
+    accounts.forEach((account) => {
+      if (!isEditableSource(account.data_source)) return
+      nextDrafts[account.id] = {
+        balance_total_local: String(account.balance_total_local ?? 0),
+        date_updated: toDateInputValue(account.date_updated),
+      }
+    })
+    setBulkDrafts(nextDrafts)
+    setBulkEditMode(true)
+  }
+
+  const cancelBulkEdit = () => {
+    setBulkEditMode(false)
+    setBulkDrafts({})
+  }
+
+  const updateBulkDraft = (accountId: string, field: 'balance_total_local' | 'date_updated', value: string) => {
+    setBulkDrafts((current) => ({
+      ...current,
+      [accountId]: {
+        balance_total_local: current[accountId]?.balance_total_local ?? '',
+        date_updated: current[accountId]?.date_updated ?? toDateInputValue(null),
+        [field]: value,
+      },
+    }))
+  }
+
+  const saveBulkChanges = async () => {
+    const changedAccounts = accounts.filter((account) => {
+      if (!isEditableSource(account.data_source)) return false
+      const draft = bulkDrafts[account.id]
+      if (!draft) return false
+      const currentDate = toDateInputValue(account.date_updated)
+      const currentBalance = Number(account.balance_total_local ?? 0)
+      const draftBalance = Number(draft.balance_total_local)
+      return draft.date_updated !== currentDate || draftBalance !== currentBalance
+    })
+
+    if (changedAccounts.length === 0) {
+      toast.info('No account changes to save')
+      setBulkEditMode(false)
+      return
+    }
+
+    for (const account of changedAccounts) {
+      const draft = bulkDrafts[account.id]
+      const balanceValue = Number(draft.balance_total_local)
+      if (!Number.isFinite(balanceValue)) {
+        toast.error(`Invalid balance for ${account.account_name}`)
+        return
+      }
+      if (!draft.date_updated) {
+        toast.error(`Missing date for ${account.account_name}`)
+        return
+      }
+    }
+
+    setBulkSaving(true)
+    try {
+      const results = await Promise.all(
+        changedAccounts.map(async (account) => {
+          const draft = bulkDrafts[account.id]
+          const newTotal = Number(draft.balance_total_local)
+          const oldTotal = Number(account.balance_total_local ?? 0)
+          const oldPersonal = Number(account.balance_personal_local ?? 0)
+          const oldFamily = Number(account.balance_family_local ?? 0)
+
+          let nextPersonal = newTotal
+          let nextFamily = 0
+          if (oldTotal !== 0) {
+            const personalRatio = oldPersonal / oldTotal
+            nextPersonal = round2(newTotal * personalRatio)
+            nextFamily = round2(newTotal - nextPersonal)
+          }
+
+          const res = await fetch(`/api/accounts/${account.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              balance_total_local: round2(newTotal),
+              balance_personal_local: nextPersonal,
+              balance_family_local: nextFamily,
+              date_updated: draft.date_updated,
+            }),
+          })
+
+          const payload = await res.json().catch(() => ({}))
+          return res.ok && payload?.success === true
+        })
+      )
+
+      const successCount = results.filter(Boolean).length
+      const failedCount = results.length - successCount
+
+      if (successCount > 0) {
+        toast.success(`Saved ${successCount} account ${successCount === 1 ? 'update' : 'updates'}`)
+      }
+      if (failedCount > 0) {
+        toast.error(`${failedCount} account ${failedCount === 1 ? 'update failed' : 'updates failed'}`)
+      }
+
+      await loadAccounts()
+      setBulkEditMode(false)
+      setBulkDrafts({})
+    } catch (error) {
+      console.error('Bulk account save error:', error)
+      toast.error('Failed to save account changes')
+    } finally {
+      setBulkSaving(false)
+    }
   }
 
   // Check if there are any Trust accounts
@@ -517,6 +649,25 @@ export function AccountsOverview() {
       </div>
 
       {/* Accounts — Mobile card layout */}
+      <div className="flex items-center justify-end gap-2">
+        {!bulkEditMode ? (
+          <Button variant="outline" size="sm" onClick={beginBulkEdit}>
+            Edit All
+          </Button>
+        ) : (
+          <>
+            <Button variant="outline" size="sm" onClick={cancelBulkEdit} disabled={bulkSaving}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={saveBulkChanges} disabled={bulkSaving}>
+              {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save All
+            </Button>
+          </>
+        )}
+      </div>
+
+      {/* Accounts — Mobile card layout */}
       <Card className="md:hidden">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
           <CardTitle className="text-base">Accounts</CardTitle>
@@ -545,7 +696,7 @@ export function AccountsOverview() {
                           <div className="text-xs text-muted-foreground truncate">{account.institution}</div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          {account.data_source === 'manual' && (
+                          {!bulkEditMode && isEditableSource(account.data_source) && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -560,14 +711,38 @@ export function AccountsOverview() {
                           </Badge>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                        <span className="text-xs text-muted-foreground block">
-                          Updated {formatDate(account.date_updated)}
-                        </span>
-                        <span className="font-semibold tabular-nums text-sm shrink-0">
-                          {formatCurrency(convertedBalance)}
-                        </span>
-                      </div>
+                      {bulkEditMode && isEditableSource(account.data_source) ? (
+                        <div className="mt-2 grid grid-cols-2 gap-2 border-t pt-2">
+                          <div className="space-y-1">
+                            <span className="text-[11px] text-muted-foreground">Balance ({account.currency})</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={bulkDrafts[account.id]?.balance_total_local ?? ''}
+                              onChange={(e) => updateBulkDraft(account.id, 'balance_total_local', e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[11px] text-muted-foreground">Last Updated</span>
+                            <Input
+                              type="date"
+                              value={bulkDrafts[account.id]?.date_updated ?? toDateInputValue(account.date_updated)}
+                              onChange={(e) => updateBulkDraft(account.id, 'date_updated', e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                          <span className="text-xs text-muted-foreground block">
+                            Updated {formatDate(account.date_updated)}
+                          </span>
+                          <span className="font-semibold tabular-nums text-sm shrink-0">
+                            {formatCurrency(convertedBalance)}
+                          </span>
+                        </div>
+                      )}
                       <div className="relative h-1.5 w-full mt-1.5 rounded bg-muted overflow-hidden">
                         <div
                           className="absolute h-full bg-blue-900 left-0 top-0 rounded"
@@ -638,7 +813,19 @@ export function AccountsOverview() {
                             <Badge variant="outline">{account.currency}</Badge>
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            {formatCurrency(convertedBalance)}
+                            {bulkEditMode && isEditableSource(account.data_source) ? (
+                              <div className="flex justify-end">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={bulkDrafts[account.id]?.balance_total_local ?? ''}
+                                  onChange={(e) => updateBulkDraft(account.id, 'balance_total_local', e.target.value)}
+                                  className="h-8 w-32 text-right"
+                                />
+                              </div>
+                            ) : (
+                              formatCurrency(convertedBalance)
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="relative h-3 w-16">
@@ -650,9 +837,20 @@ export function AccountsOverview() {
                               />
                             </div>
                           </TableCell>
-                          <TableCell>{formatDate(account.date_updated)}</TableCell>
                           <TableCell>
-                            {account.data_source === 'manual' && (
+                            {bulkEditMode && isEditableSource(account.data_source) ? (
+                              <Input
+                                type="date"
+                                value={bulkDrafts[account.id]?.date_updated ?? toDateInputValue(account.date_updated)}
+                                onChange={(e) => updateBulkDraft(account.id, 'date_updated', e.target.value)}
+                                className="h-8"
+                              />
+                            ) : (
+                              formatDate(account.date_updated)
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {!bulkEditMode && isEditableSource(account.data_source) && (
                               <Button
                                 variant="ghost"
                                 size="sm"

@@ -5,6 +5,7 @@ import { z } from 'zod'
 const CreateKidsAccountSchema = z.object({
   child_name: z.string().min(1),
   account_type: z.string().min(1),
+  date_updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   balance_usd: z.number(),
   notes: z.string().nullable().optional(),
   purpose: z.string().nullable().optional(),
@@ -30,13 +31,14 @@ export async function POST(request: Request) {
     }
 
     const today = new Date().toISOString().split('T')[0]
+    const dateUpdated = parsed.data.date_updated ?? today
 
     const { data, error } = await supabase.from('kids_accounts').insert({
       user_id: user.id,
       child_name: parsed.data.child_name,
       account_type: parsed.data.account_type,
       balance_usd: parsed.data.balance_usd,
-      date_updated: today,
+      date_updated: dateUpdated,
       notes: parsed.data.notes ?? null,
       purpose: parsed.data.purpose ?? null,
       data_source: 'manual',

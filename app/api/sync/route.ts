@@ -25,7 +25,7 @@ export async function POST() {
 
     if (!profile?.google_spreadsheet_id) {
       return NextResponse.json(
-        { success: false, error: 'Connect your sheet first. Set your Google Spreadsheet ID in settings.' },
+        { success: false, error: 'Connect your Transaction Log sheet first in Settings.' },
         { status: 400 }
       )
     }

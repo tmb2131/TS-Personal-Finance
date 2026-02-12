@@ -32,6 +32,11 @@ const PROFILE_DESCRIPTIONS = {
   horizon: 'What is the intended duration? Short-Term (e.g., checking/savings), Medium-Term (e.g., brokerage accounts for longer-term growth), Long-Term (e.g., retirement accounts, home, trusts).',
 }
 
+function toDateInputValue(value: string | null | undefined) {
+  if (!value) return new Date().toISOString().slice(0, 10)
+  return value.slice(0, 10)
+}
+
 function ProfileLabel({ htmlFor, label, description }: { htmlFor: string; label: string; description: string }) {
   return (
     <div className="flex items-center gap-1">
@@ -65,6 +70,7 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
   const [accountName, setAccountName] = useState(account.account_name)
   const [category, setCategory] = useState(account.category)
   const [currency, setCurrency] = useState(account.currency)
+  const [lastUpdated, setLastUpdated] = useState(toDateInputValue(account.date_updated))
   const [balance, setBalance] = useState(String(account.balance_total_local))
   const [liquidityProfile, setLiquidityProfile] = useState(account.liquidity_profile ?? '')
   const [riskProfile, setRiskProfile] = useState(account.risk_profile ?? '')
@@ -75,6 +81,11 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
 
     if (!institution || !accountName || !balance) {
       toast.error('Please fill in institution, account name, and balance')
+      return
+    }
+
+    if (!lastUpdated) {
+      toast.error('Please select a last updated date')
       return
     }
 
@@ -94,6 +105,7 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
           account_name: accountName,
           category,
           currency,
+          date_updated: lastUpdated,
           balance_total_local: numBalance,
           balance_personal_local: numBalance,
           balance_family_local: 0,
@@ -195,6 +207,16 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
                 <option value="EUR">EUR</option>
               </select>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-acc-date-updated">Last Updated</Label>
+            <Input
+              id="edit-acc-date-updated"
+              type="date"
+              value={lastUpdated}
+              onChange={(e) => setLastUpdated(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-acc-balance">Balance</Label>

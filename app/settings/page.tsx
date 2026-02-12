@@ -27,7 +27,7 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
         <p className="text-sm md:text-base text-muted-foreground">
-          Connect your Google Sheet and preferences
+          Preferences and Transaction Log sheet connection
         </p>
       </div>
       <SettingsForm

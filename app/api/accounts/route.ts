@@ -9,6 +9,7 @@ const CreateAccountSchema = z.object({
   account_name: z.string().min(1),
   category: z.string().min(1),
   currency: z.enum(['USD', 'GBP', 'EUR']),
+  date_updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   balance_total_local: z.number(),
   balance_personal_local: z.number().default(0),
   balance_family_local: z.number().default(0),
@@ -37,10 +38,11 @@ export async function POST(request: Request) {
     }
 
     const today = new Date().toISOString().split('T')[0]
+    const dateUpdated = parsed.data.date_updated ?? today
 
     const { data, error } = await supabase.from('account_balances').insert({
       user_id: user.id,
-      date_updated: today,
+      date_updated: dateUpdated,
       institution: parsed.data.institution,
       account_name: parsed.data.account_name,
       category: parsed.data.category,

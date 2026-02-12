@@ -60,22 +60,22 @@ export function Header() {
           setSyncing(false)
           syncStartTimeRef.current = null
           await fetchLatestDates()
-          toast.success('Data synced', { description: 'Sync completed while you were away.' })
+          toast.success('Transaction Log synced', { description: 'Sheet sync completed while you were away.' })
           setTimeout(() => window.location.reload(), 800)
         } else {
           setSyncing(false)
           syncStartTimeRef.current = null
           toast.info('Sync interrupted', {
-            description: 'Tap Refresh to sync again.',
-            action: { label: 'Refresh', onClick: () => handleSync() },
+            description: 'Tap Sync Transaction Log to try again.',
+            action: { label: 'Sync Now', onClick: () => handleSync() },
           })
         }
       } catch {
         setSyncing(false)
         syncStartTimeRef.current = null
         toast.info('Sync interrupted', {
-          description: 'Tap Refresh to sync again.',
-          action: { label: 'Refresh', onClick: () => handleSync() },
+          description: 'Tap Sync Transaction Log to try again.',
+          action: { label: 'Sync Now', onClick: () => handleSync() },
         })
       }
     }
@@ -172,7 +172,7 @@ export function Header() {
         toast.error('Sync Failed', {
           description: errorMessage,
           action: {
-            label: 'Retry',
+            label: 'Sync Now',
             onClick: () => handleSync(),
           },
         })
@@ -187,8 +187,8 @@ export function Header() {
       setSyncing(false)
       
       if (result.success) {
-        toast.success('Data Synced Successfully', {
-          description: 'All sheets have been synchronized with the database.',
+        toast.success('Transaction Log Synced', {
+          description: 'Connected sheet data has been synchronized.',
         })
         // Refresh latest dates (including last_sync_at written by the server)
         await fetchLatestDates()
@@ -197,15 +197,15 @@ export function Header() {
           window.location.reload()
         }, 1000)
       } else {
-        const errorMsg = result.error || 'Some sheets failed to sync'
+        const errorMsg = result.error || 'Transaction Log sync failed'
         const failedSheets = result.results?.filter((r: any) => !r.success).map((r: any) => r.sheet).join(', ')
         console.error('Sync failed:', result.results)
-        toast.error('Partial Sync Failure', {
+        toast.error('Sync Failure', {
           description: failedSheets 
             ? `Failed to sync: ${failedSheets}. ${errorMsg}`
             : errorMsg,
           action: {
-            label: 'Retry',
+            label: 'Sync Now',
             onClick: () => handleSync(),
           },
         })
@@ -218,14 +218,14 @@ export function Header() {
       console.error('Sync error:', error)
       if (isAborted) {
         toast.warning('Sync taking longer than expected', {
-          description: 'The sync may still be running on the server. Refresh the page in a minute to see updated data.',
+          description: 'Transaction Log sync may still be running. Refresh in a minute to check.',
         })
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
         toast.error('Sync Error', {
           description: `Unable to connect to sync service. ${errorMessage}`,
           action: {
-            label: 'Retry',
+            label: 'Sync Now',
             onClick: () => handleSync(),
           },
         })
@@ -276,18 +276,18 @@ export function Header() {
           <RefreshCw className={`h-3 w-3 md:h-4 md:w-4 ${syncing ? 'animate-spin' : ''}`} />
           {mounted ? (
             <>
-              <span className="hidden md:inline">{syncing ? 'Syncing...' : 'Refresh Data'}</span>
-              <span className="md:hidden">{syncing ? 'Sync...' : 'Refresh'}</span>
+              <span className="hidden md:inline">{syncing ? 'Syncing...' : 'Sync Transaction Log'}</span>
+              <span className="md:hidden">{syncing ? 'Sync...' : 'Sync Log'}</span>
             </>
           ) : (
-            <span>Refresh Data</span>
+            <span>Sync Transaction Log</span>
           )}
         </Button>
         
         {mounted && (
           <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground md:flex md:gap-3 lg:gap-4">
             <div className="hidden md:block">
-              <span className="font-medium">Last Refresh:</span>{' '}
+              <span className="font-medium">Last Sheet Sync:</span>{' '}
               <span className="text-foreground">{formatDate(lastRefreshDate)}</span>
             </div>
             <div className="hidden lg:block">

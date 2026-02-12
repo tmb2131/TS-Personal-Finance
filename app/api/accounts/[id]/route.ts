@@ -9,6 +9,7 @@ const UpdateAccountSchema = z.object({
   account_name: z.string().min(1).optional(),
   category: z.string().min(1).optional(),
   currency: z.enum(['USD', 'GBP', 'EUR']).optional(),
+  date_updated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   balance_total_local: z.number().optional(),
   balance_personal_local: z.number().optional(),
   balance_family_local: z.number().optional(),
@@ -16,6 +17,8 @@ const UpdateAccountSchema = z.object({
   risk_profile: z.string().nullable().optional(),
   horizon_profile: z.string().nullable().optional(),
 })
+
+const EDITABLE_DATA_SOURCES = new Set(['manual', 'csv'])
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -37,9 +40,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 })
     }
 
-    if (existing.data_source !== 'manual') {
+    if (!EDITABLE_DATA_SOURCES.has(existing.data_source)) {
       return NextResponse.json(
-        { success: false, error: 'Can only edit manually entered data' },
+        { success: false, error: 'Can only edit app-managed data' },
         { status: 403 }
       )
     }
@@ -55,7 +58,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     const updates: Record<string, any> = { ...parsed.data }
-    updates.date_updated = new Date().toISOString().split('T')[0]
 
     const { data, error } = await supabase
       .from('account_balances')
@@ -106,9 +108,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 })
     }
 
-    if (existing.data_source !== 'manual') {
+    if (!EDITABLE_DATA_SOURCES.has(existing.data_source)) {
       return NextResponse.json(
-        { success: false, error: 'Can only delete manually entered data' },
+        { success: false, error: 'Can only delete app-managed data' },
         { status: 403 }
       )
     }
