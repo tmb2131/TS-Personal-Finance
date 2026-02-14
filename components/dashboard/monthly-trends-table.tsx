@@ -592,7 +592,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 <CardHeader className="pb-3">
                   <Skeleton className="h-4 w-32" />
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="pt-2 md:pt-2">
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-full" />

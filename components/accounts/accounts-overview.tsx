@@ -459,7 +459,7 @@ export function AccountsOverview() {
         <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
           <CardTitle className="text-base">Account Category Summary</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-3">
+        <CardContent className="p-4 pt-2 md:pt-2 space-y-3">
           <div className="rounded-lg border bg-muted/30 p-3">
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Grand Total</div>
             {hasPersonalAndFamily && (
@@ -553,7 +553,7 @@ export function AccountsOverview() {
           <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
             <CardTitle className="text-base">Account Category Summary</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-2 md:pt-2">
             <Table className={compactTable}>
               <TableHeader>
                 <TableRow className="bg-muted">
@@ -672,7 +672,7 @@ export function AccountsOverview() {
         <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
           <CardTitle className="text-base">Accounts</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-4">
+        <CardContent className="p-4 pt-2 md:pt-2 space-y-4">
           {groupedByCategory.map((group) => (
             <div key={group.category}>
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-0.5">
@@ -774,7 +774,7 @@ export function AccountsOverview() {
             aria-label="Toggle full table view for Accounts"
           />
         </CardHeader>
-        <CardContent className="p-4 pt-0">
+        <CardContent className="p-4 pt-2 md:pt-2">
           <FullTableViewWrapper
             fullView={fullTableOpen}
             onClose={() => setFullTableOpen(false)}

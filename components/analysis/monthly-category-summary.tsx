@@ -631,7 +631,7 @@ export function MonthlyCategorySummary({
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-2 md:pt-2">
         {content}
       </CardContent>
     </Card>
