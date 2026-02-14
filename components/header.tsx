@@ -238,6 +238,28 @@ export function Header() {
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
+  const formatLastSheetSync = (dateString: string | null) => {
+    if (!dateString) return 'N/A'
+    const date = new Date(dateString)
+    const now = new Date()
+    const isToday =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
+
+    if (isToday) {
+      const diffMs = now.getTime() - date.getTime()
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      if (diffHours > 0) {
+        return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      }
+      const diffMins = Math.floor(diffMs / (1000 * 60))
+      return diffMins < 1 ? 'Just now' : `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+    }
+
+    return formatDate(dateString)
+  }
+
   return (
     <header
       className={cn(
@@ -281,7 +303,7 @@ export function Header() {
           <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground md:flex md:gap-3 lg:gap-4">
             <div className="hidden md:block">
               <span className="font-medium">Last Sheet Sync:</span>{' '}
-              <span className="text-foreground">{formatDate(lastRefreshDate)}</span>
+              <span className="text-foreground">{formatLastSheetSync(lastRefreshDate)}</span>
             </div>
             <div className="hidden lg:block">
               <span className="font-medium">Latest Transaction:</span>{' '}
