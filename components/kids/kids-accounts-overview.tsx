@@ -335,26 +335,24 @@ export function KidsAccountsOverview() {
     )
   }
 
+  const bulkEditActions = !bulkEditMode ? (
+    <Button variant="outline" size="sm" onClick={beginBulkEdit}>
+      Edit All
+    </Button>
+  ) : (
+    <>
+      <Button variant="outline" size="sm" onClick={cancelBulkEdit} disabled={bulkSaving}>
+        Cancel
+      </Button>
+      <Button size="sm" onClick={saveBulkChanges} disabled={bulkSaving}>
+        {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Save All
+      </Button>
+    </>
+  )
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end gap-2">
-        {!bulkEditMode ? (
-          <Button variant="outline" size="sm" onClick={beginBulkEdit}>
-            Edit All
-          </Button>
-        ) : (
-          <>
-            <Button variant="outline" size="sm" onClick={cancelBulkEdit} disabled={bulkSaving}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={saveBulkChanges} disabled={bulkSaving}>
-              {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save All
-            </Button>
-          </>
-        )}
-      </div>
-
       {/* Executive Summary Cards - One per child */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {childSummaries.map((summary) => (
@@ -511,7 +509,10 @@ export function KidsAccountsOverview() {
             {/* Account Details — Mobile cards */}
             <Card className="md:hidden">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
-                <CardTitle className="text-base">Account Details</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">Account Details</CardTitle>
+                  <div className="flex items-center gap-2">{bulkEditActions}</div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {groupedByAccountType.map((group) => (
@@ -592,7 +593,10 @@ export function KidsAccountsOverview() {
             {/* Detailed Accounts Table — Desktop */}
             <Card className="hidden md:block">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-                <CardTitle className="text-base">Account Details</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base">Account Details</CardTitle>
+                  <div className="flex items-center gap-2">{bulkEditActions}</div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="relative max-h-[600px] overflow-auto border rounded-md">
