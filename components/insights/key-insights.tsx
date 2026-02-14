@@ -613,7 +613,7 @@ export function KeyInsights() {
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-4 w-64 mt-2" />
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 md:pt-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="space-y-3 p-4 rounded-lg border bg-card">
@@ -643,7 +643,7 @@ export function KeyInsights() {
             <Skeleton className="h-6 w-32" />
             <Skeleton className="h-3 w-64 mt-1" />
           </CardHeader>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="pt-6 md:pt-6 space-y-4">
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -680,7 +680,7 @@ export function KeyInsights() {
             <CardHeader className="bg-muted/50">
               <Skeleton className="h-6 w-40" />
             </CardHeader>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="pt-6 md:pt-6 space-y-4">
               <div className="space-y-3">
                 {[1, 2].map((j) => (
                   <div key={j} className="flex items-start gap-3">
@@ -731,10 +731,10 @@ export function KeyInsights() {
         {/* Executive Summary */}
         <Card id="executive-summary" className="border-2 scroll-mt-24">
           <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
-            <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
+            <CardTitle className="text-xl font-semibold">Executive Summary</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance — click a card to jump to the section</p>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 md:pt-6">
             <div className={isMobile
               ? 'flex gap-4 overflow-x-auto pt-2 pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
               : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
@@ -966,13 +966,13 @@ export function KeyInsights() {
       {/* Net Worth Section */}
       <Card id="net-worth" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Net Worth</CardTitle>
+          <CardTitle className="text-lg">Net Worth</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             Current net worth is <span className="font-semibold">{formatCurrencyLarge(netWorthInsights.currentTotal)}</span>
             {hasTrustData && ' (Trust excluded)'}.
           </p>
         </CardHeader>
-        <CardContent className="pt-4 space-y-4">
+        <CardContent className="pt-4 md:pt-4 space-y-4">
           {/* Vs last year — prominent */}
           <div className="space-y-1.5 rounded-lg border bg-card p-2.5 w-full lg:w-[calc((100%-3*1.5rem)/4)]">
             <div>
@@ -1220,7 +1220,7 @@ export function KeyInsights() {
       {/* Annual Budget Section */}
       <Card id="annual-budget" className="scroll-mt-24">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Annual Budget</CardTitle>
+          <CardTitle className="text-lg">Annual Budget</CardTitle>
           <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
             <p className="text-sm text-muted-foreground">
               {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by{' '}
@@ -1242,7 +1242,7 @@ export function KeyInsights() {
             </Link>
           </div>
         </CardHeader>
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="pt-6 md:pt-6 space-y-6">
           {/* Spend vs Budget — progress bar */}
           <div>
             <div className="flex justify-between text-sm mb-2">
@@ -1446,7 +1446,7 @@ export function KeyInsights() {
         <CardHeader className="bg-muted/50">
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div>
-              <CardTitle className="text-xl">Annual Spend</CardTitle>
+              <CardTitle className="text-lg">Annual Spend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Est. this year (<span className="font-semibold">{formatCurrencyLarge(annualSpendInsights.currentYearEstDisplay)}</span>) vs 4-year average.
               </p>
@@ -1476,7 +1476,7 @@ export function KeyInsights() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 space-y-4">
+        <CardContent className="pt-4 md:pt-4 space-y-4">
           {/* Vs 4-year average — prominent call-out */}
           <div className="space-y-1.5 rounded-lg border bg-card p-2.5 w-full lg:w-[calc((100%-3*1.5rem)/4)]">
             <div>
@@ -1671,7 +1671,7 @@ export function KeyInsights() {
         <CardHeader className="bg-muted/50">
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div>
-              <CardTitle className="text-xl">Monthly Spend</CardTitle>
+              <CardTitle className="text-lg">Monthly Spend</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 This month (<span className="font-semibold">{formatCurrencyLarge(monthlySpendInsights.currentMonthEstDisplay)}</span>) vs trailing 12‑month average.
               </p>
@@ -1701,7 +1701,7 @@ export function KeyInsights() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 space-y-4">
+        <CardContent className="pt-4 md:pt-4 space-y-4">
           {/* Vs TTM — prominent */}
           <div className="space-y-1.5 rounded-lg border bg-card p-2.5 w-full lg:w-[calc((100%-3*1.5rem)/4)]">
             <div>
