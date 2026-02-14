@@ -264,7 +264,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
         <CardHeader className="bg-muted/50">
           {chartHeader}
         </CardHeader>
-        <CardContent className="pt-8">
+        <CardContent className="pt-8 md:pt-8">
           <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
             <div className="flex items-center space-x-2">
               <div className="h-4 w-4 rounded border border-input" />
@@ -294,7 +294,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
       <CardHeader className="bg-muted/50">
         {chartHeader}
       </CardHeader>
-      <CardContent className="pt-8">
+      <CardContent className="pt-8 md:pt-8">
         {/* Category Filters — hidden on mobile to free space for chart */}
         <div className="hidden sm:flex flex-wrap gap-4 mb-6 pb-4 border-b">
           <div className="flex items-center space-x-2">

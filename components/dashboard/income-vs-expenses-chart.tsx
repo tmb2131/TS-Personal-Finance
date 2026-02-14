@@ -190,7 +190,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
-        <CardContent className="pt-8">
+        <CardContent className="pt-8 md:pt-8">
           <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
             <div className="flex items-center space-x-2">
               <div className="h-4 w-4 rounded border border-input" />
@@ -209,7 +209,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
           <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
-      <CardContent className="pt-8">
+      <CardContent className="pt-8 md:pt-8">
         <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
           <div className="hidden sm:flex items-center space-x-2">
             <Checkbox

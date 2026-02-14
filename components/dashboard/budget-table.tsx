@@ -388,7 +388,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
           <CardHeader className="bg-muted/50">
             <Skeleton className="h-6 w-40" />
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 md:pt-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -417,7 +417,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
           <CardHeader className="bg-muted/50">
             <Skeleton className="h-6 w-32" />
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 md:pt-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -446,7 +446,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
           <CardHeader className="bg-muted/50">
             <Skeleton className="h-6 w-32" />
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 md:pt-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -542,7 +542,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent className="pt-2 md:pt-2">
           {/* Executive Summary Cards — always visible */}
           <div className="mb-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">

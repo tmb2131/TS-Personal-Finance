@@ -129,7 +129,7 @@ export function YoYNetWorthTable() {
         <CardHeader className="bg-muted/50">
           <Skeleton className="h-6 w-64" />
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 md:pt-6">
           <Table>
             <TableHeader>
               <TableRow>

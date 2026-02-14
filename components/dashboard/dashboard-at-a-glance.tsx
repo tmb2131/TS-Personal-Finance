@@ -400,12 +400,12 @@ export function DashboardAtAGlance() {
   return (
     <Card className="border-2">
       <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
-        <CardTitle className="text-2xl font-bold">Executive Summary</CardTitle>
+        <CardTitle className="text-xl font-semibold">Executive Summary</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
           Key takeaways at a glance. On mobile, detailed trend shortcuts are optional.
         </p>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 md:pt-6">
         <div className={cn(
           'grid gap-4',
           'md:grid-cols-2 lg:grid-cols-4',

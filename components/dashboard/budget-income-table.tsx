@@ -149,7 +149,7 @@ export function BudgetIncomeTable({
         <CardTitle className="text-base">Income</CardTitle>
         <p className="text-sm text-muted-foreground">All amounts are after tax</p>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="pt-2 md:pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* Summary card - left; on mobile show first (order-1) */}
           <div className="space-y-2 p-3 rounded-lg border bg-card min-w-0 max-md:order-1">

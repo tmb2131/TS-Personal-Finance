@@ -584,7 +584,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         <CardHeader className="bg-muted/50">
           <Skeleton className="h-6 w-40" />
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 md:pt-6">
           {/* Key Insights Cards Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {[1, 2, 3].map((i) => (
@@ -673,7 +673,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="pt-2 md:pt-2">
         {/* Key Insights Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
           {/* Total Variance */}
