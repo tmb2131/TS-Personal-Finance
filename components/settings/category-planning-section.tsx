@@ -1,16 +1,25 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Loader2, Plus } from 'lucide-react'
+import { HelpCircle, Loader2, Plus, Search } from 'lucide-react'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExcludedCategory, isIncomeCategory } from '@/lib/category-filters'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
 type MonthMethod = 'Linear' | 'Average' | 'Manual'
@@ -37,6 +46,9 @@ const monthMethodHelp: Record<MonthMethod, string> = {
   Average: 'Last 3 full months average (or MTD if higher)',
   Manual: 'Use your manual monthly override',
 }
+
+const selectInputClass =
+  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
 
 export function CategoryPlanningSection() {
   const { currency, fxRate } = useCurrency()
@@ -192,9 +204,38 @@ export function CategoryPlanningSection() {
       <Card className="border" id="category-planning">
         <CardHeader>
           <CardTitle>Category Planning</CardTitle>
+          <Skeleton className="h-4 w-96 max-w-full mt-1" />
         </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground">Loading category planning settings...</div>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-10 w-20 md:mb-0.5" />
+          </div>
+          <div className="overflow-auto rounded-md border">
+            <div className="min-w-[900px] p-4 space-y-3">
+              <div className="flex gap-4 pb-2 border-b border-border">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="flex gap-4 items-center">
+                  <Skeleton className="h-10 w-32" />
+                  <Skeleton className="h-10 w-24" />
+                  <Skeleton className="h-10 w-40" />
+                  <Skeleton className="h-10 w-40" />
+                </div>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
     )
@@ -204,19 +245,24 @@ export function CategoryPlanningSection() {
     <Card className="border" id="category-planning">
       <CardHeader>
         <CardTitle>Category Planning</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Manage the three category planning inputs in one place: annual forecast methodology, monthly forecast methodology, and annual budget.
-        </p>
+        <CardDescription>
+          Set annual budgets and how annual and monthly forecasts are computed per category.
+        </CardDescription>
       </CardHeader>
+      <TooltipProvider delayDuration={300}>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="category-search">Search categories</Label>
-          <Input
-            id="category-search"
-            placeholder="Search category..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              id="category-search"
+              placeholder="Search category..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
 
         <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
@@ -241,10 +287,10 @@ export function CategoryPlanningSection() {
           </Button>
         </div>
 
-        <div className="overflow-auto rounded-md border">
+        <div className="overflow-auto rounded-md border max-h-[60vh]">
           <Table className="min-w-[900px]">
             <TableHeader>
-              <TableRow className="bg-muted/50">
+              <TableRow className="bg-muted/50 sticky top-0 z-10 bg-muted border-b border-border">
                 <TableHead className="w-52">Category</TableHead>
                 <TableHead className="w-36 text-right">Annual Budget ({currency})</TableHead>
                 <TableHead className="w-56">Annual Forecast Method</TableHead>
@@ -252,7 +298,24 @@ export function CategoryPlanningSection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRows.map((row) => (
+              {filteredRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="p-0">
+                    <EmptyState
+                      title={search.trim() ? 'No categories match your search' : 'No categories yet'}
+                      description={search.trim() ? 'Try a different search or add a new category above.' : 'Add a category above to get started.'}
+                      className="py-8"
+                    />
+                    {search.trim() && (
+                      <div className="flex justify-center pb-6">
+                        <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+                          Clear search
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ) : filteredRows.map((row) => (
                 <TableRow key={row.category}>
                   <TableCell className="font-medium">{row.category}</TableCell>
                   <TableCell>
@@ -266,18 +329,33 @@ export function CategoryPlanningSection() {
                     />
                   </TableCell>
                   <TableCell>
-                    <select
-                      aria-label={`Annual method for ${row.category}`}
-                      value={row.current_year_method}
-                      onChange={(e) => handleMethodChange(row.category, 'current_year_method', e.target.value as YearMethod)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="Annual">Annual</option>
-                      <option value="Linear">Linear</option>
-                      <option value="Budget">Budget</option>
-                      <option value="Manual">Manual</option>
-                    </select>
-                    <p className="mt-1 text-xs text-muted-foreground">{yearMethodHelp[row.current_year_method]}</p>
+                    <div className="flex items-start gap-1.5">
+                      <select
+                        aria-label={`Annual method for ${row.category}`}
+                        value={row.current_year_method}
+                        onChange={(e) => handleMethodChange(row.category, 'current_year_method', e.target.value as YearMethod)}
+                        className={selectInputClass}
+                      >
+                        <option value="Annual">Annual</option>
+                        <option value="Linear">Linear</option>
+                        <option value="Budget">Budget</option>
+                        <option value="Manual">Manual</option>
+                      </select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mt-1.5"
+                            aria-label={`Annual method help for ${row.category}`}
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {yearMethodHelp[row.current_year_method]}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     {row.current_year_method === 'Manual' && (
                       <Input
                         type="number"
@@ -291,17 +369,32 @@ export function CategoryPlanningSection() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <select
-                      aria-label={`Monthly method for ${row.category}`}
-                      value={row.current_month_method}
-                      onChange={(e) => handleMethodChange(row.category, 'current_month_method', e.target.value as MonthMethod)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="Linear">Linear</option>
-                      <option value="Average">Average</option>
-                      <option value="Manual">Manual</option>
-                    </select>
-                    <p className="mt-1 text-xs text-muted-foreground">{monthMethodHelp[row.current_month_method]}</p>
+                    <div className="flex items-start gap-1.5">
+                      <select
+                        aria-label={`Monthly method for ${row.category}`}
+                        value={row.current_month_method}
+                        onChange={(e) => handleMethodChange(row.category, 'current_month_method', e.target.value as MonthMethod)}
+                        className={selectInputClass}
+                      >
+                        <option value="Linear">Linear</option>
+                        <option value="Average">Average</option>
+                        <option value="Manual">Manual</option>
+                      </select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mt-1.5"
+                            aria-label={`Monthly method help for ${row.category}`}
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {monthMethodHelp[row.current_month_method]}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     {row.current_month_method === 'Manual' && (
                       <Input
                         type="number"
@@ -320,7 +413,8 @@ export function CategoryPlanningSection() {
           </Table>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <Separator className="my-4" />
+        <div className="flex items-center justify-between gap-3 bg-muted/30 rounded-lg px-4 py-3">
           <p className="text-xs text-muted-foreground">
             Budgets are app-managed only. Google sync does not import Budget Targets.
           </p>
@@ -333,6 +427,7 @@ export function CategoryPlanningSection() {
           </Button>
         </div>
       </CardContent>
+      </TooltipProvider>
     </Card>
   )
 }

@@ -27,8 +27,19 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
         <p className="text-sm md:text-base text-muted-foreground">
-          Preferences and Transaction Log sheet connection
+          Preferences, sheet connection, category planning, and appearance.
         </p>
+        <nav className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm" aria-label="Settings sections">
+          <a href="#google-sheet" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+            Google Sheet
+          </a>
+          <a href="#category-planning" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+            Category Planning
+          </a>
+          <a href="#appearance" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+            Appearance
+          </a>
+        </nav>
       </div>
       <SettingsForm
         initialSpreadsheetId={profile?.google_spreadsheet_id ?? ''}

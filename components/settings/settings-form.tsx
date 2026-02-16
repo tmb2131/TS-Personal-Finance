@@ -99,7 +99,7 @@ export function SettingsForm({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card id="google-sheet">
         <CardHeader>
           <CardTitle>Google Sheet Setup (Transaction Log Only)</CardTitle>
           <CardDescription>

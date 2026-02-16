@@ -22,7 +22,7 @@ export function AppearanceForm() {
 
   if (!mounted) {
     return (
-      <Card>
+      <Card id="appearance">
         <CardHeader>
           <CardTitle>Appearance</CardTitle>
           <CardDescription>Choose how the app looks</CardDescription>
@@ -35,7 +35,7 @@ export function AppearanceForm() {
   }
 
   return (
-    <Card>
+    <Card id="appearance">
       <CardHeader>
         <CardTitle>Appearance</CardTitle>
         <CardDescription>Choose how the app looks. System follows your device preference.</CardDescription>
