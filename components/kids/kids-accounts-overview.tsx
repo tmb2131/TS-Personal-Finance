@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 import { KidsAccount } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { AlertCircle, Loader2, Pencil } from 'lucide-react'
+import { AlertCircle, Loader2, Pencil, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/utils/cn'
@@ -37,10 +37,10 @@ function getSourceLabel(source: KidsAccount['data_source']) {
 }
 
 function getSourceClass(source: KidsAccount['data_source']) {
-  if (source === 'csv') return 'bg-amber-50 text-amber-700 border-amber-200'
-  if (source === 'plaid') return 'bg-cyan-50 text-cyan-700 border-cyan-200'
-  if (source === 'google_sheet') return 'bg-slate-50 text-slate-700 border-slate-200'
-  return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+  if (source === 'csv') return 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+  if (source === 'plaid') return 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800'
+  if (source === 'google_sheet') return 'bg-slate-500/15 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+  return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
 }
 
 function toDateInputValue(value: string | null | undefined) {
@@ -287,7 +287,7 @@ export function KidsAccountsOverview() {
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i}>
+            <Card key={i} className="border-l-[3px] border-l-indigo-500">
               <CardHeader>
                 <div className="h-4 w-24 bg-muted animate-pulse rounded" />
               </CardHeader>
@@ -303,7 +303,7 @@ export function KidsAccountsOverview() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-indigo-500">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Kids Accounts</CardTitle>
         </CardHeader>
@@ -320,7 +320,7 @@ export function KidsAccountsOverview() {
 
   if (accounts.length === 0) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-indigo-500">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Kids Accounts</CardTitle>
         </CardHeader>
@@ -356,9 +356,14 @@ export function KidsAccountsOverview() {
       {/* Executive Summary Cards - One per child */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {childSummaries.map((summary) => (
-          <Card key={summary.childName} className="border-2">
+          <Card key={summary.childName} className="border-l-[3px] border-l-indigo-500">
             <CardHeader>
-              <CardTitle className="text-lg">{summary.childName}</CardTitle>
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/15">
+                  <User className="h-5 w-5 text-indigo-600" />
+                </div>
+                <CardTitle className="text-lg">{summary.childName}</CardTitle>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               <div>
@@ -414,7 +419,7 @@ export function KidsAccountsOverview() {
             <h2 className="text-xl font-bold">{childName}'s Accounts</h2>
 
             {/* Account Type Summary — Mobile cards */}
-            <Card className="md:hidden">
+            <Card className="md:hidden border-l-[3px] border-l-indigo-500">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
                 <CardTitle className="text-base">Account Type Summary</CardTitle>
               </CardHeader>
@@ -440,7 +445,7 @@ export function KidsAccountsOverview() {
             </Card>
 
             {/* Account Type Summary Table — Desktop */}
-            <Card className="hidden md:block">
+            <Card className="hidden md:block border-l-[3px] border-l-indigo-500">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
                 <CardTitle className="text-base">Account Type Summary</CardTitle>
               </CardHeader>
@@ -454,9 +459,9 @@ export function KidsAccountsOverview() {
                         {formatCurrency(grandTotal)}
                       </TableHead>
                       <TableHead>
-                        <div className="relative h-4 w-20">
+                        <div className="relative h-4 w-20 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="absolute h-full bg-blue-900 right-0"
+                            className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
                             style={{
                               width: `${Math.min((Math.abs(grandTotal) / maxSummaryBalance) * 100, 100)}%`,
                             }}
@@ -483,9 +488,9 @@ export function KidsAccountsOverview() {
                           {formatCurrency(item.total)}
                         </TableCell>
                         <TableCell>
-                          <div className="relative h-4 w-20">
+                          <div className="relative h-4 w-20 rounded-full bg-muted overflow-hidden">
                             <div
-                              className="absolute h-full bg-blue-900 right-0"
+                              className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
                               style={{
                                 width: `${Math.min((Math.abs(item.total) / maxSummaryBalance) * 100, 100)}%`,
                               }}
@@ -507,7 +512,7 @@ export function KidsAccountsOverview() {
             </Card>
 
             {/* Account Details — Mobile cards */}
-            <Card className="md:hidden">
+            <Card className="md:hidden border-l-[3px] border-l-indigo-500">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">Account Details</CardTitle>
@@ -591,7 +596,7 @@ export function KidsAccountsOverview() {
             </Card>
 
             {/* Detailed Accounts Table — Desktop */}
-            <Card className="hidden md:block">
+            <Card className="hidden md:block border-l-[3px] border-l-indigo-500">
               <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">Account Details</CardTitle>
@@ -642,9 +647,9 @@ export function KidsAccountsOverview() {
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  <div className="relative h-4 w-20">
+                                  <div className="relative h-4 w-20 rounded-full bg-muted overflow-hidden">
                                     <div
-                                      className="absolute h-full bg-blue-900 right-0"
+                                      className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
                                       style={{
                                         width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
                                       }}
@@ -687,9 +692,9 @@ export function KidsAccountsOverview() {
                               {formatCurrency(group.subtotal)}
                             </TableCell>
                             <TableCell>
-                              <div className="relative h-4 w-20">
+                              <div className="relative h-4 w-20 rounded-full bg-muted overflow-hidden">
                                 <div
-                                  className="absolute h-full bg-blue-900 right-0"
+                                  className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
                                   style={{
                                     width: `${Math.min((Math.abs(group.subtotal) / maxAccountBalance) * 100, 100)}%`,
                                   }}

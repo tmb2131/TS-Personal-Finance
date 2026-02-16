@@ -98,7 +98,7 @@ export function NetWorthStartEndChart() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           <Skeleton className="h-6 w-48" />
         </CardHeader>
@@ -111,7 +111,7 @@ export function NetWorthStartEndChart() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Net Worth: Year Start vs Year End</CardTitle>
         </CardHeader>
@@ -128,7 +128,7 @@ export function NetWorthStartEndChart() {
 
   if (chartData.length === 0) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Net Worth: Year Start vs Year End</CardTitle>
         </CardHeader>
@@ -147,7 +147,7 @@ export function NetWorthStartEndChart() {
   const fontSizes = getChartFontSizes(isMobile)
 
   return (
-    <Card>
+    <Card className="border-l-[3px] border-l-blue-500">
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Net Worth: Year Start vs Year End</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">

@@ -38,14 +38,16 @@ export default async function AnalysisPage({
   return (
     <div className="space-y-4 md:space-y-6">
       <AnalysisHashScroll />
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Analysis & Trends</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Deep dive into spending patterns and year-over-year changes
-          </p>
+      <div className="rounded-xl border border-l-[3px] border-l-purple-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold">Analysis & Trends</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Deep dive into spending patterns and year-over-year changes
+            </p>
+          </div>
+          <AddTransactionDialog />
         </div>
-        <AddTransactionDialog />
       </div>
       <AnalysisNavigation />
       <div id="cash-runway" className="scroll-mt-24">

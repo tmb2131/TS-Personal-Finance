@@ -242,7 +242,7 @@ export function CumulativeSpendChart() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-purple-500">
         <CardHeader>
           <CardTitle>YTD Spend Over Time</CardTitle>
         </CardHeader>
@@ -255,7 +255,7 @@ export function CumulativeSpendChart() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-purple-500">
         <CardHeader>
           <CardTitle>YTD Spend Over Time</CardTitle>
         </CardHeader>
@@ -271,7 +271,7 @@ export function CumulativeSpendChart() {
   }
 
   return (
-    <Card>
+    <Card className="border-l-[3px] border-l-purple-500">
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle>YTD Spend Over Time</CardTitle>

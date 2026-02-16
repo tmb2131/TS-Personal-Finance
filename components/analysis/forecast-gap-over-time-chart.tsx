@@ -88,7 +88,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-indigo-500">
         <CardHeader className="bg-muted/50">
           <Skeleton className="h-6 w-48" />
         </CardHeader>
@@ -101,7 +101,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-indigo-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Gap to budget over time</CardTitle>
         </CardHeader>
@@ -118,7 +118,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-indigo-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Gap to budget over time</CardTitle>
         </CardHeader>
@@ -139,7 +139,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
   }))
 
   return (
-    <Card>
+    <Card className="border-l-[3px] border-l-indigo-500">
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Gap to budget over time</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">

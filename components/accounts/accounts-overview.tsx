@@ -18,7 +18,7 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { AccountBalance } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, Loader2, Pencil } from 'lucide-react'
+import { AlertCircle, Building2, LineChart, Loader2, Pencil, Wallet } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { EditAccountDialog } from '@/components/accounts/edit-account-dialog'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
@@ -407,7 +407,7 @@ export function AccountsOverview() {
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i}>
+            <Card key={i} className="border-l-[3px] border-l-blue-500">
               <CardHeader>
                 <div className="h-4 w-24 bg-muted animate-pulse rounded" />
               </CardHeader>
@@ -423,7 +423,7 @@ export function AccountsOverview() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader>
           <CardTitle>Accounts</CardTitle>
         </CardHeader>
@@ -444,18 +444,18 @@ export function AccountsOverview() {
     <div className="space-y-4">
       <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:pb-0 md:items-stretch">
         <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
-          <KPICard title="Total Net Worth" value={totalNetWorth} />
+          <KPICard title="Total Net Worth" value={totalNetWorth} icon={LineChart} accentColor="blue" />
         </div>
         <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
-          <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" />
+          <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" icon={Wallet} accentColor="emerald" />
         </div>
         <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
-          <KPICard title="Illiquid Assets" value={illiquidAssets} />
+          <KPICard title="Illiquid Assets" value={illiquidAssets} icon={Building2} accentColor="violet" />
         </div>
       </div>
 
       {/* Category Summary — Mobile card layout */}
-      <Card className="md:hidden">
+      <Card className="md:hidden border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
           <CardTitle className="text-base">Account Category Summary</CardTitle>
         </CardHeader>
@@ -491,9 +491,9 @@ export function AccountsOverview() {
               <span className="text-sm font-semibold">Total</span>
               <span className="font-semibold tabular-nums">{formatCurrency(grandTotals.total)}</span>
             </div>
-            <div className="relative h-2 w-full mt-2 rounded bg-muted overflow-hidden">
+            <div className="relative h-2 w-full mt-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="absolute h-full bg-blue-900 left-0 top-0 rounded"
+                className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
                 style={{
                   width: `${Math.min((Math.abs(grandTotals.total) / maxSummaryBalance) * 100, 100)}%`,
                 }}
@@ -534,9 +534,9 @@ export function AccountsOverview() {
                 <span className="font-medium">Balance</span>
                 <span className="font-medium tabular-nums">{formatCurrency(item.total)}</span>
               </div>
-              <div className="relative h-1.5 w-full mt-2 rounded bg-muted overflow-hidden">
+              <div className="relative h-1.5 w-full mt-2 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="absolute h-full bg-blue-900 left-0 top-0 rounded"
+                  className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
                   style={{
                     width: `${Math.min((Math.abs(item.total) / maxSummaryBalance) * 100, 100)}%`,
                   }}
@@ -549,7 +549,7 @@ export function AccountsOverview() {
 
       {/* Category Summary Table — Desktop */}
       <div className="hidden md:block w-fit">
-        <Card>
+        <Card className="border-l-[3px] border-l-blue-500">
           <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
             <CardTitle className="text-base">Account Category Summary</CardTitle>
           </CardHeader>
@@ -631,9 +631,9 @@ export function AccountsOverview() {
                       {formatCurrency(item.total)}
                     </TableCell>
                     <TableCell>
-                      <div className="relative h-3 w-16">
+                      <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="absolute h-full bg-blue-900 right-0"
+                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
                           style={{
                             width: `${Math.min((Math.abs(item.total) / maxSummaryBalance) * 100, 100)}%`,
                           }}
@@ -668,7 +668,7 @@ export function AccountsOverview() {
       </div>
 
       {/* Accounts — Mobile card layout */}
-      <Card className="md:hidden">
+      <Card className="md:hidden border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
           <CardTitle className="text-base">Accounts</CardTitle>
         </CardHeader>
@@ -743,9 +743,9 @@ export function AccountsOverview() {
                           </span>
                         </div>
                       )}
-                      <div className="relative h-1.5 w-full mt-1.5 rounded bg-muted overflow-hidden">
+                      <div className="relative h-1.5 w-full mt-1.5 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="absolute h-full bg-blue-900 left-0 top-0 rounded"
+                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
                           style={{
                             width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
                           }}
@@ -765,7 +765,7 @@ export function AccountsOverview() {
       </Card>
 
       {/* Accounts Table — Desktop */}
-      <Card className="hidden md:block">
+      <Card className="hidden md:block border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Accounts</CardTitle>
           <FullTableViewToggle
@@ -828,9 +828,9 @@ export function AccountsOverview() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="relative h-3 w-16">
+                            <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                               <div
-                                className="absolute h-full bg-blue-900 right-0"
+                                className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
                                 style={{
                                   width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
                                 }}
@@ -872,9 +872,9 @@ export function AccountsOverview() {
                         {formatCurrency(group.subtotal)}
                       </TableCell>
                       <TableCell>
-                        <div className="relative h-3 w-16">
+                        <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="absolute h-full bg-blue-900 right-0"
+                            className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
                             style={{
                               width: `${Math.min((Math.abs(group.subtotal) / maxAccountBalance) * 100, 100)}%`,
                             }}

@@ -18,7 +18,7 @@ export default async function AccountsPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="rounded-xl border bg-muted/30 p-4 md:p-5">
+      <div className="rounded-xl border border-l-[3px] border-l-blue-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
             <h1 className="text-2xl md:text-3xl font-bold">Accounts Overview</h1>

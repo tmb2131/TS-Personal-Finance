@@ -321,7 +321,7 @@ export function TransactionAnalysis({
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-orange-500">
         <CardHeader className="bg-muted/50">
           <Skeleton className="h-6 w-48" />
         </CardHeader>
@@ -356,7 +356,7 @@ export function TransactionAnalysis({
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-orange-500">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Transaction Analysis</CardTitle>
         </CardHeader>
@@ -372,7 +372,7 @@ export function TransactionAnalysis({
   }
 
   return (
-    <Card ref={cardRef}>
+    <Card ref={cardRef} className="border-l-[3px] border-l-orange-500">
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Transaction Analysis</CardTitle>

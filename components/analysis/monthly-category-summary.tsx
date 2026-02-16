@@ -375,10 +375,10 @@ export function MonthlyCategorySummary({
 
   // Get icon and color for each comparison type
   const getComparisonIcon = (label: string) => {
-    if (label.includes('L3')) return { Icon: Calendar, color: 'text-indigo-600 dark:text-indigo-400' }
-    if (label.includes('L12')) return { Icon: Calendar, color: 'text-purple-600 dark:text-purple-400' }
-    if (label.includes('LY')) return { Icon: Calendar, color: 'text-orange-600 dark:text-orange-400' }
-    return { Icon: Calendar, color: 'text-muted-foreground' }
+    if (label.includes('L3')) return { Icon: Calendar, color: 'text-indigo-600 dark:text-indigo-400', pill: 'bg-indigo-500/15' }
+    if (label.includes('L12')) return { Icon: Calendar, color: 'text-purple-600 dark:text-purple-400', pill: 'bg-purple-500/15' }
+    if (label.includes('LY')) return { Icon: Calendar, color: 'text-orange-600 dark:text-orange-400', pill: 'bg-orange-500/15' }
+    return { Icon: Calendar, color: 'text-muted-foreground', pill: 'bg-muted' }
   }
 
   // Generate intelligent executive summary with color-coded highlights
@@ -510,9 +510,15 @@ export function MonthlyCategorySummary({
     )
   }
 
+  const summaryAccent = summaryData.absolute.total.vsL3M !== null
+    ? summaryData.absolute.total.vsL3M < 0
+      ? 'border-l-[3px] border-l-green-500'
+      : 'border-l-[3px] border-l-red-500'
+    : ''
+
   const content = (
     <div>
-      <div className="rounded-lg border border-border bg-background p-3 shadow-sm mb-4">
+      <div className={cn('rounded-lg border border-border bg-background p-3 shadow-sm mb-4', summaryAccent)}>
         <p className="text-sm">
           {getExecutiveSummary()}
         </p>
@@ -524,7 +530,7 @@ export function MonthlyCategorySummary({
             : 'grid md:grid-cols-2 lg:grid-cols-3 gap-6'
         )}>
           {comparisonCards.map((comparison) => {
-            const { Icon, color } = getComparisonIcon(comparison.label)
+            const { Icon, color, pill } = getComparisonIcon(comparison.label)
             const changeAmount = comparison.absolute.total
             const changePercentage = comparison.percentage.total
             const isSpendingLess = changeAmount !== null && changeAmount < 0
@@ -542,7 +548,9 @@ export function MonthlyCategorySummary({
                 )}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Icon className={cn('h-5 w-5', color)} />
+                  <div className={cn('flex h-7 w-7 items-center justify-center rounded-full shrink-0', pill)}>
+                    <Icon className={cn('h-4 w-4', color)} />
+                  </div>
                   <h3 className="font-semibold text-sm uppercase tracking-wide">{comparison.label}</h3>
                 </div>
                 <div>
@@ -550,12 +558,12 @@ export function MonthlyCategorySummary({
                   {changeAmount !== null ? (
                     isSpendingLess ? (
                       <div className="flex items-center gap-1.5">
-                        <TrendingDown className="h-5 w-5 text-green-600" />
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-4 w-4 text-green-600" /></div>
                         <p className="text-lg font-bold text-green-600">Spending Less</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <TrendingUp className="h-5 w-5 text-red-600" />
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-4 w-4 text-red-600" /></div>
                         <p className="text-lg font-bold text-red-600">Spending More</p>
                       </div>
                     )
@@ -604,7 +612,7 @@ export function MonthlyCategorySummary({
   }
 
   return (
-    <Card>
+    <Card className="border-l-[3px] border-l-orange-500">
       <CardHeader className="pb-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle className="text-base">

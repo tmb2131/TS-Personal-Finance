@@ -138,7 +138,7 @@ export function CashRunwayCards() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader>
           <CardTitle>Cash Runway</CardTitle>
         </CardHeader>
@@ -155,7 +155,7 @@ export function CashRunwayCards() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader>
           <CardTitle>Cash Runway</CardTitle>
         </CardHeader>
@@ -171,7 +171,7 @@ export function CashRunwayCards() {
   }
 
   return (
-    <Card>
+    <Card className="border-l-[3px] border-l-blue-500">
       <CardHeader>
         <CardTitle>Cash Runway</CardTitle>
         <p className="text-sm text-muted-foreground">Months of cash remaining based on average monthly spend</p>
@@ -180,9 +180,11 @@ export function CashRunwayCards() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* GBP Runway Card */}
           {gbpData && (
-            <div className="space-y-3 p-4 rounded-lg border bg-card">
+            <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-blue-500 bg-card">
               <div className="flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-blue-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/15">
+                  <Wallet className="h-5 w-5 text-blue-600" />
+                </div>
                 <h3 className="font-semibold text-sm uppercase tracking-wide">GBP Runway</h3>
               </div>
               <div className="space-y-2">
@@ -206,9 +208,11 @@ export function CashRunwayCards() {
 
           {/* USD Runway Card */}
           {usdData && (
-            <div className="space-y-3 p-4 rounded-lg border bg-card">
+            <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
               <div className="flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-green-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/15">
+                  <Wallet className="h-5 w-5 text-green-600" />
+                </div>
                 <h3 className="font-semibold text-sm uppercase tracking-wide">USD Runway</h3>
               </div>
               <div className="space-y-2">
