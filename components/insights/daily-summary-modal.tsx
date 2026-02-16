@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -19,7 +19,7 @@ import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
 import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts, getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExpenseCategory } from '@/lib/category-filters'
 import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
-import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
@@ -120,7 +120,59 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const [todayTransactions, setTodayTransactions] = useState<TransactionForDayRow[]>([])
   const [mobileMonthlyDriversView, setMobileMonthlyDriversView] = useState<'less' | 'more'>('less')
 
-  // Reset state when modal closes
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    const supabase = createClient()
+
+    const now = new Date()
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+    const utcTodayStr = now.toISOString().split('T')[0]
+    const localTodayStr = toLocalDateString(now)
+    const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
+
+    try {
+      const [budgetResult, syncResult, bridgeResponse, settingsResult, todayTxResult, { data: { user } }] = await Promise.all([
+        supabase.from('budget_targets').select('*'),
+        supabase.from('sync_metadata').select('last_sync_at').single(),
+        fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${utcTodayStr}`)
+          .then(async (r) => {
+            if (!r.ok) {
+              const errorData = await r.json().catch(() => ({}))
+              if (r.status === 400 || r.status === 404) return null
+              throw new Error(errorData.error || 'Failed to fetch forecast bridge')
+            }
+            return r.json()
+          })
+          .catch(() => null),
+        supabase.from('forecast_settings').select('category, current_year_method, manual_year_forecast'),
+        supabase.from('transaction_log').select('date, category, amount_gbp, amount_usd').in('date', todayDateCandidates),
+        supabase.auth.getUser(),
+      ])
+
+      const annualResult = user ? await computeAnnualTrends(supabase, user.id) : []
+      const monthlyResult = user ? await computeMonthlyTrends(supabase, user.id) : []
+      const annualForecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
+
+      if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
+      if (Array.isArray(annualResult)) setAnnualTrends(annualResult as AnnualTrend[])
+      if (Array.isArray(monthlyResult)) setMonthlyTrends(monthlyResult as MonthlyTrend[])
+      if (annualForecasts) setForecastByCategory(annualForecasts)
+      if (syncResult.data?.last_sync_at) setLastSyncDate(syncResult.data.last_sync_at)
+      if (Array.isArray(settingsResult.data)) setForecastSettings(settingsResult.data as ForecastSettingsRow[])
+      if (Array.isArray(todayTxResult.data)) setTodayTransactions(todayTxResult.data as TransactionForDayRow[])
+      if (bridgeResponse && !bridgeResponse.error) {
+        setForecastBridge(bridgeResponse as ForecastBridgeResponse)
+      }
+    } catch (error) {
+      console.error('Error fetching daily summary data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Reset state when modal closes; fetch when open
   useEffect(() => {
     if (!open) {
       setLoading(true)
@@ -133,63 +185,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       setTodayTransactions([])
       return
     }
-
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
-      
-      // Get yesterday's date
-      const now = new Date()
-      const yesterday = new Date(now)
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
-      const utcTodayStr = now.toISOString().split('T')[0]
-      const localTodayStr = toLocalDateString(now)
-      const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
-
-      try {
-        const [budgetResult, syncResult, bridgeResponse, settingsResult, todayTxResult, { data: { user } }] = await Promise.all([
-          supabase.from('budget_targets').select('*'),
-          supabase.from('sync_metadata').select('last_sync_at').single(),
-          fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${utcTodayStr}`)
-            .then(async (r) => {
-              if (!r.ok) {
-                const errorData = await r.json().catch(() => ({}))
-                // If no data for yesterday, that's okay - we'll just not show that section
-                if (r.status === 400 || r.status === 404) return null
-                throw new Error(errorData.error || 'Failed to fetch forecast bridge')
-              }
-              return r.json()
-            })
-            .catch(() => null),
-          supabase.from('forecast_settings').select('category, current_year_method, manual_year_forecast'),
-          supabase.from('transaction_log').select('date, category, amount_gbp, amount_usd').in('date', todayDateCandidates),
-          supabase.auth.getUser(),
-        ])
-
-        const annualResult = user ? await computeAnnualTrends(supabase, user.id) : []
-        const monthlyResult = user ? await computeMonthlyTrends(supabase, user.id) : []
-        const annualForecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
-
-        if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
-        if (Array.isArray(annualResult)) setAnnualTrends(annualResult as AnnualTrend[])
-        if (Array.isArray(monthlyResult)) setMonthlyTrends(monthlyResult as MonthlyTrend[])
-        if (annualForecasts) setForecastByCategory(annualForecasts)
-        if (syncResult.data?.last_sync_at) setLastSyncDate(syncResult.data.last_sync_at)
-        if (Array.isArray(settingsResult.data)) setForecastSettings(settingsResult.data as ForecastSettingsRow[])
-        if (Array.isArray(todayTxResult.data)) setTodayTransactions(todayTxResult.data as TransactionForDayRow[])
-        if (bridgeResponse && !bridgeResponse.error) {
-          setForecastBridge(bridgeResponse as ForecastBridgeResponse)
-        }
-      } catch (error) {
-        console.error('Error fetching daily summary data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchData()
-  }, [open])
+  }, [open, fetchData])
 
   // Calculate annual estimated spend (sum of tracking_est for expense categories)
   const annualEstimatedSpend = useMemo(() => {
@@ -591,6 +588,15 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
           <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
         </div>
 
+        <button
+          type="button"
+          onClick={() => fetchData()}
+          disabled={loading}
+          className="absolute right-14 top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 sm:right-16 sm:top-4 sm:h-9 sm:w-9"
+          aria-label="Refresh summary"
+        >
+          <RefreshCw className={cn('h-5 w-5 sm:h-4 sm:w-4', loading && 'animate-spin')} />
+        </button>
         <DialogClose
           className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:right-4 sm:top-4 sm:h-auto sm:w-auto sm:gap-1 sm:rounded-md sm:border sm:border-border/60 sm:bg-background/80 sm:px-2 sm:py-1.5 sm:backdrop-blur-none"
         >
@@ -601,7 +607,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
         <div className="flex h-full min-h-0 flex-col">
           <DialogHeader className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] text-left backdrop-blur-sm sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:pb-3 sm:pt-0 sm:backdrop-blur-none">
-            <DialogTitle className="pr-12 text-2xl font-bold sm:text-xl">Daily Financial Summary</DialogTitle>
+            <DialogTitle className="pr-24 text-2xl font-bold sm:pr-20 sm:text-xl">Daily Financial Summary</DialogTitle>
             <DialogDescription className="text-sm sm:text-xs">
               <span>{todayFormatted}</span>
               {lastSyncDate && <span className="text-muted-foreground/70"> · Updated {formatLastSync()}</span>}
