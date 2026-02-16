@@ -1,27 +1,16 @@
-import { createClient } from '@/lib/supabase/server'
+import { fetchBudgetTargets, fetchInvestmentReturns } from '@/lib/data/cached-queries'
 import { IncomeVsExpensesChart, type IncomeVsExpensesChartInitialData } from './income-vs-expenses-chart'
-
-async function fetchIncomeVsExpensesData(): Promise<IncomeVsExpensesChartInitialData> {
-  const supabase = await createClient()
-  const [budgetsRes, investmentRes] = await Promise.all([
-    supabase.from('budget_targets').select('*'),
-    supabase.from('investment_return').select('*'),
-  ])
-  if (budgetsRes.error) {
-    throw new Error(budgetsRes.error.message)
-  }
-  if (investmentRes.error) {
-    throw new Error(investmentRes.error.message)
-  }
-  return {
-    budgets: (budgetsRes.data ?? []) as IncomeVsExpensesChartInitialData['budgets'],
-    investmentReturns: (investmentRes.data ?? []) as IncomeVsExpensesChartInitialData['investmentReturns'],
-  }
-}
 
 export async function IncomeVsExpensesChartWrapper() {
   try {
-    const initialData = await fetchIncomeVsExpensesData()
+    const [budgets, investmentReturns] = await Promise.all([
+      fetchBudgetTargets(),
+      fetchInvestmentReturns(),
+    ])
+    const initialData: IncomeVsExpensesChartInitialData = {
+      budgets: budgets as IncomeVsExpensesChartInitialData['budgets'],
+      investmentReturns: investmentReturns as IncomeVsExpensesChartInitialData['investmentReturns'],
+    }
     return <IncomeVsExpensesChart initialData={initialData} />
   } catch (error) {
     return (

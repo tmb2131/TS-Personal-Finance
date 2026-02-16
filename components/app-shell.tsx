@@ -1,12 +1,21 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
-import { ChatWidget } from '@/components/ai-assistant/chat-widget'
 import { LoginHeader } from '@/components/login-header'
-import { DailySummaryWrapper } from '@/components/insights/daily-summary-wrapper'
 import { Toaster } from 'sonner'
+
+const ChatWidget = dynamic(
+  () => import('@/components/ai-assistant/chat-widget').then(m => ({ default: m.ChatWidget })),
+  { ssr: false }
+)
+
+const DailySummaryWrapper = dynamic(
+  () => import('@/components/insights/daily-summary-wrapper').then(m => ({ default: m.DailySummaryWrapper })),
+  { ssr: false }
+)
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

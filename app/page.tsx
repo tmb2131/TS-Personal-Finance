@@ -2,11 +2,10 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { NetWorthChartWrapper } from '@/components/dashboard/net-worth-chart-wrapper'
-import { IncomeVsExpensesChart } from '@/components/dashboard/income-vs-expenses-chart'
 import { BudgetTableWrapper } from '@/components/dashboard/budget-table-wrapper'
 import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-table-wrapper'
 import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
-import { DashboardAtAGlance } from '@/components/dashboard/dashboard-at-a-glance'
+import { DashboardAtAGlanceWrapper } from '@/components/dashboard/dashboard-at-a-glance-wrapper'
 import { DashboardNavigation } from '@/components/dashboard/dashboard-navigation'
 import { DashboardBackToTop } from '@/components/dashboard/dashboard-back-to-top'
 import { DashboardHashScroll } from '@/components/dashboard/dashboard-hash-scroll'
@@ -40,7 +39,9 @@ export default async function DashboardPage() {
       </div>
 
       <div className="max-md:order-1">
-        <DashboardAtAGlance />
+        <Suspense fallback={<div className="h-48 animate-pulse rounded-lg bg-muted" />}>
+          <DashboardAtAGlanceWrapper />
+        </Suspense>
       </div>
 
       <div className="max-md:order-2 space-y-2">

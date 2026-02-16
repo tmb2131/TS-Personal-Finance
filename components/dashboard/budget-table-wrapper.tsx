@@ -1,23 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { fetchBudgetTargets } from '@/lib/data/cached-queries'
 import { BudgetTable } from './budget-table'
-import { BudgetTarget } from '@/lib/types'
-
-async function fetchBudgetData() {
-  const supabase = await createClient()
-  
-  const { data, error } = await supabase.from('budget_targets').select('*')
-
-  if (error) {
-    console.error('Error fetching budget data:', error)
-    throw new Error('Failed to load budget data')
-  }
-
-  return data as BudgetTarget[]
-}
 
 export async function BudgetTableWrapper() {
   try {
-    const data = await fetchBudgetData()
+    const data = await fetchBudgetTargets()
     return <BudgetTable initialData={data} />
   } catch (error) {
     return (

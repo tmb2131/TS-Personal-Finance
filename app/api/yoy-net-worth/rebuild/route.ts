@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
+import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
 
 export async function POST() {
   try {
@@ -14,6 +15,7 @@ export async function POST() {
     }
 
     const result = await rebuildYoYNetWorthFromAppData(supabase, user.id)
+    revalidateTags(CACHE_TAGS.NET_WORTH)
     return NextResponse.json({ success: true, result })
   } catch (error: any) {
     console.error('YoY rebuild API error:', error)

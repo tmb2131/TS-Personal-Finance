@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
+import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
 
 const CreateAccountSchema = z.object({
   institution: z.string().min(1),
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       console.error('Account create: failed to rebuild derived net worth data', rebuildError)
     }
 
+    revalidateTags(CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH)
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Account API error:', error)

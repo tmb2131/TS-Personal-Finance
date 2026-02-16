@@ -3,10 +3,10 @@ import { MonthlyTrendsTable } from './monthly-trends-table'
 import { MonthlyTrend } from '@/lib/types'
 import { endOfMonth, type RatesByMonthOffset } from '@/lib/utils/fx-rates'
 import { computeMonthlyTrends } from '@/lib/forecasting'
+import { fetchFxRatesRange, fetchCurrentFxRate, fetchCurrentUser } from '@/lib/data/cached-queries'
 
 async function fetchMonthlyTrendsData() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await fetchCurrentUser()
   const userId = user?.id ?? null
   const now = new Date()
   let y = now.getFullYear()
@@ -26,31 +26,26 @@ async function fetchMonthlyTrendsData() {
   const eom1 = monthAgo(1)
   const eom0 = endOfMonth(y, m)
 
-  const [trendsResult, fxRatesResult, currentResult] = await Promise.all([
-    userId ? computeMonthlyTrends(supabase, userId) : Promise.resolve([]),
-    supabase
-      .from('fx_rates')
-      .select('date, gbpusd_rate')
-      .gte('date', eom3)
-      .lte('date', eom0)
-      .order('date', { ascending: true }),
-    supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single(),
+  const [trendsResult, fxRows, currentRate] = await Promise.all([
+    userId
+      ? createClient().then((supabase) => computeMonthlyTrends(supabase, userId))
+      : Promise.resolve([]),
+    fetchFxRatesRange(eom3, eom0),
+    fetchCurrentFxRate(),
   ])
 
   const trends = Array.isArray(trendsResult) ? trendsResult : []
 
-  const rows = (fxRatesResult.data || []) as { date: string; gbpusd_rate: number | null }[]
   const dateToRate = new Map<string, number>()
-  rows.forEach((r) => {
+  fxRows.forEach((r) => {
     const d = (r.date || '').split('T')[0]
     if (r.gbpusd_rate != null && r.gbpusd_rate > 0) dateToRate.set(d, r.gbpusd_rate)
   })
   const sortedDates = Array.from(dateToRate.keys()).sort()
   const getRate = (dateStr: string) => {
     const prior = sortedDates.filter((d) => d <= dateStr).pop()
-    return prior != null ? dateToRate.get(prior)! : (currentResult.data?.gbpusd_rate ?? 1.25)
+    return prior != null ? dateToRate.get(prior)! : currentRate
   }
-  const currentRate = currentResult.data?.gbpusd_rate ?? 1.25
   const ratesByMonth: RatesByMonthOffset = {
     current: sortedDates.length ? getRate(eom0) : currentRate,
     minus1: sortedDates.length ? getRate(eom1) : currentRate,

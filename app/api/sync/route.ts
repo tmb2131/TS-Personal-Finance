@@ -4,6 +4,7 @@ import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-hist
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidateAllData } from '@/lib/cache-tags'
 
 export async function POST() {
   try {
@@ -41,6 +42,7 @@ export async function POST() {
       await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
       await rebuildYoYNetWorthFromAppData(supabase, user.id)
       await recordLastSync(supabase, user.id)
+      revalidateAllData()
     }
 
     // Ensure consistent response format

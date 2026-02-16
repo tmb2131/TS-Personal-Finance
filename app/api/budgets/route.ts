@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
+import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
 
 const CreateBudgetSchema = z.object({
   category: z.string().min(1),
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
       console.error('Budget create: failed to rebuild YoY net worth data', rebuildError)
     }
 
+    revalidateTags(CACHE_TAGS.BUDGETS)
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Budget API error:', error)

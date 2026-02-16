@@ -4,6 +4,7 @@ import { isExcludedCategory } from '@/lib/category-filters'
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
 
 const YearMethodSchema = z.enum(['Annual', 'Linear', 'Budget', 'Manual'])
 const MonthMethodSchema = z.enum(['Linear', 'Average', 'Manual'])
@@ -235,6 +236,7 @@ export async function PUT(request: Request) {
       console.error('Category planning save: failed to rebuild YoY net worth data', rebuildError)
     }
 
+    revalidateTags(CACHE_TAGS.BUDGETS)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Category planning PUT error:', error)

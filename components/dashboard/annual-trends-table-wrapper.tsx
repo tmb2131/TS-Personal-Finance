@@ -3,30 +3,29 @@ import { AnnualTrendsTable } from '@/components/analysis/annual-trends-table'
 import { AnnualTrend } from '@/lib/types'
 import { endOfYear, type RatesByYear } from '@/lib/utils/fx-rates'
 import { computeAnnualTrends } from '@/lib/forecasting'
+import { fetchFxRatesRange, fetchCurrentFxRate, fetchCurrentUser } from '@/lib/data/cached-queries'
 
 async function fetchAnnualTrendsData() {
-  const supabase = await createClient()
   const currentYear = new Date().getFullYear()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await fetchCurrentUser()
   const userId = user?.id ?? null
 
-  const [trendsResult, fxRatesResult] = await Promise.all([
-    userId ? computeAnnualTrends(supabase, userId) : Promise.resolve([]),
-    supabase
-      .from('fx_rates')
-      .select('date, gbpusd_rate')
-      .gte('date', endOfYear(currentYear - 4))
-      .lte('date', endOfYear(currentYear))
-      .order('date', { ascending: true }),
+  const minDate = endOfYear(currentYear - 4)
+  const maxDate = endOfYear(currentYear)
+
+  const [trendsResult, fxRows] = await Promise.all([
+    userId
+      ? createClient().then((supabase) => computeAnnualTrends(supabase, userId))
+      : Promise.resolve([]),
+    fetchFxRatesRange(minDate, maxDate),
   ])
 
   const trends = Array.isArray(trendsResult) ? trendsResult : []
 
   // Build year -> rate (rate at end of that year: EoY date or most recent prior)
   const ratesByYear: RatesByYear = {}
-  const rows = (fxRatesResult.data || []) as { date: string; gbpusd_rate: number | null }[]
   const dateToRate = new Map<string, number>()
-  rows.forEach((r) => {
+  fxRows.forEach((r) => {
     const d = (r.date || '').split('T')[0]
     if (r.gbpusd_rate != null && r.gbpusd_rate > 0) dateToRate.set(d, r.gbpusd_rate)
   })
@@ -37,8 +36,7 @@ async function fetchAnnualTrendsData() {
     ratesByYear[y] = prior != null ? dateToRate.get(prior)! : 1.25
   }
   if (sortedDates.length === 0) {
-    const current = await supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single()
-    const r = current.data?.gbpusd_rate ?? 1.25
+    const r = await fetchCurrentFxRate()
     for (let y = currentYear - 4; y <= currentYear; y++) ratesByYear[y] = r
   }
 

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
 
 const UpdateRecurringSchema = z.object({
   name: z.string().min(1).optional(),
@@ -66,6 +67,7 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
+    revalidateTags(CACHE_TAGS.RECURRING)
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Recurring payment PATCH error:', error)
@@ -113,6 +115,7 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
+    revalidateTags(CACHE_TAGS.RECURRING)
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Recurring payment DELETE error:', error)

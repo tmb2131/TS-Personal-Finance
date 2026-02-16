@@ -42,11 +42,20 @@ export function Sidebar() {
   const [hasKidsData, setHasKidsData] = useState(true) // default true to avoid flash
 
   useEffect(() => {
+    const cached = sessionStorage.getItem('findash:hasKidsData')
+    if (cached !== null) {
+      setHasKidsData(cached === 'true')
+      return
+    }
     const supabase = createClient()
     supabase
       .from('kids_accounts')
       .select('id', { count: 'exact', head: true })
-      .then(({ count }) => setHasKidsData((count ?? 0) > 0))
+      .then(({ count }) => {
+        const has = (count ?? 0) > 0
+        setHasKidsData(has)
+        sessionStorage.setItem('findash:hasKidsData', String(has))
+      })
   }, [])
 
   const navigation = useMemo(() => {
@@ -110,6 +119,7 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                prefetch={true}
                 className={cn(
                   'group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-[color,background-color,transform] duration-150',
                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -161,6 +171,7 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                prefetch={true}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -214,6 +225,7 @@ export function Sidebar() {
                       <Link
                         key={item.name}
                         href={item.href}
+                        prefetch={true}
                         onClick={() => setMoreOpen(false)}
                         className={cn(
                           'flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-[transform,color,background-color] duration-100 ease-out active:scale-[0.98]',

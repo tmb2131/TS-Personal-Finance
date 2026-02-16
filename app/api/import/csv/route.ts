@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { normalizeCounterparty } from '@/lib/csv-parser'
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
+import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
 
 const CsvTransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -361,6 +362,20 @@ export async function POST(request: Request) {
       result = await importTransactions(supabase, user.id, legacy.data.transactions)
     } else {
       return NextResponse.json({ success: false, error: 'Invalid input' }, { status: 400 })
+    }
+
+    if (result.imported > 0) {
+      if (parsed.success) {
+        if (parsed.data.target === 'transactions') {
+          revalidateTags(CACHE_TAGS.TRANSACTIONS)
+        } else if (parsed.data.target === 'account_balances') {
+          revalidateTags(CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH)
+        } else {
+          revalidateTags(CACHE_TAGS.RECURRING)
+        }
+      } else {
+        revalidateTags(CACHE_TAGS.TRANSACTIONS)
+      }
     }
 
     return NextResponse.json({

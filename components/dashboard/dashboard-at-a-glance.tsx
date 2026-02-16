@@ -1,69 +1,39 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { LineChart, Receipt, Calendar, CalendarDays, ChevronRight } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { HistoricalNetWorth } from '@/lib/types'
-import { computeAnnualForecasts, getDefaultForecastMethods } from '@/lib/forecasting'
-import { isExcludedCategory, isExpenseCategory } from '@/lib/category-filters'
-import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
 import { cn } from '@/utils/cn'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 
-type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
-
-type ForecastSettingsRow = {
-  category: string
-  current_year_method: YearMethod | null
-  manual_year_forecast: number | null
+export type DashboardAtAGlanceData = {
+  netWorthGbp: number | null
+  netWorthUsd: number | null
+  hasTrustData: boolean
+  incomeForecastGbp: number
+  expensesForecastGbp: number
+  incomeBudgetGbp: number
+  expensesBudgetGbp: number
+  dailyNeutralBudgetGbp: number | null
+  dailyUsedBudgetGbp: number | null
+  dailyUsedPercent: number | null
+  dailyForecastDirection: 'improving' | 'worsening' | 'flat' | null
 }
 
-type TransactionForDayRow = {
-  date: string
-  category: string
-  amount_gbp: number | null
-  amount_usd: number | null
+type Section = {
+  id: string
+  label: string
+  labelShort: string
+  icon: React.ComponentType<{ className?: string }>
 }
 
-function toLocalDateString(value: Date): string {
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function getDayOfYear(value: Date): number {
-  const start = new Date(value.getFullYear(), 0, 0)
-  const msPerDay = 24 * 60 * 60 * 1000
-  return Math.floor((Number(value) - Number(start)) / msPerDay)
-}
-
-function getDaysInYear(year: number): number {
-  return new Date(year, 1, 29).getMonth() === 1 ? 366 : 365
-}
-
-function toNumber(value: unknown): number {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function inferSpendDirection(
-  annualBudget: number,
-  ytdYesterday: number,
-  todaySpend: number,
-  fallbackDirection: 1 | -1
-): 1 | -1 {
-  const candidates = [annualBudget, ytdYesterday, todaySpend]
-  for (const value of candidates) {
-    if (Math.abs(value) > 1e-9) return value >= 0 ? 1 : -1
-  }
-  return fallbackDirection
-}
+const SECTIONS_BASE: Section[] = [
+  { id: 'budget-table', label: 'Budget (Net Income)', labelShort: 'Budget', icon: Receipt },
+  { id: 'annual-trends', label: 'Annual Trends', labelShort: 'Annual', icon: Calendar },
+  { id: 'monthly-trends', label: 'Monthly Trends', labelShort: 'Monthly', icon: CalendarDays },
+]
 
 function scrollToSection(id: string) {
   const el = document.getElementById(id)
@@ -80,259 +50,10 @@ function scrollToSection(id: string) {
   }
 }
 
-type Section = {
-  id: string
-  label: string
-  labelShort: string
-  icon: React.ComponentType<{ className?: string }>
-}
-
-const SECTIONS_BASE: Section[] = [
-  { id: 'budget-table', label: 'Budget (Net Income)', labelShort: 'Budget', icon: Receipt },
-  { id: 'annual-trends', label: 'Annual Trends', labelShort: 'Annual', icon: Calendar },
-  { id: 'monthly-trends', label: 'Monthly Trends', labelShort: 'Monthly', icon: CalendarDays },
-]
-
-export function DashboardAtAGlance() {
+export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | null }) {
   const { currency, fxRate, convertAmount } = useCurrency()
   const isMobile = useIsMobile()
   const [showTrendShortcuts, setShowTrendShortcuts] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<{
-    netWorth: number | null
-    budgetStatus: 'under' | 'over' | null
-    budgetGap: number | null
-    incomeTotal: number | null
-    expensesTotal: number | null
-    hasTrustData: boolean
-    dailyNeutralBudget: number | null
-    dailyUsedBudget: number | null
-    dailyUsedPercent: number | null
-    dailyForecastDirection: 'improving' | 'worsening' | 'flat' | null
-  }>({
-    netWorth: null,
-    budgetStatus: null,
-    budgetGap: null,
-    incomeTotal: null,
-    expensesTotal: null,
-    hasTrustData: false,
-    dailyNeutralBudget: null,
-    dailyUsedBudget: null,
-    dailyUsedPercent: null,
-    dailyForecastDirection: null,
-  })
-
-  useEffect(() => {
-    let cancelled = false
-    async function fetchSummary() {
-      const supabase = createClient()
-      const today = new Date()
-      const localTodayStr = toLocalDateString(today)
-      const utcTodayStr = today.toISOString().split('T')[0]
-      const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
-      const [nwRes, budgetRes, settingsRes, todayTxRes, { data: { user } }] = await Promise.all([
-        supabase.from('historical_net_worth').select('*').order('date', { ascending: false }).limit(500),
-        supabase.from('budget_targets').select('category, annual_budget_gbp'),
-        supabase.from('forecast_settings').select('category, current_year_method, manual_year_forecast'),
-        supabase.from('transaction_log').select('date, category, amount_gbp, amount_usd').in('date', todayDateCandidates),
-        supabase.auth.getUser(),
-      ])
-      if (cancelled) return
-      let netWorth: number | null = null
-      let hasTrustData = false
-      if (nwRes.data?.length) {
-        const byYear = (nwRes.data as HistoricalNetWorth[]).reduce<Record<number, number>>((acc, item) => {
-          const year = new Date(item.date).getFullYear()
-          const amt = currency === 'USD' ? (item.amount_usd ?? 0) : (item.amount_gbp ?? 0)
-          acc[year] = (acc[year] ?? 0) + amt
-          return acc
-        }, {})
-        const latestYear = Math.max(...Object.keys(byYear).map(Number))
-        netWorth = byYear[latestYear] ?? null
-        
-        // Check if there's any Trust data
-        hasTrustData = (nwRes.data as HistoricalNetWorth[]).some(
-          (item) => item.category === 'Trust' && Math.abs(currency === 'USD' ? (item.amount_usd ?? 0) : (item.amount_gbp ?? 0)) > 0
-        )
-      }
-      let incomeTotal = 0
-      let expensesTotal = 0
-      let incomeBudget = 0
-      let expensesBudget = 0
-      const forecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
-      if (cancelled) return
-      if (budgetRes.data?.length) {
-        budgetRes.data.forEach((row: { category: string; annual_budget_gbp: number }) => {
-          if (isExcludedCategory(row.category)) return
-          const forecast = forecasts?.get(row.category)?.forecast ?? row.annual_budget_gbp
-          const tracking = currency === 'USD' ? convertAmount(forecast, 'GBP', fxRate) : forecast
-          const budget = currency === 'USD' ? convertAmount(row.annual_budget_gbp, 'GBP', fxRate) : row.annual_budget_gbp
-          if (row.category === 'Income' || row.category === 'Gift Money') {
-            incomeTotal += Math.abs(tracking)
-            incomeBudget += Math.abs(budget)
-          } else {
-            expensesTotal += Math.abs(tracking)
-            expensesBudget += Math.abs(budget)
-          }
-        })
-      }
-      const netIncomeTracking = incomeTotal - expensesTotal
-      const netIncomeBudget = incomeBudget - expensesBudget
-      const budgetGap = netIncomeTracking - netIncomeBudget
-      const budgetStatus = budgetGap >= 0 ? 'under' : 'over'
-
-      let dailyNeutralBudget: number | null = null
-      let dailyUsedBudget: number | null = null
-      let dailyUsedPercent: number | null = null
-      let dailyForecastDirection: 'improving' | 'worsening' | 'flat' | null = null
-
-      if (forecasts && user) {
-        const settingsByCategory = new Map<string, ForecastSettingsRow>()
-        ;((settingsRes.data || []) as ForecastSettingsRow[]).forEach((row) => {
-          if (!row.category) return
-          settingsByCategory.set(row.category, row)
-        })
-
-        const txRows = (todayTxRes.data || []) as TransactionForDayRow[]
-        const txRowsByDate = new Map<string, TransactionForDayRow[]>()
-        txRows.forEach((row) => {
-          const dateKey = String(row.date || '')
-          if (!dateKey) return
-          const list = txRowsByDate.get(dateKey) ?? []
-          list.push(row)
-          txRowsByDate.set(dateKey, list)
-        })
-
-        // Prefer local calendar day; if empty (common when rows were keyed in UTC), fall back to UTC date.
-        const effectiveTodayRows =
-          (txRowsByDate.get(localTodayStr)?.length ?? 0) > 0
-            ? txRowsByDate.get(localTodayStr) || []
-            : txRowsByDate.get(utcTodayStr) || []
-
-        const todaySpendByCategory = new Map<string, number>()
-        const effectiveRate = fxRate > 0 ? fxRate : 1.27
-        effectiveTodayRows.forEach((row) => {
-          if (!row.category || !isExpenseCategory(row.category)) return
-          const amountGbp =
-            row.amount_gbp != null
-              ? toNumber(row.amount_gbp)
-              : row.amount_usd != null
-                ? toNumber(row.amount_usd) / effectiveRate
-                : 0
-          if (!Number.isFinite(amountGbp) || amountGbp === 0) return
-          todaySpendByCategory.set(row.category, (todaySpendByCategory.get(row.category) ?? 0) + amountGbp)
-        })
-
-        const dayOfYear = getDayOfYear(today)
-        const daysInYear = getDaysInYear(today.getFullYear())
-
-        const categoryBaseRows = Array.from(forecasts.entries())
-          .filter(([category]) => isExpenseCategory(category))
-          .map(([category, values]) => {
-            const todaySpend = todaySpendByCategory.get(category) ?? 0
-            const ytdYesterday = values.ytd - todaySpend
-            const settingsRow = settingsByCategory.get(category)
-            const method = settingsRow?.current_year_method ?? getDefaultForecastMethods(category).year
-            return {
-              category,
-              annualBudget: values.annualBudget,
-              ytdYesterday,
-              method,
-              manualYearForecast: settingsRow?.manual_year_forecast ?? null,
-              todaySpend,
-            }
-          })
-
-        const directionScore = categoryBaseRows.reduce((sum, row) => {
-          const anchor = Math.abs(row.annualBudget) > 1e-9 ? row.annualBudget : row.ytdYesterday
-          if (Math.abs(anchor) <= 1e-9) return sum
-          return sum + Math.sign(anchor) * Math.abs(anchor)
-        }, 0)
-        const globalDirection: 1 | -1 = directionScore > 0 ? 1 : -1
-
-        const neutralCategories = categoryBaseRows.map((row) => ({
-          category: row.category,
-          annualBudget: row.annualBudget,
-          ytdYesterday: row.ytdYesterday,
-          method: row.method,
-          manualYearForecast: row.manualYearForecast,
-          spendDirection: inferSpendDirection(
-            row.annualBudget,
-            row.ytdYesterday,
-            row.todaySpend,
-            globalDirection
-          ),
-        }))
-
-        const spendWeightByCategory = new Map<string, number>()
-        let hasPositiveWeights = false
-        neutralCategories.forEach((row) => {
-          const todaySpend = (todaySpendByCategory.get(row.category) ?? 0) * row.spendDirection
-          if (todaySpend > 0) {
-            spendWeightByCategory.set(row.category, todaySpend)
-            hasPositiveWeights = true
-          }
-        })
-
-        if (!hasPositiveWeights) {
-          neutralCategories.forEach((row) => {
-            const weight = Math.abs(row.annualBudget)
-            if (weight > 0) {
-              spendWeightByCategory.set(row.category, weight)
-              hasPositiveWeights = true
-            }
-          })
-        }
-
-        if (!hasPositiveWeights) {
-          neutralCategories.forEach((row) => {
-            const weight = Math.abs(row.ytdYesterday)
-            if (weight > 0) {
-              spendWeightByCategory.set(row.category, weight)
-              hasPositiveWeights = true
-            }
-          })
-        }
-
-        const neutralResult = computeForecastNeutralDailyBudget({
-          dayOfYear,
-          daysInYear,
-          categories: neutralCategories,
-          todaySpendByCategory,
-          spendWeightByCategory,
-        })
-
-        const toDisplayCurrency = (value: number) =>
-          currency === 'USD' ? convertAmount(value, 'GBP', fxRate) : value
-
-        dailyNeutralBudget =
-          neutralResult.neutralSpend != null
-            ? Math.max(0, toDisplayCurrency(neutralResult.neutralSpend))
-            : null
-        dailyUsedBudget = toDisplayCurrency(neutralResult.usedSpend)
-        dailyUsedPercent = neutralResult.usedPercent
-        if (neutralResult.deltaAtUsed < -0.5) dailyForecastDirection = 'improving'
-        else if (neutralResult.deltaAtUsed > 0.5) dailyForecastDirection = 'worsening'
-        else dailyForecastDirection = 'flat'
-      }
-
-      setData({
-        netWorth,
-        budgetStatus,
-        budgetGap,
-        incomeTotal: incomeTotal || null,
-        expensesTotal: expensesTotal || null,
-        hasTrustData,
-        dailyNeutralBudget,
-        dailyUsedBudget,
-        dailyUsedPercent,
-        dailyForecastDirection,
-      })
-      setLoading(false)
-    }
-    fetchSummary()
-    return () => { cancelled = true }
-  }, [currency, fxRate, convertAmount])
 
   const formatCompact = (value: number) => {
     const abs = Math.abs(value)
@@ -347,34 +68,58 @@ export function DashboardAtAGlance() {
   }
   const symbol = currency === 'USD' ? '$' : '£'
 
+  const toDisplayCurrency = (gbpValue: number) =>
+    currency === 'USD' ? convertAmount(gbpValue, 'GBP', fxRate) : gbpValue
+
+  // Derive display values from server-provided data
+  const netWorth = data
+    ? (currency === 'USD' ? data.netWorthUsd : data.netWorthGbp)
+    : null
+  const hasTrustData = data?.hasTrustData ?? false
+
+  const incomeTotal = data ? toDisplayCurrency(data.incomeForecastGbp) : null
+  const expensesTotal = data ? toDisplayCurrency(data.expensesForecastGbp) : null
+
+  const netIncomeTracking = data ? toDisplayCurrency(data.incomeForecastGbp - data.expensesForecastGbp) : null
+  const netIncomeBudget = data ? toDisplayCurrency(data.incomeBudgetGbp - data.expensesBudgetGbp) : null
+  const budgetGap = netIncomeTracking != null && netIncomeBudget != null ? netIncomeTracking - netIncomeBudget : null
+  const budgetStatus = budgetGap != null ? (budgetGap >= 0 ? 'under' : 'over') : null
+
+  const dailyNeutralBudget = data?.dailyNeutralBudgetGbp != null ? Math.max(0, toDisplayCurrency(data.dailyNeutralBudgetGbp)) : null
+  const dailyUsedBudget = data?.dailyUsedBudgetGbp != null ? toDisplayCurrency(data.dailyUsedBudgetGbp) : null
+  const dailyUsedPercent = data?.dailyUsedPercent ?? null
+  const dailyForecastDirection = data?.dailyForecastDirection ?? null
+
+  const loading = data === null
+
   const getCardContent = (sectionId: string) => {
     if (sectionId === 'net-worth-chart') {
-      if (loading) return <Skeleton className="h-6 w-20" />
-      if (data.netWorth != null) return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(data.netWorth)}</span>
-      return <span className="text-sm text-muted-foreground">—</span>
+      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (netWorth != null) return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(netWorth)}</span>
+      return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     if (sectionId === 'budget-table') {
-      if (loading) return <Skeleton className="h-6 w-24" />
-      if (data.budgetStatus) {
+      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (budgetStatus) {
         return (
-          <span className={cn('text-2xl font-bold tabular-nums', data.budgetStatus === 'under' ? 'text-green-600' : 'text-red-600')}>
-            {data.budgetStatus === 'under' ? 'Under' : 'Over'}
-            {data.budgetGap != null && ` ${symbol}${formatCompact(Math.abs(data.budgetGap))}`}
+          <span className={cn('text-2xl font-bold tabular-nums', budgetStatus === 'under' ? 'text-green-600' : 'text-red-600')}>
+            {budgetStatus === 'under' ? 'Under' : 'Over'}
+            {budgetGap != null && ` ${symbol}${formatCompact(Math.abs(budgetGap))}`}
           </span>
         )
       }
-      return <span className="text-sm text-muted-foreground">—</span>
+      return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     if (sectionId === 'income-vs-expenses') {
-      if (loading) return <Skeleton className="h-6 w-28" />
-      if (data.incomeTotal != null && data.expensesTotal != null) {
+      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (incomeTotal != null && expensesTotal != null) {
         return (
           <span className="text-2xl font-bold tabular-nums">
-            {symbol}{formatCompact(data.incomeTotal - data.expensesTotal)}
+            {symbol}{formatCompact(incomeTotal - expensesTotal)}
           </span>
         )
       }
-      return <span className="text-sm text-muted-foreground">—</span>
+      return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     if (sectionId === 'annual-trends' || sectionId === 'monthly-trends') {
       return <span className="text-sm text-muted-foreground">View section</span>
@@ -383,7 +128,7 @@ export function DashboardAtAGlance() {
   }
 
   const primarySections = [
-    { id: 'net-worth-chart', label: data.hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
+    { id: 'net-worth-chart', label: hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
     { id: 'budget-table', label: 'Budget (Net Income)', labelShort: 'Budget', icon: Receipt },
     { id: 'income-vs-expenses', label: 'Income vs Expenses', labelShort: 'Cash Flow', icon: Receipt },
   ]
@@ -393,7 +138,7 @@ export function DashboardAtAGlance() {
   const sectionsToRender = isMobile
     ? [...primarySections, ...(showTrendShortcuts ? trendSections : [])]
     : [
-        { id: 'net-worth-chart', label: data.hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
+        { id: 'net-worth-chart', label: hasTrustData ? 'Net Worth (incl. Trust)' : 'Net Worth', labelShort: 'Net Worth', icon: LineChart },
         ...SECTIONS_BASE,
       ]
 
@@ -429,7 +174,7 @@ export function DashboardAtAGlance() {
             }
             const borderColor = (() => {
               if (section.id === 'net-worth-chart') return 'border-l-blue-500'
-              if (section.id === 'budget-table') return data.budgetStatus === 'under' ? 'border-l-green-500' : data.budgetStatus === 'over' ? 'border-l-red-500' : 'border-l-purple-500'
+              if (section.id === 'budget-table') return budgetStatus === 'under' ? 'border-l-green-500' : budgetStatus === 'over' ? 'border-l-red-500' : 'border-l-purple-500'
               if (section.id === 'income-vs-expenses') return 'border-l-orange-500'
               return 'border-l-muted-foreground/30'
             })()
@@ -469,23 +214,23 @@ export function DashboardAtAGlance() {
                   {section.id === 'budget-table' && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       {loading ||
-                      data.dailyNeutralBudget == null ||
-                      data.dailyUsedBudget == null ||
-                      data.dailyUsedPercent == null
+                      dailyNeutralBudget == null ||
+                      dailyUsedBudget == null ||
+                      dailyUsedPercent == null
                         ? ''
                         : (
                             <>
-                              Today neutral {symbol}{formatCompact(data.dailyNeutralBudget)} · used {symbol}
-                              {formatCompact(data.dailyUsedBudget)} ({formatPercent(data.dailyUsedPercent)}) ·{' '}
+                              Today neutral {symbol}{formatCompact(dailyNeutralBudget)} &middot; used {symbol}
+                              {formatCompact(dailyUsedBudget)} ({formatPercent(dailyUsedPercent)}) &middot;{' '}
                               <span
                                 className={cn(
-                                  data.dailyForecastDirection === 'improving' && 'text-green-600',
-                                  data.dailyForecastDirection === 'worsening' && 'text-red-600'
+                                  dailyForecastDirection === 'improving' && 'text-green-600',
+                                  dailyForecastDirection === 'worsening' && 'text-red-600'
                                 )}
                               >
-                                {data.dailyForecastDirection === 'improving'
+                                {dailyForecastDirection === 'improving'
                                   ? 'improving'
-                                  : data.dailyForecastDirection === 'worsening'
+                                  : dailyForecastDirection === 'worsening'
                                     ? 'worsening'
                                     : 'flat'}
                               </span>
@@ -495,9 +240,9 @@ export function DashboardAtAGlance() {
                   )}
                   {section.id === 'income-vs-expenses' && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {loading || data.incomeTotal == null || data.expensesTotal == null
+                      {loading || incomeTotal == null || expensesTotal == null
                         ? ''
-                        : `${symbol}${formatCompact(data.incomeTotal)} income vs ${symbol}${formatCompact(data.expensesTotal)} expenses`}
+                        : `${symbol}${formatCompact(incomeTotal)} income vs ${symbol}${formatCompact(expensesTotal)} expenses`}
                     </p>
                   )}
                 </div>

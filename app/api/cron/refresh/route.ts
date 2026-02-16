@@ -4,6 +4,7 @@ import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-hist
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { revalidateAllData } from '@/lib/cache-tags'
 
 /**
  * Cron endpoint: run data sync per user (each user's sheet).
@@ -59,6 +60,8 @@ export async function GET(request: Request) {
         }
       }
     }
+
+    revalidateAllData()
 
     return NextResponse.json({
       success: anySuccess,
