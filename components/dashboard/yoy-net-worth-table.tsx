@@ -178,7 +178,7 @@ export function YoYNetWorthTable() {
           <TableHeader>
             <TableRow className="bg-muted">
               <TableHead
-                className={cn('cursor-pointer hover:bg-muted/80 bg-muted', sortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}
+                className={cn('cursor-pointer hover:bg-muted/80 bg-muted', sortField === 'category' && 'bg-primary/10')}
                 onClick={() => handleSort('category')}
               >
                 <div className={cn('flex items-center gap-2', sortField === 'category' && 'font-semibold')}>
@@ -187,7 +187,7 @@ export function YoYNetWorthTable() {
                 </div>
               </TableHead>
               <TableHead
-                className={cn('cursor-pointer hover:bg-muted/80 bg-muted text-right', sortField === 'amount' && 'bg-gray-200 dark:bg-gray-700')}
+                className={cn('cursor-pointer hover:bg-muted/80 bg-muted text-right', sortField === 'amount' && 'bg-primary/10')}
                 onClick={() => handleSort('amount')}
               >
                 <div className={cn('flex items-center justify-end gap-2', sortField === 'amount' && 'font-semibold')}>

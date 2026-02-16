@@ -122,10 +122,10 @@ export function BudgetIncomeTable({
     const isPositive = gap > 0
 
     return (
-      <div className="relative h-2 w-16">
+      <div className="relative h-2 w-16 rounded-full bg-muted overflow-hidden">
         <div
           className={cn(
-            'absolute h-full',
+            'absolute h-full rounded-full transition-all duration-500',
             isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
           )}
           style={{
@@ -152,9 +152,11 @@ export function BudgetIncomeTable({
       <CardContent className="pt-2 md:pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* Summary card - left; on mobile show first (order-1) */}
-          <div className="space-y-2 p-3 rounded-lg border bg-card min-w-0 max-md:order-1">
+          <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card min-w-0 max-md:order-1", totals.gap >= 0 ? "border-l-green-500" : "border-l-red-500")}>
             <div className="flex items-center gap-1.5">
-              <DollarSign className="h-4 w-4 text-blue-600" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/15">
+                <DollarSign className="h-3.5 w-3.5 text-blue-600" />
+              </div>
               <h3 className="font-semibold text-xs uppercase tracking-wide">Income Status</h3>
             </div>
             <div className="space-y-1">
@@ -162,12 +164,12 @@ export function BudgetIncomeTable({
                 <p className="text-xs text-muted-foreground mb-0.5">vs Budget</p>
                 {totals.gap >= 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                     <p className="text-base font-bold text-green-600">Above Budget</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <XCircle className="h-4 w-4 text-red-600" />
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                     <p className="text-base font-bold text-red-600">Below Budget</p>
                   </div>
                 )}
@@ -205,7 +207,7 @@ export function BudgetIncomeTable({
         <Table className={compactTableClass}>
           <TableHeader>
             <TableRow className="bg-muted">
-              <TableHead className={cn('bg-muted', sortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
+              <TableHead className={cn('bg-muted', sortField === 'category' && 'bg-primary/10')}>
                 <button
                   onClick={() => onSort('category')}
                   className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold')}
@@ -214,7 +216,7 @@ export function BudgetIncomeTable({
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className={cn('text-right bg-muted', sortField === 'annualBudget' && 'bg-gray-200 dark:bg-gray-700')}>
+              <TableHead className={cn('text-right bg-muted', sortField === 'annualBudget' && 'bg-primary/10')}>
                 <button
                   onClick={() => onSort('annualBudget')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'annualBudget' && 'font-semibold')}
@@ -223,7 +225,7 @@ export function BudgetIncomeTable({
                   <SortIcon field="annualBudget" />
                 </button>
               </TableHead>
-              <TableHead className={cn('text-right bg-muted', sortField === 'tracking' && 'bg-gray-200 dark:bg-gray-700')}>
+              <TableHead className={cn('text-right bg-muted', sortField === 'tracking' && 'bg-primary/10')}>
                 <button
                   onClick={() => onSort('tracking')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'tracking' && 'font-semibold')}
@@ -232,7 +234,7 @@ export function BudgetIncomeTable({
                   <SortIcon field="tracking" />
                 </button>
               </TableHead>
-              <TableHead className={cn('text-right bg-muted', sortField === 'ytd' && 'bg-gray-200 dark:bg-gray-700')}>
+              <TableHead className={cn('text-right bg-muted', sortField === 'ytd' && 'bg-primary/10')}>
                 <button
                   onClick={() => onSort('ytd')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'ytd' && 'font-semibold')}
@@ -241,7 +243,7 @@ export function BudgetIncomeTable({
                   <SortIcon field="ytd" />
                 </button>
               </TableHead>
-              <TableHead className={cn('text-right bg-muted', sortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
+              <TableHead className={cn('text-right bg-muted', sortField === 'gap' && 'bg-primary/10')}>
                 <button
                   onClick={() => onSort('gap')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'gap' && 'font-semibold')}

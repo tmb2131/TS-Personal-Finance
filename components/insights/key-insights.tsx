@@ -744,7 +744,8 @@ export function KeyInsights() {
                 type="button"
                 onClick={() => scrollToSection('net-worth')}
                 className={cn(
-                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'space-y-3 p-5 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all border-l-[3px]',
+                  netWorthInsights.vsLastYear > 0 ? 'border-l-green-500' : 'border-l-red-500',
                   'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                   isMobile && 'min-w-[85%] max-w-[85%] snap-center'
                 )}
@@ -752,7 +753,9 @@ export function KeyInsights() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-blue-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/15">
+                      <DollarSign className="h-5 w-5 text-blue-600" />
+                    </div>
                     <h3 className="font-semibold text-sm uppercase tracking-wide">Net Worth</h3>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -797,7 +800,8 @@ export function KeyInsights() {
                 type="button"
                 onClick={() => scrollToSection('annual-budget')}
                 className={cn(
-                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'space-y-3 p-5 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all border-l-[3px]',
+                  annualBudgetInsights.overallGap < 0 ? 'border-l-green-500' : 'border-l-red-500',
                   'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                   isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
                 )}
@@ -805,7 +809,9 @@ export function KeyInsights() {
               >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/15">
+                    <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
                   <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Budget</h3>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -851,7 +857,8 @@ export function KeyInsights() {
                 type="button"
                 onClick={() => scrollToSection('annual-spend')}
                 className={cn(
-                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'space-y-3 p-5 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all border-l-[3px]',
+                  annualSpendInsights.vsFourYearAvg > 0 ? 'border-l-green-500' : 'border-l-red-500',
                   'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                   isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
                 )}
@@ -859,7 +866,9 @@ export function KeyInsights() {
               >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500/15">
+                    <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
                   <h3 className="font-semibold text-sm uppercase tracking-wide">Annual Spend</h3>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -905,7 +914,8 @@ export function KeyInsights() {
                 type="button"
                 onClick={() => scrollToSection('monthly-spend')}
                 className={cn(
-                  'space-y-3 p-4 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all',
+                  'space-y-3 p-5 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all border-l-[3px]',
+                  monthlySpendInsights.vsTtmAvg > 0 ? 'border-l-green-500' : 'border-l-red-500',
                   'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                   isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
                 )}
@@ -913,7 +923,9 @@ export function KeyInsights() {
               >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/15">
+                    <Calendar className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
                   <h3 className="font-semibold text-sm uppercase tracking-wide">Monthly Spend</h3>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
@@ -964,7 +976,7 @@ export function KeyInsights() {
       </div>
 
       {/* Net Worth Section */}
-      <Card id="net-worth" className="scroll-mt-24">
+      <Card id="net-worth" className="scroll-mt-24 border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-lg">Net Worth</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
@@ -972,38 +984,36 @@ export function KeyInsights() {
             {hasTrustData && ' (Trust excluded)'}.
           </p>
         </CardHeader>
-        <CardContent className="pt-4 md:pt-4 space-y-4">
+        <CardContent className="pt-6 md:pt-6 space-y-4">
           {/* Vs last year — prominent */}
-          <div className="space-y-1.5 rounded-lg border bg-card p-2.5 w-full lg:w-[calc((100%-3*1.5rem)/4)]">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Vs year-end {previousYear}</p>
-              {netWorthInsights.vsLastYear > 0 ? (
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  <p className="text-lg font-bold text-green-600">Increased</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <TrendingDown className="h-5 w-5 text-red-600" />
-                  <p className="text-lg font-bold text-red-600">Decreased</p>
-                </div>
-              )}
+          <div className={cn(
+            'flex items-center gap-4 rounded-lg border border-l-[3px] p-4',
+            netWorthInsights.vsLastYear > 0
+              ? 'border-l-green-500 bg-gradient-to-r from-green-500/10 via-green-500/5 to-transparent'
+              : 'border-l-red-500 bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent'
+          )}>
+            <div className={cn(
+              'hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+              netWorthInsights.vsLastYear > 0 ? 'bg-green-500/15' : 'bg-red-500/15'
+            )}>
+              {netWorthInsights.vsLastYear > 0
+                ? <TrendingUp className="h-5 w-5 text-green-600" />
+                : <TrendingDown className="h-5 w-5 text-red-600" />
+              }
             </div>
-            <div className="space-y-1 pt-1.5 border-t">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 min-w-0">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Vs year-end {previousYear}</p>
+                <p className={cn('text-lg font-bold', netWorthInsights.vsLastYear > 0 ? 'text-green-600' : 'text-red-600')}>
+                  {netWorthInsights.vsLastYear > 0 ? 'Increased' : 'Decreased'}
+                </p>
+              </div>
               <p className="text-sm">
                 <span className={cn('font-semibold', netWorthInsights.vsLastYear > 0 ? 'text-green-600' : 'text-red-600')}>
                   {netWorthInsights.vsLastYear > 0 ? '+' : ''}{formatCurrencyLarge(Math.abs(netWorthInsights.vsLastYear))}
                 </span>
                 <span className="text-xs text-muted-foreground ml-1">
-                  {netWorthInsights.vsLastYear > 0 ? 'increase' : 'decrease'} vs year-end {previousYear}
-                </span>
-              </p>
-              <p className="text-xs">
-                <span className={`font-medium ${netWorthInsights.vsLastYear > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPercent(netWorthInsights.vsLastYearPercent)}
-                </span>
-                <span className="text-muted-foreground ml-1">
-                  {netWorthInsights.vsLastYear > 0 ? 'increase' : 'decrease'} vs year-end {previousYear}
+                  ({formatPercent(netWorthInsights.vsLastYearPercent)})
                 </span>
               </p>
             </div>
@@ -1014,7 +1024,7 @@ export function KeyInsights() {
             <div>
               <h3 className="text-sm font-semibold mb-3">Net worth over time</h3>
               {netWorthInsights.netWorthChartData.length > 0 ? (
-                <div className="h-[180px] w-full">
+                <div className="h-[180px] md:h-[280px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 25, right: isMobile ? 10 : 15, left: 0, bottom: isMobile ? 25 : 15 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
@@ -1112,7 +1122,7 @@ export function KeyInsights() {
                 )}
               </div>
               {(netWorthInsights.personalVsFamilyPie.length > 0 || netWorthInsights.categoryPie.length > 0) ? (
-                <div className="h-[200px] w-full flex items-center justify-center pt-2">
+                <div className="h-[200px] md:h-[280px] w-full flex items-center justify-center pt-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart margin={{ top: 8, right: 10, bottom: 0, left: 10 }}>
                       <Pie
@@ -1189,8 +1199,8 @@ export function KeyInsights() {
                           )}
                         >
                           <span className="text-sm w-[200px] shrink-0 break-words leading-tight">{a.accountName}</span>
-                          <div className="flex-1 min-w-0 h-4 rounded bg-muted overflow-hidden shrink">
-                            <div className="h-full bg-blue-500 rounded" style={{ width: `${pct}%` }} />
+                          <div className="flex-1 min-w-0 h-4 rounded-full bg-muted overflow-hidden shrink">
+                            <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${index * 60}ms` }} />
                           </div>
                           <span className="text-xs font-medium w-16 text-right shrink-0 leading-tight">{formatCurrencyLarge(a.balance)}</span>
                         </div>
@@ -1218,7 +1228,7 @@ export function KeyInsights() {
       </Card>
 
       {/* Annual Budget Section */}
-      <Card id="annual-budget" className="scroll-mt-24">
+      <Card id="annual-budget" className={cn("scroll-mt-24 border-l-[3px]", annualBudgetInsights.overallGap < 0 ? "border-l-green-500" : "border-l-red-500")}>
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-lg">Annual Budget</CardTitle>
           <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
@@ -1301,7 +1311,7 @@ export function KeyInsights() {
             {annualBudgetInsights.overallGap < 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                   <h3 className="font-semibold text-sm">Under budget</h3>
                 </div>
                 {annualBudgetInsights.underBudget.length > 0 ? (
@@ -1313,13 +1323,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualBudgetInsights.underBudget.map((item) => {
+                        {annualBudgetInsights.underBudget.map((item, idx) => {
                           const pct = (Math.abs(item.gap) / maxGap) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
                             </div>
@@ -1335,7 +1345,7 @@ export function KeyInsights() {
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <XCircle className="h-4 w-4 text-red-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                   <h3 className="font-semibold text-sm">Over budget</h3>
                 </div>
                 {annualBudgetInsights.overBudget.length > 0 ? (
@@ -1347,13 +1357,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualBudgetInsights.overBudget.map((item) => {
+                        {annualBudgetInsights.overBudget.map((item, idx) => {
                           const pct = (Math.abs(item.gap) / maxGap) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
                             </div>
@@ -1371,7 +1381,7 @@ export function KeyInsights() {
             {annualBudgetInsights.overallGap < 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <XCircle className="h-4 w-4 text-red-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                   <h3 className="font-semibold text-sm">Over budget</h3>
                 </div>
                 {annualBudgetInsights.overBudget.length > 0 ? (
@@ -1383,13 +1393,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualBudgetInsights.overBudget.map((item) => {
+                        {annualBudgetInsights.overBudget.map((item, idx) => {
                           const pct = (Math.abs(item.gap) / maxGap) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
                             </div>
@@ -1405,7 +1415,7 @@ export function KeyInsights() {
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                   <h3 className="font-semibold text-sm">Under budget</h3>
                 </div>
                 {annualBudgetInsights.underBudget.length > 0 ? (
@@ -1417,13 +1427,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualBudgetInsights.underBudget.map((item) => {
+                        {annualBudgetInsights.underBudget.map((item, idx) => {
                           const pct = (Math.abs(item.gap) / maxGap) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.gap))}</span>
                             </div>
@@ -1442,7 +1452,7 @@ export function KeyInsights() {
       </Card>
 
       {/* Annual Spend Section */}
-      <Card id="annual-spend" className="scroll-mt-24">
+      <Card id="annual-spend" className={cn("scroll-mt-24 border-l-[3px]", annualSpendInsights.vsFourYearAvg > 0 ? "border-l-green-500" : "border-l-red-500")}>
         <CardHeader className="bg-muted/50">
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div>
@@ -1476,38 +1486,36 @@ export function KeyInsights() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 md:pt-4 space-y-4">
+        <CardContent className="pt-6 md:pt-6 space-y-4">
           {/* Vs 4-year average — prominent call-out */}
-          <div className="space-y-1.5 rounded-lg border bg-card p-2.5 w-full lg:w-[calc((100%-3*1.5rem)/4)]">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Vs 4-year average</p>
-              {annualSpendInsights.vsFourYearAvg > 0 ? (
-                <div className="flex items-center gap-1.5">
-                  <TrendingDown className="h-5 w-5 text-green-600" />
-                  <p className="text-lg font-bold text-green-600">Spending Less</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="h-5 w-5 text-red-600" />
-                  <p className="text-lg font-bold text-red-600">Spending More</p>
-                </div>
-              )}
+          <div className={cn(
+            'flex items-center gap-4 rounded-lg border border-l-[3px] p-4',
+            annualSpendInsights.vsFourYearAvg > 0
+              ? 'border-l-green-500 bg-gradient-to-r from-green-500/10 via-green-500/5 to-transparent'
+              : 'border-l-red-500 bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent'
+          )}>
+            <div className={cn(
+              'hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+              annualSpendInsights.vsFourYearAvg > 0 ? 'bg-green-500/15' : 'bg-red-500/15'
+            )}>
+              {annualSpendInsights.vsFourYearAvg > 0
+                ? <TrendingDown className="h-5 w-5 text-green-600" />
+                : <TrendingUp className="h-5 w-5 text-red-600" />
+              }
             </div>
-            <div className="space-y-1 pt-1.5 border-t">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 min-w-0">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Vs 4-year average</p>
+                <p className={cn('text-lg font-bold', annualSpendInsights.vsFourYearAvg > 0 ? 'text-green-600' : 'text-red-600')}>
+                  {annualSpendInsights.vsFourYearAvg > 0 ? 'Spending Less' : 'Spending More'}
+                </p>
+              </div>
               <p className="text-sm">
                 <span className={cn('font-semibold', annualSpendInsights.vsFourYearAvg > 0 ? 'text-green-600' : 'text-red-600')}>
                   {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))}
                 </span>
                 <span className="text-xs text-muted-foreground ml-1">
-                  {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
-                </span>
-              </p>
-              <p className="text-xs">
-                <span className={`font-medium ${annualSpendInsights.vsFourYearAvg > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}
-                </span>
-                <span className="text-muted-foreground ml-1">
-                  {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
+                  ({formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)})
                 </span>
               </p>
             </div>
@@ -1519,7 +1527,7 @@ export function KeyInsights() {
             {annualSpendInsights.vsFourYearAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                   <h3 className="font-semibold text-sm">Spending less vs average</h3>
                 </div>
                 {annualSpendInsights.spendingLess.length > 0 ? (
@@ -1531,13 +1539,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualSpendInsights.spendingLess.map((item) => {
+                        {annualSpendInsights.spendingLess.map((item, idx) => {
                           const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
                             </div>
@@ -1553,7 +1561,7 @@ export function KeyInsights() {
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <XCircle className="h-4 w-4 text-red-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                   <h3 className="font-semibold text-sm">Spending more vs average</h3>
                 </div>
                 {annualSpendInsights.spendingMore.length > 0 ? (
@@ -1565,13 +1573,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualSpendInsights.spendingMore.map((item) => {
+                        {annualSpendInsights.spendingMore.map((item, idx) => {
                           const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
                             </div>
@@ -1589,7 +1597,7 @@ export function KeyInsights() {
             {annualSpendInsights.vsFourYearAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <XCircle className="h-4 w-4 text-red-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                   <h3 className="font-semibold text-sm">Spending more vs average</h3>
                 </div>
                 {annualSpendInsights.spendingMore.length > 0 ? (
@@ -1601,13 +1609,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualSpendInsights.spendingMore.map((item) => {
+                        {annualSpendInsights.spendingMore.map((item, idx) => {
                           const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
                             </div>
@@ -1623,7 +1631,7 @@ export function KeyInsights() {
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                   <h3 className="font-semibold text-sm">Spending less vs average</h3>
                 </div>
                 {annualSpendInsights.spendingLess.length > 0 ? (
@@ -1635,13 +1643,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {annualSpendInsights.spendingLess.map((item) => {
+                        {annualSpendInsights.spendingLess.map((item, idx) => {
                           const pct = (Math.abs(item.vsFourYearAvg) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.vsFourYearAvg))}</span>
                             </div>
@@ -1667,7 +1675,7 @@ export function KeyInsights() {
       </Card>
 
       {/* Monthly Spend Section */}
-      <Card id="monthly-spend" className="scroll-mt-24">
+      <Card id="monthly-spend" className={cn("scroll-mt-24 border-l-[3px]", monthlySpendInsights.vsTtmAvg > 0 ? "border-l-green-500" : "border-l-red-500")}>
         <CardHeader className="bg-muted/50">
           <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <div>
@@ -1701,38 +1709,36 @@ export function KeyInsights() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-4 md:pt-4 space-y-4">
+        <CardContent className="pt-6 md:pt-6 space-y-4">
           {/* Vs TTM — prominent */}
-          <div className="space-y-1.5 rounded-lg border bg-card p-2.5 w-full lg:w-[calc((100%-3*1.5rem)/4)]">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Vs TTM average</p>
-              {monthlySpendInsights.vsTtmAvg > 0 ? (
-                <div className="flex items-center gap-1.5">
-                  <TrendingDown className="h-5 w-5 text-green-600" />
-                  <p className="text-lg font-bold text-green-600">Spending Less</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="h-5 w-5 text-red-600" />
-                  <p className="text-lg font-bold text-red-600">Spending More</p>
-                </div>
-              )}
+          <div className={cn(
+            'flex items-center gap-4 rounded-lg border border-l-[3px] p-4',
+            monthlySpendInsights.vsTtmAvg > 0
+              ? 'border-l-green-500 bg-gradient-to-r from-green-500/10 via-green-500/5 to-transparent'
+              : 'border-l-red-500 bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent'
+          )}>
+            <div className={cn(
+              'hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+              monthlySpendInsights.vsTtmAvg > 0 ? 'bg-green-500/15' : 'bg-red-500/15'
+            )}>
+              {monthlySpendInsights.vsTtmAvg > 0
+                ? <TrendingDown className="h-5 w-5 text-green-600" />
+                : <TrendingUp className="h-5 w-5 text-red-600" />
+              }
             </div>
-            <div className="space-y-1 pt-1.5 border-t">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 min-w-0">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Vs TTM average</p>
+                <p className={cn('text-lg font-bold', monthlySpendInsights.vsTtmAvg > 0 ? 'text-green-600' : 'text-red-600')}>
+                  {monthlySpendInsights.vsTtmAvg > 0 ? 'Spending Less' : 'Spending More'}
+                </p>
+              </div>
               <p className="text-sm">
                 <span className={cn('font-semibold', monthlySpendInsights.vsTtmAvg > 0 ? 'text-green-600' : 'text-red-600')}>
                   {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))}
                 </span>
                 <span className="text-xs text-muted-foreground ml-1">
-                  {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
-                </span>
-              </p>
-              <p className="text-xs">
-                <span className={`font-medium ${monthlySpendInsights.vsTtmAvg > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}
-                </span>
-                <span className="text-muted-foreground ml-1">
-                  {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
+                  ({formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)})
                 </span>
               </p>
             </div>
@@ -1746,7 +1752,7 @@ export function KeyInsights() {
             {monthlySpendInsights.vsTtmAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                   <h3 className="font-semibold text-sm">Spending less vs average</h3>
                 </div>
                 {monthlySpendInsights.spendingLess.length > 0 ? (
@@ -1758,13 +1764,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {monthlySpendInsights.spendingLess.map((item) => {
+                        {monthlySpendInsights.spendingLess.map((item, idx) => {
                           const pct = (Math.abs(item.diff) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
                             </div>
@@ -1780,7 +1786,7 @@ export function KeyInsights() {
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <XCircle className="h-4 w-4 text-red-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                   <h3 className="font-semibold text-sm">Spending more vs average</h3>
                 </div>
                 {monthlySpendInsights.spendingMore.length > 0 ? (
@@ -1792,13 +1798,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {monthlySpendInsights.spendingMore.map((item) => {
+                        {monthlySpendInsights.spendingMore.map((item, idx) => {
                           const pct = (Math.abs(item.diff) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
                             </div>
@@ -1816,7 +1822,7 @@ export function KeyInsights() {
             {monthlySpendInsights.vsTtmAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <XCircle className="h-4 w-4 text-red-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                   <h3 className="font-semibold text-sm">Spending more vs average</h3>
                 </div>
                 {monthlySpendInsights.spendingMore.length > 0 ? (
@@ -1828,13 +1834,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {monthlySpendInsights.spendingMore.map((item) => {
+                        {monthlySpendInsights.spendingMore.map((item, idx) => {
                           const pct = (Math.abs(item.diff) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
                             </div>
@@ -1850,7 +1856,7 @@ export function KeyInsights() {
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                   <h3 className="font-semibold text-sm">Spending less vs average</h3>
                 </div>
                 {monthlySpendInsights.spendingLess.length > 0 ? (
@@ -1862,13 +1868,13 @@ export function KeyInsights() {
                     )
                     return (
                       <div className="space-y-3">
-                        {monthlySpendInsights.spendingLess.map((item) => {
+                        {monthlySpendInsights.spendingLess.map((item, idx) => {
                           const pct = (Math.abs(item.diff) / maxVal) * 100
                           return (
                             <div key={item.category} className="flex items-center gap-2">
-                              <span className="text-sm w-24 truncate">{item.category}</span>
-                              <div className="flex-1 h-5 rounded bg-muted overflow-hidden">
-                                <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                              <span className="text-sm w-28 truncate">{item.category}</span>
+                              <div className="flex-1 h-5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${idx * 60}ms` }} />
                               </div>
                               <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrency(Math.abs(item.diff))}</span>
                             </div>

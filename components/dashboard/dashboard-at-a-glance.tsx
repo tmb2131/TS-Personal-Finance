@@ -413,13 +413,34 @@ export function DashboardAtAGlance() {
         )}>
           {sectionsToRender.map((section) => {
             const Icon = section.icon
+            const pillColor: Record<string, string> = {
+              'net-worth-chart': 'bg-blue-500/15',
+              'budget-table': 'bg-purple-500/15',
+              'income-vs-expenses': 'bg-orange-500/15',
+              'annual-trends': 'bg-indigo-500/15',
+              'monthly-trends': 'bg-indigo-500/15',
+            }
+            const iconColor: Record<string, string> = {
+              'net-worth-chart': 'text-blue-600',
+              'budget-table': 'text-purple-600',
+              'income-vs-expenses': 'text-orange-600',
+              'annual-trends': 'text-indigo-600',
+              'monthly-trends': 'text-indigo-600',
+            }
+            const borderColor = (() => {
+              if (section.id === 'net-worth-chart') return 'border-l-blue-500'
+              if (section.id === 'budget-table') return data.budgetStatus === 'under' ? 'border-l-green-500' : data.budgetStatus === 'over' ? 'border-l-red-500' : 'border-l-purple-500'
+              if (section.id === 'income-vs-expenses') return 'border-l-orange-500'
+              return 'border-l-muted-foreground/30'
+            })()
             return (
               <button
                 key={section.id}
                 type="button"
                 onClick={() => scrollToSection(section.id === 'income-vs-expenses' ? 'net-worth-chart' : section.id)}
                 className={cn(
-                  'flex flex-col items-start gap-2 p-4 rounded-lg border bg-card text-left w-full min-w-0 transition-all',
+                  'flex flex-col items-start gap-2 p-5 rounded-lg border border-l-[3px] bg-card text-left w-full min-w-0 transition-all',
+                  borderColor,
                   'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                   'max-md:shrink-0 max-md:min-w-[85%] max-md:max-w-[85%] max-md:snap-center'
                 )}
@@ -428,13 +449,15 @@ export function DashboardAtAGlance() {
                 <div className="flex items-center justify-between gap-2 w-full">
                   <div className="flex flex-col items-start gap-0.5 min-w-0">
                     <div className="flex items-center gap-2">
-                      <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <div className={cn('flex h-8 w-8 items-center justify-center rounded-full shrink-0', pillColor[section.id] || 'bg-muted')}>
+                        <Icon className={cn('h-5 w-5 shrink-0', iconColor[section.id] || 'text-muted-foreground')} />
+                      </div>
                       <span className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
                         {section.labelShort || section.label.replace(/\s*\([^)]*\)\s*/g, '').trim()}
                       </span>
                     </div>
                     {section.label.includes('(') && (
-                      <span className="text-[10px] text-muted-foreground/70 ml-7">
+                      <span className="text-[10px] text-muted-foreground/70 ml-10">
                         {section.label.match(/\(([^)]+)\)/)?.[1] || ''}
                       </span>
                     )}

@@ -156,7 +156,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-emerald-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
@@ -170,7 +170,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-emerald-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
@@ -185,12 +185,12 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   // Defer chart render until after mount to avoid hydration mismatch (isMobile / Recharts differ server vs client)
   if (!mounted) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-emerald-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
-        <CardContent className="pt-8 md:pt-8">
+        <CardContent className="pt-6 md:pt-6">
           <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
             <div className="flex items-center space-x-2">
               <div className="h-4 w-4 rounded border border-input" />
@@ -204,12 +204,12 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   }
 
   return (
-    <Card>
+    <Card className="border-l-[3px] border-l-emerald-500">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
-      <CardContent className="pt-8 md:pt-8">
+      <CardContent className="pt-6 md:pt-6">
         <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
           <div className="hidden sm:flex items-center space-x-2">
             <Checkbox

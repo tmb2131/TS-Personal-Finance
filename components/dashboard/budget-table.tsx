@@ -547,9 +547,11 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
           <div className="mb-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {/* Expenses Status */}
-              <div className="space-y-2 p-3 rounded-lg border bg-card">
+              <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card", expenseTotals.gap >= 0 ? "border-l-green-500" : "border-l-red-500")}>
                 <div className="flex items-center gap-1.5">
-                  <Receipt className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/15">
+                    <Receipt className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                  </div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide">Expenses Status</h3>
                 </div>
                 <div className="space-y-1">
@@ -557,12 +559,12 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                     <p className="text-xs text-muted-foreground mb-1">vs Budget</p>
                     {expenseTotals.gap >= 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                         <p className="text-base font-bold text-green-600">Under Budget</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                         <p className="text-base font-bold text-red-600">Over Budget</p>
                       </div>
                     )}
@@ -600,9 +602,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               {expenseTotals.gap >= 0 ? (
                 <>
                   {/* Top Categories Above Budget (Spending Less) */}
-                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
                     <div className="flex items-center gap-1.5">
-                      <TrendingDown className="h-4 w-4 text-green-600" />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -610,7 +612,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                             <p className="text-base font-bold text-green-600">Under Budget</p>
                           </div>
                         ) : (
@@ -623,9 +625,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             const pct = (Math.abs(item.gap) / maxGapCards) * 100
                             return (
                               <div key={item.category} className="flex items-center gap-1.5">
-                                <span className="text-xs w-20 truncate">{item.category}</span>
-                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                                  <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                                <span className="text-xs w-24 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
+                                  <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
                                 <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
                               </div>
@@ -638,9 +640,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                     </div>
                   </div>
                   {/* Top Categories Below Budget (Spending More) */}
-                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-red-500 bg-card">
                     <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-4 w-4 text-red-600" />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -648,7 +650,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
                         {topCategories.belowBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <XCircle className="h-4 w-4 text-red-600" />
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                             <p className="text-base font-bold text-red-600">Over Budget</p>
                           </div>
                         ) : (
@@ -661,9 +663,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             const pct = (Math.abs(item.gap) / maxGapCards) * 100
                             return (
                               <div key={item.category} className="flex items-center gap-1.5">
-                                <span className="text-xs w-20 truncate">{item.category}</span>
-                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                                  <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                                <span className="text-xs w-24 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
+                                  <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
                                 <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
                               </div>
@@ -679,9 +681,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
               ) : (
                 <>
                   {/* Top Categories Below Budget (Spending More) — first when Over Budget */}
-                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-red-500 bg-card">
                     <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-4 w-4 text-red-600" />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -689,7 +691,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
                         {topCategories.belowBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <XCircle className="h-4 w-4 text-red-600" />
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
                             <p className="text-base font-bold text-red-600">Over Budget</p>
                           </div>
                         ) : (
@@ -702,9 +704,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             const pct = (Math.abs(item.gap) / maxGapCards) * 100
                             return (
                               <div key={item.category} className="flex items-center gap-1.5">
-                                <span className="text-xs w-20 truncate">{item.category}</span>
-                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                                  <div className="h-full bg-red-500 rounded" style={{ width: `${pct}%` }} />
+                                <span className="text-xs w-24 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
+                                  <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
                                 <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
                               </div>
@@ -717,9 +719,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                     </div>
                   </div>
                   {/* Top Categories Above Budget (Spending Less) */}
-                  <div className="space-y-2 p-3 rounded-lg border bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
                     <div className="flex items-center gap-1.5">
-                      <TrendingDown className="h-4 w-4 text-green-600" />
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -727,7 +729,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
                             <p className="text-base font-bold text-green-600">Under Budget</p>
                           </div>
                         ) : (
@@ -740,9 +742,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             const pct = (Math.abs(item.gap) / maxGapCards) * 100
                             return (
                               <div key={item.category} className="flex items-center gap-1.5">
-                                <span className="text-xs w-20 truncate">{item.category}</span>
-                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden">
-                                  <div className="h-full bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                                <span className="text-xs w-24 truncate">{item.category}</span>
+                                <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
+                                  <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
                                 <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
                               </div>
@@ -798,7 +800,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                 <Table className={expenseCompactClass}>
                   <TableHeader>
                     <TableRow className="border-b bg-muted">
-                      <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
+                      <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-primary/10')}>
                         <button
                           onClick={() => handleExpenseSort('category')}
                           className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
@@ -807,7 +809,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
-                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-gray-200 dark:bg-gray-700')}>
+                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-primary/10')}>
                         <button
                           onClick={() => handleExpenseSort('annualBudget')}
                           className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
@@ -816,7 +818,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
-                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-gray-200 dark:bg-gray-700')}>
+                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-primary/10')}>
                         <button
                           onClick={() => handleExpenseSort('tracking')}
                           className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
@@ -825,7 +827,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-primary/10')}>
                         <button
                           onClick={() => handleExpenseSort('gap')}
                           className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
@@ -915,7 +917,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                   <Table className={expenseCompactClass}>
                     <TableHeader>
                       <TableRow className="border-b bg-muted">
-                        <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-primary/10')}>
                           <button
                             onClick={() => handleExpenseSort('category')}
                             className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
@@ -924,7 +926,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
                           </button>
                         </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-primary/10')}>
                           <button
                             onClick={() => handleExpenseSort('annualBudget')}
                             className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
@@ -933,7 +935,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
                           </button>
                         </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-primary/10')}>
                           <button
                             onClick={() => handleExpenseSort('tracking')}
                             className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
@@ -942,7 +944,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
                           </button>
                         </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-gray-200 dark:bg-gray-700')}>
+                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-primary/10')}>
                           <button
                             onClick={() => handleExpenseSort('gap')}
                             className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}

@@ -202,7 +202,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           {chartHeader}
         </CardHeader>
@@ -225,7 +225,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           {chartHeader}
         </CardHeader>
@@ -242,7 +242,7 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           {chartHeader}
         </CardHeader>
@@ -260,11 +260,11 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   // Defer chart render until after mount to avoid hydration mismatch (isMobile / Recharts differ server vs client)
   if (!mounted) {
     return (
-      <Card>
+      <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
           {chartHeader}
         </CardHeader>
-        <CardContent className="pt-8 md:pt-8">
+        <CardContent className="pt-6 md:pt-6">
           <div className="flex flex-wrap gap-4 mb-6 pb-4 border-b">
             <div className="flex items-center space-x-2">
               <div className="h-4 w-4 rounded border border-input" />
@@ -290,11 +290,11 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   }
 
   return (
-    <Card>
+    <Card className="border-l-[3px] border-l-blue-500">
       <CardHeader className="bg-muted/50">
         {chartHeader}
       </CardHeader>
-      <CardContent className="pt-8 md:pt-8">
+      <CardContent className="pt-6 md:pt-6">
         {/* Category Filters — hidden on mobile to free space for chart */}
         <div className="hidden sm:flex flex-wrap gap-4 mb-6 pb-4 border-b">
           <div className="flex items-center space-x-2">
