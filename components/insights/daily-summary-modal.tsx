@@ -19,7 +19,7 @@ import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
 import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts, getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExpenseCategory } from '@/lib/category-filters'
 import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
-import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
@@ -574,465 +574,533 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const mobileDriverRows = mobileDriverMode === 'less' ? monthlyDrivers.spendingLess : monthlyDrivers.spendingMore
   const cardContentClass = 'px-4 pb-4 pt-4 sm:px-5 sm:pb-4 sm:pt-5 md:pt-5'
 
+  const todayFormatted = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
   return (
     <Dialog key={modalKey} open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
         className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-0 p-0 sm:left-[50%] sm:top-[50%] sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-5xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:gap-5 sm:rounded-xl sm:border sm:p-6"
       >
+        <div className="flex justify-center pt-3 sm:hidden" aria-hidden>
+          <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
+        </div>
+
         <DialogClose
-          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:right-4 sm:top-4 sm:h-9 sm:w-9 sm:rounded-md sm:border sm:border-border/60 sm:bg-background/80"
+          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:right-4 sm:top-4 sm:h-auto sm:w-auto sm:gap-1 sm:rounded-md sm:border sm:border-border/60 sm:bg-background/80 sm:px-2 sm:py-1.5 sm:backdrop-blur-none"
         >
           <X className="h-5 w-5 sm:h-4 sm:w-4" />
           <span className="sr-only">Close</span>
+          <kbd className="hidden text-[10px] font-normal text-muted-foreground/70 sm:inline">ESC</kbd>
         </DialogClose>
 
         <div className="flex h-full min-h-0 flex-col">
-          <DialogHeader className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] text-left sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:pb-3 sm:pt-0">
+          <DialogHeader className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] text-left backdrop-blur-sm sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:pb-3 sm:pt-0 sm:backdrop-blur-none">
             <DialogTitle className="pr-12 text-2xl font-bold sm:text-xl">Daily Financial Summary</DialogTitle>
             <DialogDescription className="text-sm sm:text-xs">
-              {lastSyncDate ? `Last updated: ${formatLastSync()}` : 'Overview of your financial position'}
+              <span>{todayFormatted}</span>
+              {lastSyncDate && <span className="text-muted-foreground/70"> · Updated {formatLastSync()}</span>}
             </DialogDescription>
           </DialogHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 sm:px-0 sm:pb-0 sm:pt-0">
             {loading ? (
               <div className="space-y-4 py-3 sm:py-4">
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-36 w-full" />
+                <Skeleton className="h-4 w-28 rounded" />
+                <Skeleton className="h-36 w-full rounded-xl" />
+                <Skeleton className="h-4 w-16 rounded" />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Skeleton className="h-32 w-full rounded-xl" />
+                  <Skeleton className="h-32 w-full rounded-xl" />
+                </div>
+                <Skeleton className="h-4 w-24 rounded" />
+                <Skeleton className="h-48 w-full rounded-xl" />
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Card className="order-1 sm:order-2">
+              <div className="space-y-4 sm:space-y-3">
+                {/* Section: Budget Overview */}
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5">Budget Overview</p>
+                  <Card className={cn(
+                    'overflow-hidden border-l-[3px]',
+                    gapToBudget >= 0
+                      ? 'border-l-green-500 bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent'
+                      : 'border-l-red-500 bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent'
+                  )}>
                     <CardContent className={cardContentClass}>
                       <button
                         onClick={() => handleNavigate('/insights#annual-budget')}
-                        className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity text-left"
+                        className="flex items-center justify-between w-full gap-1.5 mb-3 group hover:opacity-70 transition-opacity text-left"
                       >
-                        <div className="flex items-center gap-1.5">
-                          <Target className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">Gap to Budget</span>
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            'flex h-7 w-7 items-center justify-center rounded-full',
+                            gapToBudget >= 0 ? 'bg-green-500/15' : 'bg-red-500/15'
+                          )}>
+                            {gapToBudget >= 0
+                              ? <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              : <AlertCircle className="h-4 w-4 text-red-600" />
+                            }
+                          </div>
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Gap to Budget</span>
                         </div>
                         <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </button>
                       <div className={cn(
-                        'text-3xl sm:text-xl font-bold tabular-nums',
+                        'text-4xl sm:text-2xl font-bold tabular-nums leading-none',
                         gapToBudget >= 0 ? 'text-green-600' : 'text-red-600'
                       )}>
                         {gapToBudget >= 0 ? 'Under' : 'Over'} {formatCurrency(Math.abs(gapToBudget))}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="order-2 sm:order-1">
-                    <CardContent className={cardContentClass}>
-                      <Link
-                        href="/#expenses-table"
-                        onClick={() => { onOpenChange(false); applyHashAfterNav('/#expenses-table') }}
-                        className={navButtonClass}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">Annual Est. Spend</span>
-                        </div>
-                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Link>
-                      <div className="text-2xl sm:text-xl font-bold tabular-nums">
-                        {formatCurrency(annualEstimatedSpend)}
+                      <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-t border-border/40 pt-3">
+                        <Link
+                          href="/#budget-table"
+                          onClick={() => { onOpenChange(false); applyHashAfterNav('/#budget-table') }}
+                          className="hover:opacity-70 transition-opacity"
+                        >
+                          <span className="text-xs text-muted-foreground">Annual Est. Spend: </span>
+                          <span className="text-sm font-semibold tabular-nums">{formatCurrency(annualEstimatedSpend)}</span>
+                        </Link>
+                        {annualVsLastYear && (
+                          <div className={cn(
+                            'text-xs font-medium tabular-nums',
+                            annualVsLastYear.diff < 0 ? 'text-green-600' : annualVsLastYear.diff > 0 ? 'text-red-600' : 'text-muted-foreground'
+                          )}>
+                            vs last year: {annualVsLastYear.diff >= 0 ? '+' : '-'}{formatCurrency(Math.abs(annualVsLastYear.diff))}
+                            {Math.abs(annualVsLastYear.percent) >= 0.1 && (
+                              <span className="text-muted-foreground">
+                                {' '}({annualVsLastYear.percent >= 0 ? '+' : ''}{annualVsLastYear.percent.toFixed(1)}%)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {annualVsLastYear && (
-                        <div className={cn(
-                          'text-[11px] sm:text-[10px] font-medium mt-1 tabular-nums',
-                          annualVsLastYear.diff < 0 ? 'text-green-600' : annualVsLastYear.diff > 0 ? 'text-red-600' : 'text-muted-foreground'
-                        )}>
-                          vs last year: {annualVsLastYear.diff >= 0 ? '+' : '-'}{formatCurrency(Math.abs(annualVsLastYear.diff))}
-                          {Math.abs(annualVsLastYear.percent) >= 0.1 && (
-                            <span className="text-muted-foreground">
-                              {' '}({annualVsLastYear.percent >= 0 ? '+' : ''}{annualVsLastYear.percent.toFixed(1)}%)
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
 
+                {/* Section: Today */}
                 {(hasChangeCard || hasNeutralCard) && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {hasNeutralCard && (
-                      <Card className={cn('order-1 sm:order-2', !hasChangeCard && 'sm:col-span-2')}>
-                        <CardContent className={cardContentClass}>
-                          <button
-                            onClick={() => handleNavigate('/analysis#forecast-evolution')}
-                            className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity text-left"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <Target className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-xs font-medium text-muted-foreground">Forecast-Neutral Today</span>
-                            </div>
-                            <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                          {dailyNeutralInsights?.neutralSpend != null ? (
-                            <>
-                              {(() => {
-                                const percentRaw = dailyNeutralInsights.usedPercent ?? 0
-                                const percentClamped = Math.min(Math.max(percentRaw, 0), 100)
-                                const size = 86
-                                const stroke = 10
-                                const radius = (size - stroke) / 2
-                                const circumference = 2 * Math.PI * radius
-                                const dash = (percentClamped / 100) * circumference
-                                const usageColor =
-                                  percentRaw < 85 ? 'text-green-500' : percentRaw <= 100 ? 'text-amber-500' : 'text-red-500'
-                                const ringStroke =
-                                  percentRaw < 85 ? '#22c55e' : percentRaw <= 100 ? '#f59e0b' : '#ef4444'
+                  <div>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5">Today</p>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+                      {hasNeutralCard && (
+                        <Card className={cn(
+                          'order-1 sm:order-2 overflow-hidden border-l-[3px]',
+                          !hasChangeCard && 'sm:col-span-2',
+                          dailyNeutralInsights?.direction === 'improving'
+                            ? 'border-l-green-500'
+                            : dailyNeutralInsights?.direction === 'worsening'
+                              ? 'border-l-red-500'
+                              : 'border-l-blue-500'
+                        )}>
+                          <CardContent className={cardContentClass}>
+                            <button
+                              onClick={() => handleNavigate('/analysis#forecast-evolution')}
+                              className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/15">
+                                  <Target className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <span className="text-xs font-medium text-muted-foreground">Forecast-Neutral Today</span>
+                              </div>
+                              <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                            {dailyNeutralInsights?.neutralSpend != null ? (
+                              <>
+                                {(() => {
+                                  const percentRaw = dailyNeutralInsights.usedPercent ?? 0
+                                  const percentClamped = Math.min(Math.max(percentRaw, 0), 100)
+                                  const mobileSize = 96
+                                  const desktopSize = 86
+                                  const stroke = 10
+                                  const usageColor =
+                                    percentRaw < 85 ? 'text-green-500' : percentRaw <= 100 ? 'text-amber-500' : 'text-red-500'
+                                  const ringStroke =
+                                    percentRaw < 85 ? '#22c55e' : percentRaw <= 100 ? '#f59e0b' : '#ef4444'
 
-                                return (
-                                  <>
-                                    <div className="sm:hidden">
-                                      <div className="text-3xl font-bold tabular-nums">
-                                        {formatCurrency(dailyNeutralInsights.neutralSpend)}
-                                      </div>
-                                      <div className="mt-1 text-xs text-muted-foreground tabular-nums">
-                                        Used {formatCurrency(dailyNeutralInsights.usedSpend)}
-                                      </div>
-                                      <div className={cn('text-xs font-semibold mt-1', usageColor)}>
-                                        {percentRaw.toFixed(Math.abs(percentRaw) >= 100 ? 0 : 1)}% of neutral
-                                      </div>
-                                      <div className="mt-2 h-2.5 rounded-full bg-muted overflow-hidden">
-                                        <div
-                                          className={cn('h-full rounded-full', percentRaw < 85 ? 'bg-green-500' : percentRaw <= 100 ? 'bg-amber-500' : 'bg-red-500')}
-                                          style={{ width: `${percentClamped}%` }}
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="hidden sm:flex items-center justify-between gap-3">
-                                      <div className="min-w-0">
-                                        <div className="text-xl font-bold tabular-nums">
-                                          {formatCurrency(dailyNeutralInsights.neutralSpend)}
-                                        </div>
-                                        <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
-                                          Used {formatCurrency(dailyNeutralInsights.usedSpend)}
-                                        </div>
-                                        <div className={cn('text-[10px] font-semibold mt-0.5', usageColor)}>
-                                          {percentRaw.toFixed(Math.abs(percentRaw) >= 100 ? 0 : 1)}% of neutral
-                                        </div>
-                                      </div>
-                                      <div className="shrink-0">
-                                        <div className="relative" style={{ width: size, height: size }}>
-                                          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-                                            <circle
-                                              cx={size / 2}
-                                              cy={size / 2}
-                                              r={radius}
-                                              fill="none"
-                                              stroke="currentColor"
-                                              strokeWidth={stroke}
-                                              className="text-muted/35"
-                                            />
-                                            <circle
-                                              cx={size / 2}
-                                              cy={size / 2}
-                                              r={radius}
-                                              fill="none"
-                                              stroke={ringStroke}
-                                              strokeWidth={stroke}
-                                              strokeLinecap="round"
-                                              strokeDasharray={`${dash} ${circumference - dash}`}
-                                            />
-                                          </svg>
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className={cn('text-xs font-semibold tabular-nums', usageColor)}>
-                                              {Math.round(percentRaw)}%
-                                            </div>
+                                  const renderRing = (size: number) => {
+                                    const radius = (size - stroke) / 2
+                                    const circumference = 2 * Math.PI * radius
+                                    const dash = (percentClamped / 100) * circumference
+                                    return (
+                                      <div className="relative" style={{ width: size, height: size }}>
+                                        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+                                          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-muted/35" />
+                                          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={ringStroke} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${dash} ${circumference - dash}`} />
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                          <div className={cn('text-xs font-semibold tabular-nums', usageColor)}>
+                                            {Math.round(percentRaw)}%
                                           </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  </>
-                                )
-                              })()}
-                              <div className={cn(
-                                'text-xs sm:text-[10px] font-medium mt-1',
-                                dailyNeutralInsights.direction === 'improving'
-                                  ? 'text-green-600'
-                                  : dailyNeutralInsights.direction === 'worsening'
-                                    ? 'text-red-600'
-                                    : 'text-muted-foreground'
-                              )}>
-                                {dailyNeutralInsights.direction === 'improving'
-                                  ? 'Projected next-day forecast: improving'
-                                  : dailyNeutralInsights.direction === 'worsening'
-                                    ? 'Projected next-day forecast: worsening'
-                                    : 'Projected next-day forecast: flat'}
-                              </div>
-                            </>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">Not enough data</div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
+                                    )
+                                  }
 
-                    {hasChangeCard && (
-                      <Card className={cn('order-2 sm:order-1', !hasNeutralCard && 'sm:col-span-2')}>
+                                  return (
+                                    <>
+                                      <div className="flex flex-col items-center gap-3 sm:hidden">
+                                        {renderRing(mobileSize)}
+                                        <div className="text-center">
+                                          <div className="text-3xl font-bold tabular-nums leading-none">
+                                            {formatCurrency(dailyNeutralInsights.neutralSpend)}
+                                          </div>
+                                          <div className="mt-1.5 text-xs text-muted-foreground tabular-nums">
+                                            Used {formatCurrency(dailyNeutralInsights.usedSpend)}
+                                          </div>
+                                          <div className={cn('text-xs font-semibold mt-1', usageColor)}>
+                                            {percentRaw.toFixed(Math.abs(percentRaw) >= 100 ? 0 : 1)}% of neutral
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="hidden sm:flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                          <div className="text-xl font-bold tabular-nums">
+                                            {formatCurrency(dailyNeutralInsights.neutralSpend)}
+                                          </div>
+                                          <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                                            Used {formatCurrency(dailyNeutralInsights.usedSpend)}
+                                          </div>
+                                          <div className={cn('text-[10px] font-semibold mt-0.5', usageColor)}>
+                                            {percentRaw.toFixed(Math.abs(percentRaw) >= 100 ? 0 : 1)}% of neutral
+                                          </div>
+                                        </div>
+                                        <div className="shrink-0">
+                                          {renderRing(desktopSize)}
+                                        </div>
+                                      </div>
+                                    </>
+                                  )
+                                })()}
+                                <div className={cn(
+                                  'text-xs sm:text-[10px] font-medium mt-2 sm:mt-1',
+                                  dailyNeutralInsights.direction === 'improving'
+                                    ? 'text-green-600'
+                                    : dailyNeutralInsights.direction === 'worsening'
+                                      ? 'text-red-600'
+                                      : 'text-muted-foreground'
+                                )}>
+                                  {dailyNeutralInsights.direction === 'improving'
+                                    ? 'Projected next-day forecast: improving'
+                                    : dailyNeutralInsights.direction === 'worsening'
+                                      ? 'Projected next-day forecast: worsening'
+                                      : 'Projected next-day forecast: flat'}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-xs text-muted-foreground">Not enough data</div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {hasChangeCard && (
+                        <Card className={cn(
+                          'order-2 sm:order-1 overflow-hidden border-l-[3px]',
+                          !hasNeutralCard && 'sm:col-span-2',
+                          yesterdayChange !== null && yesterdayChange < 0 ? 'border-l-green-500' : 'border-l-red-500'
+                        )}>
+                          <CardContent className={cardContentClass}>
+                            <button
+                              onClick={() => handleNavigate('/analysis#forecast-evolution')}
+                              className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={cn(
+                                  'flex h-7 w-7 items-center justify-center rounded-full',
+                                  yesterdayChange !== null && yesterdayChange < 0 ? 'bg-green-500/15' : 'bg-red-500/15'
+                                )}>
+                                  <Calendar className={cn(
+                                    'h-4 w-4',
+                                    yesterdayChange !== null && yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
+                                  )} />
+                                </div>
+                                <span className="text-xs font-medium text-muted-foreground">Change Since Yesterday</span>
+                              </div>
+                              <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                            {yesterdayChange !== null && (
+                              <div className={cn(
+                                'text-2xl sm:text-lg font-bold tabular-nums leading-none',
+                                yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
+                              )}>
+                                {yesterdayChange < 0 ? (
+                                  <span className="flex items-center gap-1.5">
+                                    <TrendingDown className="h-4 w-4 shrink-0" />
+                                    Gap improved by {formatCurrency(Math.abs(yesterdayChange))}
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1.5">
+                                    <TrendingUp className="h-4 w-4 shrink-0" />
+                                    Gap worsened by {formatCurrency(Math.abs(yesterdayChange))}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {yesterdayDriverHighlights.length > 0 && (
+                              <div className="mt-3">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-xs sm:text-[10px] font-bold text-muted-foreground">Top Drivers</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleNavigate('/analysis#forecast-evolution')}
+                                    className="text-xs font-medium text-primary hover:opacity-80 transition-opacity sm:hidden"
+                                  >
+                                    View all
+                                  </button>
+                                </div>
+                                {(() => {
+                                  const maxDelta = Math.max(...yesterdayDriverHighlights.map((d) => Math.abs(d.delta)), 1)
+                                  return (
+                                    <div className="space-y-1.5">
+                                      {yesterdayDriverHighlights.map((driver, index) => {
+                                        const pct = (Math.abs(driver.delta) / maxDelta) * 100
+                                        const isWorsening = driver.delta > 0
+                                        return (
+                                          <div
+                                            key={driver.category}
+                                            className={cn('flex items-center gap-2', index > 1 && 'hidden sm:flex')}
+                                          >
+                                            <span className="text-xs sm:text-[10px] w-24 sm:w-16 truncate text-muted-foreground font-medium">
+                                              {driver.category}
+                                            </span>
+                                            <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden min-w-0">
+                                              <div
+                                                className={cn('h-full rounded-full transition-all duration-500', isWorsening ? 'bg-red-500' : 'bg-green-500')}
+                                                style={{ width: `${pct}%` }}
+                                              />
+                                            </div>
+                                            <span className={cn(
+                                              'text-xs sm:text-[10px] font-medium tabular-nums w-14 sm:w-11 text-right shrink-0',
+                                              isWorsening ? 'text-red-600' : 'text-green-600'
+                                            )}>
+                                              {formatCurrency(Math.abs(driver.delta))}
+                                            </span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  )
+                                })()}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section: This Month */}
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5">This Month</p>
+                  <div className="space-y-4 sm:space-y-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+                      <Card className="border-l-[3px] border-l-blue-500">
                         <CardContent className={cardContentClass}>
-                          <button
-                            onClick={() => handleNavigate('/analysis#forecast-evolution')}
-                            className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity text-left"
+                          <Link
+                            href="/#monthly-trends"
+                            onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
+                            className={navButtonClass}
                           >
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-xs font-medium text-muted-foreground">Change Since Yesterday</span>
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/15">
+                                <Calendar className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <span className="text-xs font-medium text-muted-foreground">Est. This Month</span>
                             </div>
                             <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                          {yesterdayChange !== null && (
+                          </Link>
+                          <div className="text-2xl sm:text-xl font-bold tabular-nums leading-none">
+                            {formatCurrency(currentMonthlySpend)}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className={cn(
+                        'border-l-[3px]',
+                        monthlyVs3M !== null
+                          ? monthlyVs3M >= 0 ? 'border-l-red-500' : 'border-l-green-500'
+                          : 'border-l-muted-foreground/30'
+                      )}>
+                        <CardContent className={cardContentClass}>
+                          <Link
+                            href="/#monthly-trends"
+                            onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
+                            className={navButtonClass}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className={cn(
+                                'flex h-7 w-7 items-center justify-center rounded-full',
+                                monthlyVs3M !== null
+                                  ? monthlyVs3M >= 0 ? 'bg-red-500/15' : 'bg-green-500/15'
+                                  : 'bg-muted'
+                              )}>
+                                <TrendingUp className={cn(
+                                  'h-4 w-4',
+                                  monthlyVs3M !== null
+                                    ? monthlyVs3M >= 0 ? 'text-red-600' : 'text-green-600'
+                                    : 'text-muted-foreground'
+                                )} />
+                              </div>
+                              <span className="text-xs font-medium text-muted-foreground">vs 3M Avg</span>
+                            </div>
+                            <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </Link>
+                          {monthlyVs3M !== null ? (
                             <div className={cn(
-                              'text-2xl sm:text-lg font-bold tabular-nums',
-                              yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
+                              'text-2xl sm:text-xl font-bold tabular-nums leading-none',
+                              monthlyVs3M >= 0 ? 'text-red-600' : 'text-green-600'
                             )}>
-                              {yesterdayChange < 0 ? (
-                                <span className="flex items-center gap-1.5">
-                                  <TrendingDown className="h-4 w-4 shrink-0" />
-                                  Gap improved by {formatCurrency(Math.abs(yesterdayChange))}
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1.5">
-                                  <TrendingUp className="h-4 w-4 shrink-0" />
-                                  Gap worsened by {formatCurrency(Math.abs(yesterdayChange))}
+                              {monthlyVs3M >= 0 ? '+' : ''}{formatCurrency(monthlyVs3M)}
+                              {monthlyVs3MPercent !== null && (
+                                <span className="text-xs font-normal ml-1">
+                                  ({formatPercent(monthlyVs3MPercent)})
                                 </span>
                               )}
                             </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">No comparison</div>
                           )}
-                          {yesterdayDriverHighlights.length > 0 && (
-                            <div className="mt-3">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs sm:text-[10px] font-bold text-muted-foreground">Top Drivers</span>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {hasMonthlyDrivers && (
+                      <Card className="border-l-[3px] border-l-amber-500">
+                        <CardContent className={cardContentClass}>
+                          <Link
+                            href="/#monthly-trends"
+                            onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
+                            className="flex items-center justify-between w-full mb-2 group hover:opacity-70 transition-opacity"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/15">
+                                <TrendingUp className="h-4 w-4 text-amber-600" />
+                              </div>
+                              <span className="text-xs font-medium text-muted-foreground">Monthly Spend Drivers</span>
+                            </div>
+                            <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </Link>
+
+                          <div className="sm:hidden">
+                            {hasSpendingLessDrivers && hasSpendingMoreDrivers && (
+                              <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
                                 <button
                                   type="button"
-                                  onClick={() => handleNavigate('/analysis#forecast-evolution')}
-                                  className="text-xs font-medium text-primary hover:opacity-80 transition-opacity sm:hidden"
+                                  onClick={() => setMobileMonthlyDriversView('less')}
+                                  className={cn(
+                                    'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                                    mobileDriverMode === 'less'
+                                      ? 'bg-background text-foreground shadow-sm'
+                                      : 'text-muted-foreground hover:text-foreground'
+                                  )}
                                 >
-                                  View all
+                                  Less ({monthlyDrivers.spendingLess.length})
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setMobileMonthlyDriversView('more')}
+                                  className={cn(
+                                    'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                                    mobileDriverMode === 'more'
+                                      ? 'bg-background text-foreground shadow-sm'
+                                      : 'text-muted-foreground hover:text-foreground'
+                                  )}
+                                >
+                                  More ({monthlyDrivers.spendingMore.length})
                                 </button>
                               </div>
-                              {(() => {
-                                const maxDelta = Math.max(...yesterdayDriverHighlights.map((d) => Math.abs(d.delta)), 1)
+                            )}
+
+                            <div className={cn(
+                              'text-xs font-bold mb-1.5',
+                              mobileDriverMode === 'less' ? 'text-green-600' : 'text-red-600'
+                            )}>
+                              {mobileDriverMode === 'less' ? 'Spending Less:' : 'Spending More:'}
+                            </div>
+                            <div className="space-y-2">
+                              {mobileDriverRows.slice(0, 3).map((driver, index) => {
+                                const pct = (Math.abs(driver.diff) / monthlyDriversMaxDiff) * 100
                                 return (
-                                  <div className="space-y-1.5">
-                                    {yesterdayDriverHighlights.map((driver, index) => {
-                                      const pct = (Math.abs(driver.delta) / maxDelta) * 100
-                                      const isWorsening = driver.delta > 0
-                                      return (
-                                        <div
-                                          key={driver.category}
-                                          className={cn('flex items-center gap-2', index > 1 && 'hidden sm:flex')}
-                                        >
-                                          <span className="text-xs sm:text-[10px] w-24 sm:w-16 truncate text-muted-foreground font-medium">
-                                            {driver.category}
-                                          </span>
-                                          <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
-                                            <div
-                                              className={cn('h-full rounded', isWorsening ? 'bg-red-500' : 'bg-green-500')}
-                                              style={{ width: `${pct}%` }}
-                                            />
-                                          </div>
-                                          <span className={cn(
-                                            'text-xs sm:text-[10px] font-medium tabular-nums w-14 sm:w-11 text-right shrink-0',
-                                            isWorsening ? 'text-red-600' : 'text-green-600'
-                                          )}>
-                                            {formatCurrency(Math.abs(driver.delta))}
-                                          </span>
-                                        </div>
-                                      )
-                                    })}
+                                  <div key={driver.category} className="flex items-center gap-2">
+                                    <span className="text-xs w-24 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                    <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden min-w-0">
+                                      <div
+                                        className={cn('h-full rounded-full transition-all duration-500', mobileDriverMode === 'less' ? 'bg-green-500' : 'bg-red-500')}
+                                        style={{ width: `${pct}%`, transitionDelay: `${index * 75}ms` }}
+                                      />
+                                    </div>
+                                    <span className={cn(
+                                      'text-xs font-medium tabular-nums w-14 text-right shrink-0',
+                                      mobileDriverMode === 'less' ? 'text-green-600' : 'text-red-600'
+                                    )}>
+                                      {formatCurrency(Math.abs(driver.diff))}
+                                    </span>
                                   </div>
                                 )
-                              })()}
+                              })}
                             </div>
-                          )}
+                          </div>
+
+                          <div className="hidden sm:grid sm:grid-cols-2 sm:gap-3">
+                            {hasSpendingLessDrivers && (
+                              <div className={cn(!hasSpendingMoreDrivers && 'sm:col-span-2')}>
+                                <div className="text-[10px] font-bold mb-1 text-green-600">Spending Less:</div>
+                                <div className="space-y-1.5">
+                                  {monthlyDrivers.spendingLess.map((driver, index) => {
+                                    const pct = (Math.abs(driver.diff) / monthlyDriversMaxDiff) * 100
+                                    return (
+                                      <div key={driver.category} className="flex items-center gap-1.5">
+                                        <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                        <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden min-w-0">
+                                          <div className="h-full rounded-full bg-green-500 transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${index * 75}ms` }} />
+                                        </div>
+                                        <span className="text-[10px] font-medium tabular-nums w-11 text-right shrink-0 text-green-600">
+                                          {formatCurrency(Math.abs(driver.diff))}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {hasSpendingMoreDrivers && (
+                              <div className={cn(!hasSpendingLessDrivers && 'sm:col-span-2')}>
+                                <div className="text-[10px] font-bold mb-1 text-red-600">Spending More:</div>
+                                <div className="space-y-1.5">
+                                  {monthlyDrivers.spendingMore.map((driver, index) => {
+                                    const pct = (Math.abs(driver.diff) / monthlyDriversMaxDiff) * 100
+                                    return (
+                                      <div key={driver.category} className="flex items-center gap-1.5">
+                                        <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
+                                        <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden min-w-0">
+                                          <div className="h-full rounded-full bg-red-500 transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${index * 75}ms` }} />
+                                        </div>
+                                        <span className="text-[10px] font-medium tabular-nums w-11 text-right shrink-0 text-red-600">
+                                          {formatCurrency(Math.abs(driver.diff))}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </CardContent>
                       </Card>
                     )}
                   </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Card>
-                    <CardContent className={cardContentClass}>
-                      <Link
-                        href="/#monthly-trends"
-                        onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
-                        className={navButtonClass}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">Est. This Month</span>
-                        </div>
-                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Link>
-                      <div className="text-2xl sm:text-xl font-bold tabular-nums">
-                        {formatCurrency(currentMonthlySpend)}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className={cardContentClass}>
-                      <Link
-                        href="/#monthly-trends"
-                        onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
-                        className={navButtonClass}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs font-medium text-muted-foreground">vs 3M Avg</span>
-                        </div>
-                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Link>
-                      {monthlyVs3M !== null ? (
-                        <div className={cn(
-                          'text-2xl sm:text-xl font-bold tabular-nums',
-                          monthlyVs3M >= 0 ? 'text-red-600' : 'text-green-600'
-                        )}>
-                          {monthlyVs3M >= 0 ? '+' : ''}{formatCurrency(monthlyVs3M)}
-                          {monthlyVs3MPercent !== null && (
-                            <span className="text-xs font-normal ml-1">
-                              ({formatPercent(monthlyVs3MPercent)})
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">No comparison</div>
-                      )}
-                    </CardContent>
-                  </Card>
                 </div>
-
-                {hasMonthlyDrivers && (
-                  <Card>
-                    <CardContent className={cardContentClass}>
-                      <Link
-                        href="/#monthly-trends"
-                        onClick={() => { onOpenChange(false); applyHashAfterNav('/#monthly-trends') }}
-                        className="flex items-center justify-between w-full mb-2 group hover:opacity-70 transition-opacity"
-                      >
-                        <span className="text-xs font-medium text-muted-foreground">Monthly Spend Drivers</span>
-                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Link>
-
-                      <div className="sm:hidden">
-                        {hasSpendingLessDrivers && hasSpendingMoreDrivers && (
-                          <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-                            <button
-                              type="button"
-                              onClick={() => setMobileMonthlyDriversView('less')}
-                              className={cn(
-                                'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
-                                mobileDriverMode === 'less'
-                                  ? 'bg-background text-foreground shadow-sm'
-                                  : 'text-muted-foreground hover:text-foreground'
-                              )}
-                            >
-                              Spending Less
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setMobileMonthlyDriversView('more')}
-                              className={cn(
-                                'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
-                                mobileDriverMode === 'more'
-                                  ? 'bg-background text-foreground shadow-sm'
-                                  : 'text-muted-foreground hover:text-foreground'
-                              )}
-                            >
-                              Spending More
-                            </button>
-                          </div>
-                        )}
-
-                        <div className={cn(
-                          'text-xs font-bold mb-1.5',
-                          mobileDriverMode === 'less' ? 'text-green-600' : 'text-red-600'
-                        )}>
-                          {mobileDriverMode === 'less' ? 'Spending Less:' : 'Spending More:'}
-                        </div>
-                        <div className="space-y-2">
-                          {mobileDriverRows.slice(0, 3).map((driver) => {
-                            const pct = (Math.abs(driver.diff) / monthlyDriversMaxDiff) * 100
-                            return (
-                              <div key={driver.category} className="flex items-center gap-2">
-                                <span className="text-xs w-24 truncate text-muted-foreground font-medium">{driver.category}</span>
-                                <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
-                                  <div
-                                    className={cn('h-full rounded', mobileDriverMode === 'less' ? 'bg-green-500' : 'bg-red-500')}
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </div>
-                                <span className={cn(
-                                  'text-xs font-medium tabular-nums w-14 text-right shrink-0',
-                                  mobileDriverMode === 'less' ? 'text-green-600' : 'text-red-600'
-                                )}>
-                                  {formatCurrency(Math.abs(driver.diff))}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="hidden sm:grid sm:grid-cols-2 sm:gap-3">
-                        {hasSpendingLessDrivers && (
-                          <div className={cn(!hasSpendingMoreDrivers && 'sm:col-span-2')}>
-                            <div className="text-[10px] font-bold mb-1 text-green-600">Spending Less:</div>
-                            <div className="space-y-1.5">
-                              {monthlyDrivers.spendingLess.map((driver) => {
-                                const pct = (Math.abs(driver.diff) / monthlyDriversMaxDiff) * 100
-                                return (
-                                  <div key={driver.category} className="flex items-center gap-1.5">
-                                    <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
-                                    <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
-                                      <div className="h-full rounded bg-green-500" style={{ width: `${pct}%` }} />
-                                    </div>
-                                    <span className="text-[10px] font-medium tabular-nums w-11 text-right shrink-0 text-green-600">
-                                      {formatCurrency(Math.abs(driver.diff))}
-                                    </span>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {hasSpendingMoreDrivers && (
-                          <div className={cn(!hasSpendingLessDrivers && 'sm:col-span-2')}>
-                            <div className="text-[10px] font-bold mb-1 text-red-600">Spending More:</div>
-                            <div className="space-y-1.5">
-                              {monthlyDrivers.spendingMore.map((driver) => {
-                                const pct = (Math.abs(driver.diff) / monthlyDriversMaxDiff) * 100
-                                return (
-                                  <div key={driver.category} className="flex items-center gap-1.5">
-                                    <span className="text-[10px] w-16 truncate text-muted-foreground font-medium">{driver.category}</span>
-                                    <div className="flex-1 h-3 rounded bg-muted overflow-hidden min-w-0">
-                                      <div className="h-full rounded bg-red-500" style={{ width: `${pct}%` }} />
-                                    </div>
-                                    <span className="text-[10px] font-medium tabular-nums w-11 text-right shrink-0 text-red-600">
-                                      {formatCurrency(Math.abs(driver.diff))}
-                                    </span>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
               </div>
             )}
           </div>
