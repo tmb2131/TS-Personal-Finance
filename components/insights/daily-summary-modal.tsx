@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, createClientNoCache } from '@/lib/supabase/client'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import {
   Dialog,
@@ -122,7 +122,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const supabase = createClient()
+    const supabase = createClientNoCache()
 
     const now = new Date()
     const yesterday = new Date(now)
@@ -136,7 +136,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       const [budgetResult, syncResult, bridgeResponse, settingsResult, todayTxResult, { data: { user } }] = await Promise.all([
         supabase.from('budget_targets').select('*'),
         supabase.from('sync_metadata').select('last_sync_at').single(),
-        fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${utcTodayStr}`)
+        fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${utcTodayStr}`, { cache: 'no-store' })
           .then(async (r) => {
             if (!r.ok) {
               const errorData = await r.json().catch(() => ({}))
@@ -161,7 +161,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       if (annualForecasts) setForecastByCategory(annualForecasts)
       if (syncResult.data?.last_sync_at) setLastSyncDate(syncResult.data.last_sync_at)
       if (Array.isArray(settingsResult.data)) setForecastSettings(settingsResult.data as ForecastSettingsRow[])
-      if (Array.isArray(todayTxResult.data)) setTodayTransactions(todayTxResult.data as TransactionForDayRow[])
+      setTodayTransactions(Array.isArray(todayTxResult?.data) ? (todayTxResult.data as TransactionForDayRow[]) : [])
       if (bridgeResponse && !bridgeResponse.error) {
         setForecastBridge(bridgeResponse as ForecastBridgeResponse)
       }
