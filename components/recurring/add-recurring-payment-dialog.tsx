@@ -35,11 +35,30 @@ export function AddRecurringPaymentDialog({
   const [saving, setSaving] = useState(false)
 
   const [name, setName] = useState('')
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState('') // annualized amount (source of truth)
+
+  const monthlyDisplay = amount !== '' && !isNaN(parseFloat(amount))
+    ? String(parseFloat(amount) / 12)
+    : ''
 
   const resetForm = () => {
     setName('')
     setAmount('')
+  }
+
+  const onAnnualizedChange = (value: string) => {
+    setAmount(value)
+  }
+
+  const onMonthlyChange = (value: string) => {
+    if (value === '') {
+      setAmount('')
+      return
+    }
+    const parsed = parseFloat(value)
+    if (!isNaN(parsed)) {
+      setAmount(String(parsed * 12))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,18 +133,38 @@ export function AddRecurringPaymentDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="recurring-amount">Annualized Amount ({currency})</Label>
-            <Input
-              id="recurring-amount"
-              type="number"
-              step="0.01"
-              placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
+            <Label>Amount ({currency})</Label>
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="recurring-monthly" className="text-xs text-muted-foreground">
+                  Monthly
+                </Label>
+                <Input
+                  id="recurring-monthly"
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  value={monthlyDisplay}
+                  onChange={(e) => onMonthlyChange(e.target.value)}
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="recurring-amount" className="text-xs text-muted-foreground">
+                  Annualized
+                </Label>
+                <Input
+                  id="recurring-amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => onAnnualizedChange(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Enter the total annual cost (e.g. $120/year for a $10/month subscription)
+              Enter either monthly or annual cost; the other updates automatically.
             </p>
           </div>
           <Button type="submit" className="w-full" disabled={saving}>

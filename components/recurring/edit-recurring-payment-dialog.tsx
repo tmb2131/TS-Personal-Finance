@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -33,7 +33,36 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
     : (payment.annualized_amount_gbp ?? (payment.annualized_amount_usd ?? 0) / (fxRate || 1))
 
   const [name, setName] = useState(payment.name)
-  const [amount, setAmount] = useState(String(Math.round(initialAmount * 100) / 100))
+  const [amount, setAmount] = useState(String(Math.round(initialAmount * 100) / 100)) // annualized (source of truth)
+
+  useEffect(() => {
+    if (open) {
+      setName(payment.name)
+      const initial = currency === 'USD'
+        ? (payment.annualized_amount_usd ?? (payment.annualized_amount_gbp ?? 0) * (fxRate || 1))
+        : (payment.annualized_amount_gbp ?? (payment.annualized_amount_usd ?? 0) / (fxRate || 1))
+      setAmount(String(Math.round(initial * 100) / 100))
+    }
+  }, [open, payment.id, payment.name, payment.annualized_amount_usd, payment.annualized_amount_gbp, currency, fxRate])
+
+  const monthlyDisplay = amount !== '' && !isNaN(parseFloat(amount))
+    ? String(parseFloat(amount) / 12)
+    : ''
+
+  const onAnnualizedChange = (value: string) => {
+    setAmount(value)
+  }
+
+  const onMonthlyChange = (value: string) => {
+    if (value === '') {
+      setAmount('')
+      return
+    }
+    const parsed = parseFloat(value)
+    if (!isNaN(parsed)) {
+      setAmount(String(parsed * 12))
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -119,15 +148,36 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="edit-recurring-amount">Annualized Amount ({currency})</Label>
-            <Input
-              id="edit-recurring-amount"
-              type="number"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
+            <Label>Amount ({currency})</Label>
+            <div className="flex gap-2">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="edit-recurring-monthly" className="text-xs text-muted-foreground">
+                  Monthly
+                </Label>
+                <Input
+                  id="edit-recurring-monthly"
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  value={monthlyDisplay}
+                  onChange={(e) => onMonthlyChange(e.target.value)}
+                />
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="edit-recurring-amount" className="text-xs text-muted-foreground">
+                  Annualized
+                </Label>
+                <Input
+                  id="edit-recurring-amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => onAnnualizedChange(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
           </div>
           <div className="flex gap-2 pt-2">
             <Button type="submit" className="flex-1" disabled={saving || deleting}>
