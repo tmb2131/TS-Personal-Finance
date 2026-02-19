@@ -715,7 +715,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                   const percentRaw = dailyNeutralInsights.usedPercent ?? 0
                                   const percentClamped = Math.min(Math.max(percentRaw, 0), 100)
                                   const mobileSize = 96
-                                  const desktopSize = 86
+                                  const desktopSize = 112
                                   const stroke = 10
                                   const usageColor =
                                     percentRaw < 85 ? 'text-green-500' : percentRaw <= 100 ? 'text-amber-500' : 'text-red-500'
@@ -749,48 +749,20 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                           <div className="text-3xl font-bold tabular-nums leading-none">
                                             {formatCurrency(dailyNeutralInsights.neutralSpend)}
                                           </div>
-                                          <div className="mt-1.5 text-xs text-muted-foreground tabular-nums">
-                                            Used {formatCurrency(dailyNeutralInsights.usedSpend)}
-                                          </div>
-                                          <div className={cn('text-xs font-semibold mt-1', usageColor)}>
-                                            {percentRaw.toFixed(Math.abs(percentRaw) >= 100 ? 0 : 1)}% of neutral
-                                          </div>
                                         </div>
                                       </div>
 
-                                      <div className="hidden sm:flex items-center justify-between gap-3">
-                                        <div className="min-w-0">
+                                      <div className="hidden sm:flex flex-col items-center gap-3">
+                                        {renderRing(desktopSize)}
+                                        <div className="text-center">
                                           <div className="text-xl font-bold tabular-nums">
                                             {formatCurrency(dailyNeutralInsights.neutralSpend)}
                                           </div>
-                                          <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
-                                            Used {formatCurrency(dailyNeutralInsights.usedSpend)}
-                                          </div>
-                                          <div className={cn('text-[10px] font-semibold mt-0.5', usageColor)}>
-                                            {percentRaw.toFixed(Math.abs(percentRaw) >= 100 ? 0 : 1)}% of neutral
-                                          </div>
-                                        </div>
-                                        <div className="shrink-0">
-                                          {renderRing(desktopSize)}
                                         </div>
                                       </div>
                                     </>
                                   )
                                 })()}
-                                <div className={cn(
-                                  'text-xs sm:text-[10px] font-medium mt-2 sm:mt-1',
-                                  dailyNeutralInsights.direction === 'improving'
-                                    ? 'text-green-600'
-                                    : dailyNeutralInsights.direction === 'worsening'
-                                      ? 'text-red-600'
-                                      : 'text-muted-foreground'
-                                )}>
-                                  {dailyNeutralInsights.direction === 'improving'
-                                    ? 'Projected next-day forecast: improving'
-                                    : dailyNeutralInsights.direction === 'worsening'
-                                      ? 'Projected next-day forecast: worsening'
-                                      : 'Projected next-day forecast: flat'}
-                                </div>
                               </>
                             ) : (
                               <div className="text-xs text-muted-foreground">Not enough data</div>
