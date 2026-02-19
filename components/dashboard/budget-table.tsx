@@ -800,7 +800,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                 <Table className={expenseCompactClass}>
                   <TableHeader>
                     <TableRow className="border-b bg-muted">
-                      <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-primary/10')}>
+                      <TableHead className="bg-muted">
                         <button
                           onClick={() => handleExpenseSort('category')}
                           className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
@@ -809,7 +809,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
-                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-primary/10')}>
+                      <TableHead className="text-right bg-muted">
                         <button
                           onClick={() => handleExpenseSort('annualBudget')}
                           className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
@@ -818,7 +818,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
-                      <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-primary/10')}>
+                      <TableHead className="text-right bg-muted">
                         <button
                           onClick={() => handleExpenseSort('tracking')}
                           className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
@@ -827,7 +827,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-primary/10')}>
+                        <TableHead className="text-right bg-muted">
                         <button
                           onClick={() => handleExpenseSort('gap')}
                           className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
@@ -917,8 +917,8 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                   <Table className={expenseCompactClass}>
                     <TableHeader>
                       <TableRow className="border-b bg-muted">
-                        <TableHead className={cn('bg-muted', expenseSortField === 'category' && 'bg-primary/10')}>
-                          <button
+<TableHead className="bg-muted">
+                            <button
                             onClick={() => handleExpenseSort('category')}
                             className={cn('flex items-center hover:opacity-70 transition-opacity', expenseSortField === 'category' && 'font-semibold')}
                           >
@@ -926,7 +926,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <SortIcon field="category" currentField={expenseSortField} direction={expenseSortDirection} />
                           </button>
                         </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'annualBudget' && 'bg-primary/10')}>
+                        <TableHead className="text-right bg-muted">
                           <button
                             onClick={() => handleExpenseSort('annualBudget')}
                             className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'annualBudget' && 'font-semibold')}
@@ -935,7 +935,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <SortIcon field="annualBudget" currentField={expenseSortField} direction={expenseSortDirection} />
                           </button>
                         </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'tracking' && 'bg-primary/10')}>
+                        <TableHead className="text-right bg-muted">
                           <button
                             onClick={() => handleExpenseSort('tracking')}
                             className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'tracking' && 'font-semibold')}
@@ -944,7 +944,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
                           </button>
                         </TableHead>
-                        <TableHead className={cn('text-right bg-muted', expenseSortField === 'gap' && 'bg-primary/10')}>
+                        <TableHead className="text-right bg-muted">
                           <button
                             onClick={() => handleExpenseSort('gap')}
                             className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
