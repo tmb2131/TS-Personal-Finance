@@ -837,9 +837,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         </button>
                       </TableHead>
                       <TableHead className="w-16 bg-muted"></TableHead>
-                      <TableHead className="text-right bg-muted whitespace-nowrap">Gap change vs 1 day ago</TableHead>
-                      <TableHead className="text-right bg-muted whitespace-nowrap">Gap change vs 1 week ago</TableHead>
-                      <TableHead className="text-right bg-muted whitespace-nowrap">Gap change vs 1 month ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">1 day ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">1 week ago</TableHead>
+                      <TableHead className="text-right bg-muted whitespace-nowrap">1 month ago</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
