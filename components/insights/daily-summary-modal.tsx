@@ -733,7 +733,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                           <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={ringStroke} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${dash} ${circumference - dash}`} />
                                         </svg>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                          <div className={cn('text-xs font-semibold tabular-nums', usageColor)}>
+                                          <div className={cn('text-sm sm:text-base font-bold tabular-nums', usageColor)}>
                                             {Math.round(percentRaw)}%
                                           </div>
                                         </div>
@@ -746,7 +746,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                       <div className="flex flex-col items-center gap-3 sm:hidden">
                                         {renderRing(mobileSize)}
                                         <div className="text-center">
-                                          <div className="text-3xl font-bold tabular-nums leading-none">
+                                          <div className="text-base font-normal text-muted-foreground tabular-nums leading-none">
                                             {formatCurrency(dailyNeutralInsights.neutralSpend)}
                                           </div>
                                         </div>
@@ -755,7 +755,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                       <div className="hidden sm:flex flex-col items-center gap-3">
                                         {renderRing(desktopSize)}
                                         <div className="text-center">
-                                          <div className="text-xl font-bold tabular-nums">
+                                          <div className="text-sm font-normal text-muted-foreground tabular-nums">
                                             {formatCurrency(dailyNeutralInsights.neutralSpend)}
                                           </div>
                                         </div>
