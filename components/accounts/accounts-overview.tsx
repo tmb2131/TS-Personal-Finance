@@ -633,7 +633,7 @@ export function AccountsOverview() {
                     <TableCell>
                       <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
+                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
                           style={{
                             width: `${Math.min((Math.abs(item.total) / maxSummaryBalance) * 100, 100)}%`,
                           }}
@@ -830,7 +830,7 @@ export function AccountsOverview() {
                           <TableCell>
                             <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                               <div
-                                className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
+                                className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
                                 style={{
                                   width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
                                 }}
@@ -874,7 +874,7 @@ export function AccountsOverview() {
                       <TableCell>
                         <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                           <div
-                            className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 right-0"
+                            className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
                             style={{
                               width: `${Math.min((Math.abs(group.subtotal) / maxAccountBalance) * 100, 100)}%`,
                             }}
