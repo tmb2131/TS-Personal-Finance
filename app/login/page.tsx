@@ -1,15 +1,18 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+const supabase = createClient()
+
 function LoginForm() {
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const oauthUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     const error = searchParams.get('error')
@@ -20,18 +23,27 @@ function LoginForm() {
     }
   }, [searchParams])
 
-  const supabase = createClient()
+  useEffect(() => {
+    const redirectTo = `${window.location.origin}/auth/callback`
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true },
+    }).then(({ data }) => {
+      if (data?.url) oauthUrlRef.current = data.url
+    })
+  }, [])
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
     setMessage('')
 
     try {
-      const redirectTo =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/callback`
-          : ''
+      if (oauthUrlRef.current) {
+        window.location.href = oauthUrlRef.current
+        return
+      }
 
+      const redirectTo = `${window.location.origin}/auth/callback`
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo },
