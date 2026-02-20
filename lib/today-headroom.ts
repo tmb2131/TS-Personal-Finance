@@ -97,56 +97,51 @@ function totalForecastTomorrowWithExtraInMethodology(
   }, 0)
 }
 
-/** Solve for X >= 0 such that totalForecastTomorrow(..., methodology, X) = totalToday. Returns null for Manual and Budget (excluded from headroom). */
-function solveHeadroomForMethodology(
+/**
+ * Today's budget headroom for a methodology.
+ * Annual: sum of (annualBudget / daysInYear) over Annual categories (one day's budget each).
+ * Linear: sum of per-category headroom over Linear categories (keeps each category's forecast flat).
+ * Budget/Manual: null.
+ */
+function todayBudgetHeadroomForMethodology(
   categories: TodayHeadroomInput['categories'],
   todaySpendByCategory: Map<string, number>,
   pctToday: number,
   pctTomorrow: number,
+  daysInYear: number,
   methodology: YearMethod
 ): number | null {
   if (methodology === 'Manual' || methodology === 'Budget') return null
   const inMethod = categories.filter((c) => c.method === methodology)
   if (inMethod.length === 0) return null
 
-  const totalToday = totalForecastTodayInternal(categories, todaySpendByCategory, pctToday)
-  const totalTomorrowAtZero = totalForecastTomorrowWithExtraInMethodology(
-    categories,
-    todaySpendByCategory,
-    pctTomorrow,
-    methodology,
-    0
-  )
-
-  if (totalTomorrowAtZero >= totalToday - EPS) return 0
-
-  let high = Math.max(1000, Math.abs(totalToday - totalTomorrowAtZero) * 2, 1)
-  while (
-    totalForecastTomorrowWithExtraInMethodology(
-      categories,
-      todaySpendByCategory,
-      pctTomorrow,
-      methodology,
-      high
-    ) < totalToday &&
-    high < 1e8
-  ) {
-    high *= 2
+  if (methodology === 'Annual') {
+    const sum = inMethod.reduce((acc, row) => acc + row.annualBudget / daysInYear, 0)
+    return Math.max(0, sum)
   }
-  let low = 0
-  for (let i = 0; i < 60; i++) {
-    const mid = (low + high) / 2
-    const tot = totalForecastTomorrowWithExtraInMethodology(
-      categories,
-      todaySpendByCategory,
-      pctTomorrow,
-      methodology,
-      mid
-    )
-    if (tot < totalToday - EPS) low = mid
-    else high = mid
+
+  if (methodology === 'Linear') {
+    let sum = 0
+    for (const row of inMethod) {
+      const todaySpend = todaySpendByCategory.get(row.category) ?? 0
+      const h = computeCategoryHeadroom(
+        {
+          category: row.category,
+          annualBudget: row.annualBudget,
+          ytdYesterday: row.ytdYesterday,
+          todaySpend,
+          method: 'Linear',
+          manualYearForecast: row.manualYearForecast,
+        },
+        pctToday,
+        pctTomorrow
+      )
+      if (h != null && Number.isFinite(h)) sum += h
+    }
+    return Math.max(0, sum)
   }
-  return Math.max(0, (low + high) / 2)
+
+  return null
 }
 
 /**
@@ -236,11 +231,12 @@ export function computeTodayHeadroom(input: TodayHeadroomInput): {
   const headroomByMethodology = new Map<YearMethod, number | null>()
   const methods: YearMethod[] = ['Annual', 'Budget', 'Linear', 'Manual']
   for (const method of methods) {
-    const headroom = solveHeadroomForMethodology(
+    const headroom = todayBudgetHeadroomForMethodology(
       categories,
       todaySpendByCategory,
       pctToday,
       pctTomorrow,
+      daysInYear,
       method
     )
     headroomByMethodology.set(method, headroom)
