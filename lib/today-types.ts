@@ -16,7 +16,7 @@ export type TodayPageData = {
   budgetSumByMethodology: Record<string, number>
   /** Implied change in overall forecast if there is no more spend today (tomorrow total − today total). Positive = forecast rises. */
   impliedForecastChange: number | null
-  /** Total forecast today (sum over categories); used for optional display. */
+  /** Total forecast as of end of previous day (YTD excluding today's spend); stable for the day. */
   totalForecastToday?: number | null
   /** Total forecast at end of day if no more spend today; used for optional display. */
   totalForecastTomorrowAtZero?: number | null

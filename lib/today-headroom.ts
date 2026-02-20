@@ -71,7 +71,7 @@ function totalForecastTodayInternal(
   }, 0)
 }
 
-/** Total forecast tomorrow if we add `extraInMethodology` to that methodology's categories. Extra distributed equally. Sum over all categories. */
+/** Total forecast tomorrow with current YTD (extraInMethodology=0) or with YTD reduced by extra (simulated less spend). Used for totalForecastTomorrowAtZero. */
 function totalForecastTomorrowWithExtraInMethodology(
   categories: TodayHeadroomInput['categories'],
   todaySpendByCategory: Map<string, number>,
@@ -91,20 +91,43 @@ function totalForecastTomorrowWithExtraInMethodology(
   }, 0)
 }
 
-/** Solve for x >= 0 such that totalForecastTomorrow(..., methodology, x) = totalForecastToday. Returns null for Budget and Manual. */
+/** Total forecast tomorrow if we add `addedSpendInMethodology` to that methodology's categories (simulated more spend). YTD is negative for expenses, so we subtract added to make YTD more negative. Distributed equally. */
+function totalForecastTomorrowWithAddedSpendInMethodology(
+  categories: TodayHeadroomInput['categories'],
+  todaySpendByCategory: Map<string, number>,
+  pctTomorrow: number,
+  methodology: YearMethod,
+  addedSpendInMethodology: number
+): number {
+  const inMethod = categories.filter((c) => c.method === methodology)
+  const n = inMethod.length
+  const addedPerCategory = n > 0 ? addedSpendInMethodology / n : 0
+  return categories.reduce((sum, row) => {
+    const todaySpend = todaySpendByCategory.get(row.category) ?? 0
+    const added = row.method === methodology ? addedPerCategory : 0
+    const ytdTomorrow = row.ytdYesterday + todaySpend - added
+    const f = computeForecast(row.method, row.annualBudget, ytdTomorrow, pctTomorrow, row.manualYearForecast)
+    return sum + Math.abs(f)
+  }, 0)
+}
+
+/**
+ * Solve for X >= 0: how much more you can spend in this methodology so that
+ * tomorrow's total forecast = totalTodayTarget (start-of-day).
+ * Returns null for Budget and Manual.
+ */
 function solveHeadroomForMethodology(
   categories: TodayHeadroomInput['categories'],
   todaySpendByCategory: Map<string, number>,
-  pctToday: number,
   pctTomorrow: number,
-  methodology: YearMethod
+  methodology: YearMethod,
+  totalTodayTarget: number
 ): number | null {
   if (methodology === 'Manual' || methodology === 'Budget') return null
   const inMethod = categories.filter((c) => c.method === methodology)
   if (inMethod.length === 0) return null
 
-  const totalToday = totalForecastTodayInternal(categories, todaySpendByCategory, pctToday)
-  const totalTomorrowAtZero = totalForecastTomorrowWithExtraInMethodology(
+  const totalTomorrowAtZero = totalForecastTomorrowWithAddedSpendInMethodology(
     categories,
     todaySpendByCategory,
     pctTomorrow,
@@ -112,17 +135,17 @@ function solveHeadroomForMethodology(
     0
   )
 
-  if (totalTomorrowAtZero >= totalToday - EPS) return 0
+  if (totalTomorrowAtZero >= totalTodayTarget - EPS) return 0
 
-  let high = Math.max(1000, Math.abs(totalToday - totalTomorrowAtZero) * 2, 1)
+  let high = Math.max(1000, Math.abs(totalTodayTarget - totalTomorrowAtZero) * 2, 1)
   while (
-    totalForecastTomorrowWithExtraInMethodology(
+    totalForecastTomorrowWithAddedSpendInMethodology(
       categories,
       todaySpendByCategory,
       pctTomorrow,
       methodology,
       high
-    ) < totalToday &&
+    ) < totalTodayTarget - EPS &&
     high < 1e8
   ) {
     high *= 2
@@ -130,14 +153,14 @@ function solveHeadroomForMethodology(
   let low = 0
   for (let i = 0; i < 60; i++) {
     const mid = (low + high) / 2
-    const tot = totalForecastTomorrowWithExtraInMethodology(
+    const tot = totalForecastTomorrowWithAddedSpendInMethodology(
       categories,
       todaySpendByCategory,
       pctTomorrow,
       methodology,
       mid
     )
-    if (tot < totalToday - EPS) low = mid
+    if (tot < totalTodayTarget - EPS) low = mid
     else high = mid
   }
   return Math.max(0, (low + high) / 2)
@@ -200,7 +223,8 @@ export function computeTodayHeadroom(input: TodayHeadroomInput): {
   const pctToday = Math.min(Math.max(dayOfYear / daysInYear, 0), 1)
   const pctTomorrow = Math.min(Math.max((dayOfYear + 1) / daysInYear, 0), 1)
 
-  const totalForecastToday = totalForecastTodayInternal(categories, todaySpendByCategory, pctToday)
+  /** Forecast as of end of previous day (YTD excluding today's spend); stable for the day. */
+  const totalForecastToday = totalForecastTodayInternal(categories, new Map<string, number>(), pctToday)
   const totalForecastTomorrowAtZero =
     totalForecastTomorrowWithExtraInMethodology(
       categories,
@@ -233,9 +257,9 @@ export function computeTodayHeadroom(input: TodayHeadroomInput): {
     const headroom = solveHeadroomForMethodology(
       categories,
       todaySpendByCategory,
-      pctToday,
       pctTomorrow,
-      method
+      method,
+      totalForecastToday
     )
     headroomByMethodology.set(method, headroom)
   }

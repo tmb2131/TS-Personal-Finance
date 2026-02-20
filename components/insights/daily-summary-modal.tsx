@@ -20,8 +20,25 @@ import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts, getD
 import { isExpenseCategory } from '@/lib/category-filters'
 import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
 import { computeTodayHeadroom, type YearMethod as HeadroomYearMethod } from '@/lib/today-headroom'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Cell,
+  LabelList,
+} from 'recharts'
 import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
+
+const SPEND_FILL = '#64748b'
+const SPEND_FILL_ALT = '#475569'
+const HEADROOM_FILL = '#86efac'
+const HEADROOM_FILL_ALT = '#bbf7d0'
+const HEADROOM_LABEL_FILL = '#16a34a'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 const SESSION_KEY = 'findash_daily_summary_shown'
@@ -333,7 +350,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       method: row.method as HeadroomYearMethod,
       manualYearForecast: row.manualYearForecast,
     }))
-    const { totalForecastToday, totalForecastTomorrowAtZero } = computeTodayHeadroom({
+    const { totalForecastToday, totalForecastTomorrowAtZero, headroomByMethodology: headroomMap } = computeTodayHeadroom({
       dayOfYear,
       daysInYear,
       todaySpendByCategory,
@@ -343,6 +360,17 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       Number.isFinite(totalForecastToday) && Number.isFinite(totalForecastTomorrowAtZero)
         ? totalForecastTomorrowAtZero - totalForecastToday
         : null
+
+    const spendByMethodology: Record<string, number> = { Annual: 0, Linear: 0, Budget: 0, Manual: 0 }
+    categoryBaseRows.forEach((row) => {
+      const spendPositive = Math.max(0, -(row.todaySpend ?? 0))
+      const m = row.method ?? 'Linear'
+      spendByMethodology[m] = (spendByMethodology[m] ?? 0) + spendPositive
+    })
+    const headroomByMethodology: Record<string, number | null> = {
+      Annual: headroomMap.get('Annual') ?? null,
+      Linear: headroomMap.get('Linear') ?? null,
+    }
 
     const directionScore = categoryBaseRows.reduce((sum, row) => {
       const anchor = Math.abs(row.annualBudget) > 1e-9 ? row.annualBudget : row.ytdYesterday
@@ -421,6 +449,8 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       usedPercent: neutralResult.usedPercent,
       direction,
       impliedForecastChange,
+      spendByMethodology,
+      headroomByMethodology,
     }
   }, [forecastByCategory, forecastSettings, todayTransactions, currency, fxRate, convertAmount])
 
@@ -753,61 +783,73 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                 )}
                               </div>
                             ) : null}
-                            {dailyNeutralInsights?.neutralSpend != null ? (
-                              <>
-                                {(() => {
-                                  const percentRaw = dailyNeutralInsights.usedPercent ?? 0
-                                  const percentClamped = Math.min(Math.max(percentRaw, 0), 100)
-                                  const mobileSize = 96
-                                  const desktopSize = 112
-                                  const stroke = 10
-                                  const usageColor =
-                                    percentRaw < 85 ? 'text-green-500' : percentRaw <= 100 ? 'text-amber-500' : 'text-red-500'
-                                  const ringStroke =
-                                    percentRaw < 85 ? '#22c55e' : percentRaw <= 100 ? '#f59e0b' : '#ef4444'
-
-                                  const renderRing = (size: number) => {
-                                    const radius = (size - stroke) / 2
-                                    const circumference = 2 * Math.PI * radius
-                                    const dash = (percentClamped / 100) * circumference
-                                    return (
-                                      <div className="relative" style={{ width: size, height: size }}>
-                                        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-                                          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-muted/35" />
-                                          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={ringStroke} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${dash} ${circumference - dash}`} />
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                          <div className={cn('text-sm sm:text-base font-bold tabular-nums', usageColor)}>
-                                            {Math.round(percentRaw)}%
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )
-                                  }
-
-                                  return (
-                                    <>
-                                      <div className="flex flex-col items-center gap-3 sm:hidden">
-                                        {renderRing(mobileSize)}
-                                        <div className="text-center">
-                                          <div className="text-base font-normal text-muted-foreground tabular-nums leading-none">
-                                            {formatCurrency(dailyNeutralInsights.neutralSpend)}
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <div className="hidden sm:flex flex-col items-center gap-3">
-                                        {renderRing(desktopSize)}
-                                        <div className="text-center">
-                                          <div className="text-sm font-normal text-muted-foreground tabular-nums">
-                                            {formatCurrency(dailyNeutralInsights.neutralSpend)}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </>
-                                  )
-                                })()}
-                              </>
+                            {dailyNeutralInsights?.spendByMethodology != null && dailyNeutralInsights?.headroomByMethodology != null ? (
+                              (() => {
+                                const toDisplay = (v: number) =>
+                                  currency === 'USD' ? convertAmount(v, 'GBP', fxRate) : v
+                                const chartData = ['Annual', 'Linear'].map((name) => ({
+                                  name,
+                                  spend: toDisplay(dailyNeutralInsights!.spendByMethodology![name] ?? 0),
+                                  headroom: Math.max(
+                                    0,
+                                    toDisplay(dailyNeutralInsights!.headroomByMethodology![name] ?? 0)
+                                  ),
+                                }))
+                                const formatChartCurrency = (value: number) =>
+                                  new Intl.NumberFormat('en-GB', {
+                                    style: 'currency',
+                                    currency,
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0,
+                                  }).format(value)
+                                return (
+                                  <div className="mt-2 h-[120px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                      <BarChart
+                                        data={chartData}
+                                        layout="vertical"
+                                        margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
+                                      >
+                                        <XAxis
+                                          type="number"
+                                          width={0}
+                                          axisLine={false}
+                                          tick={false}
+                                          tickLine={false}
+                                        />
+                                        <YAxis type="category" dataKey="name" width={44} tick={{ fontSize: 11 }} />
+                                        <Tooltip
+                                          formatter={(value: number, name: string) => [
+                                            formatChartCurrency(value),
+                                            name === 'spend' ? 'Spend' : 'Remaining headroom',
+                                          ]}
+                                          contentStyle={{ fontSize: 12 }}
+                                        />
+                                        <Legend
+                                          wrapperStyle={{ fontSize: 10 }}
+                                          formatter={(value) => (value === 'spend' ? 'Spend' : 'Remaining headroom')}
+                                        />
+                                        <Bar dataKey="spend" name="spend" stackId="today" fill={SPEND_FILL} radius={[0, 2, 2, 0]}>
+                                          {chartData.map((_, i) => (
+                                            <Cell key={`s-${i}`} fill={i % 2 === 0 ? SPEND_FILL : SPEND_FILL_ALT} />
+                                          ))}
+                                        </Bar>
+                                        <Bar dataKey="headroom" name="headroom" stackId="today" fill={HEADROOM_FILL} radius={[0, 2, 2, 0]}>
+                                          {chartData.map((_, i) => (
+                                            <Cell key={`h-${i}`} fill={i % 2 === 0 ? HEADROOM_FILL : HEADROOM_FILL_ALT} />
+                                          ))}
+                                          <LabelList
+                                            dataKey="headroom"
+                                            position="right"
+                                            formatter={(value: number) => (value != null && value > 0 ? formatChartCurrency(value) : '')}
+                                            style={{ fontSize: 10, fill: HEADROOM_LABEL_FILL, fontWeight: 'bold' }}
+                                          />
+                                        </Bar>
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </div>
+                                )
+                              })()
                             ) : (
                               <div className="text-xs text-muted-foreground">Not enough data</div>
                             )}

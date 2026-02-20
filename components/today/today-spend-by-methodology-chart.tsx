@@ -16,15 +16,17 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from 'recharts'
 
-/** All methodologies for spend; headroom (dashed cap) only for Annual and Linear. */
+/** All methodologies for spend; headroom only for Annual and Linear. */
 const METHODOLOGY_ORDER = ['Annual', 'Linear', 'Budget', 'Manual'] as const
-const SPEND_FILL = '#f59e0b'
-const SPEND_FILL_ALT = '#d97706'
-/** Lighter segment for headroom; top of bar shows spend + headroom (dashed effect via label) */
-const HEADROOM_FILL = '#fcd34d'
-const HEADROOM_FILL_ALT = '#fde68a'
+const SPEND_FILL = '#64748b'
+const SPEND_FILL_ALT = '#475569'
+/** Light green for headroom */
+const HEADROOM_FILL = '#86efac'
+const HEADROOM_FILL_ALT = '#bbf7d0'
+const HEADROOM_LABEL_FILL = '#16a34a'
 
 type TodaySpendByMethodologyChartProps = {
   spendByMethodology: Record<string, number>
@@ -33,7 +35,7 @@ type TodaySpendByMethodologyChartProps = {
   budgetSumByMethodology?: Record<string, number>
   /** Implied change in overall forecast if no more spend today (tomorrow − today). Positive = rises. */
   impliedForecastChange?: number | null
-  /** Total forecast today; shown when finite. */
+  /** Total forecast as of end of previous day (stable for the day); shown when finite. */
   totalForecastToday?: number | null
   /** Total forecast at end of day if no more spend today; shown when finite. */
   totalForecastTomorrowAtZero?: number | null
@@ -52,10 +54,6 @@ export function TodaySpendByMethodologyChart({
   const chartTheme = useChartTheme()
 
   const chartData = useMemo(() => {
-    const totalSpendToday = METHODOLOGY_ORDER.reduce(
-      (sum, method) => sum + (Number(spendByMethodology[method]) || 0),
-      0
-    )
     const filtered = METHODOLOGY_ORDER.filter((method) => {
       if (budgetSumByMethodology == null) return true
       const budgetSum = budgetSumByMethodology[method] ?? 0
@@ -65,7 +63,7 @@ export function TodaySpendByMethodologyChart({
         (method === 'Annual' || method === 'Linear') &&
         headroomRaw != null &&
         Number.isFinite(headroomRaw)
-          ? Math.max(0, headroomRaw - totalSpendToday)
+          ? Math.max(0, headroomRaw)
           : 0
       const hasHeadroom = remainingHeadroom > 0
       return Number(budgetSum) > 0 || spend > 0 || hasHeadroom
@@ -78,7 +76,7 @@ export function TodaySpendByMethodologyChart({
           (method === 'Annual' || method === 'Linear') &&
           headroomRaw != null &&
           Number.isFinite(headroomRaw)
-            ? Math.max(0, headroomRaw - totalSpendToday)
+            ? Math.max(0, headroomRaw)
             : 0
         return { name: method, spend, headroom: headroomVal }
       })
@@ -90,7 +88,7 @@ export function TodaySpendByMethodologyChart({
         (method === 'Annual' || method === 'Linear') &&
         headroomRaw != null &&
         Number.isFinite(headroomRaw)
-          ? Math.max(0, headroomRaw - totalSpendToday)
+          ? Math.max(0, headroomRaw)
           : 0
       return { name: method, spend, headroom: headroomVal }
     })
@@ -108,24 +106,21 @@ export function TodaySpendByMethodologyChart({
   const fontSizes = getChartFontSizes(isMobile)
   const chartHeight = isMobile ? 260 : 320
 
-  const forecastTodayText =
-    totalForecastToday != null &&
-    Number.isFinite(totalForecastToday) &&
-    totalForecastTomorrowAtZero != null &&
-    Number.isFinite(totalForecastTomorrowAtZero)
-      ? `Forecast today: ${formatCurrency(totalForecastToday)} · If no more spend today: ${formatCurrency(totalForecastTomorrowAtZero)}. `
+  const startingForecastText =
+    totalForecastToday != null && Number.isFinite(totalForecastToday)
+      ? `Starting forecast today: ${formatCurrency(totalForecastToday)}. `
       : ''
 
   const impliedChangeText =
     impliedForecastChange != null && Number.isFinite(impliedForecastChange)
-      ? forecastTodayText +
+      ? startingForecastText +
         (impliedForecastChange > 0
-          ? `Overall forecast rises by ${formatCurrency(impliedForecastChange)}.`
+          ? `If no more spend today: overall forecast rises by ${formatCurrency(impliedForecastChange)}.`
           : impliedForecastChange < 0
-            ? `Overall forecast falls by ${formatCurrency(-impliedForecastChange)}.`
-            : 'Overall forecast unchanged.')
-      : forecastTodayText
-        ? forecastTodayText.slice(0, -2)
+            ? `If no more spend today: overall forecast falls by ${formatCurrency(-impliedForecastChange)}.`
+            : 'If no more spend today: overall forecast unchanged.')
+      : startingForecastText
+        ? startingForecastText.slice(0, -1)
         : null
 
   const impliedChangeClassName =
@@ -169,14 +164,14 @@ export function TodaySpendByMethodologyChart({
             />
             <YAxis
               domain={[0, (dataMax: number) => (typeof dataMax === 'number' && dataMax > 0 ? Math.ceil(dataMax * 1.08) : 1)]}
-              tickFormatter={formatCurrency}
-              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
-              width={isMobile ? 48 : 60}
-              stroke={chartTheme.axisStroke}
+              width={0}
+              axisLine={false}
+              tick={false}
+              tickLine={false}
             />
             <Tooltip
               formatter={(value: number, name: string) => {
-                if (name === 'spend') {
+                if (name?.toLowerCase() === 'spend') {
                   return [formatCurrency(value), 'Spend']
                 }
                 return [formatCurrency(value), 'Remaining headroom']
@@ -213,14 +208,18 @@ export function TodaySpendByMethodologyChart({
               name="Remaining headroom"
               stackId="method"
               radius={[0, 4, 4, 0]}
-              stroke={chartTheme.axisStroke}
-              strokeDasharray="5 5"
-              strokeWidth={2}
+              stroke="transparent"
               fill={HEADROOM_FILL}
             >
               {chartData.map((_, index) => (
                 <Cell key={`headroom-${index}`} fill={index % 2 === 0 ? HEADROOM_FILL : HEADROOM_FILL_ALT} />
               ))}
+              <LabelList
+                dataKey="headroom"
+                position="top"
+                formatter={(value: number) => (value != null && value > 0 ? formatCurrency(value) : '')}
+                style={{ fontSize: fontSizes.axisTick, fill: HEADROOM_LABEL_FILL, fontWeight: 'bold' }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
