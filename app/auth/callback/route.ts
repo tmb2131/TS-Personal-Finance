@@ -41,7 +41,9 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      // Single DB round trip: upsert profile and get is_new (avoids separate select + upsert)
+      let isNewUser: boolean
+
+      // Prefer RPC (one round trip); fall back to select + upsert if RPC missing or fails (e.g. migration not applied)
       const { data: profileResult, error: rpcError } = await supabase
         .rpc('ensure_user_profile', {
           p_id: data.user.id,
@@ -49,13 +51,32 @@ export async function GET(request: Request) {
         })
         .single()
 
-      if (rpcError) {
-        console.error('[auth/callback] ensure_user_profile RPC error:', rpcError)
-        return NextResponse.redirect(`${origin}/login?error=auth_code_error`)
+      if (!rpcError && profileResult) {
+        type EnsureProfileRow = { id: string; email: string | null; google_spreadsheet_id: string | null; is_new: boolean }
+        isNewUser = (profileResult as EnsureProfileRow).is_new === true
+      } else {
+        if (rpcError) {
+          console.warn('[auth/callback] ensure_user_profile RPC failed, using fallback:', rpcError.message)
+        }
+        // Fallback: original select + upsert (two round trips)
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('google_spreadsheet_id')
+          .eq('id', data.user.id)
+          .single()
+        isNewUser = !existingProfile?.google_spreadsheet_id
+        await supabase
+          .from('user_profiles')
+          .upsert(
+            {
+              id: data.user.id,
+              email: data.user.email ?? null,
+              updated_at: new Date().toISOString(),
+              ...(isNewUser ? { google_spreadsheet_id: DUMMY_SHEET_ID } : {}),
+            },
+            { onConflict: 'id' }
+          )
       }
-
-      type EnsureProfileRow = { id: string; email: string | null; google_spreadsheet_id: string | null; is_new: boolean }
-      const isNewUser = (profileResult as EnsureProfileRow | null)?.is_new === true
 
       // For new users, trigger sync in background (don't block redirect)
       if (isNewUser) {
