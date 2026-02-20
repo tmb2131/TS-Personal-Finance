@@ -162,11 +162,18 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
       ? totalForecastTomorrowAtZero - totalForecastToday
       : null
 
+  const budgetSumByMethodology: Record<string, number> = { Annual: 0, Budget: 0, Linear: 0, Manual: 0 }
+  headroomCategories.forEach((row) => {
+    const m = row.method
+    budgetSumByMethodology[m] = (budgetSumByMethodology[m] ?? 0) + row.annualBudget
+  })
+
   return {
     transactions: expenseTransactions,
     spendByCategory,
     spendByMethodology,
     headroomByMethodology,
+    budgetSumByMethodology,
     impliedForecastChange,
   }
 }

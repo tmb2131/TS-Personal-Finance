@@ -17,8 +17,8 @@ import {
   Cell,
 } from 'recharts'
 
-/** Only Annual and Linear shown (Budget and Manual excluded from headroom and chart). */
-const METHODOLOGY_ORDER = ['Annual', 'Linear'] as const
+/** All methodologies for spend; headroom (dashed cap) only for Annual and Linear. */
+const METHODOLOGY_ORDER = ['Annual', 'Linear', 'Budget', 'Manual'] as const
 const SPEND_FILL = '#f59e0b'
 const SPEND_FILL_ALT = '#d97706'
 /** Lighter segment for headroom; top of bar shows spend + headroom (dashed effect via label) */
@@ -28,6 +28,8 @@ const HEADROOM_FILL_ALT = '#fde68a'
 type TodaySpendByMethodologyChartProps = {
   spendByMethodology: Record<string, number>
   headroomByMethodology: Record<string, number | null>
+  /** Sum of annual budgets per methodology; exclude methodology from chart if 0. */
+  budgetSumByMethodology?: Record<string, number>
   /** Implied change in overall forecast if no more spend today (tomorrow − today). Positive = rises. */
   impliedForecastChange?: number | null
 }
@@ -35,6 +37,7 @@ type TodaySpendByMethodologyChartProps = {
 export function TodaySpendByMethodologyChart({
   spendByMethodology,
   headroomByMethodology,
+  budgetSumByMethodology,
   impliedForecastChange,
 }: TodaySpendByMethodologyChartProps) {
   const { currency } = useCurrency()
@@ -42,18 +45,43 @@ export function TodaySpendByMethodologyChart({
   const chartTheme = useChartTheme()
 
   const chartData = useMemo(() => {
-    return METHODOLOGY_ORDER.map((method) => {
+    const filtered = METHODOLOGY_ORDER.filter((method) => {
+      if (budgetSumByMethodology == null) return true
+      const budgetSum = budgetSumByMethodology[method] ?? 0
       const spend = Number(spendByMethodology[method]) || 0
-      const headroom = headroomByMethodology[method]
-      const headroomVal =
-        headroom != null && Number.isFinite(headroom) ? headroom : 0
-      return {
-        name: method,
-        spend,
-        headroom: headroomVal,
-      }
+      const headroomRaw = headroomByMethodology[method]
+      const hasHeadroom =
+        (method === 'Annual' || method === 'Linear') &&
+        headroomRaw != null &&
+        Number.isFinite(headroomRaw) &&
+        headroomRaw > 0
+      return Number(budgetSum) > 0 || spend > 0 || hasHeadroom
     })
-  }, [spendByMethodology, headroomByMethodology])
+    if (filtered.length === 0) {
+      return METHODOLOGY_ORDER.map((method) => {
+        const spend = Number(spendByMethodology[method]) || 0
+        const headroomRaw = headroomByMethodology[method]
+        const headroomVal =
+          (method === 'Annual' || method === 'Linear') &&
+          headroomRaw != null &&
+          Number.isFinite(headroomRaw)
+            ? headroomRaw
+            : 0
+        return { name: method, spend, headroom: headroomVal }
+      })
+    }
+    return filtered.map((method) => {
+      const spend = Number(spendByMethodology[method]) || 0
+      const headroomRaw = headroomByMethodology[method]
+      const headroomVal =
+        (method === 'Annual' || method === 'Linear') &&
+        headroomRaw != null &&
+        Number.isFinite(headroomRaw)
+          ? headroomRaw
+          : 0
+      return { name: method, spend, headroom: headroomVal }
+    })
+  }, [spendByMethodology, headroomByMethodology, budgetSumByMethodology])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -113,6 +141,7 @@ export function TodaySpendByMethodologyChart({
               stroke={chartTheme.axisStroke}
             />
             <YAxis
+              domain={[0, 'auto']}
               tickFormatter={formatCurrency}
               tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
               width={isMobile ? 48 : 60}
