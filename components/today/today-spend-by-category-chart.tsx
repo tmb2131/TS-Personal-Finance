@@ -13,10 +13,10 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from 'recharts'
 
 /** Distinct per-category palette (works in light and dark). */
@@ -95,7 +95,6 @@ export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCateg
             }
             barCategoryGap="18%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="name"
               tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
@@ -106,10 +105,10 @@ export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCateg
             />
             <YAxis
               domain={[0, (dataMax: number) => (typeof dataMax === 'number' && dataMax > 0 ? Math.ceil(dataMax * 1.08) : 1)]}
-              tickFormatter={formatCurrency}
-              tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
-              width={isMobile ? 48 : 60}
-              stroke={chartTheme.axisStroke}
+              width={0}
+              axisLine={false}
+              tick={false}
+              tickLine={false}
             />
             <Tooltip
               formatter={(value: number) => [formatCurrency(value), 'Spend']}
@@ -126,6 +125,12 @@ export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCateg
               {chartData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
               ))}
+              <LabelList
+                dataKey="value"
+                position="top"
+                formatter={(value: number) => (value != null ? formatCurrency(value) : '')}
+                style={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>

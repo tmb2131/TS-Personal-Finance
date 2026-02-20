@@ -11,7 +11,6 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
@@ -156,7 +155,6 @@ export function TodaySpendByMethodologyChart({
             }
             barCategoryGap="18%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
               dataKey="name"
               tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
