@@ -85,9 +85,10 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
         : row.amount_usd != null
           ? toNumber(row.amount_usd) / fxRate
           : 0
-    if (!Number.isFinite(amountGbp) || amountGbp === 0) return
-    const absGbp = Math.abs(amountGbp)
-    todaySpendByCategory.set(row.category, (todaySpendByCategory.get(row.category) ?? 0) + absGbp)
+    if (!Number.isFinite(amountGbp)) return
+    // Raw sum so refunds (positive) offset expenses (negative)
+    todaySpendByCategory.set(row.category, (todaySpendByCategory.get(row.category) ?? 0) + amountGbp)
+    if (amountGbp === 0) return
     expenseTransactions.push({
       id: row.id,
       date: row.date,
@@ -111,16 +112,18 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     if (row.category) budgetByCategory.set(row.category, Number(row.annual_budget_gbp ?? 0))
   })
 
+  // Display spend = net expense as positive (refunds reduce or zero it)
   const spendByCategory: Record<string, number> = {}
-  todaySpendByCategory.forEach((v, k) => {
-    spendByCategory[k] = v
+  todaySpendByCategory.forEach((rawSum, k) => {
+    spendByCategory[k] = Math.max(0, -rawSum)
   })
 
   const spendByMethodology: Record<string, number> = { Annual: 0, Budget: 0, Linear: 0, Manual: 0 }
-  todaySpendByCategory.forEach((spend, category) => {
+  todaySpendByCategory.forEach((rawSum, category) => {
+    const netExpense = Math.max(0, -rawSum)
     const settings = settingsByCategory.get(category)
     const method = (settings?.current_year_method ?? getDefaultForecastMethods(category).year) as YearMethod
-    spendByMethodology[method] = (spendByMethodology[method] ?? 0) + spend
+    spendByMethodology[method] = (spendByMethodology[method] ?? 0) + netExpense
   })
 
   const dayOfYear = getDayOfYear(today)
@@ -140,7 +143,11 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     }
   })
 
-  const { headroomByMethodology: headroomMap } = computeTodayHeadroom({
+  const {
+    headroomByMethodology: headroomMap,
+    totalForecastToday,
+    totalForecastTomorrowAtZero,
+  } = computeTodayHeadroom({
     dayOfYear,
     daysInYear,
     todaySpendByCategory,
@@ -150,12 +157,17 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
   ;(['Annual', 'Budget', 'Linear', 'Manual'] as const).forEach((m) => {
     headroomByMethodology[m] = headroomMap.get(m) ?? null
   })
+  const impliedForecastChange =
+    Number.isFinite(totalForecastToday) && Number.isFinite(totalForecastTomorrowAtZero)
+      ? totalForecastTomorrowAtZero - totalForecastToday
+      : null
 
   return {
     transactions: expenseTransactions,
     spendByCategory,
     spendByMethodology,
     headroomByMethodology,
+    impliedForecastChange,
   }
 }
 

@@ -27,11 +27,14 @@ const HEADROOM_FILL_ALT = '#fde68a'
 type TodaySpendByMethodologyChartProps = {
   spendByMethodology: Record<string, number>
   headroomByMethodology: Record<string, number | null>
+  /** Implied change in overall forecast if no more spend today (tomorrow − today). Positive = rises. */
+  impliedForecastChange?: number | null
 }
 
 export function TodaySpendByMethodologyChart({
   spendByMethodology,
   headroomByMethodology,
+  impliedForecastChange,
 }: TodaySpendByMethodologyChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
@@ -63,6 +66,15 @@ export function TodaySpendByMethodologyChart({
   const fontSizes = getChartFontSizes(isMobile)
   const chartHeight = isMobile ? 260 : 320
 
+  const impliedChangeText =
+    impliedForecastChange != null && Number.isFinite(impliedForecastChange)
+      ? impliedForecastChange > 0
+        ? `If no more spend today: overall forecast rises by ${formatCurrency(impliedForecastChange)}.`
+        : impliedForecastChange < 0
+          ? `If no more spend today: overall forecast falls by ${formatCurrency(-impliedForecastChange)}.`
+          : 'If no more spend today: overall forecast unchanged.'
+      : null
+
   return (
     <Card className="border-l-[3px] border-l-amber-500">
       <CardHeader className="bg-muted/50">
@@ -70,6 +82,9 @@ export function TodaySpendByMethodologyChart({
         <p className="text-sm text-muted-foreground">
           Bar = today&apos;s spend; lighter segment = headroom (how much more you can spend in that methodology before next day&apos;s overall forecast would be lower than today&apos;s).
         </p>
+        {impliedChangeText != null && (
+          <p className="text-sm font-medium text-foreground mt-1">{impliedChangeText}</p>
+        )}
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={chartHeight}>

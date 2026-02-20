@@ -48,6 +48,7 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
       <TodaySpendByMethodologyChart
         spendByMethodology={data.spendByMethodology}
         headroomByMethodology={data.headroomByMethodology}
+        impliedForecastChange={data.impliedForecastChange}
       />
       <TodaySpendByCategoryChart spendByCategory={data.spendByCategory} />
       <TodayTransactions transactions={data.transactions} />

@@ -29,18 +29,19 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
     return `${prefix}${symbol}${formatted}`
   }
 
-  const total = transactions.reduce((sum, t) => {
+  const netTotal = transactions.reduce((sum, t) => {
     const gbp = t.amount_gbp ?? 0
     const usd = t.amount_usd ?? 0
     const hasGbp = t.amount_gbp != null
     const amountInGbp = hasGbp ? gbp : usd / (fxRate || 1)
     const amountInUsd = hasGbp ? gbp * (fxRate || 1) : usd
     const value = currency === 'GBP' ? amountInGbp : amountInUsd
-    return sum + Math.abs(value)
+    return sum + value
   }, 0)
+  const totalDisplay = Math.max(0, -netTotal)
   const totalFormatted =
     (currency === 'GBP' ? '£' : '$') +
-    total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    totalDisplay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   if (transactions.length === 0) {
     return (

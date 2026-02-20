@@ -12,4 +12,6 @@ export type TodayPageData = {
   spendByCategory: Record<string, number>
   spendByMethodology: Record<string, number>
   headroomByMethodology: Record<string, number | null>
+  /** Implied change in overall forecast if there is no more spend today (tomorrow total − today total). Positive = forecast rises. */
+  impliedForecastChange: number | null
 }
