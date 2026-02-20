@@ -13,6 +13,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   Cell,
 } from 'recharts'
@@ -144,7 +145,9 @@ export function TodaySpendByMethodologyChart({
           Bar = today&apos;s spend; lighter segment = remaining headroom (decreases with any spend today, across all methodologies).
         </p>
         {impliedChangeText != null && (
-          <p className={impliedChangeClassName}>{impliedChangeText}</p>
+          <div className="mt-2 rounded-md bg-muted/70 px-3 py-2">
+            <p className={impliedChangeClassName}>{impliedChangeText}</p>
+          </div>
         )}
       </CardHeader>
       <CardContent>
@@ -153,9 +156,10 @@ export function TodaySpendByMethodologyChart({
             data={chartData}
             margin={
               isMobile
-                ? { top: 10, right: 10, left: 0, bottom: 5 }
-                : { top: 20, right: 30, left: 20, bottom: 5 }
+                ? { top: 10, right: 10, left: 0, bottom: 8 }
+                : { top: 20, right: 30, left: 20, bottom: 8 }
             }
+            barCategoryGap="18%"
           >
             <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
@@ -164,7 +168,7 @@ export function TodaySpendByMethodologyChart({
               stroke={chartTheme.axisStroke}
             />
             <YAxis
-              domain={[0, 'auto']}
+              domain={[0, (dataMax: number) => (typeof dataMax === 'number' && dataMax > 0 ? Math.ceil(dataMax * 1.08) : 1)]}
               tickFormatter={formatCurrency}
               tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
               width={isMobile ? 48 : 60}
@@ -175,28 +179,44 @@ export function TodaySpendByMethodologyChart({
                 if (name === 'spend') {
                   return [formatCurrency(value), 'Spend']
                 }
-                return [formatCurrency(value), 'Remaining headroom (dashed cap)']
+                return [formatCurrency(value), 'Remaining headroom']
               }}
               contentStyle={{
                 backgroundColor: chartTheme.tooltipBg,
                 borderColor: chartTheme.tooltipBorder,
                 color: chartTheme.tooltipText,
+                borderRadius: '6px',
+                padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
-            <Bar dataKey="spend" name="spend" stackId="method" radius={[4, 0, 0, 0]} stroke="transparent">
+            <Legend
+              wrapperStyle={{
+                paddingTop: isMobile ? '10px' : '16px',
+                fontSize: fontSizes.legend,
+              }}
+              iconType="square"
+              iconSize={fontSizes.iconSize}
+              formatter={(value) => (
+                <span style={{ fontSize: fontSizes.legend, marginRight: isMobile ? '16px' : '24px' }}>
+                  {value}
+                </span>
+              )}
+            />
+            <Bar dataKey="spend" name="Spend" stackId="method" radius={[4, 0, 0, 0]} stroke="transparent" fill={SPEND_FILL}>
               {chartData.map((_, index) => (
                 <Cell key={`spend-${index}`} fill={index % 2 === 0 ? SPEND_FILL : SPEND_FILL_ALT} />
               ))}
             </Bar>
             <Bar
               dataKey="headroom"
-              name="headroom"
+              name="Remaining headroom"
               stackId="method"
               radius={[0, 4, 4, 0]}
               stroke={chartTheme.axisStroke}
               strokeDasharray="5 5"
               strokeWidth={2}
+              fill={HEADROOM_FILL}
             >
               {chartData.map((_, index) => (
                 <Cell key={`headroom-${index}`} fill={index % 2 === 0 ? HEADROOM_FILL : HEADROOM_FILL_ALT} />

@@ -20,7 +20,7 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
             <Skeleton className="h-6 w-48" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-[260px] w-full md:h-[320px]" />
           </CardContent>
         </Card>
         <Card>
@@ -28,7 +28,7 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
             <Skeleton className="h-6 w-48" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-[280px] w-full" />
+            <Skeleton className="h-[260px] w-full md:h-[320px]" />
           </CardContent>
         </Card>
         <Card>
@@ -36,7 +36,7 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
             <Skeleton className="h-6 w-48" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-[280px] w-full" />
+            <Skeleton className="h-[260px] w-full md:h-[320px]" />
           </CardContent>
         </Card>
       </div>

@@ -19,7 +19,17 @@ import {
   Cell,
 } from 'recharts'
 
-const BAR_COLORS = ['#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f', '#fbbf24', '#fcd34d']
+/** Distinct per-category palette (works in light and dark). */
+const BAR_COLORS = [
+  '#0ea5e9', // sky
+  '#8b5cf6', // violet
+  '#f59e0b', // amber
+  '#10b981', // emerald
+  '#ef4444', // red
+  '#06b6d4', // cyan
+  '#ec4899', // pink
+  '#64748b', // slate
+]
 
 type TodaySpendByCategoryChartProps = {
   spendByCategory: Record<string, number>
@@ -80,9 +90,10 @@ export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCateg
             data={chartData}
             margin={
               isMobile
-                ? { top: 10, right: 10, left: 0, bottom: 5 }
-                : { top: 20, right: 30, left: 20, bottom: 5 }
+                ? { top: 10, right: 10, left: 0, bottom: 56 }
+                : { top: 20, right: 30, left: 20, bottom: 8 }
             }
+            barCategoryGap="18%"
           >
             <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
             <XAxis
@@ -91,9 +102,10 @@ export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCateg
               stroke={chartTheme.axisStroke}
               angle={isMobile ? -45 : 0}
               textAnchor={isMobile ? 'end' : 'middle'}
-              interval={0}
+              interval={isMobile && chartData.length > 6 ? 'preserveStartEnd' : 0}
             />
             <YAxis
+              domain={[0, (dataMax: number) => (typeof dataMax === 'number' && dataMax > 0 ? Math.ceil(dataMax * 1.08) : 1)]}
               tickFormatter={formatCurrency}
               tick={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill }}
               width={isMobile ? 48 : 60}
@@ -105,6 +117,8 @@ export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCateg
                 backgroundColor: chartTheme.tooltipBg,
                 borderColor: chartTheme.tooltipBorder,
                 color: chartTheme.tooltipText,
+                borderRadius: '6px',
+                padding: isMobile ? '6px 10px' : '8px 12px',
                 fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
