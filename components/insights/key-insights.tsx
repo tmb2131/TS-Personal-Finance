@@ -13,10 +13,8 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
-import { createClient } from '@/lib/supabase/client'
 import { EXCLUDED_CATEGORY } from '@/lib/category-filters'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
-import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts } from '@/lib/forecasting'
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
 import {
   LineChart,
@@ -51,52 +49,41 @@ export function KeyInsights() {
 
   useEffect(() => {
     async function fetchData() {
-      const supabase = createClient()
-      
-      const [budgetResult, netWorthResult, accountsResult, { data: { user } }] = await Promise.all([
-        supabase.from('budget_targets').select('*'),
-        supabase.from('historical_net_worth').select('*').order('date', { ascending: false }),
-        supabase.from('account_balances').select('*').order('date_updated', { ascending: false }),
-        supabase.auth.getUser(),
-      ])
+      try {
+        const res = await fetch('/api/insights')
+        const data = await res.json()
 
-      const annualResult = user ? await computeAnnualTrends(supabase, user.id) : []
-      const monthlyResult = user ? await computeMonthlyTrends(supabase, user.id) : []
-      const annualForecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
+        if (!res.ok) {
+          setError((data as { error?: string }).error ?? 'Failed to load insights')
+          setLoading(false)
+          return
+        }
 
-      // Check for errors
-      const errors = [
-        budgetResult.error,
-        netWorthResult.error,
-        accountsResult.error,
-      ].filter(Boolean)
+        if (data.error) {
+          setError('Failed to load some insights data. Please try refreshing the page.')
+        } else {
+          setError(null)
+        }
 
-      if (errors.length > 0) {
-        console.error('Errors fetching insights data:', errors)
-        setError('Failed to load some insights data. Please try refreshing the page.')
-      } else {
-        setError(null)
-      }
+        if (data.budgetData) setBudgetData(data.budgetData as BudgetTarget[])
+        if (Array.isArray(data.annualTrends)) setAnnualTrends(data.annualTrends as AnnualTrend[])
+        if (Array.isArray(data.monthlyTrends)) setMonthlyTrends(data.monthlyTrends as MonthlyTrend[])
+        if (data.historicalNetWorth) setHistoricalNetWorth(data.historicalNetWorth as HistoricalNetWorth[])
+        if (Array.isArray(data.accountBalances)) setAccountBalances(data.accountBalances as AccountBalance[])
 
-      if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
-      if (Array.isArray(annualResult)) setAnnualTrends(annualResult as AnnualTrend[])
-      if (Array.isArray(monthlyResult)) setMonthlyTrends(monthlyResult as MonthlyTrend[])
-      if (annualForecasts) setForecastByCategory(annualForecasts)
-      if (netWorthResult.data) setHistoricalNetWorth(netWorthResult.data as HistoricalNetWorth[])
-      if (accountsResult.data) {
-        // Get most recent balance for each account
-        const accountsMap = new Map<string, AccountBalance>()
-        accountsResult.data.forEach((account: AccountBalance) => {
-          const key = `${account.institution}-${account.account_name}`
-          const existing = accountsMap.get(key)
-          if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
-            accountsMap.set(key, account)
+        if (Array.isArray(data.forecastByCategory)) {
+          const map = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
+          for (const e of data.forecastByCategory as { category: string; forecast: number; ytd: number; annualBudget: number }[]) {
+            map.set(e.category, { forecast: e.forecast, ytd: e.ytd, annualBudget: e.annualBudget })
           }
-        })
-        setAccountBalances(Array.from(accountsMap.values()))
+          setForecastByCategory(map)
+        }
+      } catch (err) {
+        console.error('Error fetching insights data:', err)
+        setError('Failed to load insights. Please try refreshing the page.')
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     fetchData()
