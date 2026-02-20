@@ -33,9 +33,9 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // getClaims() verifies JWT locally (cached JWKS); faster than getUser() which hits Auth server
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub } : null
 
   const pathname = request.nextUrl.pathname
 

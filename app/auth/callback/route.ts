@@ -41,28 +41,21 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      // Check if this is a new user (no existing profile or no google_spreadsheet_id)
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('google_spreadsheet_id')
-        .eq('id', data.user.id)
+      // Single DB round trip: upsert profile and get is_new (avoids separate select + upsert)
+      const { data: profileResult, error: rpcError } = await supabase
+        .rpc('ensure_user_profile', {
+          p_id: data.user.id,
+          p_email: data.user.email ?? null,
+        })
         .single()
 
-      const isNewUser = !existingProfile?.google_spreadsheet_id
+      if (rpcError) {
+        console.error('[auth/callback] ensure_user_profile RPC error:', rpcError)
+        return NextResponse.redirect(`${origin}/login?error=auth_code_error`)
+      }
 
-      // Upsert user profile
-      await supabase
-        .from('user_profiles')
-        .upsert(
-          { 
-            id: data.user.id, 
-            email: data.user.email ?? null, 
-            updated_at: new Date().toISOString(),
-            // Set dummy sheet ID for new users
-            ...(isNewUser ? { google_spreadsheet_id: DUMMY_SHEET_ID } : {}),
-          },
-          { onConflict: 'id' }
-        )
+      type EnsureProfileRow = { id: string; email: string | null; google_spreadsheet_id: string | null; is_new: boolean }
+      const isNewUser = (profileResult as EnsureProfileRow | null)?.is_new === true
 
       // For new users, trigger sync in background (don't block redirect)
       if (isNewUser) {
