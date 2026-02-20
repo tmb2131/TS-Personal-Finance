@@ -194,7 +194,7 @@ export default async function TodayPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="rounded-xl border border-l-[3px] border-l-amber-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
+      <div className="rounded-xl border border-l-[3px] border-l-slate-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold">Today</h1>
           <p className="text-sm md:text-base text-muted-foreground">

@@ -132,7 +132,7 @@ export function TodaySpendByMethodologyChart({
       : 'text-sm font-bold text-foreground mt-1'
 
   return (
-    <Card className="border-l-[3px] border-l-amber-500">
+    <Card className="border-l-[3px] border-l-slate-500">
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
         <p className="text-sm text-muted-foreground">
