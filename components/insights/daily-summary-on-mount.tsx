@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useDailySummary } from './daily-summary-context'
 import { shouldShowDailySummary } from './daily-summary-modal'
 
 export function DailySummaryOnMount() {
+  const searchParams = useSearchParams()
   const { openModal, startPrefetch } = useDailySummary()
+  const openDaily = searchParams.get('openDaily') === '1'
 
   // Start prefetching daily summary data as soon as we're on insights so it's ready when the modal opens
   useEffect(() => {
@@ -14,12 +17,16 @@ export function DailySummaryOnMount() {
   }, [startPrefetch])
 
   useEffect(() => {
-    // Check if we should show the modal (not dismissed)
     if (!shouldShowDailySummary()) return
+
+    // Post-login: open daily summary immediately so user doesn't see key insights first
+    if (openDaily) {
+      openModal()
+      return
+    }
 
     let cancelled = false
 
-    // Check if user has data before showing
     async function checkForData() {
       const supabase = createClient()
       const { data: budgetData } = await supabase
@@ -27,9 +34,7 @@ export function DailySummaryOnMount() {
         .select('id')
         .limit(1)
       
-      // Only show if there's actual budget data (not just dummy data)
       if (!cancelled && budgetData && budgetData.length > 0) {
-        // Small delay to ensure page is loaded
         setTimeout(() => {
           if (!cancelled) {
             openModal()
@@ -43,7 +48,7 @@ export function DailySummaryOnMount() {
     return () => {
       cancelled = true
     }
-  }, [openModal])
+  }, [openModal, openDaily])
 
   return null
 }

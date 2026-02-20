@@ -6,6 +6,7 @@ import { DummyDataMessage } from '@/components/insights/dummy-data-message'
 import { AutoSyncOnMount } from '@/components/insights/auto-sync-on-mount'
 import { DailySummaryOnMount } from '@/components/insights/daily-summary-on-mount'
 import { InsightsHashScroll } from '@/components/insights/insights-hash-scroll'
+import { InsightsContentWithOpenDaily } from '@/components/insights/insights-content-with-open-daily'
 
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
@@ -35,13 +36,15 @@ export default async function InsightsPage() {
       <DailySummaryOnMount />
       <ConnectSheetModal open={needsSpreadsheet} />
       {hasDummyData && <DummyDataMessage />}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Key Insights</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Quick overview of your financial performance and trends
-        </p>
-      </div>
-      <KeyInsights />
+      <InsightsContentWithOpenDaily>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Key Insights</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Quick overview of your financial performance and trends
+          </p>
+        </div>
+        <KeyInsights />
+      </InsightsContentWithOpenDaily>
     </div>
   )
 }

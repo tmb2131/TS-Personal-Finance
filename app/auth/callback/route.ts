@@ -6,7 +6,7 @@ import { recordLastSync } from '@/lib/sync-metadata'
 import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
-const POST_LOGIN_REDIRECT = '/insights'
+const POST_LOGIN_REDIRECT = '/insights?openDaily=1'
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
 export async function GET(request: Request) {
