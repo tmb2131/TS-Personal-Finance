@@ -132,6 +132,43 @@ export function TransactionsList() {
     return sum
   }, [filteredTransactions, currency, fxRate])
 
+  // Group filtered transactions by day (date string YYYY-MM-DD), sorted newest first
+  const transactionsByDay = useMemo(() => {
+    const byDay = new Map<string, TransactionLog[]>()
+    for (const t of filteredTransactions) {
+      const dateStr = t.date
+      if (!byDay.has(dateStr)) byDay.set(dateStr, [])
+      byDay.get(dateStr)!.push(t)
+    }
+    const sortedDates = Array.from(byDay.keys()).sort((a, b) => b.localeCompare(a))
+    return sortedDates.map((dateStr) => ({ dateStr, transactions: byDay.get(dateStr)! }))
+  }, [filteredTransactions])
+
+  const formatDayHeader = (dateStr: string): string => {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const date = new Date(y, (m ?? 1) - 1, d ?? 1)
+    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+  }
+
+  const getDayTotal = (dayTransactions: TransactionLog[]): number => {
+    let sum = 0
+    for (const t of dayTransactions) {
+      const gbp = t.amount_gbp ?? 0
+      const usd = t.amount_usd ?? 0
+      const hasGbp = t.amount_gbp != null
+      const amountInGbp = hasGbp ? gbp : usd / (fxRate || 1)
+      const amountInUsd = hasGbp ? gbp * (fxRate || 1) : usd
+      sum += currency === 'GBP' ? amountInGbp : amountInUsd
+    }
+    return sum
+  }
+
+  const formatTotal = (value: number): string => {
+    const prefix = value < 0 ? '-' : ''
+    const symbol = currency === 'GBP' ? '£' : '$'
+    return `${prefix}${symbol}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
   // Close filter when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -272,30 +309,52 @@ export function TransactionsList() {
           }
         />
       ) : (
-        <ul className="space-y-1">
-          {filteredTransactions.map((t) => (
-            <li
-              key={t.id}
-              className="flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50"
-            >
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground"
-                aria-hidden
-              >
-                {merchantInitial(t)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-foreground">
-                  {t.counterparty?.trim() || 'Unknown'}
-                </p>
-                <p className="truncate text-sm text-muted-foreground">{t.category || '—'}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-medium text-foreground">{formatAmount(t)}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-6">
+          {transactionsByDay.map(({ dateStr, transactions: dayTransactions }) => {
+            const dayTotal = getDayTotal(dayTransactions)
+            return (
+              <section key={dateStr} className="space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <h3 className="text-base font-semibold text-foreground">
+                    {formatDayHeader(dateStr)}
+                  </h3>
+                  <span
+                    className={cn(
+                      'text-sm font-medium',
+                      dayTotal < 0 ? 'text-foreground' : 'text-muted-foreground'
+                    )}
+                  >
+                    {formatTotal(dayTotal)}
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {dayTransactions.map((t) => (
+                    <li
+                      key={t.id}
+                      className="flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground"
+                        aria-hidden
+                      >
+                        {merchantInitial(t)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">
+                          {t.counterparty?.trim() || 'Unknown'}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">{t.category || '—'}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-medium text-foreground">{formatAmount(t)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
       )}
     </div>
   )
