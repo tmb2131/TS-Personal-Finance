@@ -1,23 +1,14 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
-
 /**
- * When openDaily=1 (post-login), we hide the key insights content so the daily
- * summary modal is the first thing the user sees. Content is shown after they
- * close the modal (URL is cleared to /insights).
+ * Wrapper for Key Insights page content. The daily summary modal is opened on
+ * mount when openDaily=1 (see DailySummaryOnMount); we always render children
+ * so the page is never blank if the modal is slow to open or has no data.
  */
 export function InsightsContentWithOpenDaily({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const searchParams = useSearchParams()
-  const openDaily = searchParams.get('openDaily') === '1'
-
-  if (openDaily) {
-    return null
-  }
-
   return <>{children}</>
 }

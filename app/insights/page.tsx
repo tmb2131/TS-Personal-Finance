@@ -7,6 +7,7 @@ import { AutoSyncOnMount } from '@/components/insights/auto-sync-on-mount'
 import { DailySummaryOnMount } from '@/components/insights/daily-summary-on-mount'
 import { InsightsHashScroll } from '@/components/insights/insights-hash-scroll'
 import { InsightsContentWithOpenDaily } from '@/components/insights/insights-content-with-open-daily'
+import { fetchInsightsData } from '@/lib/insights-data'
 
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
@@ -20,11 +21,14 @@ export default async function InsightsPage() {
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('google_spreadsheet_id')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, initialData] = await Promise.all([
+    supabase
+      .from('user_profiles')
+      .select('google_spreadsheet_id')
+      .eq('id', user.id)
+      .single(),
+    fetchInsightsData(supabase, user.id),
+  ])
 
   const needsSpreadsheet = !profile?.google_spreadsheet_id?.trim()
   const hasDummyData = profile?.google_spreadsheet_id === DUMMY_SHEET_ID
@@ -43,7 +47,7 @@ export default async function InsightsPage() {
             Quick overview of your financial performance and trends
           </p>
         </div>
-        <KeyInsights />
+        <KeyInsights initialData={initialData} />
       </InsightsContentWithOpenDaily>
     </div>
   )

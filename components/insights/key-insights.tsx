@@ -14,6 +14,7 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { EXCLUDED_CATEGORY } from '@/lib/category-filters'
+import type { InsightsDataPayload } from '@/lib/insights-data'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
 import {
@@ -31,23 +32,61 @@ import {
   LabelList,
 } from 'recharts'
 
-export function KeyInsights() {
+function forecastMapFromPayload(forecastByCategory: InsightsDataPayload['forecastByCategory']) {
+  const map = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
+  if (!Array.isArray(forecastByCategory)) return map
+  for (const e of forecastByCategory) {
+    map.set(e.category, { forecast: e.forecast, ytd: e.ytd, annualBudget: e.annualBudget })
+  }
+  return map
+}
+
+function applyPayloadToState(
+  data: InsightsDataPayload,
+  setters: {
+    setBudgetData: (v: BudgetTarget[]) => void
+    setAnnualTrends: (v: AnnualTrend[]) => void
+    setMonthlyTrends: (v: MonthlyTrend[]) => void
+    setHistoricalNetWorth: (v: HistoricalNetWorth[]) => void
+    setAccountBalances: (v: AccountBalance[]) => void
+    setForecastByCategory: (v: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null) => void
+    setError: (v: string | null) => void
+  }
+) {
+  if (data.budgetData) setters.setBudgetData(data.budgetData)
+  if (Array.isArray(data.annualTrends)) setters.setAnnualTrends(data.annualTrends)
+  if (Array.isArray(data.monthlyTrends)) setters.setMonthlyTrends(data.monthlyTrends)
+  if (data.historicalNetWorth) setters.setHistoricalNetWorth(data.historicalNetWorth)
+  if (Array.isArray(data.accountBalances)) setters.setAccountBalances(data.accountBalances)
+  setters.setForecastByCategory(forecastMapFromPayload(data.forecastByCategory))
+  setters.setError(data.error ?? null)
+}
+
+export interface KeyInsightsProps {
+  /** When provided (e.g. from server), render immediately without client fetch. */
+  initialData?: InsightsDataPayload | null
+}
+
+export function KeyInsights({ initialData }: KeyInsightsProps) {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
   const previousYear = new Date().getFullYear() - 1
-  const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
-  const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
-  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
-  const [historicalNetWorth, setHistoricalNetWorth] = useState<HistoricalNetWorth[]>([])
-  const [accountBalances, setAccountBalances] = useState<AccountBalance[]>([])
-  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [budgetData, setBudgetData] = useState<BudgetTarget[]>(initialData?.budgetData ?? [])
+  const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>(initialData?.annualTrends ?? [])
+  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>(initialData?.monthlyTrends ?? [])
+  const [historicalNetWorth, setHistoricalNetWorth] = useState<HistoricalNetWorth[]>(initialData?.historicalNetWorth ?? [])
+  const [accountBalances, setAccountBalances] = useState<AccountBalance[]>(initialData?.accountBalances ?? [])
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(
+    initialData ? forecastMapFromPayload(initialData.forecastByCategory) : null
+  )
+  const [loading, setLoading] = useState(!initialData)
+  const [error, setError] = useState<string | null>(initialData?.error ?? null)
   const [showAnnualSpendBreakdownMobile, setShowAnnualSpendBreakdownMobile] = useState(false)
   const [showMonthlySpendBreakdownMobile, setShowMonthlySpendBreakdownMobile] = useState(false)
 
   useEffect(() => {
+    if (initialData) return
     async function fetchData() {
       try {
         const res = await fetch('/api/insights')
@@ -59,24 +98,17 @@ export function KeyInsights() {
           return
         }
 
+        applyPayloadToState(data as InsightsDataPayload, {
+          setBudgetData,
+          setAnnualTrends,
+          setMonthlyTrends,
+          setHistoricalNetWorth,
+          setAccountBalances,
+          setForecastByCategory,
+          setError,
+        })
         if (data.error) {
           setError('Failed to load some insights data. Please try refreshing the page.')
-        } else {
-          setError(null)
-        }
-
-        if (data.budgetData) setBudgetData(data.budgetData as BudgetTarget[])
-        if (Array.isArray(data.annualTrends)) setAnnualTrends(data.annualTrends as AnnualTrend[])
-        if (Array.isArray(data.monthlyTrends)) setMonthlyTrends(data.monthlyTrends as MonthlyTrend[])
-        if (data.historicalNetWorth) setHistoricalNetWorth(data.historicalNetWorth as HistoricalNetWorth[])
-        if (Array.isArray(data.accountBalances)) setAccountBalances(data.accountBalances as AccountBalance[])
-
-        if (Array.isArray(data.forecastByCategory)) {
-          const map = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
-          for (const e of data.forecastByCategory as { category: string; forecast: number; ytd: number; annualBudget: number }[]) {
-            map.set(e.category, { forecast: e.forecast, ytd: e.ytd, annualBudget: e.annualBudget })
-          }
-          setForecastByCategory(map)
         }
       } catch (err) {
         console.error('Error fetching insights data:', err)
@@ -87,7 +119,7 @@ export function KeyInsights() {
     }
 
     fetchData()
-  }, [])
+  }, [initialData])
 
   // Filter out income categories (for budget and trends)
   const expenseCategories = useMemo(() => {
