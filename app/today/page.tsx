@@ -175,6 +175,8 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     headroomByMethodology,
     budgetSumByMethodology,
     impliedForecastChange,
+    totalForecastToday,
+    totalForecastTomorrowAtZero,
   }
 }
 

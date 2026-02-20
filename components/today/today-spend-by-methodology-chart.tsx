@@ -32,6 +32,10 @@ type TodaySpendByMethodologyChartProps = {
   budgetSumByMethodology?: Record<string, number>
   /** Implied change in overall forecast if no more spend today (tomorrow − today). Positive = rises. */
   impliedForecastChange?: number | null
+  /** Total forecast today; shown when finite. */
+  totalForecastToday?: number | null
+  /** Total forecast at end of day if no more spend today; shown when finite. */
+  totalForecastTomorrowAtZero?: number | null
 }
 
 export function TodaySpendByMethodologyChart({
@@ -39,22 +43,30 @@ export function TodaySpendByMethodologyChart({
   headroomByMethodology,
   budgetSumByMethodology,
   impliedForecastChange,
+  totalForecastToday,
+  totalForecastTomorrowAtZero,
 }: TodaySpendByMethodologyChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
 
   const chartData = useMemo(() => {
+    const totalSpendToday = METHODOLOGY_ORDER.reduce(
+      (sum, method) => sum + (Number(spendByMethodology[method]) || 0),
+      0
+    )
     const filtered = METHODOLOGY_ORDER.filter((method) => {
       if (budgetSumByMethodology == null) return true
       const budgetSum = budgetSumByMethodology[method] ?? 0
       const spend = Number(spendByMethodology[method]) || 0
       const headroomRaw = headroomByMethodology[method]
-      const hasHeadroom =
+      const remainingHeadroom =
         (method === 'Annual' || method === 'Linear') &&
         headroomRaw != null &&
-        Number.isFinite(headroomRaw) &&
-        headroomRaw > 0
+        Number.isFinite(headroomRaw)
+          ? Math.max(0, headroomRaw - totalSpendToday)
+          : 0
+      const hasHeadroom = remainingHeadroom > 0
       return Number(budgetSum) > 0 || spend > 0 || hasHeadroom
     })
     if (filtered.length === 0) {
@@ -65,7 +77,7 @@ export function TodaySpendByMethodologyChart({
           (method === 'Annual' || method === 'Linear') &&
           headroomRaw != null &&
           Number.isFinite(headroomRaw)
-            ? headroomRaw
+            ? Math.max(0, headroomRaw - totalSpendToday)
             : 0
         return { name: method, spend, headroom: headroomVal }
       })
@@ -77,7 +89,7 @@ export function TodaySpendByMethodologyChart({
         (method === 'Annual' || method === 'Linear') &&
         headroomRaw != null &&
         Number.isFinite(headroomRaw)
-          ? headroomRaw
+          ? Math.max(0, headroomRaw - totalSpendToday)
           : 0
       return { name: method, spend, headroom: headroomVal }
     })
@@ -95,14 +107,25 @@ export function TodaySpendByMethodologyChart({
   const fontSizes = getChartFontSizes(isMobile)
   const chartHeight = isMobile ? 260 : 320
 
+  const forecastTodayText =
+    totalForecastToday != null &&
+    Number.isFinite(totalForecastToday) &&
+    totalForecastTomorrowAtZero != null &&
+    Number.isFinite(totalForecastTomorrowAtZero)
+      ? `Forecast today: ${formatCurrency(totalForecastToday)} · If no more spend today: ${formatCurrency(totalForecastTomorrowAtZero)}. `
+      : ''
+
   const impliedChangeText =
     impliedForecastChange != null && Number.isFinite(impliedForecastChange)
-      ? impliedForecastChange > 0
-        ? `If no more spend today: overall forecast rises by ${formatCurrency(impliedForecastChange)}.`
-        : impliedForecastChange < 0
-          ? `If no more spend today: overall forecast falls by ${formatCurrency(-impliedForecastChange)}.`
-          : 'If no more spend today: overall forecast unchanged.'
-      : null
+      ? forecastTodayText +
+        (impliedForecastChange > 0
+          ? `Overall forecast rises by ${formatCurrency(impliedForecastChange)}.`
+          : impliedForecastChange < 0
+            ? `Overall forecast falls by ${formatCurrency(-impliedForecastChange)}.`
+            : 'Overall forecast unchanged.')
+      : forecastTodayText
+        ? forecastTodayText.slice(0, -2)
+        : null
 
   const impliedChangeClassName =
     impliedForecastChange != null && Number.isFinite(impliedForecastChange)
@@ -118,7 +141,7 @@ export function TodaySpendByMethodologyChart({
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Bar = today&apos;s spend; lighter segment = headroom (how much more you can spend in that methodology before next day&apos;s overall forecast would be lower than today&apos;s).
+          Bar = today&apos;s spend; lighter segment = remaining headroom (decreases with any spend today, across all methodologies).
         </p>
         {impliedChangeText != null && (
           <p className={impliedChangeClassName}>{impliedChangeText}</p>
@@ -152,7 +175,7 @@ export function TodaySpendByMethodologyChart({
                 if (name === 'spend') {
                   return [formatCurrency(value), 'Spend']
                 }
-                return [formatCurrency(value), 'Headroom (dashed cap)']
+                return [formatCurrency(value), 'Remaining headroom (dashed cap)']
               }}
               contentStyle={{
                 backgroundColor: chartTheme.tooltipBg,
