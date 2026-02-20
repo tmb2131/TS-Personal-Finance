@@ -19,6 +19,7 @@ import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
 import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts, getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExpenseCategory } from '@/lib/category-filters'
 import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
+import { computeTodayHeadroom, type YearMethod as HeadroomYearMethod } from '@/lib/today-headroom'
 import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -325,6 +326,24 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
     if (categoryBaseRows.length === 0) return null
 
+    const headroomCategories = categoryBaseRows.map((row) => ({
+      category: row.category,
+      annualBudget: row.annualBudget,
+      ytdYesterday: row.ytdYesterday,
+      method: row.method as HeadroomYearMethod,
+      manualYearForecast: row.manualYearForecast,
+    }))
+    const { totalForecastToday, totalForecastTomorrowAtZero } = computeTodayHeadroom({
+      dayOfYear,
+      daysInYear,
+      todaySpendByCategory,
+      categories: headroomCategories,
+    })
+    const impliedForecastChange =
+      Number.isFinite(totalForecastToday) && Number.isFinite(totalForecastTomorrowAtZero)
+        ? totalForecastTomorrowAtZero - totalForecastToday
+        : null
+
     const directionScore = categoryBaseRows.reduce((sum, row) => {
       const anchor = Math.abs(row.annualBudget) > 1e-9 ? row.annualBudget : row.ytdYesterday
       if (Math.abs(anchor) <= 1e-9) return sum
@@ -401,6 +420,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       usedSpend,
       usedPercent: neutralResult.usedPercent,
       direction,
+      impliedForecastChange,
     }
   }, [forecastByCategory, forecastSettings, todayTransactions, currency, fxRate, convertAmount])
 
@@ -709,6 +729,30 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                               </div>
                               <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
+                            {dailyNeutralInsights?.impliedForecastChange != null && Number.isFinite(dailyNeutralInsights.impliedForecastChange) ? (
+                              <div className={cn(
+                                'text-sm font-bold mb-3 flex items-center gap-1.5',
+                                dailyNeutralInsights.impliedForecastChange > 0
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : dailyNeutralInsights.impliedForecastChange < 0
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-foreground'
+                              )}>
+                                {dailyNeutralInsights.impliedForecastChange > 0 ? (
+                                  <>
+                                    <TrendingUp className="h-4 w-4 shrink-0" />
+                                    If no more spend today: overall forecast rises by {formatCurrency(Math.abs(dailyNeutralInsights.impliedForecastChange))}.
+                                  </>
+                                ) : dailyNeutralInsights.impliedForecastChange < 0 ? (
+                                  <>
+                                    <TrendingDown className="h-4 w-4 shrink-0" />
+                                    If no more spend today: overall forecast falls by {formatCurrency(Math.abs(dailyNeutralInsights.impliedForecastChange))}.
+                                  </>
+                                ) : (
+                                  'If no more spend today: overall forecast unchanged.'
+                                )}
+                              </div>
+                            ) : null}
                             {dailyNeutralInsights?.neutralSpend != null ? (
                               <>
                                 {(() => {
