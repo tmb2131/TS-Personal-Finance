@@ -45,12 +45,12 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <TodayTransactions transactions={data.transactions} />
-      <TodaySpendByCategoryChart spendByCategory={data.spendByCategory} />
       <TodaySpendByMethodologyChart
         spendByMethodology={data.spendByMethodology}
         headroomByMethodology={data.headroomByMethodology}
       />
+      <TodaySpendByCategoryChart spendByCategory={data.spendByCategory} />
+      <TodayTransactions transactions={data.transactions} />
     </div>
   )
 }

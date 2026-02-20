@@ -2,12 +2,10 @@
 
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
-import { Target } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -53,8 +51,6 @@ export function TodaySpendByMethodologyChart({
     })
   }, [spendByMethodology, headroomByMethodology])
 
-  const hasAnySpend = chartData.some((d) => d.spend > 0)
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
@@ -66,26 +62,6 @@ export function TodaySpendByMethodologyChart({
 
   const fontSizes = getChartFontSizes(isMobile)
   const chartHeight = isMobile ? 260 : 320
-
-  if (!hasAnySpend) {
-    return (
-      <Card className="border-l-[3px] border-l-amber-500">
-        <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Expense by method (Annual, Budget, Linear, Manual). Dashed line = spend + headroom before next day&apos;s forecast drops.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={Target}
-            title="No spend by methodology"
-            description="No expense data for today to show by forecast methodology."
-          />
-        </CardContent>
-      </Card>
-    )
-  }
 
   return (
     <Card className="border-l-[3px] border-l-amber-500">
