@@ -58,20 +58,24 @@ function computeForecast(
   return ytdValue + annualBudget * pctRemaining
 }
 
-/** Total forecast today = sum over all categories of |F_c(today)| (total expected expense as positive). */
+/** Only Annual and Linear contribute to total forecast (Budget and Manual excluded). */
+const FORECAST_METHODS: YearMethod[] = ['Annual', 'Linear']
+
+/** Total forecast today = sum over Annual+Linear categories of |F_c(today)| (total expected expense as positive). */
 function totalForecastTodayInternal(
   categories: TodayHeadroomInput['categories'],
   todaySpendByCategory: Map<string, number>,
   pctToday: number
 ): number {
   return categories.reduce((sum, row) => {
+    if (!FORECAST_METHODS.includes(row.method)) return sum
     const ytd = row.ytdYesterday + (todaySpendByCategory.get(row.category) ?? 0)
     const f = computeForecast(row.method, row.annualBudget, ytd, pctToday, row.manualYearForecast)
     return sum + Math.abs(f)
   }, 0)
 }
 
-/** Total forecast tomorrow if we add `extraInMethodology` to categories using `methodology`. Extra is distributed equally across that methodology's categories. */
+/** Total forecast tomorrow if we add `extraInMethodology` to categories using `methodology`. Extra is distributed equally. Only Annual+Linear contribute. */
 function totalForecastTomorrowWithExtraInMethodology(
   categories: TodayHeadroomInput['categories'],
   todaySpendByCategory: Map<string, number>,
@@ -79,10 +83,12 @@ function totalForecastTomorrowWithExtraInMethodology(
   methodology: YearMethod,
   extraInMethodology: number
 ): number {
+  if (!FORECAST_METHODS.includes(methodology)) return 0
   const inMethod = categories.filter((c) => c.method === methodology)
   const n = inMethod.length
   const extraPerCategory = n > 0 ? extraInMethodology / n : 0
   return categories.reduce((sum, row) => {
+    if (!FORECAST_METHODS.includes(row.method)) return sum
     const todaySpend = todaySpendByCategory.get(row.category) ?? 0
     const extra = row.method === methodology ? extraPerCategory : 0
     const ytdTomorrow = row.ytdYesterday + todaySpend + extra
@@ -91,7 +97,7 @@ function totalForecastTomorrowWithExtraInMethodology(
   }, 0)
 }
 
-/** Solve for X >= 0 such that totalForecastTomorrow(..., methodology, X) = totalToday. Returns null for Manual (forecast independent of YTD). */
+/** Solve for X >= 0 such that totalForecastTomorrow(..., methodology, X) = totalToday. Returns null for Manual and Budget (excluded from headroom). */
 function solveHeadroomForMethodology(
   categories: TodayHeadroomInput['categories'],
   todaySpendByCategory: Map<string, number>,
@@ -99,7 +105,7 @@ function solveHeadroomForMethodology(
   pctTomorrow: number,
   methodology: YearMethod
 ): number | null {
-  if (methodology === 'Manual') return null
+  if (methodology === 'Manual' || methodology === 'Budget') return null
   const inMethod = categories.filter((c) => c.method === methodology)
   if (inMethod.length === 0) return null
 
@@ -201,13 +207,14 @@ export function computeTodayHeadroom(input: TodayHeadroomInput): {
   const pctTomorrow = Math.min(Math.max((dayOfYear + 1) / daysInYear, 0), 1)
 
   const totalForecastToday = totalForecastTodayInternal(categories, todaySpendByCategory, pctToday)
-  const totalForecastTomorrowAtZero = totalForecastTomorrowWithExtraInMethodology(
-    categories,
-    todaySpendByCategory,
-    pctTomorrow,
-    'Annual',
-    0
-  )
+  const totalForecastTomorrowAtZero =
+    totalForecastTomorrowWithExtraInMethodology(
+      categories,
+      todaySpendByCategory,
+      pctTomorrow,
+      'Annual',
+      0
+    )
 
   for (const row of categories) {
     const todaySpend = todaySpendByCategory.get(row.category) ?? 0

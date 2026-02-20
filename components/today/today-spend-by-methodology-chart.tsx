@@ -17,7 +17,8 @@ import {
   Cell,
 } from 'recharts'
 
-const METHODOLOGY_ORDER = ['Annual', 'Budget', 'Linear', 'Manual'] as const
+/** Only Annual and Linear shown (Budget and Manual excluded from headroom and chart). */
+const METHODOLOGY_ORDER = ['Annual', 'Linear'] as const
 const SPEND_FILL = '#f59e0b'
 const SPEND_FILL_ALT = '#d97706'
 /** Lighter segment for headroom; top of bar shows spend + headroom (dashed effect via label) */
@@ -75,6 +76,15 @@ export function TodaySpendByMethodologyChart({
           : 'If no more spend today: overall forecast unchanged.'
       : null
 
+  const impliedChangeClassName =
+    impliedForecastChange != null && Number.isFinite(impliedForecastChange)
+      ? impliedForecastChange > 0
+        ? 'text-sm font-bold text-red-600 dark:text-red-400 mt-1'
+        : impliedForecastChange < 0
+          ? 'text-sm font-bold text-green-600 dark:text-green-400 mt-1'
+          : 'text-sm font-bold text-foreground mt-1'
+      : 'text-sm font-bold text-foreground mt-1'
+
   return (
     <Card className="border-l-[3px] border-l-amber-500">
       <CardHeader className="bg-muted/50">
@@ -83,7 +93,7 @@ export function TodaySpendByMethodologyChart({
           Bar = today&apos;s spend; lighter segment = headroom (how much more you can spend in that methodology before next day&apos;s overall forecast would be lower than today&apos;s).
         </p>
         {impliedChangeText != null && (
-          <p className="text-sm font-medium text-foreground mt-1">{impliedChangeText}</p>
+          <p className={impliedChangeClassName}>{impliedChangeText}</p>
         )}
       </CardHeader>
       <CardContent>
