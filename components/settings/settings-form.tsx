@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,6 +30,7 @@ export function SettingsForm({
   initialDefaultCurrency,
   serviceAccountEmail,
 }: SettingsFormProps) {
+  const router = useRouter()
   const [copiedEmail, setCopiedEmail] = useState(false)
 
   const [spreadsheetId, setSpreadsheetId] = useState(initialSpreadsheetId)
@@ -72,7 +74,7 @@ export function SettingsForm({
         const result = await response.json().catch(() => ({}))
         if (response.ok && result.success) {
           toast.success('Transaction Log synced successfully')
-          window.location.reload()
+          router.refresh()
         } else if (!response.ok) {
           toast.error(result.error || 'Sync failed')
         } else {

@@ -65,7 +65,7 @@ const dayOfYear = (date: Date) => {
   return Math.floor((Number(date) - Number(start)) / MS_PER_DAY)
 }
 
-async function fetchFxRateGBPUSD(supabase: SupabaseClient): Promise<number> {
+export async function fetchFxRateGBPUSD(supabase: SupabaseClient): Promise<number> {
   const { data } = await supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single()
   const rate = data?.gbpusd_rate
   return rate && rate > 0 ? rate : 1.25
@@ -148,11 +148,27 @@ const normalizeManualForecast = (value: number | null | undefined, expense: bool
   return expense ? -Math.abs(num) : Math.abs(num)
 }
 
-async function fetchTransactionsPaged(
+export type TxRowForecast = {
+  category: string
+  date: unknown
+  amount_gbp: number | null
+  amount_usd: number | null
+}
+
+/** Optional preloaded data for daily-summary API to avoid duplicate fetches. transactionRows must be from (currentYear-4)-01-01 through today. */
+export type DailySummaryPreloaded = {
+  rate: number
+  settingsMap: Map<string, ForecastSettingRow>
+  budgetRes: { data: { category: string; annual_budget_gbp: number | null }[] | null }
+  categories: string[]
+  transactionRows: TxRowForecast[]
+}
+
+export async function fetchTransactionsPaged(
   supabase: SupabaseClient,
   userId: string,
   startDate: string
-): Promise<{ category: string; date: any; amount_gbp: number | null; amount_usd: number | null }[]> {
+): Promise<TxRowForecast[]> {
   const all: { category: string; date: any; amount_gbp: number | null; amount_usd: number | null }[] = []
   let page = 0
   let hasMore = true
@@ -183,7 +199,8 @@ async function fetchTransactionsPaged(
 
 export async function computeAnnualForecasts(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  preloaded?: DailySummaryPreloaded
 ): Promise<Map<string, { forecast: number; ytd: number; annualBudget: number }>> {
   const today = new Date()
   const currentYear = today.getFullYear()
@@ -192,14 +209,35 @@ export async function computeAnnualForecasts(
   const pctElapsed = Math.min(Math.max(dayOfYear(today) / totalDaysInYear(currentYear), 0), 1)
   const pctRemaining = 1 - pctElapsed
 
-  const [rate, settingsMap, budgetRes, categories] = await Promise.all([
-    fetchFxRateGBPUSD(supabase),
-    fetchForecastSettingsMap(supabase, userId),
-    supabase.from('budget_targets').select('category, annual_budget_gbp').eq('user_id', userId),
-    fetchCategories(supabase, userId),
-  ])
+  let rate: number
+  let settingsMap: Map<string, ForecastSettingRow>
+  let budgetRes: { data: { category: string; annual_budget_gbp: number | null }[] | null }
+  let categories: string[]
+  let txRes: TxRowForecast[]
 
-  const txRes = await fetchTransactionsPaged(supabase, userId, startDate)
+  if (preloaded) {
+    rate = preloaded.rate
+    settingsMap = preloaded.settingsMap
+    budgetRes = preloaded.budgetRes
+    categories = preloaded.categories
+    txRes = preloaded.transactionRows.filter((tx) => {
+      const dateStr = toDateOnly(tx.date)
+      return dateStr && dateStr.startsWith(String(currentYear))
+    })
+  } else {
+    const [r, s, b, c] = await Promise.all([
+      fetchFxRateGBPUSD(supabase),
+      fetchForecastSettingsMap(supabase, userId),
+      supabase.from('budget_targets').select('category, annual_budget_gbp').eq('user_id', userId),
+      fetchCategories(supabase, userId),
+    ])
+    rate = r
+    settingsMap = s
+    budgetRes = b
+    categories = c
+    txRes = await fetchTransactionsPaged(supabase, userId, startDate)
+  }
+
   const ytd = new Map<string, number>()
 
   ;(txRes || []).forEach((tx) => {
@@ -245,7 +283,8 @@ export async function computeAnnualForecasts(
 
 export async function computeAnnualTrends(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  preloaded?: DailySummaryPreloaded
 ): Promise<AnnualTrend[]> {
   const today = new Date()
   const currentYear = today.getFullYear()
@@ -253,14 +292,27 @@ export async function computeAnnualTrends(
   const totalDaysInYear = (year: number) => (new Date(year, 1, 29).getMonth() === 1 ? 366 : 365)
   const pctYearElapsed = () => dayOfYear(today) / totalDaysInYear(currentYear)
 
-  const [rate, settingsMap, budgetRes] = await Promise.all([
-    fetchFxRateGBPUSD(supabase),
-    fetchForecastSettingsMap(supabase, userId),
-    supabase.from('budget_targets').select('category, annual_budget_gbp').eq('user_id', userId),
-  ])
+  let rate: number
+  let settingsMap: Map<string, ForecastSettingRow>
+  let budgetRes: { data: { category: string; annual_budget_gbp: number | null }[] | null }
+  let txRes: TxRowForecast[]
 
-  // Fetch transactions with pagination to avoid row limits
-  const txRes = await fetchTransactionsPaged(supabase, userId, startDate)
+  if (preloaded) {
+    rate = preloaded.rate
+    settingsMap = preloaded.settingsMap
+    budgetRes = preloaded.budgetRes
+    txRes = preloaded.transactionRows
+  } else {
+    const [r, s, b] = await Promise.all([
+      fetchFxRateGBPUSD(supabase),
+      fetchForecastSettingsMap(supabase, userId),
+      supabase.from('budget_targets').select('category, annual_budget_gbp').eq('user_id', userId),
+    ])
+    rate = r
+    settingsMap = s
+    budgetRes = b
+    txRes = await fetchTransactionsPaged(supabase, userId, startDate)
+  }
 
   const budgetByCategory = new Map<string, number>()
   ;(budgetRes.data || []).forEach((row: { category: string; annual_budget_gbp: number | null }) => {
@@ -289,7 +341,9 @@ export async function computeAnnualTrends(
     }
   })
 
-  const categories = (await fetchCategories(supabase, userId)).filter(isExpense)
+  const categories = preloaded
+    ? preloaded.categories.filter(isExpense)
+    : (await fetchCategories(supabase, userId)).filter(isExpense)
   const pctElapsed = Math.min(Math.max(pctYearElapsed(), 0), 1)
   const pctRemaining = 1 - pctElapsed
 
@@ -340,7 +394,8 @@ export async function computeAnnualTrends(
 
 export async function computeMonthlyTrends(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  preloaded?: DailySummaryPreloaded
 ): Promise<MonthlyTrend[]> {
   const today = new Date()
   const currentYear = today.getFullYear()
@@ -348,13 +403,26 @@ export async function computeMonthlyTrends(
   const startDate = new Date(currentYear, currentMonth - 13, 1) // 13 months back (to cover 12 full months + current)
   const startDateStr = toDateOnly(startDate)
 
-  const [rate, settingsMap] = await Promise.all([
-    fetchFxRateGBPUSD(supabase),
-    fetchForecastSettingsMap(supabase, userId),
-  ])
+  let rate: number
+  let settingsMap: Map<string, ForecastSettingRow>
+  let txRes: TxRowForecast[]
 
-  // Fetch transactions with pagination to avoid row limits
-  const txRes = await fetchTransactionsPaged(supabase, userId, startDateStr)
+  if (preloaded) {
+    rate = preloaded.rate
+    settingsMap = preloaded.settingsMap
+    txRes = preloaded.transactionRows.filter((tx) => {
+      const dateStr = toDateOnly(tx.date)
+      return dateStr && dateStr >= startDateStr
+    })
+  } else {
+    const [r, s] = await Promise.all([
+      fetchFxRateGBPUSD(supabase),
+      fetchForecastSettingsMap(supabase, userId),
+    ])
+    rate = r
+    settingsMap = s
+    txRes = await fetchTransactionsPaged(supabase, userId, startDateStr)
+  }
 
   const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`
 
@@ -376,7 +444,9 @@ export async function computeMonthlyTrends(
     byMonth.set(key, (byMonth.get(key) || 0) + amount)
   })
 
-  const categories = (await fetchCategories(supabase, userId)).filter(isExpense)
+  const categories = preloaded
+    ? preloaded.categories.filter(isExpense)
+    : (await fetchCategories(supabase, userId)).filter(isExpense)
   const daysInCurrentMonth = new Date(currentYear, currentMonth, 0).getDate()
   const pctMonthElapsed = today.getDate() / daysInCurrentMonth
 

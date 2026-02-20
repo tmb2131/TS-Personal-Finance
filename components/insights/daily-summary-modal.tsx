@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import {
   Dialog,
@@ -16,7 +15,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
-import { computeAnnualTrends, computeMonthlyTrends, computeAnnualForecasts, getDefaultForecastMethods } from '@/lib/forecasting'
+import { getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExpenseCategory } from '@/lib/category-filters'
 import { computeForecastNeutralDailyBudget } from '@/lib/forecast-neutral-daily-budget'
 import { computeTodayHeadroom, type YearMethod as HeadroomYearMethod } from '@/lib/today-headroom'
@@ -115,9 +114,47 @@ interface DailySummaryModalProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   modalKey?: number
+  /** If provided, modal will use prefetched data when opening (e.g. from insights page). */
+  consumePrefetch?: () => Promise<unknown> | null
 }
 
-export function DailySummaryModal({ open: controlledOpen, onOpenChange: controlledOnOpenChange, modalKey }: DailySummaryModalProps = {}) {
+function applyDailySummaryData(
+  data: unknown,
+  setters: {
+    setBudgetData: (v: BudgetTarget[]) => void
+    setAnnualTrends: (v: AnnualTrend[]) => void
+    setMonthlyTrends: (v: MonthlyTrend[]) => void
+    setForecastBridge: (v: ForecastBridgeResponse | null) => void
+    setLastSyncDate: (v: string | null) => void
+    setForecastSettings: (v: ForecastSettingsRow[]) => void
+    setTodayTransactions: (v: TransactionForDayRow[]) => void
+    setForecastByCategory: (v: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null) => void
+  }
+) {
+  const d = data as Record<string, unknown>
+  if (d.budgetData) setters.setBudgetData(d.budgetData as BudgetTarget[])
+  if (Array.isArray(d.annualTrends)) setters.setAnnualTrends(d.annualTrends as AnnualTrend[])
+  if (Array.isArray(d.monthlyTrends)) setters.setMonthlyTrends(d.monthlyTrends as MonthlyTrend[])
+  if (d.forecastBridge && !(d.forecastBridge as { error?: unknown }).error) {
+    setters.setForecastBridge(d.forecastBridge as ForecastBridgeResponse)
+  }
+  if (d.lastSyncDate) setters.setLastSyncDate(d.lastSyncDate as string)
+  if (Array.isArray(d.forecastSettings)) {
+    setters.setForecastSettings(d.forecastSettings as ForecastSettingsRow[])
+  }
+  if (Array.isArray(d.todayTransactions)) {
+    setters.setTodayTransactions(d.todayTransactions as TransactionForDayRow[])
+  }
+  if (Array.isArray(d.forecastByCategory)) {
+    const map = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
+    for (const e of d.forecastByCategory as { category: string; forecast: number; ytd: number; annualBudget: number }[]) {
+      map.set(e.category, { forecast: e.forecast, ytd: e.ytd, annualBudget: e.annualBudget })
+    }
+    setters.setForecastByCategory(map)
+  }
+}
+
+export function DailySummaryModal({ open: controlledOpen, onOpenChange: controlledOnOpenChange, modalKey, consumePrefetch }: DailySummaryModalProps = {}) {
   const router = useRouter()
   const { currency, fxRate, convertAmount } = useCurrency()
   // Support both controlled (from context) and uncontrolled (direct prop) usage
@@ -140,55 +177,40 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const supabase = createClient()
-
-    const now = new Date()
-    const yesterday = new Date(now)
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-    const utcTodayStr = now.toISOString().split('T')[0]
-    const localTodayStr = toLocalDateString(now)
-    const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
-
+    const setters = {
+      setBudgetData,
+      setAnnualTrends,
+      setMonthlyTrends,
+      setForecastBridge,
+      setLastSyncDate,
+      setForecastSettings,
+      setTodayTransactions,
+      setForecastByCategory,
+    }
     try {
-      const [budgetResult, syncResult, bridgeResponse, settingsResult, todayTxResult, { data: { user } }] = await Promise.all([
-        supabase.from('budget_targets').select('*'),
-        supabase.from('sync_metadata').select('last_sync_at').single(),
-        fetch(`/api/forecast-bridge?startDate=${yesterdayStr}&endDate=${utcTodayStr}`)
-          .then(async (r) => {
-            if (!r.ok) {
-              const errorData = await r.json().catch(() => ({}))
-              if (r.status === 400 || r.status === 404) return null
-              throw new Error(errorData.error || 'Failed to fetch forecast bridge')
-            }
-            return r.json()
-          })
-          .catch(() => null),
-        supabase.from('forecast_settings').select('category, current_year_method, manual_year_forecast'),
-        supabase.from('transaction_log').select('date, category, amount_gbp, amount_usd').in('date', todayDateCandidates),
-        supabase.auth.getUser(),
-      ])
-
-      const annualResult = user ? await computeAnnualTrends(supabase, user.id) : []
-      const monthlyResult = user ? await computeMonthlyTrends(supabase, user.id) : []
-      const annualForecasts = user ? await computeAnnualForecasts(supabase, user.id) : null
-
-      if (budgetResult.data) setBudgetData(budgetResult.data as BudgetTarget[])
-      if (Array.isArray(annualResult)) setAnnualTrends(annualResult as AnnualTrend[])
-      if (Array.isArray(monthlyResult)) setMonthlyTrends(monthlyResult as MonthlyTrend[])
-      if (annualForecasts) setForecastByCategory(annualForecasts)
-      if (syncResult.data?.last_sync_at) setLastSyncDate(syncResult.data.last_sync_at)
-      if (Array.isArray(settingsResult.data)) setForecastSettings(settingsResult.data as ForecastSettingsRow[])
-      if (Array.isArray(todayTxResult.data)) setTodayTransactions(todayTxResult.data as TransactionForDayRow[])
-      if (bridgeResponse && !bridgeResponse.error) {
-        setForecastBridge(bridgeResponse as ForecastBridgeResponse)
+      const preload = consumePrefetch?.() ?? null
+      if (preload) {
+        try {
+          const data = await preload
+          applyDailySummaryData(data, setters)
+          return
+        } catch {
+          // Prefetch failed or stale; fall through to normal fetch
+        }
       }
+      const res = await fetch('/api/daily-summary')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Failed to fetch daily summary')
+      }
+      const data = await res.json()
+      applyDailySummaryData(data, setters)
     } catch (error) {
       console.error('Error fetching daily summary data:', error)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [consumePrefetch])
 
   // Reset state when modal closes; fetch when open
   useEffect(() => {
@@ -199,6 +221,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       setMonthlyTrends([])
       setForecastBridge(null)
       setLastSyncDate(null)
+      setForecastByCategory(null)
       setForecastSettings([])
       setTodayTransactions([])
       return

@@ -63,7 +63,6 @@ export function ConnectSheetModal({ open }: ConnectSheetModalProps) {
       if (response.ok && result.success) {
         toast.success('Data synced successfully')
         router.refresh()
-        window.location.reload()
         return
       }
       if (!response.ok) {

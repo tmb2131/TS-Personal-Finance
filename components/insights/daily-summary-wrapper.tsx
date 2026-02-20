@@ -4,7 +4,7 @@ import { DailySummaryModal } from './daily-summary-modal'
 import { useDailySummary } from './daily-summary-context'
 
 export function DailySummaryWrapper() {
-  const { isOpen, openModal, closeModal, modalKey } = useDailySummary()
+  const { isOpen, openModal, closeModal, modalKey, consumePrefetch } = useDailySummary()
 
   const handleOpenChange = (open: boolean) => {
     if (open) {
@@ -14,5 +14,12 @@ export function DailySummaryWrapper() {
     }
   }
 
-  return <DailySummaryModal open={isOpen} onOpenChange={handleOpenChange} modalKey={modalKey} />
+  return (
+    <DailySummaryModal
+      open={isOpen}
+      onOpenChange={handleOpenChange}
+      modalKey={modalKey}
+      consumePrefetch={consumePrefetch}
+    />
+  )
 }

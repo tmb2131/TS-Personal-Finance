@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { CurrencyToggle } from './currency-toggle'
 import { ThemeToggle } from './theme-toggle'
 import { Button } from './ui/button'
@@ -26,6 +27,7 @@ const BOTTOM_BOUNDARY_PX = 100
 const HIDE_MIN_DISTANCE_FROM_BOTTOM_PX = 180
 
 export function Header() {
+  const router = useRouter()
   const isMobile = useIsMobile()
   const dailySummary = useDailySummarySafe()
   const [syncing, setSyncing] = useState(false)
@@ -60,7 +62,7 @@ export function Header() {
           syncStartTimeRef.current = null
           await fetchLatestDates()
           toast.success('Transaction Log synced', { description: 'Sheet sync completed while you were away.' })
-          setTimeout(() => window.location.reload(), 800)
+          setTimeout(() => router.refresh(), 800)
         } else {
           setSyncing(false)
           syncStartTimeRef.current = null
@@ -191,10 +193,8 @@ export function Header() {
         })
         // Refresh latest dates (including last_sync_at written by the server)
         await fetchLatestDates()
-        // Reload the page to show updated data
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
+        // Refresh server components to show updated data (no full page reload)
+        setTimeout(() => router.refresh(), 1000)
       } else {
         const errorMsg = result.error || 'Transaction Log sync failed'
         const failedSheets = result.results?.filter((r: any) => !r.success).map((r: any) => r.sheet).join(', ')

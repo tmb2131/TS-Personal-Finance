@@ -1,12 +1,27 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback, useRef } from 'react'
+
+export type DailySummaryPrefetchedData = Awaited<ReturnType<typeof fetchDailySummaryJson>>
+
+async function fetchDailySummaryJson(): Promise<unknown> {
+  const res = await fetch('/api/daily-summary')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { error?: string }).error ?? 'Failed to fetch daily summary')
+  }
+  return res.json()
+}
 
 interface DailySummaryContextType {
   openModal: () => void
   closeModal: () => void
   isOpen: boolean
   modalKey: number
+  /** Start prefetching daily summary data (e.g. when user lands on /insights). */
+  startPrefetch: () => void
+  /** Consume prefetched data if any; returns the promise or null. Caller should clear after use. */
+  consumePrefetch: () => Promise<unknown> | null
 }
 
 const DailySummaryContext = createContext<DailySummaryContextType | undefined>(undefined)
@@ -14,6 +29,19 @@ const DailySummaryContext = createContext<DailySummaryContextType | undefined>(u
 export function DailySummaryProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [modalKey, setModalKey] = useState(0)
+  const prefetchPromiseRef = useRef<Promise<unknown> | null>(null)
+
+  const startPrefetch = useCallback(() => {
+    if (prefetchPromiseRef.current == null) {
+      prefetchPromiseRef.current = fetchDailySummaryJson()
+    }
+  }, [])
+
+  const consumePrefetch = useCallback((): Promise<unknown> | null => {
+    const p = prefetchPromiseRef.current
+    prefetchPromiseRef.current = null
+    return p
+  }, [])
 
   const openModal = useCallback(() => {
     // Increment key to force fresh mount, then open
@@ -29,7 +57,9 @@ export function DailySummaryProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <DailySummaryContext.Provider value={{ openModal, closeModal, isOpen, modalKey }}>
+    <DailySummaryContext.Provider
+      value={{ openModal, closeModal, isOpen, modalKey, startPrefetch, consumePrefetch }}
+    >
       {children}
     </DailySummaryContext.Provider>
   )

@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
 export function AutoSyncOnMount() {
+  const router = useRouter()
   const [hasChecked, setHasChecked] = useState(false)
 
   useEffect(() => {
@@ -43,8 +45,7 @@ export function AutoSyncOnMount() {
             const result = await response.json().catch(() => ({}))
 
             if (response.ok && result.success) {
-              // Refresh the page to show new data
-              window.location.reload()
+              router.refresh()
             } else {
               // Don't show error - let user see the page, they can refresh manually
               console.error('Auto-sync failed:', result.error)

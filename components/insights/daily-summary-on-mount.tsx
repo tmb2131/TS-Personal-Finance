@@ -6,7 +6,12 @@ import { useDailySummary } from './daily-summary-context'
 import { shouldShowDailySummary } from './daily-summary-modal'
 
 export function DailySummaryOnMount() {
-  const { openModal } = useDailySummary()
+  const { openModal, startPrefetch } = useDailySummary()
+
+  // Start prefetching daily summary data as soon as we're on insights so it's ready when the modal opens
+  useEffect(() => {
+    startPrefetch()
+  }, [startPrefetch])
 
   useEffect(() => {
     // Check if we should show the modal (not dismissed)
