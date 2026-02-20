@@ -26,7 +26,7 @@ import { AlertCircle, TrendingUp, TrendingDown, ArrowUpDown, ArrowUp, ArrowDown,
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { CategoryPlanningDialog } from '@/components/category-planning/category-planning-dialog'
 
-type SortField = 'category' | 'cur_month_minus_3' | 'cur_month_minus_2' | 'cur_month_minus_1' | 'cur_month_est' | 'ttm_avg' | 'z_score' | 'delta_last_month' | 'delta_l3m' | 'delta_l12m'
+type SortField = 'category' | 'cur_month_minus_3' | 'cur_month_minus_2' | 'cur_month_minus_1' | 'cur_month_est' | 'mtd' | 'ttm_avg' | 'z_score' | 'delta_last_month' | 'delta_l3m' | 'delta_l12m'
 type SortDirection = 'asc' | 'desc' | null
 
 interface MonthlyTrendsTableProps {
@@ -172,7 +172,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
   const processedData = useMemo(() => {
     const r = currency === 'USD' ? ratesByMonth : null
     const fallbackRate = currency === 'USD' ? currentFxRate : 1
-    const mult = (row: MonthlyTrend, key: keyof Pick<MonthlyTrend, 'cur_month_minus_3' | 'cur_month_minus_2' | 'cur_month_minus_1' | 'cur_month_est' | 'ttm_avg'>) => {
+    const mult = (row: MonthlyTrend, key: keyof Pick<MonthlyTrend, 'cur_month_minus_3' | 'cur_month_minus_2' | 'cur_month_minus_1' | 'cur_month_est' | 'mtd' | 'ttm_avg'>) => {
       const gbpValue = row[key] as number
       if (currency === 'GBP') return gbpValue
       // USD: convert GBP → USD using EoM rates when available, else current rate
@@ -182,6 +182,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           case 'cur_month_minus_2': return gbpValue * r.minus2
           case 'cur_month_minus_1': return gbpValue * r.minus1
           case 'cur_month_est': return gbpValue * r.current
+          case 'mtd': return gbpValue * r.current
           case 'ttm_avg': return gbpValue * r.minus1
           default: return gbpValue * fallbackRate
         }
@@ -193,6 +194,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
       const c2 = mult(row, 'cur_month_minus_2')
       const c1 = mult(row, 'cur_month_minus_1')
       const c0 = mult(row, 'cur_month_est')
+      const mtd = mult(row, 'mtd')
       const ttm = mult(row, 'ttm_avg')
       const l3m_avg = (c3 + c2 + c1) / 3
       return {
@@ -201,6 +203,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         cur_month_minus_2: c2,
         cur_month_minus_1: c1,
         cur_month_est: c0,
+        mtd: mtd,
         ttm_avg: ttm,
         delta_vs_last_month: c0 - c1,
         delta_vs_l12m_avg: c0 - ttm,
@@ -257,6 +260,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         cur_month_minus_2: acc.cur_month_minus_2 + Math.abs(row.cur_month_minus_2),
         cur_month_minus_1: acc.cur_month_minus_1 + Math.abs(row.cur_month_minus_1),
         cur_month_est: acc.cur_month_est + Math.abs(row.cur_month_est),
+        mtd: acc.mtd + Math.abs(row.mtd),
         ttm_avg: acc.ttm_avg + Math.abs(row.ttm_avg),
         delta_vs_last_month: acc.delta_vs_last_month + row.delta_vs_last_month,
         delta_vs_l3m: acc.delta_vs_l3m + row.delta_vs_l3m,
@@ -267,6 +271,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         cur_month_minus_2: 0,
         cur_month_minus_1: 0,
         cur_month_est: 0,
+        mtd: 0,
         ttm_avg: 0,
         delta_vs_last_month: 0,
         delta_vs_l3m: 0,
@@ -914,92 +919,103 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
               <TableRow className="border-b bg-muted">
-              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted', sortField === 'category' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'category' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('category')}
-                  className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold')}
+                  className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold text-primary')}
                 >
                   Expense Categories
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_month_minus_3' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_3' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_3')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_3' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_3' && 'font-semibold text-primary')}
                 >
                   {getMonthName(3)}
                   <SortIcon field="cur_month_minus_3" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_month_minus_2' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_2' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_2')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_2' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_2' && 'font-semibold text-primary')}
                 >
                   {getMonthName(2)}
                   <SortIcon field="cur_month_minus_2" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_month_minus_1' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_1' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_1')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_1' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_1' && 'font-semibold text-primary')}
                 >
                   {getMonthName(1)}
                   <SortIcon field="cur_month_minus_1" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-gray-700 bg-muted', sortField === 'cur_month_est' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-gray-700 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_est' && 'bg-gradient-to-r from-primary/15 to-primary/8 border-b-primary/40 shadow-md')}>
                 <button
                   onClick={() => handleSort('cur_month_est')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_est' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_est' && 'font-semibold text-primary')}
                 >
                   {getMonthName(0)} Est.
                   <SortIcon field="cur_month_est" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 w-14 bg-muted">Trend</TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'ttm_avg' && 'bg-primary/10')}>
+              {fullView && (
+                <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'mtd' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+                  <button
+                    onClick={() => handleSort('mtd')}
+                    className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'mtd' && 'font-semibold text-primary')}
+                  >
+                    MTD ({Math.round((new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100)}%)
+                    <SortIcon field="mtd" />
+                  </button>
+                </TableHead>
+              )}
+              <TableHead className="sticky top-0 z-20 w-14 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent">Trend</TableHead>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'ttm_avg' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('ttm_avg')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'ttm_avg' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'ttm_avg' && 'font-semibold text-primary')}
                 >
                   TTM Avg
                   <SortIcon field="ttm_avg" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'z_score' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'z_score' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('z_score')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'z_score' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'z_score' && 'font-semibold text-primary')}
                 >
                   Z-Score
                   <SortIcon field="z_score" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'delta_last_month' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_last_month' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('delta_last_month')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_last_month' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_last_month' && 'font-semibold text-primary')}
                 >
                   Delta vs Last Mo
                   <SortIcon field="delta_last_month" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'delta_l3m' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_l3m' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('delta_l3m')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l3m' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l3m' && 'font-semibold text-primary')}
                 >
                   Delta vs. L3M Avg
                   <SortIcon field="delta_l3m" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'delta_l12m' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_l12m' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('delta_l12m')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l12m' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l12m' && 'font-semibold text-primary')}
                 >
                   Delta vs. L12M Avg
                   <SortIcon field="delta_l12m" />
@@ -1021,6 +1037,11 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
               <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month })} className="text-right font-semibold w-16 border-l-2 border-r-2 border-gray-700 bg-muted/50">
                 {formatCurrencyWithParens(-totals.cur_month_est)}
               </ClickableTrendCell>
+              {fullView && (
+                <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month })} className="text-right font-semibold w-16 bg-muted/50">
+                  {formatCurrencyWithParens(-totals.mtd)}
+                </ClickableTrendCell>
+              )}
               <TableCell className="text-right w-14 bg-muted/50">
                 <Sparkline row={{ category: 'Total', cur_month_minus_3: totals.cur_month_minus_3, cur_month_minus_2: totals.cur_month_minus_2, cur_month_minus_1: totals.cur_month_minus_1, cur_month_est: totals.cur_month_est, ttm_avg: totals.ttm_avg, z_score: 0, delta_vs_l3m: totals.delta_vs_l3m, delta_vs_last_month: totals.delta_vs_last_month, delta_vs_l12m_avg: totals.delta_vs_l12m_avg } as typeof processedData[0]} />
               </TableCell>
@@ -1060,6 +1081,12 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month, category: row.category })} style={getMonthlyBgStyle(row.cur_month_est)} className="text-right w-16 border-l-2 border-r-2 border-gray-700">
                     {row.cur_month_est === 0 ? '-' : formatCurrencyWithParens(-row.cur_month_est)}
                   </ClickableTrendCell>
+                  
+                  {fullView && (
+                    <ClickableTrendCell href={buildTransactionAnalysisUrl({ period: 'MTD', year: getYearMonth(0).year, month: getYearMonth(0).month, category: row.category })} style={getMonthlyBgStyle(row.mtd)} className="text-right w-16">
+                      {row.mtd === 0 ? '-' : formatCurrencyWithParens(-row.mtd)}
+                    </ClickableTrendCell>
+                  )}
                   
                   {/* Sparkline Trend */}
                   <TableCell className="text-right w-14">

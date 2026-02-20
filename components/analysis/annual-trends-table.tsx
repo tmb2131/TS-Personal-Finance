@@ -733,76 +733,76 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
               <TableRow className="border-b bg-muted">
-              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted', sortField === 'category' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'category' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('category')}
-                  className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold')}
+                  className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold text-primary')}
                 >
                   Expense Categories
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_4' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_yr_minus_4' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_4')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_4' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_4' && 'font-semibold text-primary')}
                 >
                   {currentYear - 4}
                   <SortIcon field="cur_yr_minus_4" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_3' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_yr_minus_3' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_3')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_3' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_3' && 'font-semibold text-primary')}
                 >
                   {currentYear - 3}
                   <SortIcon field="cur_yr_minus_3" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_2' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_yr_minus_2' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_2')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_2' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_2' && 'font-semibold text-primary')}
                 >
                   {currentYear - 2}
                   <SortIcon field="cur_yr_minus_2" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted', sortField === 'cur_yr_minus_1' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_yr_minus_1' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_yr_minus_1')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_1' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_minus_1' && 'font-semibold text-primary')}
                 >
                   {currentYear - 1}
                   <SortIcon field="cur_yr_minus_1" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-primary/30 bg-muted', sortField === 'cur_yr_est' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-primary/30 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_yr_est' && 'bg-gradient-to-r from-primary/15 to-primary/8 border-b-primary/40 shadow-md')}>
                 <button
                   onClick={() => handleSort('cur_yr_est')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est' && 'font-semibold text-primary')}
                 >
                   {currentYear} Est.
                   <SortIcon field="cur_yr_est" />
                 </button>
               </TableHead>
-              <TableHead className="sticky top-0 z-20 w-14 bg-muted">
+              <TableHead className="sticky top-0 z-20 w-14 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent">
                 Trend
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'cur_yr_est_vs_last_yr' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_yr_est_vs_last_yr' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_yr_est_vs_last_yr')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est_vs_last_yr' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est_vs_last_yr' && 'font-semibold text-primary')}
                 >
                   Delta vs Last Yr
                   <SortIcon field="cur_yr_est_vs_last_yr" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted', sortField === 'cur_yr_est_vs_4yr_avg' && 'bg-primary/10')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_yr_est_vs_4yr_avg' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_yr_est_vs_4yr_avg')}
-                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est_vs_4yr_avg' && 'font-semibold')}
+                  className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_yr_est_vs_4yr_avg' && 'font-semibold text-primary')}
                 >
                   Delta vs 4Yr Avg
                   <SortIcon field="cur_yr_est_vs_4yr_avg" />

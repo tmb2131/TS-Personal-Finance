@@ -517,6 +517,7 @@ export async function computeMonthlyTrends(
       cur_month_minus_2: adjust(cur_month_minus_2),
       cur_month_minus_1: adjust(cur_month_minus_1),
       cur_month_est: adjust(curMonthEst),
+      mtd: adjust(mtd),
       ttm_avg: adjust(mean),
       z_score,
       delta_vs_l3m: adjust(curMonthEst - (cur_month_minus_1 + cur_month_minus_2 + cur_month_minus_3) / 3 || 0),

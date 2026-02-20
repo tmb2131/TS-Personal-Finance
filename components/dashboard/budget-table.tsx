@@ -827,6 +827,15 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <SortIcon field="tracking" currentField={expenseSortField} direction={expenseSortDirection} />
                         </button>
                       </TableHead>
+                      <TableHead className="text-right bg-muted">
+                        <button
+                          onClick={() => handleExpenseSort('ytd')}
+                          className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'ytd' && 'font-semibold')}
+                        >
+                          YTD
+                          <SortIcon field="ytd" currentField={expenseSortField} direction={expenseSortDirection} />
+                        </button>
+                      </TableHead>
                         <TableHead className="text-right bg-muted">
                         <button
                           onClick={() => handleExpenseSort('gap')}
@@ -880,6 +889,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           </TableCell>
                           <TableCell className="text-right">
                             ({formatCurrencyCompact(Math.abs(row.tracking))})
+                          </TableCell>
+                          <TableCell className="text-right">
+                            ({formatCurrencyCompact(Math.abs(row.ytd))})
                           </TableCell>
                           <TableCell
                             className={cn(
@@ -946,6 +958,15 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         </TableHead>
                         <TableHead className="text-right bg-muted">
                           <button
+                            onClick={() => handleExpenseSort('ytd')}
+                            className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'ytd' && 'font-semibold')}
+                          >
+                            YTD
+                            <SortIcon field="ytd" currentField={expenseSortField} direction={expenseSortDirection} />
+                          </button>
+                        </TableHead>
+                        <TableHead className="text-right bg-muted">
+                          <button
                             onClick={() => handleExpenseSort('gap')}
                             className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', expenseSortField === 'gap' && 'font-semibold')}
                           >
@@ -969,6 +990,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             </TableCell>
                             <TableCell className="text-right">
                               ({formatCurrencyCompact(Math.abs(row.tracking))})
+                            </TableCell>
+                            <TableCell className="text-right">
+                              ({formatCurrencyCompact(Math.abs(row.ytd))})
                             </TableCell>
                             <TableCell
                               className={cn(
@@ -1004,6 +1028,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         <TableHead className="bg-muted">Expenses</TableHead>
                         <TableHead className="text-right bg-muted">Budget</TableHead>
                         <TableHead className="text-right bg-muted">Tracking</TableHead>
+                        <TableHead className="text-right bg-muted">YTD</TableHead>
                         <TableHead className="text-right bg-muted">Gap</TableHead>
                         <TableHead className="w-16 bg-muted"></TableHead>
                       </TableRow>
@@ -1021,6 +1046,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             </TableCell>
                             <TableCell className="text-right">
                               ({formatCurrencyCompact(Math.abs(row.tracking))})
+                            </TableCell>
+                            <TableCell className="text-right">
+                              ({formatCurrencyCompact(Math.abs(row.ytd))})
                             </TableCell>
                             <TableCell
                               className={cn(

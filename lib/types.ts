@@ -79,6 +79,7 @@ export interface MonthlyTrend {
   cur_month_minus_2: number
   cur_month_minus_1: number
   cur_month_est: number
+  mtd: number
   ttm_avg: number
   z_score: number
   delta_vs_l3m: number
