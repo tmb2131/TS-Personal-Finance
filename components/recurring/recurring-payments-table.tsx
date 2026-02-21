@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import { EditRecurringPaymentDialog } from './edit-recurring-payment-dialog'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface AggregatedRecurringPayment {
   name: string
@@ -40,6 +41,7 @@ export function RecurringPaymentsTable() {
   const [error, setError] = useState<string | null>(null)
   const [editingPayment, setEditingPayment] = useState<RecurringPayment | null>(null)
   const [fullView, setFullView] = useState(false)
+  const [showOnlyFlagged, setShowOnlyFlagged] = useState(false)
 
   // Fetch recurring payments
   useEffect(() => {
@@ -140,11 +142,18 @@ export function RecurringPaymentsTable() {
 
   // Filter to only show top 80% in the default view (full view shows all)
   const displayedPayments = useMemo(() => {
-    if (fullView) {
-      return paymentsWithCumulative
+    let filtered = paymentsWithCumulative
+    
+    // Apply review filter if enabled
+    if (showOnlyFlagged) {
+      filtered = filtered.filter((p) => p.needsReview)
     }
-    return paymentsWithCumulative.filter((p) => p.cumulative <= threshold80Percent)
-  }, [paymentsWithCumulative, threshold80Percent, fullView])
+    
+    if (fullView) {
+      return filtered
+    }
+    return filtered.filter((p) => p.cumulative <= threshold80Percent)
+  }, [paymentsWithCumulative, threshold80Percent, fullView, showOnlyFlagged])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -241,11 +250,24 @@ export function RecurringPaymentsTable() {
     <Card>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <div>
+          <div className="flex-1">
             <CardTitle className="text-base">Recurring Payments</CardTitle>
             <p className="text-sm text-muted-foreground">
               Manually tracked recurring payments. All amounts shown are annualized values.
             </p>
+            <div className="flex items-center gap-2 mt-2">
+              <Checkbox
+                id="show-only-flagged"
+                checked={showOnlyFlagged}
+                onCheckedChange={(checked) => setShowOnlyFlagged(checked === true)}
+              />
+              <label
+                htmlFor="show-only-flagged"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Show only payments flagged for review
+              </label>
+            </div>
           </div>
           <FullTableViewToggle
             fullView={fullView}
@@ -255,10 +277,17 @@ export function RecurringPaymentsTable() {
         </div>
       </CardHeader>
       <CardContent>
-        {!fullView && paymentsWithCumulative.length > 0 && (
+        {!fullView && paymentsWithCumulative.length > 0 && !showOnlyFlagged && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
             <p className="text-sm text-blue-900 dark:text-blue-200">
               <span className="font-semibold">Showing top 80% of recurring payments.</span> Click <span className="font-medium">&quot;Full table view&quot;</span> above to see all payments.
+            </p>
+          </div>
+        )}
+        {showOnlyFlagged && (
+          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-md">
+            <p className="text-sm text-orange-900 dark:text-orange-200">
+              <span className="font-semibold">Showing only payments flagged for review.</span> Uncheck the filter above to see all payments.
             </p>
           </div>
         )}
