@@ -18,6 +18,7 @@ function LoginForm() {
   const [message, setMessage] = useState('')
   const cachedRef = useRef<CachedOAuthUrl | null>(null)
   const loadingResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
     const error = searchParams.get('error')
@@ -64,8 +65,13 @@ function LoginForm() {
   }
 
   const handleGoogleSignIn = async () => {
-    setLoading(true)
+    if (submittingRef.current) return
+    submittingRef.current = true
     setMessage('')
+    setLoading(true)
+
+    // Yield so the loading state paints before we block on network (helps first tap on mobile)
+    await new Promise((r) => setTimeout(r, 0))
 
     try {
       const cached = cachedRef.current
@@ -77,7 +83,6 @@ function LoginForm() {
         return
       }
 
-      // Cache is stale or missing – fetch fresh URL now
       const supabase = createClient()
       const redirectTo = `${window.location.origin}/auth/callback`
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -88,6 +93,7 @@ function LoginForm() {
       if (error) {
         setMessage(error.message || 'Failed to sign in with Google')
         setLoading(false)
+        submittingRef.current = false
         return
       }
 
@@ -99,9 +105,11 @@ function LoginForm() {
 
       setMessage('Sign-in could not be started. Please try again.')
       setLoading(false)
+      submittingRef.current = false
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : 'Failed to sign in')
       setLoading(false)
+      submittingRef.current = false
     }
   }
 
@@ -117,8 +125,11 @@ function LoginForm() {
         <div className="space-y-4">
           <Button
             type="button"
-            className="w-full bg-[#6389FF] hover:bg-[#5275e8] text-white border-0"
+            className="w-full bg-[#6389FF] hover:bg-[#5275e8] text-white border-0 touch-manipulation"
             disabled={loading}
+            onPointerDown={(e) => {
+              if (e.pointerType === 'touch') handleGoogleSignIn()
+            }}
             onClick={handleGoogleSignIn}
           >
             {loading ? 'Redirecting...' : 'Sign in with Google'}

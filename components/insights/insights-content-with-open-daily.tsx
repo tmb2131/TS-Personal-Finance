@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useDailySummary } from './daily-summary-context'
-import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { WelcomeBack } from './welcome-back'
 
 /**
- * Wrapper for Key Insights page content. When openDaily=1 on mobile, we show
- * the "Welcome back" state until the daily summary modal has opened, then
- * show children (so no flash of Key Insights before the modal).
+ * Wrapper for Key Insights page content. When openDaily=1 we show the
+ * "Welcome back" state (mobile only, via CSS) until the daily summary modal
+ * has opened, then show children. Uses media queries so the correct view
+ * is chosen on first paint and avoids flicker.
  */
 export function InsightsContentWithOpenDaily({
   children,
@@ -18,7 +18,6 @@ export function InsightsContentWithOpenDaily({
 }) {
   const searchParams = useSearchParams()
   const { isOpen } = useDailySummary()
-  const isMobile = useIsMobile()
   const [postLoginModalOpened, setPostLoginModalOpened] = useState(false)
 
   const openDaily = searchParams.get('openDaily') === '1'
@@ -29,13 +28,16 @@ export function InsightsContentWithOpenDaily({
     }
   }, [openDaily, isOpen])
 
-  const showWelcomeUntilModal = isMobile && openDaily && !postLoginModalOpened
+  const showWelcomeUntilModal = openDaily && !postLoginModalOpened
 
   if (showWelcomeUntilModal) {
     return (
-      <div className="md:hidden">
-        <WelcomeBack />
-      </div>
+      <>
+        <div className="md:hidden">
+          <WelcomeBack />
+        </div>
+        <div className="hidden md:block">{children}</div>
+      </>
     )
   }
 

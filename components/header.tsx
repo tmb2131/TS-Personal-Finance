@@ -314,11 +314,14 @@ export function Header() {
           <RefreshCw className={`h-3 w-3 md:h-4 md:w-4 ${syncing ? 'animate-spin' : ''}`} />
           {mounted ? (
             <>
-              <span className="hidden md:inline">{syncing ? 'Syncing...' : 'Sync Transaction Log'}</span>
-              <span className="md:hidden">{syncing ? 'Sync...' : 'Sync Log'}</span>
+              <span className="hidden md:inline">Sync Transaction Log</span>
+              <span className="md:hidden">Sync Log</span>
             </>
           ) : (
-            <span>Sync Transaction Log</span>
+            <>
+              <span className="hidden md:inline">Sync Transaction Log</span>
+              <span className="md:hidden">Sync Log</span>
+            </>
           )}
         </Button>
         
