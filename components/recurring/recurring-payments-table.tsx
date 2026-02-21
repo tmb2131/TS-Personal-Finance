@@ -213,6 +213,19 @@ export function RecurringPaymentsTable() {
     }
   }
 
+  // Calculate KPI values
+  const kpiData = useMemo(() => {
+    const totalAnnualized = aggregatedPayments.reduce((sum, payment) => sum + Math.abs(payment.annualizedAmount), 0)
+    const flaggedCount = aggregatedPayments.filter((payment) => payment.needsReview).length
+    const paymentCount = aggregatedPayments.length
+
+    return {
+      totalAnnualized,
+      flaggedCount,
+      paymentCount,
+    }
+  }, [aggregatedPayments])
+
   if (loading) {
     return (
       <Card>
@@ -249,20 +262,6 @@ export function RecurringPaymentsTable() {
     )
   }
 
-  // Calculate KPI values
-  const kpiData = useMemo(() => {
-    const totalAnnualized = aggregatedPayments.reduce((sum, payment) => sum + Math.abs(payment.annualizedAmount), 0)
-    const flaggedCount = aggregatedPayments.filter((payment) => payment.needsReview).length
-    const paymentCount = aggregatedPayments.length
-
-    return {
-      totalAnnualized,
-      flaggedCount,
-      paymentCount,
-    }
-  }, [aggregatedPayments])
-
-  
   return (
     <Card>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
