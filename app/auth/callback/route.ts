@@ -12,6 +12,12 @@ const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const oauthError = searchParams.get('error')
+
+  if (oauthError) {
+    const errorCode = oauthError === 'access_denied' ? 'cancelled' : 'auth_code_error'
+    return NextResponse.redirect(`${origin}/login?error=${errorCode}`)
+  }
 
   if (code) {
     const cookieStore = await cookies()
