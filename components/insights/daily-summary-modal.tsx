@@ -655,7 +655,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
     <Dialog key={modalKey} open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-0 p-0 sm:left-[50%] sm:top-[50%] sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-5xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:gap-5 sm:rounded-xl sm:border sm:p-6"
+        className="left-0 top-0 h-[100dvh] max-h-none w-screen max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-0 p-0 sm:left-[50%] sm:top-[50%] sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-5xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:gap-5 sm:rounded-xl sm:border sm:p-6"
       >
         <div className="flex justify-center pt-3 sm:hidden" aria-hidden>
           <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
