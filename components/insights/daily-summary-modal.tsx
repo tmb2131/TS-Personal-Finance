@@ -680,16 +680,19 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-0 pt-3 sm:px-0 sm:pb-0 sm:pt-0">
             {loading ? (
-              <div className="space-y-4 py-3 sm:py-4">
-                <Skeleton className="h-4 w-28 rounded" />
-                <Skeleton className="h-36 w-full rounded-xl" />
-                <Skeleton className="h-4 w-16 rounded" />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Skeleton className="h-32 w-full rounded-xl" />
-                  <Skeleton className="h-32 w-full rounded-xl" />
+              <div className="flex min-h-full flex-col space-y-4 py-3 sm:py-4">
+                <p className="text-sm text-muted-foreground text-center">Loading your daily summary...</p>
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-28 rounded" />
+                  <Skeleton className="h-36 w-full rounded-xl" />
+                  <Skeleton className="h-4 w-16 rounded" />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Skeleton className="h-32 w-full rounded-xl" />
+                    <Skeleton className="h-32 w-full rounded-xl" />
+                  </div>
+                  <Skeleton className="h-4 w-24 rounded" />
+                  <Skeleton className="h-48 w-full rounded-xl" />
                 </div>
-                <Skeleton className="h-4 w-24 rounded" />
-                <Skeleton className="h-48 w-full rounded-xl" />
               </div>
             ) : (
               <div className="space-y-4 sm:space-y-3">

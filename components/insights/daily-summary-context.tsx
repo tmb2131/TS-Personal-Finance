@@ -46,10 +46,7 @@ export function DailySummaryProvider({ children }: { children: ReactNode }) {
   const openModal = useCallback(() => {
     // Increment key to force fresh mount, then open
     setModalKey((k) => k + 1)
-    // Use requestAnimationFrame to ensure Dialog properly initializes
-    requestAnimationFrame(() => {
-      setIsOpen(true)
-    })
+    setIsOpen(true)
   }, [])
 
   const closeModal = useCallback(() => {
