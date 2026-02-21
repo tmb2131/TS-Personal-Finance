@@ -147,6 +147,8 @@ export function RecurringPaymentsTable() {
     // Apply review filter if enabled
     if (showOnlyFlagged) {
       filtered = filtered.filter((p) => p.needsReview)
+      // When showing only flagged, show all of them (remove top 80% filter)
+      return filtered
     }
     
     if (fullView) {
@@ -287,7 +289,7 @@ export function RecurringPaymentsTable() {
         {showOnlyFlagged && (
           <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-md">
             <p className="text-sm text-orange-900 dark:text-orange-200">
-              <span className="font-semibold">Showing only payments flagged for review.</span> Uncheck the filter above to see all payments.
+              <span className="font-semibold">Showing all payments flagged for review.</span> Uncheck the filter above to see all payments.
             </p>
           </div>
         )}
