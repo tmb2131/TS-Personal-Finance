@@ -834,7 +834,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                       <BarChart
                                         data={chartData}
                                         layout="vertical"
-                                        margin={{ top: 4, right: 8, left: 8, bottom: 4 }}
+                                        margin={{ top: 4, right: 52, left: 8, bottom: 4 }}
                                       >
                                         <XAxis
                                           type="number"
@@ -867,6 +867,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
                                           <LabelList
                                             dataKey="headroom"
                                             position="right"
+                                            offset={6}
                                             formatter={(value: number) => (value != null && value > 0 ? formatChartCurrency(value) : '')}
                                             style={{ fontSize: 10, fill: HEADROOM_LABEL_FILL, fontWeight: 'bold' }}
                                           />
