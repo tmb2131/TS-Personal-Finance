@@ -150,8 +150,8 @@ export function TodaySpendByMethodologyChart({
             data={chartData}
             margin={
               isMobile
-                ? { top: 10, right: 10, left: 0, bottom: 8 }
-                : { top: 20, right: 30, left: 20, bottom: 8 }
+                ? { top: 10, right: 60, left: 0, bottom: 8 }
+                : { top: 20, right: 80, left: 20, bottom: 8 }
             }
             barCategoryGap="18%"
           >
