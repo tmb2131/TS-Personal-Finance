@@ -19,7 +19,7 @@ export default async function RecurringPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="rounded-xl border bg-muted/30 p-4 md:p-5">
+      <div className="rounded-xl border border-l-[3px] border-l-violet-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
             <h1 className="text-2xl md:text-3xl font-bold">Recurring Payments</h1>
@@ -47,7 +47,9 @@ export default async function RecurringPage() {
         </div>
       </div>
       <RecurringPaymentsTable />
-      <RecurringPayments />
+      <div className="pt-3 md:pt-4 border-t border-border">
+        <RecurringPayments />
+      </div>
     </div>
   )
 }

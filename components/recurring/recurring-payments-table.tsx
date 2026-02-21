@@ -17,13 +17,14 @@ import { Badge } from '@/components/ui/badge'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { RecurringPayment } from '@/lib/types'
-import { AlertCircle, Flag, FlagOff, Pencil } from 'lucide-react'
+import { AlertCircle, Flag, FlagOff, Pencil, Calculator, AlertTriangle, CreditCard } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { toast } from 'sonner'
 import { EditRecurringPaymentDialog } from './edit-recurring-payment-dialog'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 import { Checkbox } from '@/components/ui/checkbox'
+import { KPICard } from '@/components/kpi-card'
 
 interface AggregatedRecurringPayment {
   name: string
@@ -248,6 +249,20 @@ export function RecurringPaymentsTable() {
     )
   }
 
+  // Calculate KPI values
+  const kpiData = useMemo(() => {
+    const totalAnnualized = aggregatedPayments.reduce((sum, payment) => sum + Math.abs(payment.annualizedAmount), 0)
+    const flaggedCount = aggregatedPayments.filter((payment) => payment.needsReview).length
+    const paymentCount = aggregatedPayments.length
+
+    return {
+      totalAnnualized,
+      flaggedCount,
+      paymentCount,
+    }
+  }, [aggregatedPayments])
+
+  
   return (
     <Card>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
@@ -279,6 +294,29 @@ export function RecurringPaymentsTable() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* KPI Cards */}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+            <KPICard
+              title="Total Annualized"
+              value={kpiData.totalAnnualized}
+              icon={Calculator}
+              accentColor="violet"
+            />
+            <KPICard
+              title="Flagged for Review"
+              value={kpiData.flaggedCount}
+              icon={AlertTriangle}
+              accentColor="emerald"
+            />
+            <KPICard
+              title="Payment Count"
+              value={kpiData.paymentCount}
+              icon={CreditCard}
+              accentColor="blue"
+            />
+          </div>
+        )}
         {!fullView && paymentsWithCumulative.length > 0 && !showOnlyFlagged && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
             <p className="text-sm text-blue-900 dark:text-blue-200">

@@ -114,6 +114,22 @@ export function RecurringPayments() {
     }
   }, [detectedPayments, preferences])
 
+  // Calculate totals for summaries
+  const { monthlyTotal, yearlyTotal } = useMemo(() => {
+    const monthlySum = monthlyPayments
+      .filter(p => !isIgnored(p.counterpartyPattern))
+      .reduce((sum, payment) => sum + (payment.averageAmount * 12), 0) // Convert to annualized
+    const yearlySum = yearlyPayments
+      .filter(p => !isIgnored(p.counterpartyPattern))
+      .reduce((sum, payment) => sum + payment.averageAmount, 0)
+
+    return {
+      monthlyTotal: monthlySum,
+      yearlyTotal: yearlySum,
+    }
+  }, [monthlyPayments, yearlyPayments])
+
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -131,6 +147,12 @@ export function RecurringPayments() {
     })
   }
 
+  const isUpcoming = (nextExpectedDate: Date): boolean => {
+    const today = new Date()
+    const daysUntil = Math.ceil((nextExpectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    return daysUntil >= 0 && daysUntil <= 7
+  }
+  
   const toggleIgnore = async (pattern: string, currentlyIgnored: boolean) => {
     const supabase = createClient()
     const normalizedPattern = pattern.toLowerCase()
@@ -191,11 +213,14 @@ export function RecurringPayments() {
 
   const PaymentCard = ({ payment }: { payment: DetectedRecurringPayment }) => {
     const ignored = isIgnored(payment.counterpartyPattern)
+    const upcoming = isUpcoming(payment.nextExpectedDate)
+    
     return (
       <div
         className={cn(
           'p-4 rounded-lg border bg-card transition-all',
-          ignored && 'opacity-40'
+          ignored && 'opacity-40',
+          upcoming && !ignored && 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20'
         )}
       >
         <div className="flex items-start justify-between gap-4">
@@ -205,6 +230,11 @@ export function RecurringPayments() {
               <Badge variant={payment.frequency === 'Monthly' ? 'default' : 'secondary'}>
                 {payment.frequency}
               </Badge>
+              {upcoming && !ignored && (
+                <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700">
+                  Upcoming
+                </Badge>
+              )}
               {ignored && (
                 <Badge variant="outline" className="text-muted-foreground">
                   Ignored
@@ -226,10 +256,13 @@ export function RecurringPayments() {
             </div>
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => toggleIgnore(payment.counterpartyPattern, ignored)}
-            className="shrink-0"
+            className={cn(
+              'shrink-0',
+              ignored && 'text-muted-foreground hover:text-destructive'
+            )}
           >
             {ignored ? (
               <>
@@ -301,6 +334,11 @@ export function RecurringPayments() {
           <p className="text-sm text-muted-foreground">
             Recurring monthly payments detected from your transaction history
           </p>
+          {monthlyTotal > 0 && (
+            <p className="text-sm font-medium text-foreground">
+              Total annualized: {formatCurrency(monthlyTotal)}
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           {monthlyPayments.length > 0 ? (
@@ -329,6 +367,11 @@ export function RecurringPayments() {
           <p className="text-sm text-muted-foreground">
             Recurring annual payments detected from your transaction history
           </p>
+          {yearlyTotal > 0 && (
+            <p className="text-sm font-medium text-foreground">
+              Total annual: {formatCurrency(yearlyTotal)}
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           {yearlyPayments.length > 0 ? (
