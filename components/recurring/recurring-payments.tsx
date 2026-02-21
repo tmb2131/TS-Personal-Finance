@@ -89,6 +89,12 @@ export function RecurringPayments() {
     return detectRecurringPayments(transactions, currency, fxRate)
   }, [transactions, currency, fxRate])
 
+  const isIgnored = (pattern: string): boolean => {
+    return preferences.some(
+      (p) => p.counterparty_pattern.toLowerCase() === pattern.toLowerCase() && p.is_ignored
+    )
+  }
+
   // Filter out ignored payments and separate by frequency
   const { monthlyPayments, yearlyPayments } = useMemo(() => {
     const ignoredPatterns = new Set(
@@ -203,12 +209,6 @@ export function RecurringPayments() {
       console.error('Error updating preference:', err)
       toast.error('Failed to update preference')
     }
-  }
-
-  const isIgnored = (pattern: string): boolean => {
-    return preferences.some(
-      (p) => p.counterparty_pattern.toLowerCase() === pattern.toLowerCase() && p.is_ignored
-    )
   }
 
   const PaymentCard = ({ payment }: { payment: DetectedRecurringPayment }) => {

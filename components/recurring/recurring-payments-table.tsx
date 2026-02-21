@@ -303,18 +303,32 @@ export function RecurringPaymentsTable() {
               icon={Calculator}
               accentColor="violet"
             />
-            <KPICard
-              title="Flagged for Review"
-              value={kpiData.flaggedCount}
-              icon={AlertTriangle}
-              accentColor="emerald"
-            />
-            <KPICard
-              title="Payment Count"
-              value={kpiData.paymentCount}
-              icon={CreditCard}
-              accentColor="blue"
-            />
+            <Card className={cn('h-full w-full min-w-0 border-l-[3px] border-l-emerald-500')}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
+                    <AlertTriangle className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <CardTitle className="text-sm font-medium">Flagged for Review</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold tabular-nums">{kpiData.flaggedCount}</div>
+              </CardContent>
+            </Card>
+            <Card className={cn('h-full w-full min-w-0 border-l-[3px] border-l-blue-500')}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-sm font-medium">Payment Count</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold tabular-nums">{kpiData.paymentCount}</div>
+              </CardContent>
+            </Card>
           </div>
         )}
         {!fullView && paymentsWithCumulative.length > 0 && !showOnlyFlagged && (
