@@ -678,7 +678,7 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3 sm:px-0 sm:pb-0 sm:pt-0">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-0 pt-3 sm:px-0 sm:pb-0 sm:pt-0">
             {loading ? (
               <div className="space-y-4 py-3 sm:py-4">
                 <Skeleton className="h-4 w-28 rounded" />
