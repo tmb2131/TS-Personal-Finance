@@ -27,12 +27,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
-        <div className="flex min-h-screen flex-col bg-background">
+        <div className="flex min-h-dvh flex-col bg-background">
           <LoginHeader />
           <main
             id="main-content"
             tabIndex={-1}
-            className="flex flex-1 flex-col items-center justify-center px-4 py-8"
+            className="flex flex-1 flex-col items-center justify-center px-4 py-8 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
           >
             {children}
           </main>

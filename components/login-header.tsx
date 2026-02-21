@@ -8,7 +8,8 @@ import { ThemeToggle } from '@/components/theme-toggle'
  */
 export function LoginHeader() {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4">
+    <header className="flex shrink-0 flex-col border-b border-border bg-background pt-[env(safe-area-inset-top)]">
+      <div className="flex h-16 items-center justify-between px-4">
       <div className="flex min-w-0 items-center gap-3">
         {/* Logo: minimal upward trend — growth, dashboard, finance (PRD: clean, modern) */}
         <div
@@ -32,6 +33,7 @@ export function LoginHeader() {
         </h1>
       </div>
       <ThemeToggle />
+      </div>
     </header>
   )
 }

@@ -90,6 +90,12 @@
   .main-content {
     padding-bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
   }
+
+  /* Toaster: respect safe area so toasts are not under the notch */
+  [data-sonner-toaster] {
+    top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
+    right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+  }
 }
 
 .skip-link {
