@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Search, Filter, Receipt } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { SYNC_COMPLETED_EVENT } from '@/components/header'
 
 const DATE_RANGE_OPTIONS = [
   { label: 'Last 7 days', days: 7 },
@@ -35,6 +36,14 @@ export function TransactionsList() {
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
+  const [fetchVersion, setFetchVersion] = useState(0)
+
+  // Re-fetch when sync completes
+  useEffect(() => {
+    const onSyncCompleted = () => setFetchVersion((v) => v + 1)
+    window.addEventListener(SYNC_COMPLETED_EVENT, onSyncCompleted)
+    return () => window.removeEventListener(SYNC_COMPLETED_EVENT, onSyncCompleted)
+  }, [])
 
   // Fetch transactions (all in range; we filter client-side for search/category)
   useEffect(() => {
@@ -86,7 +95,7 @@ export function TransactionsList() {
     }
 
     fetchTransactions()
-  }, [dateRangeDays])
+  }, [dateRangeDays, fetchVersion])
 
   // Unique categories from fetched data (for filter dropdown)
   const categories = useMemo(() => {

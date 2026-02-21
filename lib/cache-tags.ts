@@ -18,7 +18,9 @@ export const CACHE_TAGS = {
 
 /** Invalidate all data caches (used after full sync) */
 export function revalidateAllData() {
-  revalidateTag(CACHE_TAGS.SYNC, 'max')
+  for (const tag of Object.values(CACHE_TAGS)) {
+    revalidateTag(tag, 'max')
+  }
 }
 
 /** Invalidate specific cache tags */

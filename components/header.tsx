@@ -21,6 +21,9 @@ function useDailySummarySafe() {
   }
 }
 
+/** Custom event dispatched after a successful sync so client components can re-fetch. */
+export const SYNC_COMPLETED_EVENT = 'sync-completed'
+
 const SCROLL_THRESHOLD = 8
 const BOTTOM_BOUNDARY_PX = 100
 // Only hide header when this far (or more) from bottom; avoids flicker when reaching bottom
@@ -61,7 +64,8 @@ export function Header() {
           setSyncing(false)
           syncStartTimeRef.current = null
           await fetchLatestDates()
-          toast.success('Transaction Log synced', { description: 'Sheet sync completed while you were away.' })
+          toast.success('Sync Complete', { description: 'Sheet sync completed while you were away.' })
+          window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
           setTimeout(() => router.refresh(), 800)
         } else {
           setSyncing(false)
@@ -188,9 +192,11 @@ export function Header() {
       setSyncing(false)
       
       if (result.success) {
-        toast.success('Transaction Log Synced', {
-          description: 'Connected sheet data has been synchronized.',
+        toast.success('Sync Complete', {
+          description: formatSyncResults(result.results),
         })
+        // Notify client components (e.g. TransactionsList) to re-fetch
+        window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
         // Refresh latest dates (including last_sync_at written by the server)
         await fetchLatestDates()
         // Refresh server components to show updated data (no full page reload)
@@ -230,6 +236,23 @@ export function Header() {
         })
       }
     }
+  }
+
+  /** Build a human-readable description from per-sheet sync results. */
+  const formatSyncResults = (results: { sheet: string; success: boolean; rowsProcessed: number }[]): string => {
+    if (!results || results.length === 0) return 'Sync completed.'
+    const succeeded = results.filter((r) => r.success && r.rowsProcessed > 0)
+    const failed = results.filter((r) => !r.success)
+    const parts: string[] = []
+    if (succeeded.length > 0) {
+      const details = succeeded.map((r) => `${r.rowsProcessed.toLocaleString()} ${r.sheet.toLowerCase()} rows`)
+      parts.push(`Synced ${details.join(', ')}`)
+    }
+    if (failed.length > 0) {
+      parts.push(`Failed: ${failed.map((r) => r.sheet).join(', ')}`)
+    }
+    if (parts.length === 0) return 'No new data to sync.'
+    return parts.join('. ')
   }
 
   const formatDate = (dateString: string | null) => {
@@ -300,20 +323,27 @@ export function Header() {
         </Button>
         
         {mounted && (
-          <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground md:flex md:gap-3 lg:gap-4">
-            <div className="hidden md:block">
-              <span className="font-medium">Last Sheet Sync:</span>{' '}
-              <span className="text-foreground">{formatLastSheetSync(lastRefreshDate)}</span>
+          <>
+            <div className="min-w-0 text-xs text-muted-foreground md:hidden">
+              <span className="text-foreground">
+                {syncing ? 'Syncing...' : formatLastSheetSync(lastRefreshDate)}
+              </span>
             </div>
-            <div className="hidden lg:block">
-              <span className="font-medium">Latest Transaction:</span>{' '}
-              <span className="text-foreground">{formatDate(latestTransactionDate)}</span>
+            <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground md:flex md:gap-3 lg:gap-4">
+              <div className="hidden md:block">
+                <span className="font-medium">Last Sheet Sync:</span>{' '}
+                <span className="text-foreground">{formatLastSheetSync(lastRefreshDate)}</span>
+              </div>
+              <div className="hidden lg:block">
+                <span className="font-medium">Latest Transaction:</span>{' '}
+                <span className="text-foreground">{formatDate(latestTransactionDate)}</span>
+              </div>
+              <div className="hidden lg:block">
+                <span className="font-medium">Latest Account:</span>{' '}
+                <span className="text-foreground">{formatDate(maxAccountDate)}</span>
+              </div>
             </div>
-            <div className="hidden lg:block">
-              <span className="font-medium">Latest Account:</span>{' '}
-              <span className="text-foreground">{formatDate(maxAccountDate)}</span>
-            </div>
-          </div>
+          </>
         )}
       </div>
       <div className="flex items-center gap-1.5 md:gap-2">
