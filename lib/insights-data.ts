@@ -32,12 +32,15 @@ export interface InsightsDataPayload {
  * Fetches and computes all data needed for the Key Insights page.
  * Use from server (page or API route); shares one preload + parallel computes.
  */
+const HISTORICAL_NET_WORTH_YEARS_BACK = 25
+
 export async function fetchInsightsData(
   supabase: SupabaseClient,
   userId: string
 ): Promise<InsightsDataPayload> {
   const currentYear = new Date().getFullYear()
   const txStartDate = `${currentYear - 4}-01-01`
+  const minNetWorthDate = `${currentYear - HISTORICAL_NET_WORTH_YEARS_BACK}-01-01`
 
   const [
     budgetResult,
@@ -52,11 +55,14 @@ export async function fetchInsightsData(
     supabase
       .from('historical_net_worth')
       .select('*')
+      .gte('date', minNetWorthDate)
       .order('date', { ascending: false }),
+    // De-duplication below keeps latest row per (institution, account_name); 500 rows is sufficient for typical account counts.
     supabase
       .from('account_balances')
       .select('*')
-      .order('date_updated', { ascending: false }),
+      .order('date_updated', { ascending: false })
+      .limit(500),
     fetchFxRateGBPUSD(supabase),
     fetchForecastSettingsMap(supabase, userId),
     fetchCategories(supabase, userId),
