@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
-import { AuthTimeoutProvider } from '@/lib/contexts/auth-timeout-provider'
 import { DailySummaryProvider } from '@/components/insights/daily-summary-context'
 import { ThemeProvider } from '@/lib/contexts/theme-provider'
 import { AppShell } from '@/components/app-shell'
@@ -33,11 +32,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <CurrencyProvider>
-            <AuthTimeoutProvider>
-              <DailySummaryProvider>
-                <AppShell>{children}</AppShell>
-              </DailySummaryProvider>
-            </AuthTimeoutProvider>
+            <DailySummaryProvider>
+              <AppShell>{children}</AppShell>
+            </DailySummaryProvider>
           </CurrencyProvider>
         </ThemeProvider>
         <Analytics />
