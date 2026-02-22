@@ -2,6 +2,11 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import type { BudgetTarget, HistoricalNetWorth } from '@/lib/types'
 import type { FxRatesRow } from '@/lib/utils/fx-rates'
+import {
+  computeNetWorthTimeSeriesFromAccountBalances,
+  computeYearStartYearEndFromAccountBalances,
+  type YearStartYearEndSnapshot,
+} from '@/lib/net-worth-from-accounts'
 
 /**
  * Two-layer caching strategy:
@@ -69,3 +74,21 @@ export const fetchCurrentUser = cache(async () => {
   const { data: { user } } = await supabase.auth.getUser()
   return user
 })
+
+/** Net worth time series computed from account_balances (no historical_net_worth). */
+export const fetchNetWorthFromAccountBalances = cache(async (): Promise<HistoricalNetWorth[]> => {
+  const user = await fetchCurrentUser()
+  if (!user) return []
+  const supabase = await createClient()
+  return computeNetWorthTimeSeriesFromAccountBalances(supabase, user.id)
+})
+
+/** Year Start / Year End snapshots computed from account_balances (no yoy_net_worth). */
+export const fetchYearStartYearEndFromAccountBalances = cache(
+  async (): Promise<YearStartYearEndSnapshot | null> => {
+    const user = await fetchCurrentUser()
+    if (!user) return null
+    const supabase = await createClient()
+    return computeYearStartYearEndFromAccountBalances(supabase, user.id)
+  }
+)

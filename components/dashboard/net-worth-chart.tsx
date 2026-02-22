@@ -10,7 +10,6 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
-import { createClient } from '@/lib/supabase/client'
 import { HistoricalNetWorth } from '@/lib/types'
 import { EditNetWorthHistoryDialog } from './edit-net-worth-history-dialog'
 import { TrendingUp, AlertCircle } from 'lucide-react'
@@ -103,38 +102,15 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
       .sort((a: any, b: any) => a.year - b.year)
   }, [currency])
 
-  // Use initial data if provided, or fetch when currency changes
+  // Use server-provided initialData only (from account_balances); reprocess when currency changes
   useEffect(() => {
-    // If we have initial data, reprocess it when currency changes
-    if (initialData) {
+    if (initialData?.length) {
       const chartData = processData(initialData)
       setData(chartData)
-      setLoading(false)
-      return
+    } else {
+      setData([])
     }
-
-    // Otherwise fetch fresh data
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
-      const { data: netWorthData, error } = await supabase
-        .from('historical_net_worth')
-        .select('*')
-        .order('date', { ascending: true })
-
-      if (error) {
-        console.error('Error fetching net worth:', error)
-        setError('Failed to load net worth data. Please try refreshing the page.')
-        setLoading(false)
-        return
-      }
-
-      const chartData = processData(netWorthData)
-      setData(chartData)
-      setLoading(false)
-    }
-
-    fetchData()
+    setLoading(false)
   }, [currency, initialData, processData])
 
   // Derive display data so we show initialData on first paint (avoids flash of empty before useEffect runs)

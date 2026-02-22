@@ -1,9 +1,9 @@
-import { fetchHistoricalNetWorth } from '@/lib/data/cached-queries'
+import { fetchNetWorthFromAccountBalances } from '@/lib/data/cached-queries'
 import { NetWorthChart } from './net-worth-chart'
 
 export async function NetWorthChartWrapper() {
   try {
-    const data = await fetchHistoricalNetWorth()
+    const data = await fetchNetWorthFromAccountBalances()
     return <NetWorthChart initialData={data} />
   } catch (error) {
     return (
