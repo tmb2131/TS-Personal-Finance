@@ -39,13 +39,6 @@ export async function POST(request: Request) {
     if (result.success) {
       await recordLastSync(supabase, user.id)
       revalidateAllData()
-      // Trigger YoY rebuild in background (separate invocation) so sync returns without waiting
-      const origin = new URL(request.url).origin
-      const cookie = request.headers.get('cookie') ?? ''
-      void fetch(`${origin}/api/yoy-net-worth/rebuild`, {
-        method: 'POST',
-        headers: { cookie },
-      }).catch((e) => console.error('Sync API: background YoY rebuild request failed', e))
     }
 
     // Ensure consistent response format
