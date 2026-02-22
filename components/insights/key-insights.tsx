@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,26 +12,27 @@ import { InsightsNavigation } from '@/components/insights/insights-navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
 import { EXCLUDED_CATEGORY } from '@/lib/category-filters'
 import type { InsightsDataPayload } from '@/lib/insights-data'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
 import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie,
-  Legend,
-  LabelList,
-} from 'recharts'
+
+const LazyNetWorthCharts = dynamic(
+  () =>
+    import('@/components/insights/key-insights-net-worth-charts').then((m) => ({
+      default: m.KeyInsightsNetWorthCharts,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid md:grid-cols-2 gap-6">
+        <Skeleton className="h-[180px] md:h-[280px] w-full rounded-lg" />
+        <Skeleton className="h-[200px] md:h-[280px] w-full rounded-lg" />
+      </div>
+    ),
+  }
+)
 
 function forecastMapFromPayload(forecastByCategory: InsightsDataPayload['forecastByCategory']) {
   const map = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
@@ -187,58 +189,37 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
 
     const currentTotal = currentPersonal + currentFamily
 
-    // Get historical net worth data grouped by year
+    // Build a single-pass index: latest Personal/Family value per year.
+    // This replaces repeated filter/sort scans across historicalNetWorth.
     const currentYear = new Date().getFullYear()
     const lastYear = currentYear - 1
-    
-    const netWorthByYear = historicalNetWorth.reduce((acc: any, item: HistoricalNetWorth) => {
-      const year = new Date(item.date).getFullYear()
-      const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
-      
-      if (!acc[year]) {
-        acc[year] = { Personal: 0, Family: 0, Total: 0, dates: [] }
-      }
-      
-      if (item.category === 'Personal') {
-        acc[year].Personal += amount || 0
-      } else if (item.category === 'Family') {
-        acc[year].Family += amount || 0
-      }
-      acc[year].Total += amount || 0
-      acc[year].dates.push(new Date(item.date))
-      
-      return acc
-    }, {})
+    const latestByYearCategory = new Map<string, { date: string; amount: number }>()
+    historicalNetWorth.forEach((item: HistoricalNetWorth) => {
+      const date = new Date(item.date)
+      const year = date.getFullYear()
+      if (Number.isNaN(year) || !Number.isFinite(year)) return
 
-    // For comparison, get the most recent historical net worth entry for last year
-    // IMPORTANT: Exclude Trust from historical data to match current calculation
-    // Get the most recent Personal value for last year
-    const lastYearPersonalEntries = historicalNetWorth
-      .filter((item: HistoricalNetWorth) => {
-        const year = new Date(item.date).getFullYear()
-        return year === lastYear && item.category === 'Personal'
-      })
-      .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-    
-    const lastYearPersonal = lastYearPersonalEntries.length > 0
-      ? (currency === 'USD' ? lastYearPersonalEntries[0].amount_usd : lastYearPersonalEntries[0].amount_gbp) || 0
-      : 0
-    
-    // Get the most recent Family value for last year (excluding Trust)
-    const lastYearFamilyEntries = historicalNetWorth
-      .filter((item: HistoricalNetWorth) => {
-        const year = new Date(item.date).getFullYear()
-        return year === lastYear && item.category === 'Family'
-      })
-      .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-    
-    const lastYearFamily = lastYearFamilyEntries.length > 0
-      ? (currency === 'USD' ? lastYearFamilyEntries[0].amount_usd : lastYearFamilyEntries[0].amount_gbp) || 0
-      : 0
+      const category =
+        item.category === 'Personal' || item.category === 'Family'
+          ? item.category
+          : null
+      if (!category) return
+
+      const amount = currency === 'USD' ? (item.amount_usd || 0) : (item.amount_gbp || 0)
+      const dateKey = date.toISOString().slice(0, 10)
+      const key = `${year}|${category}`
+      const existing = latestByYearCategory.get(key)
+      if (!existing || dateKey > existing.date) {
+        latestByYearCategory.set(key, { date: dateKey, amount })
+      }
+    })
+
+    const yearCategoryAmount = (year: number, category: 'Personal' | 'Family') =>
+      latestByYearCategory.get(`${year}|${category}`)?.amount ?? 0
+
+    // For comparison, use latest Personal/Family values for last year (Trust excluded by design).
+    const lastYearPersonal = yearCategoryAmount(lastYear, 'Personal')
+    const lastYearFamily = yearCategoryAmount(lastYear, 'Family')
     
     // Calculate last year's total (Personal + Family, excluding Trust) to match current calculation
     const lastYearTotal = lastYearPersonal + lastYearFamily
@@ -246,37 +227,11 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
     // Calculate 5-year average (current year - 1 through current year - 5)
     // IMPORTANT: Exclude Trust from each year's calculation, use most recent entry per category per year
     const yearsForAvg = [currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4, currentYear - 5]
-    const fiveYearAvg = yearsForAvg.reduce((sum, year) => {
-      // Get most recent Personal entry for this year
-      const yearPersonalEntries = historicalNetWorth
-        .filter((item: HistoricalNetWorth) => {
-          const itemYear = new Date(item.date).getFullYear()
-          return itemYear === year && item.category === 'Personal'
-        })
-        .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-      
-      const yearPersonal = yearPersonalEntries.length > 0
-        ? (currency === 'USD' ? yearPersonalEntries[0].amount_usd : yearPersonalEntries[0].amount_gbp) || 0
-        : 0
-      
-      // Get most recent Family entry for this year (excluding Trust)
-      const yearFamilyEntries = historicalNetWorth
-        .filter((item: HistoricalNetWorth) => {
-          const itemYear = new Date(item.date).getFullYear()
-          return itemYear === year && item.category === 'Family'
-        })
-        .sort((a: HistoricalNetWorth, b: HistoricalNetWorth) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-      
-      const yearFamily = yearFamilyEntries.length > 0
-        ? (currency === 'USD' ? yearFamilyEntries[0].amount_usd : yearFamilyEntries[0].amount_gbp) || 0
-        : 0
-      
-      return sum + (yearPersonal + yearFamily)
-    }, 0) / 5
+    const fiveYearAvg =
+      yearsForAvg.reduce(
+        (sum, year) => sum + yearCategoryAmount(year, 'Personal') + yearCategoryAmount(year, 'Family'),
+        0
+      ) / 5
 
     // Calculate changes (comparing Personal + Family, excluding Trust)
     const vsLastYear = currentTotal - lastYearTotal
@@ -305,26 +260,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
       .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
       .slice(0, 6) // Top 6 accounts
 
-    // Net worth over time: use Dashboard-style yearly snapshots, but exclude Trust for Insights
-    const latestByYearCategory = new Map<string, { date: string; amount: number }>()
-    historicalNetWorth.forEach((item: HistoricalNetWorth) => {
-      const date = new Date(item.date)
-      const year = date.getFullYear()
-      if (Number.isNaN(year) || !Number.isFinite(year)) return
-
-      const category = item.category === 'Personal' || item.category === 'Family'
-        ? item.category
-        : null
-      if (!category) return
-
-      const amount = currency === 'USD' ? (item.amount_usd || 0) : (item.amount_gbp || 0)
-      const dateKey = date.toISOString().slice(0, 10)
-      const key = `${year}|${category}`
-      const existing = latestByYearCategory.get(key)
-      if (!existing || dateKey > existing.date) {
-        latestByYearCategory.set(key, { date: dateKey, amount })
-      }
-    })
+    // Net worth over time: use latest Personal/Family per year from the prebuilt index.
 
     const groupedByYear: Record<number, { year: number; Personal: number; Family: number }> = {}
     latestByYearCategory.forEach((entry, key) => {
@@ -1041,160 +977,16 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Net worth over time — small line chart */}
-            <div>
-              <h3 className="text-sm font-semibold mb-3">Net worth over time</h3>
-              {netWorthInsights.netWorthChartData.length > 0 ? (
-                <div className="h-[180px] md:h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={netWorthInsights.netWorthChartData} margin={{ top: 25, right: isMobile ? 10 : 15, left: 0, bottom: isMobile ? 25 : 15 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fontWeight: 600 }}
-                        interval={0}
-                        angle={isMobile ? -45 : 0}
-                        textAnchor={isMobile ? 'end' : 'middle'}
-                        height={isMobile ? 50 : 35}
-                        domain={['dataMin', 'dataMax']}
-                        tickFormatter={(value, index) => {
-                          // Always show year labels, show month labels for context
-                          const data = netWorthInsights.netWorthChartData[index]
-                          if (data && data.isYearTick) {
-                            return value // Year labels (4 digits) - always show
-                          }
-                          return value // Month abbreviations
-                        }}
-                      />
-                      <YAxis
-                        tick={{ fontSize: getChartFontSizes(isMobile).axisTick, fontWeight: 400 }}
-                        tickFormatter={(v) => {
-                          if (v === 0) return '0'
-                          if (v >= 1e6) {
-                            const m = v / 1e6
-                            return m % 1 === 0 ? `${m}M` : `${m.toFixed(1)}M`
-                          }
-                          if (v >= 1000) {
-                            const k = v / 1000
-                            return k % 1 === 0 ? `${k}k` : `${k.toFixed(1)}k`
-                          }
-                          return String(v)
-                        }}
-                      />
-                      <Tooltip 
-                        formatter={(v: number) => [formatCurrencyLarge(v), 'Total']} 
-                        labelFormatter={(label, payload) => {
-                          if (!payload || payload.length === 0) return label
-                          const data = payload[0].payload
-                          if (data && data.month) {
-                            const [year, month] = data.month.split('-')
-                            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-                            return `${monthNames[parseInt(month, 10) - 1]} ${year}`
-                          }
-                          return label
-                        }} 
-                      />
-                      <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} dot={false}>
-                        <LabelList
-                          dataKey="total"
-                          position="top"
-                          offset={8}
-                          content={({ x, y, value, index }: { x?: string | number; y?: string | number; value?: string | number; index?: number }) => {
-                            if (value == null || x == null || y == null || typeof x === 'string' || typeof y === 'string' || typeof value === 'string') return null
-                            const data = netWorthInsights.netWorthChartData
-                            const isFirst = index === 0
-                            const isLast = index === data.length - 1
-                            // Find peak index (highest total)
-                            const peakIndex = data.reduce((maxIdx, item, i) => item.total > data[maxIdx].total ? i : maxIdx, 0)
-                            const isPeak = index === peakIndex
-                            // Only label first, last, and peak points
-                            if (!isFirst && !isLast && !isPeak) return null
-                            return (
-                              <text
-                                key={index}
-                                x={x}
-                                y={y - 8}
-                                textAnchor={isFirst ? 'start' : isLast ? 'end' : 'middle'}
-                                fontSize={getChartFontSizes(isMobile).axisTick}
-                                fill={chartTheme.labelFill}
-                              >
-                                {formatCurrencyLarge(value)}
-                              </text>
-                            )
-                          }}
-                        />
-                      </Line>
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No historical data yet.</p>
-              )}
-            </div>
-
-            {/* Personal vs Family or Category Breakdown — donut */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-sm font-semibold">
-                  {netWorthInsights.hasPersonalFamilySplit ? 'Personal vs Family' : 'Net Worth by Category'}
-                </h3>
-                {!netWorthInsights.hasPersonalFamilySplit && hasTrustData && (
-                  <span className="text-xs text-muted-foreground">(Trust excluded)</span>
-                )}
-              </div>
-              {(netWorthInsights.personalVsFamilyPie.length > 0 || netWorthInsights.categoryPie.length > 0) ? (
-                <div className="h-[200px] md:h-[280px] w-full flex items-center justify-center pt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart margin={{ top: 8, right: 10, bottom: 0, left: 10 }}>
-                      <Pie
-                        data={netWorthInsights.hasPersonalFamilySplit ? netWorthInsights.personalVsFamilyPie : netWorthInsights.categoryPie}
-                        cx="50%"
-                        cy="48%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        paddingAngle={2}
-                        dataKey="value"
-                        nameKey="name"
-                        stroke="#fff"
-                        strokeWidth={1}
-                      >
-                        {(netWorthInsights.hasPersonalFamilySplit ? netWorthInsights.personalVsFamilyPie : netWorthInsights.categoryPie).map((entry, i) => (
-                          <Cell key={i} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(v: number) => formatCurrencyLarge(v)}
-                        contentStyle={{
-                          backgroundColor: chartTheme.tooltipBg,
-                          borderColor: chartTheme.tooltipBorder,
-                          color: chartTheme.tooltipText,
-                          borderRadius: '6px',
-                          padding: isMobile ? '6px 10px' : '8px 12px',
-                          fontSize: `${getChartFontSizes(isMobile).tooltipMin}px`,
-                        }}
-                      />
-                      <Legend
-                        wrapperStyle={{
-                          paddingTop: isMobile ? '10px' : '20px',
-                          fontSize: getChartFontSizes(isMobile).legend,
-                        }}
-                        iconType="square"
-                        iconSize={getChartFontSizes(isMobile).iconSize}
-                        formatter={(value) => (
-                          <span style={{ fontSize: getChartFontSizes(isMobile).legend, marginRight: isMobile ? '16px' : '24px' }}>
-                            {value}
-                          </span>
-                        )}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No balance data yet.</p>
-              )}
-            </div>
-          </div>
+          <LazyNetWorthCharts
+            isMobile={isMobile}
+            hasTrustData={hasTrustData}
+            chartTheme={chartTheme}
+            netWorthChartData={netWorthInsights.netWorthChartData}
+            hasPersonalFamilySplit={netWorthInsights.hasPersonalFamilySplit}
+            personalVsFamilyPie={netWorthInsights.personalVsFamilyPie}
+            categoryPie={netWorthInsights.categoryPie}
+            formatCurrencyLarge={formatCurrencyLarge}
+          />
 
           {/* Top Holdings — same style as Annual Budget (custom horizontal bars) */}
           <div>
