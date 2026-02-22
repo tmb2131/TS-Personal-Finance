@@ -335,6 +335,79 @@ export async function computeNetWorthTimeSeriesFromAccountBalances(
   return result
 }
 
+export type LatestNetWorthSnapshot = {
+  Personal: { amount_usd: number; amount_gbp: number }
+  Family: { amount_usd: number; amount_gbp: number }
+  Trust: { amount_usd: number; amount_gbp: number }
+}
+
+/**
+ * Compute current net worth from account_balances using latest row per account (same concept as
+ * Key Insights / AccountsOverview). Returns Personal, Family, Trust in USD and GBP for the
+ * dashboard chart current-year bar.
+ */
+export async function computeLatestNetWorthSnapshotFromAccountBalances(
+  db: SupabaseClient,
+  userId: string
+): Promise<LatestNetWorthSnapshot | null> {
+  const accountHistory = await fetchAccountHistory(db, userId)
+  if (!accountHistory.length) return null
+
+  const stateByAccount = new Map<string, AccountHistoryRow>()
+  for (const row of accountHistory) {
+    const key = `${row.institution}|${row.account_name}`
+    stateByAccount.set(key, row)
+  }
+
+  const fallbackRates = await getFallbackRates(db)
+
+  let personalUsd = 0
+  let personalGbp = 0
+  let familyUsd = 0
+  let familyGbp = 0
+  let trustUsd = 0
+  let trustGbp = 0
+
+  for (const account of stateByAccount.values()) {
+    const currency = normalizeCurrency(account.currency)
+    const category = (account.category ?? '').trim().toLowerCase()
+    const isTrust = category === 'trust' || category.includes('trust')
+    const total = toFiniteNumber(account.balance_total_local) ?? 0
+    const personal = toFiniteNumber(account.balance_personal_local) ?? 0
+    const family = toFiniteNumber(account.balance_family_local) ?? 0
+
+    if (isTrust) {
+      if (Math.abs(total) > EPSILON) {
+        trustUsd += convertLocalToUsd(total, currency, fallbackRates)
+        trustGbp += convertLocalToGbp(total, currency, fallbackRates)
+      }
+      continue
+    }
+
+    const splitMissing = Math.abs(personal) <= EPSILON && Math.abs(family) <= EPSILON && Math.abs(total) > EPSILON
+    if (splitMissing) {
+      personalUsd += convertLocalToUsd(total, currency, fallbackRates)
+      personalGbp += convertLocalToGbp(total, currency, fallbackRates)
+      continue
+    }
+
+    if (Math.abs(personal) > EPSILON) {
+      personalUsd += convertLocalToUsd(personal, currency, fallbackRates)
+      personalGbp += convertLocalToGbp(personal, currency, fallbackRates)
+    }
+    if (Math.abs(family) > EPSILON) {
+      familyUsd += convertLocalToUsd(family, currency, fallbackRates)
+      familyGbp += convertLocalToGbp(family, currency, fallbackRates)
+    }
+  }
+
+  return {
+    Personal: { amount_usd: roundMoney(personalUsd), amount_gbp: roundMoney(personalGbp) },
+    Family: { amount_usd: roundMoney(familyUsd), amount_gbp: roundMoney(familyGbp) },
+    Trust: { amount_usd: roundMoney(trustUsd), amount_gbp: roundMoney(trustGbp) },
+  }
+}
+
 /**
  * Compute Personal+Family net worth as of a single date from account_balances (latest row per
  * account with date_updated <= cutoffDate), with FX conversion.

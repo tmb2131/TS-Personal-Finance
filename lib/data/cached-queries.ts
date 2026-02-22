@@ -4,8 +4,8 @@ import type { BudgetTarget, HistoricalNetWorth } from '@/lib/types'
 import type { FxRatesRow } from '@/lib/utils/fx-rates'
 import {
   computeNetWorthTimeSeriesFromAccountBalances,
-  computeYearStartYearEndFromAccountBalances,
-  type YearStartYearEndSnapshot,
+  computeLatestNetWorthSnapshotFromAccountBalances,
+  type LatestNetWorthSnapshot,
 } from '@/lib/net-worth-from-accounts'
 
 /**
@@ -83,12 +83,12 @@ export const fetchNetWorthFromAccountBalances = cache(async (): Promise<Historic
   return computeNetWorthTimeSeriesFromAccountBalances(supabase, user.id)
 })
 
-/** Year Start / Year End snapshots computed from account_balances (no yoy_net_worth). */
-export const fetchYearStartYearEndFromAccountBalances = cache(
-  async (): Promise<YearStartYearEndSnapshot | null> => {
+/** Current net worth (latest row per account) from account_balances for dashboard chart current year. */
+export const fetchLatestNetWorthFromAccountBalances = cache(
+  async (): Promise<LatestNetWorthSnapshot | null> => {
     const user = await fetchCurrentUser()
     if (!user) return null
     const supabase = await createClient()
-    return computeYearStartYearEndFromAccountBalances(supabase, user.id)
+    return computeLatestNetWorthSnapshotFromAccountBalances(supabase, user.id)
   }
 )

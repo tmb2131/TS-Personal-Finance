@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { TransactionAnalysis } from '@/components/analysis/transaction-analysis'
-import { NetWorthStartEndChartWrapper } from '@/components/analysis/net-worth-start-end-chart-wrapper'
+import { NetWorthStartEndChart } from '@/components/analysis/net-worth-start-end-chart'
 import { YoYNetWorthWaterfall } from '@/components/analysis/yoy-net-worth-waterfall'
 import { CumulativeSpendChart } from '@/components/analysis/cumulative-spend-chart'
 import { AnnualCumulativeSpendChart } from '@/components/analysis/annual-cumulative-spend-chart'
@@ -75,7 +75,7 @@ export default async function AnalysisPage({
       </div>
       <div id="yoy-net-worth" className="scroll-mt-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <NetWorthStartEndChartWrapper />
+          <NetWorthStartEndChart />
           <YoYNetWorthWaterfall />
         </div>
       </div>

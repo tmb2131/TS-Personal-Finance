@@ -10,7 +10,6 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
-import type { YearStartYearEndSnapshot } from '@/lib/net-worth-from-accounts'
 import { Wallet, AlertCircle } from 'lucide-react'
 import {
   BarChart,
@@ -27,28 +26,15 @@ import {
 const YEAR_START = 'Year Start'
 const YEAR_END = 'Year End'
 
-export type NetWorthStartEndInitialData = YearStartYearEndSnapshot
-
-interface NetWorthStartEndChartProps {
-  /** When provided, chart uses this instead of fetching yoy_net_worth (e.g. from account_balances). */
-  initialData?: YearStartYearEndSnapshot | null
-}
-
-export function NetWorthStartEndChart({ initialData }: NetWorthStartEndChartProps = {}) {
+export function NetWorthStartEndChart() {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
   const [data, setData] = useState<YoYNetWorth[]>([])
-  const [loading, setLoading] = useState(!initialData)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (initialData != null) {
-      setLoading(false)
-      setError(null)
-      return
-    }
-
     async function fetchData() {
       const supabase = createClient()
       const { data: netWorthData, error } = await supabase
@@ -69,18 +55,9 @@ export function NetWorthStartEndChart({ initialData }: NetWorthStartEndChartProp
     }
 
     fetchData()
-  }, [currency, initialData])
+  }, [currency])
 
   const chartData = useMemo(() => {
-    if (initialData) {
-      const getAmount = (x: { amount_usd: number; amount_gbp: number }) =>
-        currency === 'USD' ? x.amount_usd : x.amount_gbp
-      return [
-        { name: 'Year Start', value: getAmount(initialData.yearStart), label: 'Prior year-end net worth' },
-        { name: 'Current', value: getAmount(initialData.yearEnd), label: 'Current net worth' },
-      ]
-    }
-
     if (data.length === 0) return []
 
     const yearStartItem = data.find((item) => item.category === YEAR_START)
@@ -109,7 +86,7 @@ export function NetWorthStartEndChart({ initialData }: NetWorthStartEndChartProp
     }
 
     return rows
-  }, [data, currency, initialData])
+  }, [data, currency])
 
   const symbol = currency === 'USD' ? '$' : '£'
   const formatAsMillions = (value: number) => {

@@ -338,6 +338,9 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
       }
     })
 
+    // Current year: use live total from account_balances so chart matches headline
+    groupedByYear[currentYear] = { year: currentYear, Personal: currentPersonal, Family: currentFamily }
+
     const netWorthChartData = Object.values(groupedByYear)
       .map((item) => ({
         ...item,

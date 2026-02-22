@@ -31,11 +31,19 @@ const FAMILY_FILL = '#22c55e' // Green-500 (matches app's positive/growth color)
 const TRUST_FILL = '#8b5cf6' // Violet-500
 const TOTAL_LINE_STROKE = '#1e40af' // Blue-800 (darker blue for emphasis)
 
-interface NetWorthChartProps {
-  initialData?: HistoricalNetWorth[]
+export type CurrentYearFromAccounts = {
+  Personal: { amount_usd: number; amount_gbp: number }
+  Family: { amount_usd: number; amount_gbp: number }
+  Trust: { amount_usd: number; amount_gbp: number }
 }
 
-export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
+interface NetWorthChartProps {
+  initialData?: HistoricalNetWorth[]
+  /** Live snapshot from account_balances for current year bar (overrides historical_net_worth for current year). */
+  currentYearFromAccounts?: CurrentYearFromAccounts | null
+}
+
+export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorthChartProps = {}) {
   const { currency } = useCurrency()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialData)
@@ -53,70 +61,101 @@ export function NetWorthChart({ initialData }: NetWorthChartProps = {}) {
   }, [])
 
   // Process data function - use useCallback to memoize with currency dependency
-  const processData = useCallback((netWorthData: HistoricalNetWorth[]) => {
-    const latestByYearCategory = new Map<string, { date: string; amount: number }>()
+  const processData = useCallback(
+    (netWorthData: HistoricalNetWorth[], currentYearSnapshot?: CurrentYearFromAccounts | null) => {
+      const latestByYearCategory = new Map<string, { date: string; amount: number }>()
 
-    netWorthData.forEach((item: HistoricalNetWorth) => {
-      const date = new Date(item.date)
-      const year = date.getFullYear()
-      
-      // Skip invalid dates or NaN years
-      if (isNaN(year) || !isFinite(year)) {
-        return
+      netWorthData.forEach((item: HistoricalNetWorth) => {
+        const date = new Date(item.date)
+        const year = date.getFullYear()
+
+        // Skip invalid dates or NaN years
+        if (isNaN(year) || !isFinite(year)) {
+          return
+        }
+
+        const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
+        const amountValue = amount || 0
+        const category = item.category === 'Personal' || item.category === 'Family' || item.category === 'Trust'
+          ? item.category
+          : null
+
+        if (!category) return
+
+        const dateKey = date.toISOString().slice(0, 10)
+        const key = `${year}|${category}`
+        const existing = latestByYearCategory.get(key)
+        if (!existing || dateKey > existing.date) {
+          latestByYearCategory.set(key, { date: dateKey, amount: amountValue })
+        }
+      })
+
+      const currentYear = new Date().getFullYear()
+
+      // Current year: use live snapshot from account_balances when provided
+      if (currentYearSnapshot) {
+        const today = new Date().toISOString().slice(0, 10)
+        for (const cat of ['Personal', 'Family', 'Trust'] as const) {
+          const amt = currency === 'USD' ? currentYearSnapshot[cat].amount_usd : currentYearSnapshot[cat].amount_gbp
+          latestByYearCategory.set(`${currentYear}|${cat}`, { date: today, amount: amt })
+        }
+      } else if (netWorthData.length > 0) {
+        // Fallback: ensure current year shows latest available when latest snapshot is from a prior year
+        const maxDate = netWorthData.reduce((max, item) => {
+          const d = item.date?.slice(0, 10)
+          return d && (!max || d > max) ? d : max
+        }, '')
+        const maxYear = maxDate ? parseInt(maxDate.slice(0, 4), 10) : 0
+        if (maxDate && maxYear < currentYear) {
+          const amountsAtLatest = netWorthData.filter((item) => item.date?.slice(0, 10) === maxDate)
+          for (const item of amountsAtLatest) {
+            const category = item.category === 'Personal' || item.category === 'Family' || item.category === 'Trust' ? item.category : null
+            if (category) {
+              const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
+              latestByYearCategory.set(`${currentYear}|${category}`, { date: maxDate, amount: amount ?? 0 })
+            }
+          }
+        }
       }
-      
-      const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
-      const amountValue = amount || 0
-      const category = item.category === 'Personal' || item.category === 'Family' || item.category === 'Trust'
-        ? item.category
-        : null
 
-      if (!category) return
+      const grouped: Record<number, { year: number; Personal: number; Family: number; Trust: number; Total: number }> = {}
+      latestByYearCategory.forEach((entry, key) => {
+        const [yearStr, category] = key.split('|')
+        const year = Number(yearStr)
+        if (!grouped[year]) {
+          grouped[year] = { year, Personal: 0, Family: 0, Trust: 0, Total: 0 }
+        }
+        if (category === 'Personal' || category === 'Family' || category === 'Trust') {
+          grouped[year][category] = entry.amount
+        }
+      })
 
-      const dateKey = date.toISOString().slice(0, 10)
-      const key = `${year}|${category}`
-      const existing = latestByYearCategory.get(key)
-      if (!existing || dateKey > existing.date) {
-        latestByYearCategory.set(key, { date: dateKey, amount: amountValue })
-      }
-    })
+      Object.values(grouped).forEach((row) => {
+        row.Total = (row.Personal || 0) + (row.Family || 0) + (row.Trust || 0)
+      })
 
-    const grouped: Record<number, { year: number; Personal: number; Family: number; Trust: number; Total: number }> = {}
-    latestByYearCategory.forEach((entry, key) => {
-      const [yearStr, category] = key.split('|')
-      const year = Number(yearStr)
-      if (!grouped[year]) {
-        grouped[year] = { year, Personal: 0, Family: 0, Trust: 0, Total: 0 }
-      }
-      if (category === 'Personal' || category === 'Family' || category === 'Trust') {
-        grouped[year][category] = entry.amount
-      }
-    })
+      return Object.values(grouped)
+        .filter((item: any) => item.year != null && !isNaN(item.year) && isFinite(item.year) && item.Total > 0) // Only display years where total net worth > 0 (per PRD requirement)
+        .sort((a: any, b: any) => a.year - b.year)
+    },
+    [currency]
+  )
 
-    Object.values(grouped).forEach((row) => {
-      row.Total = (row.Personal || 0) + (row.Family || 0) + (row.Trust || 0)
-    })
-
-    return Object.values(grouped)
-      .filter((item: any) => item.year != null && !isNaN(item.year) && isFinite(item.year) && item.Total > 0) // Only display years where total net worth > 0 (per PRD requirement)
-      .sort((a: any, b: any) => a.year - b.year)
-  }, [currency])
-
-  // Use server-provided initialData only (from account_balances); reprocess when currency changes
+  // Use server-provided initialData; current year uses live snapshot from account_balances when provided
   useEffect(() => {
     if (initialData?.length) {
-      const chartData = processData(initialData)
+      const chartData = processData(initialData, currentYearFromAccounts)
       setData(chartData)
     } else {
       setData([])
     }
     setLoading(false)
-  }, [currency, initialData, processData])
+  }, [currency, initialData, currentYearFromAccounts, processData])
 
   // Derive display data so we show initialData on first paint (avoids flash of empty before useEffect runs)
   const displayData = useMemo(
-    () => (data.length ? data : (initialData?.length ? processData(initialData) : [])),
-    [data, initialData, processData]
+    () => (data.length ? data : (initialData?.length ? processData(initialData, currentYearFromAccounts) : [])),
+    [data, initialData, currentYearFromAccounts, processData]
   )
 
   // Check if there's any Family data

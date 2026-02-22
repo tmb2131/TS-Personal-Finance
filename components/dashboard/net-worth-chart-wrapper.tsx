@@ -1,10 +1,18 @@
-import { fetchNetWorthFromAccountBalances } from '@/lib/data/cached-queries'
+import { fetchHistoricalNetWorth, fetchLatestNetWorthFromAccountBalances } from '@/lib/data/cached-queries'
 import { NetWorthChart } from './net-worth-chart'
 
 export async function NetWorthChartWrapper() {
   try {
-    const data = await fetchNetWorthFromAccountBalances()
-    return <NetWorthChart initialData={data} />
+    const [data, currentYearFromAccounts] = await Promise.all([
+      fetchHistoricalNetWorth(),
+      fetchLatestNetWorthFromAccountBalances(),
+    ])
+    return (
+      <NetWorthChart
+        initialData={data}
+        currentYearFromAccounts={currentYearFromAccounts}
+      />
+    )
   } catch (error) {
     return (
       <div className="text-sm text-destructive p-4">
