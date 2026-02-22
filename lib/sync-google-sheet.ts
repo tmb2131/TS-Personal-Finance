@@ -8,7 +8,8 @@ function isGlobalTable(table: string): boolean {
   return GLOBAL_TABLES.has(table);
 }
 
-const BATCH_SIZE = 1000;
+/** Max rows per DB insert to balance throughput and request size (Supabase/PostgREST handle ~1–2k rows). */
+const BATCH_SIZE = 2000;
 
 /** Split an array into chunks of at most `size` for batched DB operations. */
 function chunkArray<T>(array: T[], size: number): T[][] {
@@ -130,21 +131,19 @@ export async function syncGoogleSheet(
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const db = supabase ?? (await createClient());
+    // Run spreadsheet metadata fetch and DB client creation in parallel when possible
+    const [spreadsheetInfo, dbClient] = await Promise.all([
+      sheets.spreadsheets.get({ spreadsheetId }).catch((err: any) => {
+        throw new Error(`Failed to access spreadsheet: ${err.message}`);
+      }),
+      supabase !== undefined ? Promise.resolve(supabase) : createClient(),
+    ]);
+    const db = dbClient;
     const effectiveConfigs = SHEET_CONFIGS;
-
-    // First, get the list of sheets to verify they exist
-    let availableSheets: string[] = [];
-    try {
-      const spreadsheetInfo = await sheets.spreadsheets.get({
-        spreadsheetId,
-      });
-      availableSheets = (spreadsheetInfo.data.sheets || []).map(sheet => sheet.properties?.title || '');
-      console.log('Available sheets in spreadsheet:', availableSheets);
-    } catch (error: any) {
-      console.error('Error fetching spreadsheet info:', error);
-      throw new Error(`Failed to access spreadsheet: ${error.message}`);
-    }
+    const availableSheets: string[] = (spreadsheetInfo.data.sheets || []).map(
+      (sheet) => sheet.properties?.title || ''
+    );
+    console.log('Available sheets in spreadsheet:', availableSheets);
 
     // Filter to only configs whose sheet tab exists in the spreadsheet
     const presentConfigs: SheetConfig[] = [];
@@ -165,6 +164,7 @@ export async function syncGoogleSheet(
     });
 
     // Fetch ALL sheet data in one batchGet call
+    const sheetsFetchStart = Date.now();
     console.log(`Fetching ${ranges.length} sheets in a single batchGet call...`);
     type FetchedItem = { config: SheetConfig; error: string | null; data: any[] | null };
     const fetchedData: FetchedItem[] = [];
@@ -174,6 +174,7 @@ export async function syncGoogleSheet(
         spreadsheetId,
         ranges,
       });
+      console.log(`Sheets fetch: ${Date.now() - sheetsFetchStart}ms`);
 
       const valueRanges = batchResponse.data.valueRanges || [];
 
@@ -258,6 +259,7 @@ export async function syncGoogleSheet(
 
       try {
         let upsertResult: { data: any; error: any };
+        let rowsProcessedForResult = transformedData.length;
         if (config.table === 'account_balances') {
           // Build set of current institution per account_name|category to clean up stale rows
           const uniqueAccounts = new Map<string, { account_name: string; category: string; institution: string }>();
@@ -366,11 +368,10 @@ export async function syncGoogleSheet(
 
             const mergedData = Array.from(bySource.values());
             const chunks = chunkArray(mergedData, BATCH_SIZE);
-            let lastError: any = null;
-            for (const chunk of chunks) {
-              const { error } = await db.from(config.table).insert(chunk);
-              if (error) lastError = error;
-            }
+            const insertResults = await Promise.all(
+              chunks.map((chunk) => db.from(config.table).insert(chunk))
+            );
+            const lastError = insertResults.map((r) => r.error).find(Boolean) ?? null;
             upsertResult = { data: null, error: lastError };
           } else if (config.table === 'recurring_payments') {
             // Preserve needs_review flags from existing records before deleting
@@ -485,35 +486,35 @@ export async function syncGoogleSheet(
             `FX Rates: Sheet has ${deduplicatedData.length} rows up to today; ${toInsert.length} new date(s) to append (max existing: ${maxExistingDate ?? 'none'})`
           );
 
+          rowsProcessedForResult = toInsert.length;
           if (toInsert.length === 0) {
             upsertResult = { data: null, error: null };
           } else {
             const fxChunks = chunkArray(toInsert, BATCH_SIZE);
-            let fxLastError: any = null;
-            for (const chunk of fxChunks) {
-              const { error } = await db.from(config.table).insert(chunk);
-              if (error) fxLastError = error;
-            }
+            const fxResults = await Promise.all(
+              fxChunks.map((chunk) => db.from(config.table).insert(chunk))
+            );
+            const fxLastError = fxResults.map((r) => r.error).find(Boolean) ?? null;
             upsertResult = { data: null, error: fxLastError };
           }
         } else if (config.table === 'transaction_log') {
-          // Delete only google_sheet rows, then chunked insert
-          const { error: delErr } = await db
-            .from(config.table)
-            .delete()
-            .eq('user_id', uid)
-            .eq('data_source', 'google_sheet');
-          if (delErr) {
-            console.warn('Transaction Log: delete error', delErr);
-          }
-
-          const chunks = chunkArray(dataWithUser, BATCH_SIZE);
-          let lastError: any = null;
-          for (const chunk of chunks) {
-            const { error } = await db.from(config.table).insert(chunk);
-            if (error) lastError = error;
-          }
-          upsertResult = { data: null, error: lastError };
+          // Single RPC: delete google_sheet rows + bulk insert in one round-trip
+          const txLogStart = Date.now();
+          const rowsForRpc = transformedData.map((row: any) => ({
+            date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date,
+            category: row.category ?? '',
+            counterparty: row.counterparty ?? null,
+            counterparty_dedup: (row.counterparty_dedup ?? (row.counterparty ?? '')).toString(),
+            amount_usd: row.amount_usd ?? null,
+            amount_gbp: row.amount_gbp ?? null,
+            currency: row.currency ?? null,
+          }));
+          const { error: rpcErr } = await db.rpc('sync_transaction_log_bulk', {
+            p_user_id: uid,
+            p_rows: rowsForRpc,
+          });
+          console.log(`Transaction log bulk (delete + insert ${rowsForRpc.length} rows): ${Date.now() - txLogStart}ms`);
+          upsertResult = { data: null, error: rpcErr ?? null };
         } else {
           const { data, error } = await db
             .from(config.table)
@@ -529,13 +530,13 @@ export async function syncGoogleSheet(
             sheet: config.name,
             success: false,
             error: upsertResult.error.message || JSON.stringify(upsertResult.error),
-            rowsProcessed: transformedData.length,
+            rowsProcessed: rowsProcessedForResult,
           };
         }
         return {
           sheet: config.name,
           success: true,
-          rowsProcessed: transformedData.length,
+          rowsProcessed: rowsProcessedForResult,
         };
       } catch (error: any) {
         console.error(`Error processing sheet ${config.name}:`, error);

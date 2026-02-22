@@ -1,12 +1,10 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
 import { recordLastSync } from '@/lib/sync-metadata'
-import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { revalidateAllData } from '@/lib/cache-tags'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = await createClient()
     const {
@@ -39,10 +37,15 @@ export async function POST() {
     console.log('Sync API: Sync completed', { success: result.success, resultsCount: result.results?.length })
 
     if (result.success) {
-      await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
       await recordLastSync(supabase, user.id)
       revalidateAllData()
+      // Trigger YoY rebuild in background (separate invocation) so sync returns without waiting
+      const origin = new URL(request.url).origin
+      const cookie = request.headers.get('cookie') ?? ''
+      void fetch(`${origin}/api/yoy-net-worth/rebuild`, {
+        method: 'POST',
+        headers: { cookie },
+      }).catch((e) => console.error('Sync API: background YoY rebuild request failed', e))
     }
 
     // Ensure consistent response format

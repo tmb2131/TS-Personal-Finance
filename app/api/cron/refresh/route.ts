@@ -1,6 +1,5 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
 import { recordLastSync } from '@/lib/sync-metadata'
-import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
 import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
@@ -44,19 +43,18 @@ export async function GET(request: Request) {
       if (!result.success) anySuccess = false
       if (result.success) {
         try {
-          await rebuildHistoricalNetWorthFromAccountHistory(admin, profile.id)
           await rebuildYoYNetWorthFromAppData(admin, profile.id)
           await recordLastSync(admin, profile.id)
         } catch (error: unknown) {
           anySuccess = false
-          const message = error instanceof Error ? error.message : 'Failed to rebuild derived net worth data'
+          const message = error instanceof Error ? error.message : 'Failed to rebuild YoY net worth data'
           allResults.push({
-            sheet: 'Derived Net Worth (app computation)',
+            sheet: 'YoY Net Worth (app computation)',
             success: false,
             error: message,
             rowsProcessed: 0,
           })
-          console.error(`Cron: historical net worth rebuild failed for user ${profile.id}:`, error)
+          console.error(`Cron: YoY net worth rebuild failed for user ${profile.id}:`, error)
         }
       }
     }
