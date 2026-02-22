@@ -459,28 +459,43 @@ export async function syncGoogleSheet(
             upsertResult = { data, error }
           }
         } else if (config.table === 'fx_rates') {
-          // For historical FX rates, date is PRIMARY KEY
-          // Deduplicate by date, keeping the last occurrence (in case of duplicates in source data)
+          // Append-only: sheet now contains rates only up to current day; insert only new dates.
           const dateMap = new Map<string, any>();
-
           transformedData.forEach((item: any) => {
             dateMap.set(item.date, item);
           });
-
           const deduplicatedData = Array.from(dateMap.values());
-          console.log(`FX Rates: Processing ${transformedData.length} rows, ${deduplicatedData.length} unique dates`);
           if (transformedData.length !== deduplicatedData.length) {
             console.warn(`FX Rates: Found ${transformedData.length - deduplicatedData.length} duplicate dates in source data`);
           }
-          const fxChunks = chunkArray(deduplicatedData, BATCH_SIZE);
-          let fxLastError: any = null;
-          for (const chunk of fxChunks) {
-            const { error } = await db
-              .from(config.table)
-              .upsert(chunk, { onConflict: 'date' });
-            if (error) fxLastError = error;
+
+          const { data: maxRow } = await db
+            .from(config.table)
+            .select('date')
+            .order('date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const maxExistingDate = maxRow?.date ?? null;
+          const toInsert =
+            maxExistingDate == null
+              ? deduplicatedData
+              : deduplicatedData.filter((item: any) => item.date > maxExistingDate);
+
+          console.log(
+            `FX Rates: Sheet has ${deduplicatedData.length} rows up to today; ${toInsert.length} new date(s) to append (max existing: ${maxExistingDate ?? 'none'})`
+          );
+
+          if (toInsert.length === 0) {
+            upsertResult = { data: null, error: null };
+          } else {
+            const fxChunks = chunkArray(toInsert, BATCH_SIZE);
+            let fxLastError: any = null;
+            for (const chunk of fxChunks) {
+              const { error } = await db.from(config.table).insert(chunk);
+              if (error) fxLastError = error;
+            }
+            upsertResult = { data: null, error: fxLastError };
           }
-          upsertResult = { data: null, error: fxLastError };
         } else if (config.table === 'transaction_log') {
           // Delete only google_sheet rows, then chunked insert
           const { error: delErr } = await db
