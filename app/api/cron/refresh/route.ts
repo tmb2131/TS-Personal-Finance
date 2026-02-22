@@ -38,6 +38,7 @@ export async function GET(request: Request) {
       const result = await syncGoogleSheet(admin, {
         spreadsheetId: profile.google_spreadsheet_id,
         userId: profile.id,
+        fullTransactionReplace: true,
       })
       allResults.push(...(result.results ?? []))
       if (!result.success) anySuccess = false

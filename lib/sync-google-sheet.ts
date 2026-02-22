@@ -26,6 +26,9 @@ const DELETE_INSERT_TABLES = new Set<string>();
 /** Tables that have a data_source column (scoped deletes during sync). */
 const DATA_SOURCE_TABLES = new Set<string>();
 
+/** Manual sync: cap Transaction Log sheet fetch to this many data rows (newest-first). */
+const TRANSACTION_LOG_MANUAL_ROW_CAP = 100;
+
 interface SheetConfig {
   name: string;
   range: string;
@@ -60,7 +63,7 @@ const SHEET_CONFIGS: SheetConfig[] = [
   },
   {
     name: 'FX Rates',
-    range: 'A:C',
+    range: 'A1:C11',
     table: 'fx_rates',
     transform: (row) => {
       // Normalize date to ISO string format (YYYY-MM-DD) for consistent comparison
@@ -76,7 +79,7 @@ const SHEET_CONFIGS: SheetConfig[] = [
   },
   {
     name: 'FX Rate Current',
-    range: 'A:B',
+    range: 'A1:B11',
     table: 'fx_rate_current',
     transform: (row) => {
       const date = row[0] ? new Date(row[0]) : null;
@@ -94,6 +97,8 @@ const SHEET_CONFIGS: SheetConfig[] = [
 export interface SyncGoogleSheetOptions {
   spreadsheetId: string;
   userId: string;
+  /** When true (cron), full table replace. When false/omitted (manual), 100 rows + last week only. */
+  fullTransactionReplace?: boolean;
 }
 
 /**
@@ -106,7 +111,7 @@ export async function syncGoogleSheet(
   supabase: SupabaseClient | undefined,
   options: SyncGoogleSheetOptions
 ) {
-  const { spreadsheetId, userId } = options;
+  const { spreadsheetId, userId, fullTransactionReplace = false } = options;
   try {
     if (!spreadsheetId) {
       throw new Error('spreadsheetId is required')
@@ -160,7 +165,11 @@ export async function syncGoogleSheet(
     // Build ranges for a single batchGet call (one API round-trip instead of N)
     const ranges = presentConfigs.map((config) => {
       const quotedSheetName = config.name.includes(' ') ? `'${config.name}'` : config.name;
-      return `${quotedSheetName}!${config.range}`;
+      const range =
+        config.table === 'transaction_log' && !fullTransactionReplace
+          ? `A2:F${TRANSACTION_LOG_MANUAL_ROW_CAP + 1}`
+          : config.range;
+      return `${quotedSheetName}!${range}`;
     });
 
     // Fetch ALL sheet data in one batchGet call
@@ -205,7 +214,11 @@ export async function syncGoogleSheet(
         presentConfigs.map(async (config) => {
           try {
             const quotedSheetName = config.name.includes(' ') ? `'${config.name}'` : config.name;
-            const rangeString = `${quotedSheetName}!${config.range}`;
+            const range =
+              config.table === 'transaction_log' && !fullTransactionReplace
+                ? `A2:F${TRANSACTION_LOG_MANUAL_ROW_CAP + 1}`
+                : config.range;
+            const rangeString = `${quotedSheetName}!${range}`;
             const response = await sheets.spreadsheets.values.get({
               spreadsheetId,
               range: rangeString,
@@ -498,9 +511,19 @@ export async function syncGoogleSheet(
             upsertResult = { data: null, error: fxLastError };
           }
         } else if (config.table === 'transaction_log') {
-          // Single RPC: delete google_sheet rows + bulk insert in one round-trip
+          // Single RPC: delete google_sheet rows (all or last week) + bulk insert
           const txLogStart = Date.now();
-          const rowsForRpc = transformedData.map((row: any) => ({
+          let rowsToInsert = transformedData;
+          if (!fullTransactionReplace) {
+            const cutoff = new Date();
+            cutoff.setUTCDate(cutoff.getUTCDate() - 7);
+            cutoff.setUTCHours(0, 0, 0, 0);
+            rowsToInsert = transformedData.filter((row: any) => {
+              const d = row.date instanceof Date ? row.date : new Date(row.date);
+              return d >= cutoff;
+            });
+          }
+          const rowsForRpc = rowsToInsert.map((row: any) => ({
             date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : row.date,
             category: row.category ?? '',
             counterparty: row.counterparty ?? null,
@@ -512,8 +535,12 @@ export async function syncGoogleSheet(
           const { error: rpcErr } = await db.rpc('sync_transaction_log_bulk', {
             p_user_id: uid,
             p_rows: rowsForRpc,
+            p_full_replace: fullTransactionReplace,
           });
-          console.log(`Transaction log bulk (delete + insert ${rowsForRpc.length} rows): ${Date.now() - txLogStart}ms`);
+          console.log(
+            `Transaction log bulk (${fullTransactionReplace ? 'full' : 'last week'}, ${rowsForRpc.length} rows): ${Date.now() - txLogStart}ms`
+          );
+          rowsProcessedForResult = rowsForRpc.length;
           upsertResult = { data: null, error: rpcErr ?? null };
         } else {
           const { data, error } = await db
