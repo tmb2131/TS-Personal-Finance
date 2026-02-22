@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
 import { DailySummaryProvider } from '@/components/insights/daily-summary-context'
+import { InsightsDataProvider } from '@/components/insights/insights-data-context'
 import { ThemeProvider } from '@/lib/contexts/theme-provider'
 import { AppShell } from '@/components/app-shell'
 
@@ -33,7 +34,9 @@ export default function RootLayout({
         <ThemeProvider>
           <CurrencyProvider>
             <DailySummaryProvider>
-              <AppShell>{children}</AppShell>
+              <InsightsDataProvider>
+                <AppShell>{children}</AppShell>
+              </InsightsDataProvider>
             </DailySummaryProvider>
           </CurrencyProvider>
         </ThemeProvider>

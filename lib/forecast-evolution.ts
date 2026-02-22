@@ -294,7 +294,8 @@ const getDateRange = (startDate: string, endDate: string): string[] => {
 export async function computeForecastSnapshotsForDates(
   supabase: SupabaseClient,
   userId: string,
-  targetDates: string[]
+  targetDates: string[],
+  preloadedTxRows?: TxRow[]
 ): Promise<Map<string, SnapshotByCategory>> {
   if (targetDates.length === 0) return new Map()
 
@@ -308,7 +309,7 @@ export async function computeForecastSnapshotsForDates(
   const minYear = parseISODateUTC(minDate).getUTCFullYear()
   const minYearStart = `${minYear}-01-01`
 
-  const [fxRate, currentSettingsRes, currentBudgetsRes, settingsHistory, budgetHistory, txRows] =
+  const [fxRate, currentSettingsRes, currentBudgetsRes, settingsHistory, budgetHistory] =
     await Promise.all([
       getCurrentFxRate(supabase),
       supabase
@@ -321,8 +322,10 @@ export async function computeForecastSnapshotsForDates(
         .eq('user_id', userId),
       fetchSettingsHistoryPaged(supabase, userId, maxDate),
       fetchBudgetHistoryPaged(supabase, userId, maxDate),
-      fetchTransactionsPaged(supabase, userId, minYearStart, maxDate),
     ])
+  const txRows =
+    preloadedTxRows ??
+    (await fetchTransactionsPaged(supabase, userId, minYearStart, maxDate))
 
   if (currentSettingsRes.error) {
     throw new Error(`forecast_settings query failed: ${currentSettingsRes.error.message}`)

@@ -22,6 +22,10 @@ interface DailySummaryContextType {
   startPrefetch: () => void
   /** Consume prefetched data if any; returns the promise or null. Caller should clear after use. */
   consumePrefetch: () => Promise<unknown> | null
+  /** Last successful payload + timestamp for fast reopen UX. */
+  getCachedPayload: () => { data: unknown; at: number } | null
+  /** Store latest successful payload for stale-while-revalidate reopen behavior. */
+  setCachedPayload: (data: unknown) => void
 }
 
 const DailySummaryContext = createContext<DailySummaryContextType | undefined>(undefined)
@@ -30,6 +34,7 @@ export function DailySummaryProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [modalKey, setModalKey] = useState(0)
   const prefetchPromiseRef = useRef<Promise<unknown> | null>(null)
+  const cachedPayloadRef = useRef<{ data: unknown; at: number } | null>(null)
 
   const startPrefetch = useCallback(() => {
     if (prefetchPromiseRef.current == null) {
@@ -53,9 +58,24 @@ export function DailySummaryProvider({ children }: { children: ReactNode }) {
     setIsOpen(false)
   }, [])
 
+  const getCachedPayload = useCallback(() => cachedPayloadRef.current, [])
+
+  const setCachedPayload = useCallback((data: unknown) => {
+    cachedPayloadRef.current = { data, at: Date.now() }
+  }, [])
+
   return (
     <DailySummaryContext.Provider
-      value={{ openModal, closeModal, isOpen, modalKey, startPrefetch, consumePrefetch }}
+      value={{
+        openModal,
+        closeModal,
+        isOpen,
+        modalKey,
+        startPrefetch,
+        consumePrefetch,
+        getCachedPayload,
+        setCachedPayload,
+      }}
     >
       {children}
     </DailySummaryContext.Provider>

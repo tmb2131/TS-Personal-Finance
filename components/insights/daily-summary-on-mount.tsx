@@ -8,13 +8,8 @@ import { shouldShowDailySummary } from './daily-summary-modal'
 
 export function DailySummaryOnMount() {
   const searchParams = useSearchParams()
-  const { openModal, startPrefetch } = useDailySummary()
+  const { openModal } = useDailySummary()
   const openDaily = searchParams.get('openDaily') === '1'
-
-  // Start prefetching daily summary data as soon as we're on insights so it's ready when the modal opens
-  useEffect(() => {
-    startPrefetch()
-  }, [startPrefetch])
 
   useEffect(() => {
     if (!shouldShowDailySummary()) return

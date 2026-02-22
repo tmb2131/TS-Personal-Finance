@@ -1,7 +1,5 @@
-import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Skeleton } from '@/components/ui/skeleton'
 import { ConnectSheetModal } from '@/components/insights/connect-sheet-modal'
 import { DummyDataMessage } from '@/components/insights/dummy-data-message'
 import { AutoSyncOnMount } from '@/components/insights/auto-sync-on-mount'
@@ -9,6 +7,8 @@ import { DailySummaryOnMount } from '@/components/insights/daily-summary-on-moun
 import { InsightsHashScroll } from '@/components/insights/insights-hash-scroll'
 import { InsightsContentWithOpenDaily } from '@/components/insights/insights-content-with-open-daily'
 import { InsightsDataBlock } from '@/components/insights/insights-data-block'
+import { InsightsDataHydrator } from '@/components/insights/insights-data-context'
+import { fetchInsightsData } from '@/lib/insights-data'
 
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
@@ -30,30 +30,18 @@ export default async function InsightsPage() {
 
   const needsSpreadsheet = !profile?.google_spreadsheet_id?.trim()
   const hasDummyData = profile?.google_spreadsheet_id === DUMMY_SHEET_ID
+  const initialData = await fetchInsightsData(supabase, user.id)
 
   return (
     <div className="space-y-4 md:space-y-6">
+      <InsightsDataHydrator data={initialData} />
       <InsightsHashScroll />
       <AutoSyncOnMount />
       <DailySummaryOnMount />
       <ConnectSheetModal open={needsSpreadsheet} />
       {hasDummyData && <DummyDataMessage />}
       <InsightsContentWithOpenDaily>
-        <Suspense
-          fallback={
-            <>
-              <Skeleton className="h-9 w-48 mb-2" />
-              <Skeleton className="h-5 w-80 max-w-full mb-4" />
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-32 rounded-xl" />
-                <Skeleton className="h-32 rounded-xl" />
-                <Skeleton className="h-32 rounded-xl" />
-              </div>
-            </>
-          }
-        >
-          <InsightsDataBlock userId={user.id} />
-        </Suspense>
+        <InsightsDataBlock initialData={initialData} />
       </InsightsContentWithOpenDaily>
     </div>
   )

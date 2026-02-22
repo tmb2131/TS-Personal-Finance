@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import {
   Dialog,
@@ -32,6 +32,8 @@ import {
 } from 'recharts'
 import { TrendingUp, TrendingDown, DollarSign, Target, Calendar, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { toLocalDateString } from '@/lib/daily-summary-utils'
+import type { InsightsSeedData } from './insights-data-context'
 
 const SPEND_FILL = '#64748b'
 const SPEND_FILL_ALT = '#475569'
@@ -55,13 +57,6 @@ type TransactionForDayRow = {
   category: string
   amount_gbp: number | null
   amount_usd: number | null
-}
-
-function toLocalDateString(value: Date): string {
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 function getDayOfYear(value: Date): number {
@@ -116,6 +111,19 @@ interface DailySummaryModalProps {
   modalKey?: number
   /** If provided, modal will use prefetched data when opening (e.g. from insights page). */
   consumePrefetch?: () => Promise<unknown> | null
+  /** Last successful payload cache for reopen UX. */
+  getCachedPayload?: () => { data: unknown; at: number } | null
+  /** Persist latest successful payload into shared context cache. */
+  setCachedPayload?: (data: unknown) => void
+  /** Optional insights page data seed used to avoid full daily-summary fetch on /insights. */
+  insightsData?: InsightsSeedData | null
+}
+
+type DailySummaryDeltaResponse = {
+  forecastBridge: ForecastBridgeResponse
+  lastSyncDate: string | null
+  forecastSettings: ForecastSettingsRow[]
+  todayTransactions: TransactionForDayRow[]
 }
 
 function applyDailySummaryData(
@@ -154,8 +162,17 @@ function applyDailySummaryData(
   }
 }
 
-export function DailySummaryModal({ open: controlledOpen, onOpenChange: controlledOnOpenChange, modalKey, consumePrefetch }: DailySummaryModalProps = {}) {
+export function DailySummaryModal({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  modalKey,
+  consumePrefetch,
+  getCachedPayload,
+  setCachedPayload,
+  insightsData,
+}: DailySummaryModalProps = {}) {
   const router = useRouter()
+  const pathname = usePathname()
   const { currency, fxRate, convertAmount } = useCurrency()
   // Support both controlled (from context) and uncontrolled (direct prop) usage
   const [internalOpen, setInternalOpen] = useState(false)
@@ -175,8 +192,10 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
   const [todayTransactions, setTodayTransactions] = useState<TransactionForDayRow[]>([])
   const [mobileMonthlyDriversView, setMobileMonthlyDriversView] = useState<'less' | 'more'>('less')
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async ({ background = false }: { background?: boolean } = {}) => {
+    if (!background) {
+      setLoading(true)
+    }
     const setters = {
       setBudgetData,
       setAnnualTrends,
@@ -188,11 +207,38 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       setForecastByCategory,
     }
     try {
+      if (pathname === '/insights' && insightsData) {
+        try {
+          const deltaRes = await fetch('/api/daily-summary/delta')
+          if (!deltaRes.ok) {
+            const err = await deltaRes.json().catch(() => ({}))
+            throw new Error((err as { error?: string }).error ?? 'Failed to fetch daily summary delta')
+          }
+          const delta = (await deltaRes.json()) as DailySummaryDeltaResponse
+          const merged = {
+            budgetData: insightsData.budgetData ?? [],
+            annualTrends: insightsData.annualTrends ?? [],
+            monthlyTrends: insightsData.monthlyTrends ?? [],
+            forecastByCategory: insightsData.forecastByCategory ?? [],
+            forecastBridge: delta.forecastBridge,
+            lastSyncDate: delta.lastSyncDate,
+            forecastSettings: delta.forecastSettings ?? [],
+            todayTransactions: delta.todayTransactions ?? [],
+          }
+          applyDailySummaryData(merged, setters)
+          setCachedPayload?.(merged)
+          return
+        } catch {
+          // If delta fails, fall back to existing full-response flow.
+        }
+      }
+
       const preload = consumePrefetch?.() ?? null
       if (preload) {
         try {
           const data = await preload
           applyDailySummaryData(data, setters)
+          setCachedPayload?.(data)
           return
         } catch {
           // Prefetch failed or stale; fall through to normal fetch
@@ -205,12 +251,15 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       }
       const data = await res.json()
       applyDailySummaryData(data, setters)
+      setCachedPayload?.(data)
     } catch (error) {
       console.error('Error fetching daily summary data:', error)
     } finally {
-      setLoading(false)
+      if (!background) {
+        setLoading(false)
+      }
     }
-  }, [consumePrefetch])
+  }, [consumePrefetch, insightsData, pathname, setCachedPayload])
 
   // Reset state when modal closes; fetch when open
   useEffect(() => {
@@ -226,8 +275,24 @@ export function DailySummaryModal({ open: controlledOpen, onOpenChange: controll
       setTodayTransactions([])
       return
     }
-    fetchData()
-  }, [open, fetchData])
+    const cached = getCachedPayload?.() ?? null
+    if (cached && Date.now() - cached.at < 120_000) {
+      applyDailySummaryData(cached.data, {
+        setBudgetData,
+        setAnnualTrends,
+        setMonthlyTrends,
+        setForecastBridge,
+        setLastSyncDate,
+        setForecastSettings,
+        setTodayTransactions,
+        setForecastByCategory,
+      })
+      setLoading(false)
+      void fetchData({ background: true })
+      return
+    }
+    void fetchData()
+  }, [open, fetchData, getCachedPayload])
 
   // Calculate annual estimated spend (sum of tracking_est for expense categories)
   const annualEstimatedSpend = useMemo(() => {
