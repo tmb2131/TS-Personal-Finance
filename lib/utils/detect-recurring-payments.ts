@@ -12,21 +12,26 @@ export interface DetectedRecurringPayment {
 
 const EXCLUDED_CATEGORIES = ['Excluded', 'Income', 'Gift Money', 'Other Income']
 
+/** Monthly interval range (days). Slightly wider for month-length and processing delays. */
+const MONTHLY_DAYS_MIN = 24
+const MONTHLY_DAYS_MAX = 38
+/** Calendar-based monthly: same day-of-month style (28-31 days). */
+const CALENDAR_MONTHLY_DAYS_MIN = 28
+const CALENDAR_MONTHLY_DAYS_MAX = 31
+/** Yearly interval range (days). Covers leap years and renewal delays. */
+const YEARLY_DAYS_MIN = 320
+const YEARLY_DAYS_MAX = 410
+/** Amount variance: 15% to allow subscription price increases. */
+const AMOUNT_VARIANCE = 0.15
+
 /**
- * Detects recurring payments from transaction log data
- * Groups by first 5 letters of counterparty (normalized to lowercase)
- * Identifies monthly (25-37 day intervals) and yearly (365 day intervals) patterns
- * 
- * Data window: Analyzes transactions from the last 30 months (2.5 years) to ensure
- * annual recurring payments can be detected (requires at least 2 transactions).
- * 
- * Filtering rules:
- * 1. Live Check: Only includes series with transactions in the last 60 days
- * 2. Monthly Density Check: Monthly patterns must have 2+ transactions in last 4 months
- * 3. Amount Variance: Amounts must be within 10% of average
- * 4. Pattern Matching: At least 50% of intervals must match the pattern
- * 5. Fallback Detection: If 2+ transactions in last 90 days with monthly spacing, flag as monthly
- * 6. Only returns items that pass checks, sorted by Next Expected Date
+ * Detects recurring payments from transaction log data.
+ * Groups by counterparty_dedup when present, else counterparty (normalized to lowercase trim).
+ * Identifies monthly (24-38 day intervals or calendar 28-31) and yearly (320-410 day) patterns.
+ *
+ * Data window: Last 30 months for pattern detection.
+ * Live check: Monthly = last tx within 60 days; Yearly = last tx within 14 months.
+ * Fallbacks: Monthly (2+ txs in 90d with monthly spacing); Yearly (2+ txs in 14 months with yearly spacing).
  */
 export function detectRecurringPayments(
   transactions: TransactionLog[],
@@ -49,14 +54,16 @@ export function detectRecurringPayments(
     return txDate >= thirtyMonthsAgo
   })
 
-  // Group by first 5 letters of counterparty (normalized to lowercase)
+  // Group by full normalized counterparty (counterparty_dedup when present for consistency with DB)
   const groupedTransactions = new Map<string, TransactionLog[]>()
+  function getPattern(tx: TransactionLog): string {
+    const raw = tx.counterparty_dedup ?? tx.counterparty ?? ''
+    return raw.toString().toLowerCase().trim()
+  }
 
   filteredTransactions.forEach((tx) => {
-    if (!tx.counterparty) return
-
-    const normalized = tx.counterparty.toLowerCase().trim()
-    const pattern = normalized.substring(0, 5)
+    const pattern = getPattern(tx)
+    if (!pattern) return
 
     if (!groupedTransactions.has(pattern)) {
       groupedTransactions.set(pattern, [])
@@ -70,6 +77,10 @@ export function detectRecurringPayments(
   const sixtyDaysAgo = new Date(today)
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
   sixtyDaysAgo.setHours(0, 0, 0, 0)
+
+  const fourteenMonthsAgo = new Date(today)
+  fourteenMonthsAgo.setMonth(fourteenMonthsAgo.getMonth() - 14)
+  fourteenMonthsAgo.setHours(0, 0, 0, 0)
 
   const fourMonthsAgo = new Date(today)
   fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4)
@@ -89,13 +100,13 @@ export function detectRecurringPayments(
       return dateA.getTime() - dateB.getTime()
     })
 
-    // 1. LIVE CHECK: Filter out series where most recent transaction is older than 60 days
     const lastTx = sortedTxs[sortedTxs.length - 1]
     const lastDate = typeof lastTx.date === 'string' ? new Date(lastTx.date) : new Date(lastTx.date)
     lastDate.setHours(0, 0, 0, 0)
 
-    if (lastDate < sixtyDaysAgo) {
-      return // Skip inactive/cancelled subscriptions
+    // Pre-check: require at least one recent transaction (14 months) so we can classify yearly
+    if (lastDate < fourteenMonthsAgo) {
+      return // No recent activity
     }
 
     // Get amounts in selected currency
@@ -121,13 +132,13 @@ export function detectRecurringPayments(
     // Calculate average amount
     const averageAmount = amounts.reduce((sum, amt) => sum + amt, 0) / amounts.length
 
-    // Check if amounts are within 10% of each other (for 2+ transactions)
-    const amountVariance = amounts.every((amt) => {
+    // Amount variance: within 15% of average (allows subscription price increases)
+    const amountVarianceOk = amounts.every((amt) => {
       const variance = Math.abs(amt - averageAmount) / averageAmount
-      return variance <= 0.10
+      return variance <= AMOUNT_VARIANCE
     })
 
-    if (!amountVariance) return
+    if (!amountVarianceOk) return
 
     // Calculate intervals between transactions
     const intervals: number[] = []
@@ -143,14 +154,20 @@ export function detectRecurringPayments(
       intervals.push(daysDiff)
     }
 
-    // Detect monthly pattern (25-37 days)
-    const monthlyIntervals = intervals.filter((days) => days >= 25 && days <= 37)
+    // Monthly: 24-38 days
+    const monthlyIntervals = intervals.filter((days) => days >= MONTHLY_DAYS_MIN && days <= MONTHLY_DAYS_MAX)
     const monthlyAvgInterval = monthlyIntervals.length > 0
       ? monthlyIntervals.reduce((sum, days) => sum + days, 0) / monthlyIntervals.length
       : 0
 
-    // Detect yearly pattern (330-400 days to account for slight variations)
-    const yearlyIntervals = intervals.filter((days) => days >= 330 && days <= 400)
+    // Calendar-based monthly: 28-31 days (same day-of-month style)
+    const calendarMonthlyIntervals = intervals.filter((days) => days >= CALENDAR_MONTHLY_DAYS_MIN && days <= CALENDAR_MONTHLY_DAYS_MAX)
+    const calendarMonthlyAvgInterval = calendarMonthlyIntervals.length > 0
+      ? calendarMonthlyIntervals.reduce((sum, days) => sum + days, 0) / calendarMonthlyIntervals.length
+      : 0
+
+    // Yearly: 320-410 days
+    const yearlyIntervals = intervals.filter((days) => days >= YEARLY_DAYS_MIN && days <= YEARLY_DAYS_MAX)
     const yearlyAvgInterval = yearlyIntervals.length > 0
       ? yearlyIntervals.reduce((sum, days) => sum + days, 0) / yearlyIntervals.length
       : 0
@@ -166,36 +183,45 @@ export function detectRecurringPayments(
     let frequency: 'Monthly' | 'Yearly' | null = null
     let avgInterval = 0
 
-    // Monthly: need 3+ transactions with 2+ monthly intervals, and at least 50% of intervals are monthly
-    // PLUS density check: at least 2 in last 4 months
+    const strongMonthlyMatch = monthlyIntervals.length >= 2 && monthlyIntervals.length >= intervals.length * 0.5
+    const strongYearlyMatch = yearlyIntervals.length >= 1 && yearlyIntervals.length >= intervals.length * 0.5
+
+    // Monthly: 3+ txs, 2+ monthly intervals, 50% match; density: 2+ in last 4 months OR 1+ when strong match
     if (
       txs.length >= 3 &&
-      monthlyIntervals.length >= 2 &&
-      monthlyIntervals.length >= intervals.length * 0.5 &&
-      transactionsLast4Months >= 2
+      strongMonthlyMatch &&
+      (transactionsLast4Months >= 2 || (transactionsLast4Months >= 1 && monthlyIntervals.length >= intervals.length * 0.5))
     ) {
       frequency = 'Monthly'
       avgInterval = monthlyAvgInterval
-    } 
-    // Yearly: can work with 2+ transactions, need at least 1 yearly interval, and at least 50% of intervals are yearly
-    else if (txs.length >= 2 && yearlyIntervals.length >= 1 && yearlyIntervals.length >= intervals.length * 0.5) {
-      frequency = 'Yearly'
-      avgInterval = yearlyAvgInterval
     }
-    // Also check for monthly with 2 transactions if both intervals are monthly
-    // BUT still require density check
+    // Calendar-based monthly: 2+ txs with 28-31 day intervals (same day-of-month)
+    else if (
+      txs.length >= 2 &&
+      calendarMonthlyIntervals.length >= 1 &&
+      calendarMonthlyIntervals.length >= intervals.length * 0.5 &&
+      (transactionsLast4Months >= 2 || transactionsLast4Months >= 1)
+    ) {
+      frequency = 'Monthly'
+      avgInterval = calendarMonthlyAvgInterval
+    }
+    // Monthly with 2 txs: one monthly interval, both in last 4 months
     else if (
       txs.length === 2 &&
       monthlyIntervals.length === 1 &&
       intervals.length === 1 &&
-      transactionsLast4Months >= 2
+      (transactionsLast4Months >= 2 || transactionsLast4Months >= 1)
     ) {
       frequency = 'Monthly'
       avgInterval = monthlyAvgInterval
     }
+    // Yearly: 2+ txs, at least 1 yearly interval, 50% yearly
+    else if (txs.length >= 2 && strongYearlyMatch) {
+      frequency = 'Yearly'
+      avgInterval = yearlyAvgInterval
+    }
 
-    // 5. FALLBACK DETECTION: If no frequency detected yet, check for 2+ transactions in last 90 days
-    // with similar amounts and roughly monthly spacing
+    // Fallback monthly: 2+ txs in last 90 days with roughly monthly spacing
     if (!frequency) {
       const transactionsLast90Days = sortedTxs.filter((tx) => {
         const txDate = typeof tx.date === 'string' ? new Date(tx.date) : new Date(tx.date)
@@ -204,7 +230,6 @@ export function detectRecurringPayments(
       })
 
       if (transactionsLast90Days.length >= 2) {
-        // Check if intervals between these recent transactions are roughly monthly (25-37 days)
         const recentIntervals: number[] = []
         for (let i = 1; i < transactionsLast90Days.length; i++) {
           const dateA = typeof transactionsLast90Days[i - 1].date === 'string'
@@ -213,20 +238,13 @@ export function detectRecurringPayments(
           const dateB = typeof transactionsLast90Days[i].date === 'string'
             ? new Date(transactionsLast90Days[i].date)
             : new Date(transactionsLast90Days[i].date)
-
           const daysDiff = Math.round((dateB.getTime() - dateA.getTime()) / (1000 * 60 * 60 * 24))
           recentIntervals.push(daysDiff)
         }
-
-        // Check if at least one interval is roughly monthly
-        const hasMonthlyInterval = recentIntervals.some((days) => days >= 25 && days <= 37)
-
+        const hasMonthlyInterval = recentIntervals.some((days) => days >= MONTHLY_DAYS_MIN && days <= MONTHLY_DAYS_MAX)
         if (hasMonthlyInterval) {
-          // Calculate average interval from recent transactions
           const recentAvgInterval = recentIntervals.reduce((sum, days) => sum + days, 0) / recentIntervals.length
-          
-          // Only use fallback if the average interval is roughly monthly
-          if (recentAvgInterval >= 25 && recentAvgInterval <= 37) {
+          if (recentAvgInterval >= MONTHLY_DAYS_MIN && recentAvgInterval <= MONTHLY_DAYS_MAX) {
             frequency = 'Monthly'
             avgInterval = recentAvgInterval
           }
@@ -234,7 +252,42 @@ export function detectRecurringPayments(
       }
     }
 
+    // Fallback yearly: 2+ txs in last 14 months with roughly yearly spacing
+    if (!frequency) {
+      const transactionsLast14Months = sortedTxs.filter((tx) => {
+        const txDate = typeof tx.date === 'string' ? new Date(tx.date) : new Date(tx.date)
+        txDate.setHours(0, 0, 0, 0)
+        return txDate >= fourteenMonthsAgo
+      })
+
+      if (transactionsLast14Months.length >= 2) {
+        const recentIntervals: number[] = []
+        for (let i = 1; i < transactionsLast14Months.length; i++) {
+          const dateA = typeof transactionsLast14Months[i - 1].date === 'string'
+            ? new Date(transactionsLast14Months[i - 1].date)
+            : new Date(transactionsLast14Months[i - 1].date)
+          const dateB = typeof transactionsLast14Months[i].date === 'string'
+            ? new Date(transactionsLast14Months[i].date)
+            : new Date(transactionsLast14Months[i].date)
+          const daysDiff = Math.round((dateB.getTime() - dateA.getTime()) / (1000 * 60 * 60 * 24))
+          recentIntervals.push(daysDiff)
+        }
+        const hasYearlyInterval = recentIntervals.some((days) => days >= YEARLY_DAYS_MIN && days <= YEARLY_DAYS_MAX)
+        if (hasYearlyInterval) {
+          const recentAvgInterval = recentIntervals.reduce((sum, days) => sum + days, 0) / recentIntervals.length
+          if (recentAvgInterval >= YEARLY_DAYS_MIN && recentAvgInterval <= YEARLY_DAYS_MAX) {
+            frequency = 'Yearly'
+            avgInterval = recentAvgInterval
+          }
+        }
+      }
+    }
+
     if (!frequency) return
+
+    // Frequency-specific live check: monthly 60 days, yearly 14 months
+    if (frequency === 'Monthly' && lastDate < sixtyDaysAgo) return
+    if (frequency === 'Yearly' && lastDate < fourteenMonthsAgo) return
 
     // Get the most common counterparty name (for display)
     const counterpartyCounts = new Map<string, number>()

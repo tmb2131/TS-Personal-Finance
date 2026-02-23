@@ -89,23 +89,26 @@ export function RecurringPayments() {
     return detectRecurringPayments(transactions, currency, fxRate)
   }, [transactions, currency, fxRate])
 
+  // Match preference to payment pattern: exact or prefix so existing 5-char prefs still match full normalized pattern
+  const patternMatchesPreference = (prefPattern: string, paymentPattern: string): boolean => {
+    const a = prefPattern.toLowerCase()
+    const b = paymentPattern.toLowerCase()
+    return a === b || b.startsWith(a) || a.startsWith(b)
+  }
+
   const isIgnored = (pattern: string): boolean => {
     return preferences.some(
-      (p) => p.counterparty_pattern.toLowerCase() === pattern.toLowerCase() && p.is_ignored
+      (p) => p.is_ignored && patternMatchesPreference(p.counterparty_pattern, pattern)
     )
   }
 
   // Filter out ignored payments and separate by frequency
   const { monthlyPayments, yearlyPayments } = useMemo(() => {
-    const ignoredPatterns = new Set(
-      preferences.filter((p) => p.is_ignored).map((p) => p.counterparty_pattern.toLowerCase())
-    )
-
     const active = detectedPayments.filter(
-      (payment) => !ignoredPatterns.has(payment.counterpartyPattern.toLowerCase())
+      (payment) => !preferences.some((p) => p.is_ignored && patternMatchesPreference(p.counterparty_pattern, payment.counterpartyPattern))
     )
     const ignored = detectedPayments.filter(
-      (payment) => ignoredPatterns.has(payment.counterpartyPattern.toLowerCase())
+      (payment) => preferences.some((p) => p.is_ignored && patternMatchesPreference(p.counterparty_pattern, payment.counterpartyPattern))
     )
 
     const activeMonthly = active.filter((p) => p.frequency === 'Monthly')

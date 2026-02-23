@@ -21,6 +21,8 @@ export interface TransactionLog {
   date: string
   category: string
   counterparty: string | null
+  /** Normalized counterparty for grouping (e.g. lowercase trim). Used by recurring detection. */
+  counterparty_dedup?: string | null
   amount_usd: number | null
   amount_gbp: number | null
   /** Original transaction currency from sheet column F: 'USD' | 'GBP'. Used for per-currency burn. */
