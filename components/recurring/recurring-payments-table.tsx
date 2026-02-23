@@ -358,6 +358,9 @@ export function RecurringPaymentsTable() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-sm truncate">{payment.name}</div>
+                      {payment.editablePayment?.notes?.trim() && (
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">{payment.editablePayment.notes}</div>
+                      )}
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         {payment.isTop80Percent && (
                           <span className="text-xs text-yellow-600 dark:text-yellow-400 font-semibold">Top 80%</span>
@@ -418,6 +421,7 @@ export function RecurringPaymentsTable() {
               <TableHeader>
                 <TableRow className="border-b bg-muted">
                   <TableHead className="sticky top-0 z-20 bg-muted">Name</TableHead>
+                  <TableHead className="sticky top-0 z-20 bg-muted max-w-[200px]">Notes</TableHead>
                   <TableHead className="sticky top-0 z-20 text-right bg-muted">Annualized Amount</TableHead>
                   <TableHead className="sticky top-0 z-20 bg-muted text-center">Actions</TableHead>
                 </TableRow>
@@ -443,6 +447,9 @@ export function RecurringPaymentsTable() {
                             Review
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] text-muted-foreground text-xs truncate" title={payment.editablePayment?.notes ?? undefined}>
+                        {payment.editablePayment?.notes?.trim() ? payment.editablePayment.notes : '—'}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(payment.annualizedAmount)}

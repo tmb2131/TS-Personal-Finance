@@ -8,6 +8,7 @@ const CreateRecurringSchema = z.object({
   annualized_amount_gbp: z.number().nullable().default(null),
   annualized_amount_usd: z.number().nullable().default(null),
   needs_review: z.boolean().default(false),
+  notes: z.string().nullable().default(null),
 })
 
 export async function POST(request: Request) {
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
       annualized_amount_gbp: parsed.data.annualized_amount_gbp,
       annualized_amount_usd: parsed.data.annualized_amount_usd,
       needs_review: parsed.data.needs_review,
+      notes: parsed.data.notes ?? null,
       data_source: 'manual',
     }).select().single()
 

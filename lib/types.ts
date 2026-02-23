@@ -117,6 +117,8 @@ export interface RecurringPreference {
   id: string
   counterparty_pattern: string
   is_ignored: boolean
+  /** User notes for this detected recurring payment. Optional for backward compatibility. */
+  notes?: string | null
   created_at: string
 }
 
@@ -126,6 +128,8 @@ export interface RecurringPayment {
   annualized_amount_gbp: number | null
   annualized_amount_usd: number | null
   needs_review: boolean
+  /** User notes (e.g. renewal date). Optional for backward compatibility. */
+  notes?: string | null
   created_at: string
   updated_at: string
   data_source?: DataSource

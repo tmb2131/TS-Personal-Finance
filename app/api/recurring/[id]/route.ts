@@ -8,6 +8,7 @@ const UpdateRecurringSchema = z.object({
   annualized_amount_gbp: z.number().nullable().optional(),
   annualized_amount_usd: z.number().nullable().optional(),
   needs_review: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
 })
 
 const EDITABLE_DATA_SOURCES = new Set(['manual', 'csv'])

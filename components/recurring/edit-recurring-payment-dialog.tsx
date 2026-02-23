@@ -34,16 +34,18 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
 
   const [name, setName] = useState(payment.name)
   const [amount, setAmount] = useState(String(Math.round(initialAmount * 100) / 100)) // annualized (source of truth)
+  const [notes, setNotes] = useState(payment.notes ?? '')
 
   useEffect(() => {
     if (open) {
       setName(payment.name)
+      setNotes(payment.notes ?? '')
       const initial = currency === 'USD'
         ? (payment.annualized_amount_usd ?? (payment.annualized_amount_gbp ?? 0) * (fxRate || 1))
         : (payment.annualized_amount_gbp ?? (payment.annualized_amount_usd ?? 0) / (fxRate || 1))
       setAmount(String(Math.round(initial * 100) / 100))
     }
-  }, [open, payment.id, payment.name, payment.annualized_amount_usd, payment.annualized_amount_gbp, currency, fxRate])
+  }, [open, payment.id, payment.name, payment.notes, payment.annualized_amount_usd, payment.annualized_amount_gbp, currency, fxRate])
 
   const monthlyDisplay = amount !== '' && !isNaN(parseFloat(amount))
     ? String(parseFloat(amount) / 12)
@@ -90,6 +92,7 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
           name: name.trim(),
           annualized_amount_gbp: Math.round(amountGbp * 100) / 100,
           annualized_amount_usd: Math.round(amountUsd * 100) / 100,
+          notes: notes.trim() || null,
         }),
       })
 
@@ -145,6 +148,17 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-recurring-notes">Notes</Label>
+            <textarea
+              id="edit-recurring-notes"
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+              placeholder="e.g. renewal date, account reference"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
             />
           </div>
           <div className="space-y-2">

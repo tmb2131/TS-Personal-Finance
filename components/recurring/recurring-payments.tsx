@@ -6,13 +6,45 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog, RecurringPreference } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { detectRecurringPayments, DetectedRecurringPayment } from '@/lib/utils/detect-recurring-payments'
-import { AlertCircle, Calendar, X } from 'lucide-react'
+import { AlertCircle, Calendar, FileText, X } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { toast } from 'sonner'
+
+function getTransactionsForPattern(
+  transactions: TransactionLog[],
+  pattern: string
+): TransactionLog[] {
+  const normalizedPattern = pattern.toLowerCase()
+  return transactions
+    .filter((tx) => {
+      const raw = tx.counterparty_dedup ?? tx.counterparty ?? ''
+      const txPattern = raw.toString().toLowerCase().trim()
+      return txPattern === normalizedPattern
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.date).getTime()
+      const dateB = new Date(b.date).getTime()
+      return dateB - dateA
+    })
+}
 
 export function RecurringPayments() {
   const { currency, fxRate } = useCurrency()
@@ -20,6 +52,9 @@ export function RecurringPayments() {
   const [preferences, setPreferences] = useState<RecurringPreference[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedPayment, setSelectedPayment] = useState<DetectedRecurringPayment | null>(null)
+  const [editingNotesPayment, setEditingNotesPayment] = useState<DetectedRecurringPayment | null>(null)
+  const [notesDraft, setNotesDraft] = useState('')
 
   // Fetch transactions and preferences
   useEffect(() => {
@@ -102,6 +137,63 @@ export function RecurringPayments() {
     )
   }
 
+  // Find preference that matches this payment's pattern (prefer exact, then longest)
+  const getPreferenceForPayment = (payment: DetectedRecurringPayment): RecurringPreference | undefined => {
+    const pattern = payment.counterpartyPattern.toLowerCase()
+    const matching = preferences.filter((p) => patternMatchesPreference(p.counterparty_pattern, pattern))
+    if (matching.length === 0) return undefined
+    if (matching.length === 1) return matching[0]
+    const exact = matching.find((p) => p.counterparty_pattern.toLowerCase() === pattern)
+    if (exact) return exact
+    matching.sort((a, b) => b.counterparty_pattern.length - a.counterparty_pattern.length)
+    return matching[0]
+  }
+
+  const saveNote = async (payment: DetectedRecurringPayment, notes: string) => {
+    const supabase = createClient()
+    const normalizedPattern = payment.counterpartyPattern.toLowerCase()
+    const trimmed = notes.trim() || null
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('You must be signed in to add notes')
+        return
+      }
+
+      const existing = getPreferenceForPayment(payment)
+
+      if (existing) {
+        const { error } = await supabase
+          .from('recurring_preferences')
+          .update({ notes: trimmed })
+          .eq('id', existing.id)
+
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('recurring_preferences')
+          .insert({
+            user_id: user.id,
+            counterparty_pattern: normalizedPattern,
+            is_ignored: false,
+            notes: trimmed,
+          })
+
+        if (error) throw error
+      }
+
+      const { data: updated } = await supabase.from('recurring_preferences').select('*')
+      if (updated) setPreferences(updated as RecurringPreference[])
+      setEditingNotesPayment(null)
+      setNotesDraft('')
+      toast.success(trimmed ? 'Note saved' : 'Note cleared')
+    } catch (err) {
+      console.error('Error saving note:', err)
+      toast.error('Failed to save note')
+    }
+  }
+
   // Filter out ignored payments and separate by frequency
   const { monthlyPayments, yearlyPayments } = useMemo(() => {
     const active = detectedPayments.filter(
@@ -116,10 +208,12 @@ export function RecurringPayments() {
     const ignoredMonthly = ignored.filter((p) => p.frequency === 'Monthly')
     const ignoredYearly = ignored.filter((p) => p.frequency === 'Yearly')
 
-    // Sort active by next expected date, ignored at the end
+    const byAmountDesc = (a: { averageAmount: number }, b: { averageAmount: number }) =>
+      b.averageAmount - a.averageAmount
+
     return {
-      monthlyPayments: [...activeMonthly, ...ignoredMonthly],
-      yearlyPayments: [...activeYearly, ...ignoredYearly],
+      monthlyPayments: [...activeMonthly.sort(byAmountDesc), ...ignoredMonthly.sort(byAmountDesc)],
+      yearlyPayments: [...activeYearly.sort(byAmountDesc), ...ignoredYearly.sort(byAmountDesc)],
     }
   }, [detectedPayments, preferences])
 
@@ -167,6 +261,12 @@ export function RecurringPayments() {
     const normalizedPattern = pattern.toLowerCase()
 
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('You must be signed in to update preferences')
+        return
+      }
+
       // Check if preference exists
       const { data: existing } = await supabase
         .from('recurring_preferences')
@@ -183,10 +283,11 @@ export function RecurringPayments() {
 
         if (error) throw error
       } else {
-        // Create new preference
+        // Create new preference (user_id required for RLS and NOT NULL)
         const { error } = await supabase
           .from('recurring_preferences')
           .insert({
+            user_id: user.id,
             counterparty_pattern: normalizedPattern,
             is_ignored: !currentlyIgnored,
           })
@@ -217,7 +318,9 @@ export function RecurringPayments() {
   const PaymentCard = ({ payment }: { payment: DetectedRecurringPayment }) => {
     const ignored = isIgnored(payment.counterpartyPattern)
     const upcoming = isUpcoming(payment.nextExpectedDate)
-    
+    const preference = getPreferenceForPayment(payment)
+    const note = preference?.notes?.trim()
+
     return (
       <div
         className={cn(
@@ -227,9 +330,15 @@ export function RecurringPayments() {
         )}
       >
         <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold">{payment.counterpartyName}</h3>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setSelectedPayment(payment)}
+                className="font-semibold text-left hover:underline underline-offset-2 focus:outline-none focus:underline"
+              >
+                {payment.counterpartyName}
+              </button>
               <Badge variant={payment.frequency === 'Monthly' ? 'default' : 'secondary'}>
                 {payment.frequency}
               </Badge>
@@ -243,6 +352,19 @@ export function RecurringPayments() {
                   Ignored
                 </Badge>
               )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setEditingNotesPayment(payment)
+                  setNotesDraft(preference?.notes ?? '')
+                }}
+                title={note ? 'Edit note' : 'Add note'}
+              >
+                <FileText className={cn('h-4 w-4', note && 'text-foreground')} />
+              </Button>
             </div>
             <div className="space-y-1 text-sm text-muted-foreground">
               <p>
@@ -256,6 +378,11 @@ export function RecurringPayments() {
                 <span className="font-medium">Transactions:</span> {payment.transactionCount} in last
                 12 months
               </p>
+              {note && (
+                <p className="pt-1 border-t border-border/50 mt-1">
+                  <span className="font-medium">Note:</span> {note}
+                </p>
+              )}
             </div>
           </div>
           <Button
@@ -392,6 +519,116 @@ export function RecurringPayments() {
           )}
         </CardContent>
       </Card>
+
+      {/* Transaction details dialog */}
+      <Dialog
+        open={!!selectedPayment}
+        onOpenChange={(open) => !open && setSelectedPayment(null)}
+      >
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedPayment ? selectedPayment.counterpartyName : ''} — transactions
+            </DialogTitle>
+          </DialogHeader>
+          {selectedPayment && (
+            <div className="flex-1 min-h-0 overflow-auto -mx-6 px-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Counterparty</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Category</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {getTransactionsForPattern(transactions, selectedPayment.counterpartyPattern).map(
+                    (tx) => {
+                      const amount =
+                        currency === 'USD'
+                          ? (tx.amount_usd != null
+                              ? tx.amount_usd
+                              : tx.amount_gbp != null
+                                ? tx.amount_gbp * fxRate
+                                : 0)
+                          : (tx.amount_gbp != null
+                              ? tx.amount_gbp
+                              : tx.amount_usd != null
+                                ? tx.amount_usd / fxRate
+                                : 0)
+                      return (
+                        <TableRow key={tx.id}>
+                          <TableCell>{formatDate(new Date(tx.date))}</TableCell>
+                          <TableCell>{tx.counterparty ?? '—'}</TableCell>
+                          <TableCell
+                            className={cn(
+                              'text-right',
+                              amount < 0 && 'text-destructive'
+                            )}
+                          >
+                            {formatCurrency(Math.abs(amount))}
+                            {amount < 0 ? '' : ' (credit)'}
+                          </TableCell>
+                          <TableCell>{tx.category ?? '—'}</TableCell>
+                        </TableRow>
+                      )
+                    }
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Note edit dialog for detected recurring payments */}
+      <Dialog
+        open={!!editingNotesPayment}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingNotesPayment(null)
+            setNotesDraft('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Note — {editingNotesPayment?.counterpartyName ?? ''}
+            </DialogTitle>
+          </DialogHeader>
+          {editingNotesPayment && (
+            <div className="space-y-4 mt-2">
+              <textarea
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-y"
+                placeholder="e.g. renewal date, account reference"
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                rows={4}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingNotesPayment(null)
+                    setNotesDraft('')
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => saveNote(editingNotesPayment, notesDraft)}
+                >
+                  Save note
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
