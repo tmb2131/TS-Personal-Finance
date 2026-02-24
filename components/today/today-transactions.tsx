@@ -29,6 +29,12 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
     return `${prefix}${symbol}${formatted}`
   }
 
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    const amtA = a.amount_gbp ?? a.amount_usd ?? 0
+    const amtB = b.amount_gbp ?? b.amount_usd ?? 0
+    return amtA - amtB
+  })
+
   const netTotal = transactions.reduce((sum, t) => {
     const gbp = t.amount_gbp ?? 0
     const usd = t.amount_usd ?? 0
@@ -74,7 +80,7 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
       </CardHeader>
       <CardContent>
         <ul className="divide-y divide-border">
-          {transactions.map((t) => (
+          {sortedTransactions.map((t) => (
             <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate">{t.counterparty?.trim() || '—'}</p>
