@@ -16,10 +16,8 @@ export type DashboardAtAGlanceData = {
   expensesForecastGbp: number
   incomeBudgetGbp: number
   expensesBudgetGbp: number
-  dailyNeutralBudgetGbp: number | null
-  dailyUsedBudgetGbp: number | null
-  dailyUsedPercent: number | null
-  dailyForecastDirection: 'improving' | 'worsening' | 'flat' | null
+  monthlyEstGbp: number | null
+  monthlyMtdGbp: number | null
 }
 
 type Section = {
@@ -61,11 +59,6 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
     if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}k`
     return value.toFixed(0)
   }
-  const formatPercent = (value: number) => {
-    const abs = Math.abs(value)
-    const decimals = abs >= 100 ? 0 : 1
-    return `${value.toFixed(decimals)}%`
-  }
   const symbol = currency === 'USD' ? '$' : '£'
 
   const toDisplayCurrency = (gbpValue: number) =>
@@ -84,11 +77,6 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
   const netIncomeBudget = data ? toDisplayCurrency(data.incomeBudgetGbp - data.expensesBudgetGbp) : null
   const budgetGap = netIncomeTracking != null && netIncomeBudget != null ? netIncomeTracking - netIncomeBudget : null
   const budgetStatus = budgetGap != null ? (budgetGap >= 0 ? 'under' : 'over') : null
-
-  const dailyNeutralBudget = data?.dailyNeutralBudgetGbp != null ? Math.max(0, toDisplayCurrency(data.dailyNeutralBudgetGbp)) : null
-  const dailyUsedBudget = data?.dailyUsedBudgetGbp != null ? toDisplayCurrency(data.dailyUsedBudgetGbp) : null
-  const dailyUsedPercent = data?.dailyUsedPercent ?? null
-  const dailyForecastDirection = data?.dailyForecastDirection ?? null
 
   const loading = data === null
 
@@ -121,8 +109,21 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
       }
       return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
-    if (sectionId === 'annual-trends' || sectionId === 'monthly-trends') {
-      return <span className="text-sm text-muted-foreground">View section</span>
+    if (sectionId === 'annual-trends') {
+      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (data?.expensesForecastGbp != null) {
+        const val = toDisplayCurrency(data.expensesForecastGbp)
+        return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(Math.abs(val))}</span>
+      }
+      return <span className="text-sm text-muted-foreground">&mdash;</span>
+    }
+    if (sectionId === 'monthly-trends') {
+      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (data?.monthlyEstGbp != null) {
+        const val = toDisplayCurrency(data.monthlyEstGbp)
+        return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(Math.abs(val))}</span>
+      }
+      return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     return null
   }
@@ -176,6 +177,8 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
               if (section.id === 'net-worth-chart') return 'border-l-blue-500'
               if (section.id === 'budget-table') return budgetStatus === 'under' ? 'border-l-green-500' : budgetStatus === 'over' ? 'border-l-red-500' : 'border-l-purple-500'
               if (section.id === 'income-vs-expenses') return 'border-l-orange-500'
+              if (section.id === 'annual-trends') return data?.expensesForecastGbp != null ? 'border-l-indigo-500' : 'border-l-muted-foreground/30'
+              if (section.id === 'monthly-trends') return data?.monthlyEstGbp != null ? 'border-l-indigo-500' : 'border-l-muted-foreground/30'
               return 'border-l-muted-foreground/30'
             })()
             return (
@@ -211,32 +214,11 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
                 </div>
                 <div className="w-full">
                   {getCardContent(section.id)}
-                  {section.id === 'budget-table' && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {loading ||
-                      dailyNeutralBudget == null ||
-                      dailyUsedBudget == null ||
-                      dailyUsedPercent == null
-                        ? ''
-                        : (
-                            <>
-                              Today neutral {symbol}{formatCompact(dailyNeutralBudget)} &middot; used {symbol}
-                              {formatCompact(dailyUsedBudget)} ({formatPercent(dailyUsedPercent)}) &middot;{' '}
-                              <span
-                                className={cn(
-                                  dailyForecastDirection === 'improving' && 'text-green-600',
-                                  dailyForecastDirection === 'worsening' && 'text-red-600'
-                                )}
-                              >
-                                {dailyForecastDirection === 'improving'
-                                  ? 'improving'
-                                  : dailyForecastDirection === 'worsening'
-                                    ? 'worsening'
-                                    : 'flat'}
-                              </span>
-                            </>
-                          )}
-                    </p>
+                  {section.id === 'annual-trends' && data?.expensesForecastGbp != null && (
+                    <p className="mt-1 text-xs text-muted-foreground">est. spend this year</p>
+                  )}
+                  {section.id === 'monthly-trends' && data?.monthlyEstGbp != null && (
+                    <p className="mt-1 text-xs text-muted-foreground">est. this month</p>
                   )}
                   {section.id === 'income-vs-expenses' && (
                     <p className="mt-1 text-xs text-muted-foreground">
