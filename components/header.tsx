@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useDailySummary } from '@/components/insights/daily-summary-context'
 import { cn } from '@/utils/cn'
+import type { HeaderStatus } from '@/lib/data/cached-queries'
 
 // Safe hook that returns null if context is not available
 function useDailySummarySafe() {
@@ -29,7 +30,7 @@ const BOTTOM_BOUNDARY_PX = 100
 // Only hide header when this far (or more) from bottom; avoids flicker when reaching bottom
 const HIDE_MIN_DISTANCE_FROM_BOTTOM_PX = 180
 
-export function Header() {
+export function Header({ initialData }: { initialData?: HeaderStatus | null }) {
   const router = useRouter()
   const isMobile = useIsMobile()
   const dailySummary = useDailySummarySafe()
@@ -37,15 +38,15 @@ export function Header() {
   const [mounted, setMounted] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(true)
   const lastScrollTop = useRef(0)
-  const [lastRefreshDate, setLastRefreshDate] = useState<string | null>(null)
-  const [latestTransactionDate, setLatestTransactionDate] = useState<string | null>(null)
-  const [maxAccountDate, setMaxAccountDate] = useState<string | null>(null)
+  const [lastRefreshDate, setLastRefreshDate] = useState<string | null>(initialData?.lastSyncAt ?? null)
+  const [latestTransactionDate, setLatestTransactionDate] = useState<string | null>(initialData?.latestTransactionDate ?? null)
+  const [maxAccountDate, setMaxAccountDate] = useState<string | null>(initialData?.maxAccountDate ?? null)
   const syncStartTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     setMounted(true)
-    // Fetch latest dates (including last sync) from database
-    fetchLatestDates()
+    // If initialData was provided by the server, skip the client fetch on mount
+    if (!initialData) fetchLatestDates()
   }, [])
 
   // When user returns to app (e.g. from home screen), recover if sync was in progress — mobile often suspends/kills in-flight requests
@@ -119,37 +120,14 @@ export function Header() {
   const fetchLatestDates = async () => {
     try {
       const supabase = createClient()
-
-      // Fetch last sync time for current user (RLS scopes to auth.uid())
-      const { data: syncData } = await supabase
-        .from('sync_metadata')
-        .select('last_sync_at')
-        .maybeSingle()
-      if (syncData?.last_sync_at) {
-        setLastRefreshDate(syncData.last_sync_at)
-      }
-
-      // Fetch latest transaction date
-      const { data: transactionData } = await supabase
-        .from('transaction_log')
-        .select('date')
-        .order('date', { ascending: false })
-        .limit(1)
-      
-      if (transactionData && transactionData.length > 0 && transactionData[0]?.date) {
-        setLatestTransactionDate(transactionData[0].date)
-      }
-
-      // Fetch max account date_updated
-      const { data: accountData } = await supabase
-        .from('account_balances')
-        .select('date_updated')
-        .order('date_updated', { ascending: false })
-        .limit(1)
-      
-      if (accountData && accountData.length > 0 && accountData[0]?.date_updated) {
-        setMaxAccountDate(accountData[0].date_updated)
-      }
+      const [syncResult, txResult, acctResult] = await Promise.all([
+        supabase.from('sync_metadata').select('last_sync_at').maybeSingle(),
+        supabase.from('transaction_log').select('date').order('date', { ascending: false }).limit(1),
+        supabase.from('account_balances').select('date_updated').order('date_updated', { ascending: false }).limit(1),
+      ])
+      if (syncResult.data?.last_sync_at) setLastRefreshDate(syncResult.data.last_sync_at)
+      if (txResult.data?.[0]?.date) setLatestTransactionDate(txResult.data[0].date)
+      if (acctResult.data?.[0]?.date_updated) setMaxAccountDate(acctResult.data[0].date_updated)
     } catch (error) {
       console.error('Error fetching latest dates:', error)
     }
@@ -197,10 +175,12 @@ export function Header() {
         })
         // Notify client components (e.g. TransactionsList) to re-fetch
         window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
-        // Refresh latest dates (including last_sync_at written by the server)
-        await fetchLatestDates()
-        // Refresh server components to show updated data (no full page reload)
-        setTimeout(() => router.refresh(), 1000)
+        // Optimistically show "Just now" before the DB round-trip completes
+        setLastRefreshDate(new Date().toISOString())
+        // Update other dates in background (non-blocking)
+        fetchLatestDates()
+        // Refresh server components — cache is already invalidated server-side
+        setTimeout(() => router.refresh(), 100)
       } else {
         const errorMsg = result.error || 'Transaction Log sync failed'
         const failedSheets = result.results?.filter((r: any) => !r.success).map((r: any) => r.sheet).join(', ')

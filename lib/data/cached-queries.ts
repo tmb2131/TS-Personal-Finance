@@ -92,3 +92,24 @@ export const fetchLatestNetWorthFromAccountBalances = cache(
     return computeLatestNetWorthSnapshotFromAccountBalances(supabase, user.id)
   }
 )
+
+export interface HeaderStatus {
+  lastSyncAt: string | null
+  latestTransactionDate: string | null
+  maxAccountDate: string | null
+}
+
+/** Fetch all 3 header date fields in parallel for fast initial render. */
+export const fetchHeaderStatus = cache(async (): Promise<HeaderStatus> => {
+  const supabase = await createClient()
+  const [syncResult, txResult, acctResult] = await Promise.all([
+    supabase.from('sync_metadata').select('last_sync_at').maybeSingle(),
+    supabase.from('transaction_log').select('date').order('date', { ascending: false }).limit(1),
+    supabase.from('account_balances').select('date_updated').order('date_updated', { ascending: false }).limit(1),
+  ])
+  return {
+    lastSyncAt: syncResult.data?.last_sync_at ?? null,
+    latestTransactionDate: txResult.data?.[0]?.date ?? null,
+    maxAccountDate: acctResult.data?.[0]?.date_updated ?? null,
+  }
+})

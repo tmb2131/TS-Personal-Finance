@@ -7,6 +7,7 @@ import { DailySummaryProvider } from '@/components/insights/daily-summary-contex
 import { InsightsDataProvider } from '@/components/insights/insights-data-context'
 import { ThemeProvider } from '@/lib/contexts/theme-provider'
 import { AppShell } from '@/components/app-shell'
+import { fetchHeaderStatus } from '@/lib/data/cached-queries'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -23,11 +24,18 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  let initialHeaderData = null
+  try {
+    initialHeaderData = await fetchHeaderStatus()
+  } catch {
+    // Unauthenticated (login page) or error — Header falls back to its own fetch
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
@@ -35,7 +43,7 @@ export default function RootLayout({
           <CurrencyProvider>
             <DailySummaryProvider>
               <InsightsDataProvider>
-                <AppShell>{children}</AppShell>
+                <AppShell initialHeaderData={initialHeaderData}>{children}</AppShell>
               </InsightsDataProvider>
             </DailySummaryProvider>
           </CurrencyProvider>

@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { LoginHeader } from '@/components/login-header'
 import { Toaster } from 'sonner'
+import type { HeaderStatus } from '@/lib/data/cached-queries'
 
 const ChatWidget = dynamic(
   () => import('@/components/ai-assistant/chat-widget').then(m => ({ default: m.ChatWidget })),
@@ -17,7 +18,12 @@ const DailySummaryWrapper = dynamic(
   { ssr: false }
 )
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+interface AppShellProps {
+  children: React.ReactNode
+  initialHeaderData?: HeaderStatus | null
+}
+
+export function AppShell({ children, initialHeaderData }: AppShellProps) {
   const pathname = usePathname()
   const isLogin = pathname === '/login'
 
@@ -50,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex h-dvh overflow-hidden bg-background">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
-          <Header />
+          <Header initialData={initialHeaderData} />
           <main
             id="main-content"
             tabIndex={-1}
