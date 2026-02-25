@@ -26,8 +26,20 @@ const DELETE_INSERT_TABLES = new Set<string>();
 /** Tables that have a data_source column (scoped deletes during sync). */
 const DATA_SOURCE_TABLES = new Set<string>();
 
-/** Manual sync: cap Transaction Log sheet fetch to this many data rows (newest-first). */
-const TRANSACTION_LOG_MANUAL_ROW_CAP = 100;
+/** Parse date from sheet: string (e.g. "2/25/2026") or Google Sheets serial (days since 1899-12-30). */
+function parseSheetDate(value: unknown): Date | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (Number.isFinite(n)) {
+    if (n > 100000) return null;
+    const epoch = new Date(1899, 11, 30).getTime();
+    const ms = n * 24 * 60 * 60 * 1000;
+    const d = new Date(epoch + ms);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(value as string);
+  return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+}
 
 interface SheetConfig {
   name: string;
@@ -43,8 +55,8 @@ const SHEET_CONFIGS: SheetConfig[] = [
     range: 'A:F',
     table: 'transaction_log',
     transform: (row) => {
-      const date = row[0] ? new Date(row[0]) : null;
-      if (!date || isNaN(date.getTime())) return null;
+      const date = parseSheetDate(row[0]);
+      if (!date) return null;
       const counterparty = row[2] || null;
       // Column F may be missing in sparse rows; accept any value that starts with USD/GBP (case-insensitive)
       const raw = row.length > 5 && row[5] != null ? String(row[5]).trim() : '';
@@ -97,7 +109,7 @@ const SHEET_CONFIGS: SheetConfig[] = [
 export interface SyncGoogleSheetOptions {
   spreadsheetId: string;
   userId: string;
-  /** When true (cron), full table replace. When false/omitted (manual), 100 rows + last week only. */
+  /** When true (cron), full table replace. When false/omitted (manual), last week only. */
   fullTransactionReplace?: boolean;
 }
 
@@ -165,10 +177,7 @@ export async function syncGoogleSheet(
     // Build ranges for a single batchGet call (one API round-trip instead of N)
     const ranges = presentConfigs.map((config) => {
       const quotedSheetName = config.name.includes(' ') ? `'${config.name}'` : config.name;
-      const range =
-        config.table === 'transaction_log' && !fullTransactionReplace
-          ? `A2:F${TRANSACTION_LOG_MANUAL_ROW_CAP + 1}`
-          : config.range;
+      const range = config.range;
       return `${quotedSheetName}!${range}`;
     });
 
@@ -214,10 +223,7 @@ export async function syncGoogleSheet(
         presentConfigs.map(async (config) => {
           try {
             const quotedSheetName = config.name.includes(' ') ? `'${config.name}'` : config.name;
-            const range =
-              config.table === 'transaction_log' && !fullTransactionReplace
-                ? `A2:F${TRANSACTION_LOG_MANUAL_ROW_CAP + 1}`
-                : config.range;
+            const range = config.range;
             const rangeString = `${quotedSheetName}!${range}`;
             const response = await sheets.spreadsheets.values.get({
               spreadsheetId,
