@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { SYNC_COMPLETED_EVENT } from '@/lib/contexts/sync-context'
 
 const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
@@ -45,6 +46,7 @@ export function AutoSyncOnMount() {
             const result = await response.json().catch(() => ({}))
 
             if (response.ok && result.success) {
+              window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
               router.refresh()
             } else {
               // Don't show error - let user see the page, they can refresh manually

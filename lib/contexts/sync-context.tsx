@@ -150,7 +150,8 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
         window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
         setLastRefreshDate(new Date().toISOString())
         fetchLatestDates()
-        setTimeout(() => router.refresh(), 100)
+        // Refresh all server-rendered data and rerender current screen
+        setTimeout(() => router.refresh(), 0)
       } else {
         const errorMsg = result.error || 'Transaction Log sync failed'
         const failedSheets = result.results
@@ -200,7 +201,7 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
           await fetchLatestDates()
           toast.success('Sync Complete', { description: 'Sheet sync completed while you were away.' })
           window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
-          setTimeout(() => router.refresh(), 800)
+          setTimeout(() => router.refresh(), 0)
         } else {
           setSyncing(false)
           syncStartTimeRef.current = null

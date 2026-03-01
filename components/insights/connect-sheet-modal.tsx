@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { SYNC_COMPLETED_EVENT } from '@/lib/contexts/sync-context'
 
 interface ConnectSheetModalProps {
   open: boolean
@@ -62,6 +63,7 @@ export function ConnectSheetModal({ open }: ConnectSheetModalProps) {
       const result = await response.json().catch(() => ({}))
       if (response.ok && result.success) {
         toast.success('Data synced successfully')
+        window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
         router.refresh()
         return
       }

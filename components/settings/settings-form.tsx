@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { SYNC_COMPLETED_EVENT } from '@/lib/contexts/sync-context'
 import { ExternalLink, Copy, FileUp } from 'lucide-react'
 
 const TEMPLATE_SHEET_ID = '1LsbT4ahDlq7Lyf04d5nyr4bsjqmkDq-kqQoA2t66Kgg'
@@ -74,6 +75,7 @@ export function SettingsForm({
         const result = await response.json().catch(() => ({}))
         if (response.ok && result.success) {
           toast.success('Transaction Log synced successfully')
+          window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
           router.refresh()
         } else if (!response.ok) {
           toast.error(result.error || 'Sync failed')
