@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
 const allNavigation = [
-  { name: 'Key Insights', href: '/insights', icon: Lightbulb },
   { name: 'Daily Summary', href: '/', icon: LayoutList },
+  { name: 'Key Insights', href: '/insights', icon: Lightbulb },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Today', href: '/today', icon: Calendar },
   { name: 'Accounts', href: '/accounts', icon: Wallet },

@@ -192,15 +192,18 @@ All cron routes require `Authorization: Bearer <CRON_SECRET>` and are enforced i
 ## Pages & Navigation
 
 Sidebar order (`components/sidebar.tsx`):
-1. `Key Insights` (`/insights`)
-2. `Dashboard` (`/`)
-3. `Accounts` (`/accounts`)
-4. `Liquidity` (`/liquidity`)
-5. `Kids Accounts` (`/kids`) - hidden if no kids data
-6. `Analysis` (`/analysis`)
-7. `Recurring` (`/recurring`)
-8. `Import` (`/import`)
-9. `Settings` (`/settings`)
+1. `Daily Summary` (`/`)
+2. `Key Insights` (`/insights`)
+3. `Dashboard` (`/dashboard`)
+4. `Today` (`/today`)
+5. `Accounts` (`/accounts`)
+6. `Transactions` (`/transactions`)
+7. `Liquidity` (`/liquidity`)
+8. `Kids Accounts` (`/kids`) - hidden if no kids data
+9. `Analysis` (`/analysis`)
+10. `Recurring` (`/recurring`)
+11. `Import` (`/import`)
+12. `Settings` (`/settings`)
 
 ## API Routes
 
