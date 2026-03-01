@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { LayoutDashboard, Wallet, Receipt, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp, MessageCircle, LogOut, Calendar } from 'lucide-react'
+import { LayoutDashboard, Wallet, Receipt, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp, MessageCircle, LogOut, Calendar, LayoutList } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,6 +18,7 @@ import { useDailySummary } from '@/components/insights/daily-summary-context'
 
 const allNavigation = [
   { name: 'Key Insights', href: '/insights', icon: Lightbulb },
+  { name: 'Daily Summary', href: '/summary', icon: LayoutList },
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Today', href: '/today', icon: Calendar },
   { name: 'Accounts', href: '/accounts', icon: Wallet },

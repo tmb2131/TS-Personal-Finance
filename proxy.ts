@@ -49,10 +49,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Allow login page (redirect to insights with daily summary first if already signed in)
+  // Allow login page (redirect to daily summary if already signed in)
   if (pathname === '/login') {
     if (user) {
-      return NextResponse.redirect(new URL('/insights?openDaily=1', request.url))
+      return NextResponse.redirect(new URL('/summary', request.url))
     }
     return response
   }
