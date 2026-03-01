@@ -40,6 +40,7 @@ export function AnnualCumulativeSpendChart() {
   const [error, setError] = useState<string | null>(null)
   // On mobile, default to only Current Year + Budget; on desktop show all years
   const [showHistoricalYears, setShowHistoricalYears] = useState(false)
+  const [showYTDOnly, setShowYTDOnly] = useState(false)
   useEffect(() => {
     setShowHistoricalYears(!isMobile)
   }, [isMobile])
@@ -467,6 +468,22 @@ export function AnnualCumulativeSpendChart() {
     return chartDataPoints
   }, [transactions, budgetData, annualTrends, currency, fxRate, forecastByCategory])
 
+  const currentYear = new Date().getFullYear()
+
+  // Day of year for today (0-based), used for YTD filtering
+  const todayDayOfYear = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const startOfCurrentYear = new Date(currentYear, 0, 1)
+    return Math.floor((today.getTime() - startOfCurrentYear.getTime()) / (1000 * 60 * 60 * 24))
+  }, [currentYear])
+
+  // Slice chart data to YTD when the toggle is on
+  const displayData = useMemo(() => {
+    if (!showYTDOnly) return chartData
+    return chartData.filter((d) => d.dayOfYear <= todayDayOfYear)
+  }, [chartData, showYTDOnly, todayDayOfYear])
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -482,7 +499,6 @@ export function AnnualCumulativeSpendChart() {
     return `${currencySymbol}${valueInK.toFixed(0)}k`
   }
 
-  const currentYear = new Date().getFullYear()
   const years = [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1]
   
   // Helper to convert day of year to month index (0-11)
@@ -498,12 +514,14 @@ export function AnnualCumulativeSpendChart() {
   }
 
   // Calculate day of year for the start of each month (0-based)
+  // When YTD-only mode is on, only return ticks for months that have started
   const getMonthStartDays = (): number[] => {
     const monthStarts: number[] = []
     for (let month = 0; month < 12; month++) {
       const date = new Date(currentYear, month, 1)
       const startOfYear = new Date(currentYear, 0, 1)
       const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24))
+      if (showYTDOnly && dayOfYear > todayDayOfYear) break
       monthStarts.push(dayOfYear)
     }
     return monthStarts
@@ -608,15 +626,27 @@ export function AnnualCumulativeSpendChart() {
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle>Annual Cumulative Spend</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="show-historical-years"
-              checked={showHistoricalYears}
-              onCheckedChange={(checked) => setShowHistoricalYears(checked === true)}
-            />
-            <Label htmlFor="show-historical-years" className="text-sm font-normal cursor-pointer whitespace-nowrap">
-              Show historical years (2022–{currentYear - 1})
-            </Label>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="show-ytd-only"
+                checked={showYTDOnly}
+                onCheckedChange={(checked) => setShowYTDOnly(checked === true)}
+              />
+              <Label htmlFor="show-ytd-only" className="text-sm font-normal cursor-pointer whitespace-nowrap">
+                YTD only
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="show-historical-years"
+                checked={showHistoricalYears}
+                onCheckedChange={(checked) => setShowHistoricalYears(checked === true)}
+              />
+              <Label htmlFor="show-historical-years" className="text-sm font-normal cursor-pointer whitespace-nowrap">
+                Show historical years (2022–{currentYear - 1})
+              </Label>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -629,7 +659,7 @@ export function AnnualCumulativeSpendChart() {
           />
         ) : (
           <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
-            <LineChart data={chartData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={displayData} margin={isMobile ? { top: 10, right: 10, left: 0, bottom: 5 } : { top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridStroke} />
               <XAxis
                 dataKey="dayOfYear"
