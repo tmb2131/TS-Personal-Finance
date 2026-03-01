@@ -20,4 +20,6 @@ export type TodayPageData = {
   totalForecastToday?: number | null
   /** Total forecast at end of day if no more spend today; used for optional display. */
   totalForecastTomorrowAtZero?: number | null
+  /** For each methodology, the category names that use it (for filtering transactions). */
+  categoriesByMethodology: Record<string, string[]>
 }

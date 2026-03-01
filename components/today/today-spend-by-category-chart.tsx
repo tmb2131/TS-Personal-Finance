@@ -33,9 +33,11 @@ const BAR_COLORS = [
 
 type TodaySpendByCategoryChartProps = {
   spendByCategory: Record<string, number>
+  /** When provided, bars are clickable and this is called with the category name. */
+  onBarClick?: (category: string) => void
 }
 
-export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCategoryChartProps) {
+export function TodaySpendByCategoryChart({ spendByCategory, onBarClick }: TodaySpendByCategoryChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
@@ -121,7 +123,13 @@ export function TodaySpendByCategoryChart({ spendByCategory }: TodaySpendByCateg
                 fontSize: `${fontSizes.tooltipMin}px`,
               }}
             />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="transparent">
+            <Bar
+              dataKey="value"
+              radius={[4, 4, 0, 0]}
+              stroke="transparent"
+              cursor={onBarClick ? 'pointer' : undefined}
+              onClick={onBarClick ? (data: { name?: string }) => data?.name != null && onBarClick(data.name) : undefined}
+            >
               {chartData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
               ))}

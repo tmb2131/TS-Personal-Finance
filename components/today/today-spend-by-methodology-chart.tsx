@@ -38,6 +38,8 @@ type TodaySpendByMethodologyChartProps = {
   totalForecastToday?: number | null
   /** Total forecast at end of day if no more spend today; shown when finite. */
   totalForecastTomorrowAtZero?: number | null
+  /** When provided, bars are clickable and this is called with the methodology name. */
+  onBarClick?: (methodology: string) => void
 }
 
 export function TodaySpendByMethodologyChart({
@@ -47,6 +49,7 @@ export function TodaySpendByMethodologyChart({
   impliedForecastChange,
   totalForecastToday,
   totalForecastTomorrowAtZero,
+  onBarClick,
 }: TodaySpendByMethodologyChartProps) {
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
@@ -196,7 +199,16 @@ export function TodaySpendByMethodologyChart({
                 </span>
               )}
             />
-            <Bar dataKey="spend" name="Spend" stackId="method" radius={[4, 0, 0, 0]} stroke="transparent" fill={SPEND_FILL}>
+            <Bar
+              dataKey="spend"
+              name="Spend"
+              stackId="method"
+              radius={[4, 0, 0, 0]}
+              stroke="transparent"
+              fill={SPEND_FILL}
+              cursor={onBarClick ? 'pointer' : undefined}
+              onClick={onBarClick ? (data: { name?: string }) => data?.name != null && onBarClick(data.name) : undefined}
+            >
               {chartData.map((_, index) => (
                 <Cell key={`spend-${index}`} fill={index % 2 === 0 ? SPEND_FILL : SPEND_FILL_ALT} />
               ))}
@@ -208,6 +220,8 @@ export function TodaySpendByMethodologyChart({
               radius={[0, 4, 4, 0]}
               stroke="transparent"
               fill={HEADROOM_FILL}
+              cursor={onBarClick ? 'pointer' : undefined}
+              onClick={onBarClick ? (data: { name?: string }) => data?.name != null && onBarClick(data.name) : undefined}
             >
               {chartData.map((_, index) => (
                 <Cell key={`headroom-${index}`} fill={index % 2 === 0 ? HEADROOM_FILL : HEADROOM_FILL_ALT} />

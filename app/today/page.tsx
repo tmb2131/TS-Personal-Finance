@@ -119,11 +119,15 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
   })
 
   const spendByMethodology: Record<string, number> = { Annual: 0, Budget: 0, Linear: 0, Manual: 0 }
+  const categoriesByMethodology: Record<string, string[]> = { Annual: [], Budget: [], Linear: [], Manual: [] }
   todaySpendByCategory.forEach((rawSum, category) => {
     const netExpense = Math.max(0, -rawSum)
     const settings = settingsByCategory.get(category)
     const method = (settings?.current_year_method ?? getDefaultForecastMethods(category).year) as YearMethod
     spendByMethodology[method] = (spendByMethodology[method] ?? 0) + netExpense
+    if (!categoriesByMethodology[method].includes(category)) {
+      categoriesByMethodology[method].push(category)
+    }
   })
 
   const dayOfYear = getDayOfYear(today)
@@ -177,6 +181,7 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     impliedForecastChange,
     totalForecastToday,
     totalForecastTomorrowAtZero,
+    categoriesByMethodology,
   }
 }
 
