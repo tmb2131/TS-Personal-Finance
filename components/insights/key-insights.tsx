@@ -693,11 +693,12 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
             <p className="text-sm text-muted-foreground mt-1">Key takeaways at a glance — click a card to jump to the section</p>
           </CardHeader>
           <CardContent className="pt-6 md:pt-6">
-            <div className={isMobile
-              ? 'flex gap-4 overflow-x-auto pt-2 pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
-              : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
-            }>
-              {/* Net Worth Summary — clickable to scroll to section */}
+            <div className="relative">
+              <div className={isMobile
+                ? 'flex gap-4 overflow-x-auto pt-2 pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
+                : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
+              }>
+                {/* Net Worth Summary — clickable to scroll to section */}
               <button
                 type="button"
                 onClick={() => scrollToSection('net-worth')}
@@ -923,6 +924,10 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                 </div>
               </div>
               </button>
+              </div>
+              {isMobile && (
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent" aria-hidden />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1012,7 +1017,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                             !isLast && "mb-2" // Reduced spacing between items for more compact layout
                           )}
                         >
-                          <span className="text-sm w-[200px] shrink-0 break-words leading-tight">{a.accountName}</span>
+                          <span className="text-sm max-w-[45%] min-w-0 shrink truncate leading-tight md:w-[200px] md:max-w-none md:break-words">{a.accountName}</span>
                           <div className="flex-1 min-w-0 h-4 rounded-full bg-muted overflow-hidden shrink">
                             <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${pct}%`, transitionDelay: `${index * 60}ms` }} />
                           </div>

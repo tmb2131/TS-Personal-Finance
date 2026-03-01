@@ -854,7 +854,7 @@ export function AccountsOverview() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0"
+                                className="h-11 w-11 min-h-[44px] min-w-[44px] p-0"
                                 onClick={() => setEditingAccount(account)}
                               >
                                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />

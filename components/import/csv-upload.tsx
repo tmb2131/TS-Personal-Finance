@@ -679,29 +679,32 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
 
             <div>
               <h4 className="text-sm font-medium mb-2">Raw Data Preview (first 5 rows)</h4>
-              <div className="rounded-md border overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {headers.map((header) => (
-                        <TableHead key={header} className="whitespace-nowrap text-xs">
-                          {header}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rows.slice(0, 5).map((row, i) => (
-                      <TableRow key={i}>
-                        {row.map((cell, j) => (
-                          <TableCell key={j} className="text-xs whitespace-nowrap">
-                            {cell}
-                          </TableCell>
+              <div className="relative">
+                <div className="rounded-md border overflow-x-auto overflow-y-auto scroll-touch max-h-[280px]">
+                  <Table className="min-w-[400px]">
+                    <TableHeader>
+                      <TableRow>
+                        {headers.map((header) => (
+                          <TableHead key={header} className="whitespace-nowrap text-xs">
+                            {header}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.slice(0, 5).map((row, i) => (
+                        <TableRow key={i}>
+                          {row.map((cell, j) => (
+                            <TableCell key={j} className="text-xs whitespace-nowrap">
+                              {cell}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent rounded-r-md" aria-hidden />
               </div>
             </div>
 

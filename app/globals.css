@@ -120,6 +120,11 @@
   transform: translateY(0);
 }
 
+/* Horizontal scroll containers: smooth touch scrolling on iOS */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:focus-within {
     scroll-behavior: auto;

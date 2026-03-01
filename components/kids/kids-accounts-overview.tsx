@@ -551,7 +551,7 @@ export function KidsAccountsOverview() {
                                   {getSourceLabel(account.data_source)}
                                 </Badge>
                                 {!bulkEditMode && isEditableSource(account.data_source) && (
-                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingAccount(account)}>
+                                  <Button variant="ghost" size="sm" className="h-11 w-11 min-h-[44px] min-w-[44px] p-0" onClick={() => setEditingAccount(account)}>
                                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                   </Button>
                                 )}
@@ -676,7 +676,7 @@ export function KidsAccountsOverview() {
                                 </TableCell>
                                 <TableCell>
                                   {!bulkEditMode && isEditableSource(account.data_source) && (
-                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingAccount(account)}>
+                                    <Button variant="ghost" size="sm" className="h-11 w-11 min-h-[44px] min-w-[44px] p-0" onClick={() => setEditingAccount(account)}>
                                       <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                     </Button>
                                   )}

@@ -1,13 +1,12 @@
 /**
  * Standard typography for Recharts (AreaChart, BarChart, LineChart).
- * Aligns with global 11px floor: desktop 12px (text-xs), mobile 11px.
- * Use interval/tickCount to reduce crowding; do not shrink below 11px.
+ * Desktop and mobile both use 12px for readability; use interval/tickCount to reduce crowding.
  */
 export const CHART_FONT = {
   /** Desktop: axis, legend, tooltip (matches text-xs) */
   desktop: 12,
-  /** Mobile: axis, legend, tooltip (global floor) */
-  mobile: 11,
+  /** Mobile: axis, legend, tooltip (12px for readability on small screens) */
+  mobile: 12,
 } as const
 
 export type ChartFontSize = typeof CHART_FONT.desktop | typeof CHART_FONT.mobile

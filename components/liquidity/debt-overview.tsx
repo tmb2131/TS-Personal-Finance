@@ -252,7 +252,7 @@ export default function DebtOverview() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className="h-11 w-11 min-h-[44px] min-w-[44px]"
                               onClick={() => setEditingDebt(item)}
                             >
                               <Pencil className="h-4 w-4" />

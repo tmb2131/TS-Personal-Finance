@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Card, CardContent } from '@/components/ui/card'
 
 type ApiRow = {
   year: number
@@ -246,7 +247,7 @@ export function EditNetWorthHistoryDialog() {
           Edit History
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="left-0 top-0 h-[100dvh] max-h-none w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-4 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-3xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-xl sm:border sm:p-6">
         <DialogHeader>
           <DialogTitle>Edit Historical Net Worth</DialogTitle>
           <DialogDescription>
@@ -255,17 +256,83 @@ export function EditNetWorthHistoryDialog() {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Label className="text-sm text-muted-foreground">
               Values are saved in {currency}. Only years before {currentYear} are editable.
             </Label>
-            <Button type="button" variant="outline" size="sm" onClick={addYear}>
+            <Button type="button" variant="outline" size="sm" onClick={addYear} className="w-fit">
               <Plus className="mr-2 h-4 w-4" />
               Add Year
             </Button>
           </div>
 
-          <div className="max-h-[420px] overflow-auto rounded-md border">
+          {/* Mobile: card layout */}
+          <div className="max-h-[50vh] overflow-y-auto space-y-3 md:hidden">
+            {loading ? (
+              <p className="text-center text-sm text-muted-foreground py-6">Loading history...</p>
+            ) : rows.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-6">No historical years found. Add a year to create manual history.</p>
+            ) : (
+              rows.map((row) => (
+                <Card key={row.id}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-xs shrink-0">Year</Label>
+                      <Input
+                        value={row.year}
+                        onChange={(e) => updateCell(row.id, 'year', e.target.value)}
+                        inputMode="numeric"
+                        className="flex-1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Personal ({currency})</Label>
+                      <Input
+                        value={row.personal}
+                        onChange={(e) => updateCell(row.id, 'personal', e.target.value)}
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Family ({currency})</Label>
+                      <Input
+                        value={row.family}
+                        onChange={(e) => updateCell(row.id, 'family', e.target.value)}
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Trust ({currency})</Label>
+                      <Input
+                        value={row.trust}
+                        onChange={(e) => updateCell(row.id, 'trust', e.target.value)}
+                        inputMode="decimal"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="text-xs text-muted-foreground">
+                        {row.hasManualOverride ? 'Manual' : 'Generated'}
+                      </span>
+                      {row.isNew && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-11 w-11 min-h-[44px] min-w-[44px] p-0"
+                          onClick={() => removeNewRow(row.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block max-h-[420px] overflow-auto rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
@@ -330,7 +397,7 @@ export function EditNetWorthHistoryDialog() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="h-11 w-11 min-h-[44px] min-w-[44px] p-0"
                             onClick={() => removeNewRow(row.id)}
                           >
                             <X className="h-4 w-4" />

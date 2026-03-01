@@ -681,7 +681,7 @@ export function ChatWidget() {
                   variant="ghost"
                   size="icon"
                   onClick={handleClearChat}
-                  className="h-8 w-8"
+                  className="h-11 w-11 min-h-[44px] min-w-[44px]"
                   aria-label="Clear chat"
                   title="Clear chat"
                 >
@@ -692,7 +692,7 @@ export function ChatWidget() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsOpen(false)}
-                className="h-8 w-8"
+                className="h-11 w-11 min-h-[44px] min-w-[44px]"
                 aria-label="Close chat"
               >
                 <X className="h-4 w-4" />

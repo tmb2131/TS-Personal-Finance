@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { CurrencyToggle } from './currency-toggle'
 import { ThemeToggle } from './theme-toggle'
 import { Button } from './ui/button'
-import { RefreshCw, BarChart3 } from 'lucide-react'
+import { RefreshCw, BarChart3, MessageCircle } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -37,6 +37,7 @@ export function Header({ initialData }: { initialData?: HeaderStatus | null }) {
   const [syncing, setSyncing] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(true)
+  const [scrolled, setScrolled] = useState(false)
   const lastScrollTop = useRef(0)
   const [lastRefreshDate, setLastRefreshDate] = useState<string | null>(initialData?.lastSyncAt ?? null)
   const [latestTransactionDate, setLatestTransactionDate] = useState<string | null>(initialData?.latestTransactionDate ?? null)
@@ -91,27 +92,29 @@ export function Header({ initialData }: { initialData?: HeaderStatus | null }) {
 
   // Hide header on scroll down, show on scroll up (mobile only). Disable toggle near bottom to prevent rubber-band flicker.
   useEffect(() => {
-    if (!isMobile) return
     const el = document.querySelector('.main-content') as HTMLElement | null
     if (!el) return
     const onScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = el
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight
-      if (distanceFromBottom < BOTTOM_BOUNDARY_PX) {
-        setHeaderVisible(true)
-        lastScrollTop.current = scrollTop
-        return
-      }
-      if (scrollTop <= 0) {
-        setHeaderVisible(true)
-      } else if (scrollTop > lastScrollTop.current && scrollTop > SCROLL_THRESHOLD) {
-        if (distanceFromBottom >= HIDE_MIN_DISTANCE_FROM_BOTTOM_PX) {
-          setHeaderVisible(false)
+      setScrolled(scrollTop > 8)
+      if (isMobile) {
+        if (distanceFromBottom < BOTTOM_BOUNDARY_PX) {
+          setHeaderVisible(true)
+          lastScrollTop.current = scrollTop
+          return
         }
-      } else if (scrollTop < lastScrollTop.current) {
-        setHeaderVisible(true)
+        if (scrollTop <= 0) {
+          setHeaderVisible(true)
+        } else if (scrollTop > lastScrollTop.current && scrollTop > SCROLL_THRESHOLD) {
+          if (distanceFromBottom >= HIDE_MIN_DISTANCE_FROM_BOTTOM_PX) {
+            setHeaderVisible(false)
+          }
+        } else if (scrollTop < lastScrollTop.current) {
+          setHeaderVisible(true)
+        }
+        lastScrollTop.current = scrollTop
       }
-      lastScrollTop.current = scrollTop
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
@@ -266,8 +269,9 @@ export function Header({ initialData }: { initialData?: HeaderStatus | null }) {
   return (
     <header
       className={cn(
-        'z-40 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6 transition-transform duration-200 ease-out',
-        isMobile && !headerVisible && '-translate-y-full -mt-16'
+        'z-40 flex min-h-16 shrink-0 items-center justify-between border-b bg-background/95 px-3 pt-[env(safe-area-inset-top,0px)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6 md:pt-0 transition-transform duration-200 ease-out',
+        isMobile && !headerVisible && '-translate-y-full -mt-16',
+        isMobile && scrolled && headerVisible && 'shadow-sm'
       )}
     >
       <div className="flex min-w-0 items-center gap-1.5 md:gap-4">
@@ -330,6 +334,16 @@ export function Header({ initialData }: { initialData?: HeaderStatus | null }) {
         )}
       </div>
       <div className="flex items-center gap-1.5 md:gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="md:hidden h-11 w-11 min-h-[44px] min-w-[44px]"
+          onClick={() => window.dispatchEvent(new Event('findash:open-chat-widget'))}
+          aria-label="Open AI Assistant"
+        >
+          <MessageCircle className="h-5 w-5" />
+        </Button>
         <ThemeToggle />
         <CurrencyToggle />
       </div>

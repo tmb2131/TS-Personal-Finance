@@ -523,7 +523,7 @@ export function MonthlyCategorySummary({
           {getExecutiveSummary()}
         </p>
       </div>
-      <div>
+      <div className={cn(isMobile && 'relative')}>
         <div className={cn(
           isMobile
             ? 'flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
@@ -603,6 +603,9 @@ export function MonthlyCategorySummary({
             )
           })}
         </div>
+        {isMobile && (
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent" aria-hidden />
+        )}
       </div>
     </div>
   )

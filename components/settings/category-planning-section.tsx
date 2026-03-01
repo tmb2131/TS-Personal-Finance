@@ -287,7 +287,128 @@ export function CategoryPlanningSection() {
           </Button>
         </div>
 
-        <div className="overflow-auto rounded-md border max-h-[60vh]">
+        {/* Mobile: card layout */}
+        <div className="md:hidden space-y-3 max-h-[60vh] overflow-y-auto">
+          {filteredRows.length === 0 ? (
+            <div className="rounded-md border p-4">
+              <EmptyState
+                title={search.trim() ? 'No categories match your search' : 'No categories yet'}
+                description={search.trim() ? 'Try a different search or add a new category above.' : 'Add a category above to get started.'}
+                className="py-6"
+              />
+              {search.trim() && (
+                <div className="flex justify-center pt-2">
+                  <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+                    Clear search
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            filteredRows.map((row) => (
+              <Card key={row.category} className="overflow-hidden">
+                <CardContent className="p-4 space-y-4">
+                  <div className="font-semibold text-sm">{row.category}</div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Annual Budget ({currency})</Label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      className="text-right w-full"
+                      value={getDisplayBudget(row)}
+                      onChange={(e) => setBudgetFromDisplay(row.category, e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Annual Forecast Method</Label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        aria-label={`Annual method for ${row.category}`}
+                        value={row.current_year_method}
+                        onChange={(e) => handleMethodChange(row.category, 'current_year_method', e.target.value as YearMethod)}
+                        className={selectInputClass}
+                      >
+                        <option value="Annual">Annual</option>
+                        <option value="Linear">Linear</option>
+                        <option value="Budget">Budget</option>
+                        <option value="Manual">Manual</option>
+                      </select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-2 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            aria-label={`Annual method help for ${row.category}`}
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {yearMethodHelp[row.current_year_method]}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    {row.current_year_method === 'Manual' && (
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        placeholder="Manual annual forecast"
+                        value={row.manual_year_forecast ?? ''}
+                        onChange={(e) => handleManualChange(row.category, 'manual_year_forecast', e.target.value)}
+                        className="mt-1"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Monthly Forecast Method</Label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        aria-label={`Monthly method for ${row.category}`}
+                        value={row.current_month_method}
+                        onChange={(e) => handleMethodChange(row.category, 'current_month_method', e.target.value as MonthMethod)}
+                        className={selectInputClass}
+                      >
+                        <option value="Linear">Linear</option>
+                        <option value="Average">Average</option>
+                        <option value="Manual">Manual</option>
+                      </select>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded p-2 text-muted-foreground hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            aria-label={`Monthly method help for ${row.category}`}
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          {monthMethodHelp[row.current_month_method]}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    {row.current_month_method === 'Manual' && (
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        placeholder="Manual monthly forecast"
+                        value={row.manual_month_forecast ?? ''}
+                        onChange={(e) => handleManualChange(row.category, 'manual_month_forecast', e.target.value)}
+                        className="mt-1"
+                      />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block overflow-auto rounded-md border max-h-[60vh]">
           <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow className="bg-muted/50 sticky top-0 z-10 bg-muted border-b border-border">

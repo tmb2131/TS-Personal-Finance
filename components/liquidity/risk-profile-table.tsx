@@ -175,45 +175,47 @@ export default function RiskProfileTable() {
                       {formatCurrency(group.total)}
                     </span>
                   </div>
-                  <Table className="[&_th]:text-[11px] [&_td]:text-[13px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="sticky left-0 z-10 bg-background">Institution</TableHead>
-                        <TableHead>Account</TableHead>
-                        <TableHead>Currency</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.accounts
-                        .sort((a, b) => {
-                          const balA = convertAmount(a.balance_total_local ?? 0, a.currency ?? 'USD', fxRate)
-                          const balB = convertAmount(b.balance_total_local ?? 0, b.currency ?? 'USD', fxRate)
-                          return balB - balA
-                        })
-                        .map((account, idx) => {
-                          const balance = convertAmount(
-                            account.balance_total_local ?? 0,
-                            account.currency ?? 'USD',
-                            fxRate
-                          )
-                          return (
-                            <TableRow key={idx}>
-                              <TableCell className="sticky left-0 z-10 bg-background font-medium">
-                                {account.institution}
-                              </TableCell>
-                              <TableCell>{account.account_name}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{account.currency}</Badge>
-                              </TableCell>
-                              <TableCell className="text-right tabular-nums">
-                                {formatCurrency(balance)}
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                    </TableBody>
-                  </Table>
+                  <div className="overflow-x-auto scroll-touch -mx-1 px-1">
+                    <Table className="min-w-[320px] [&_th]:text-[11px] [&_td]:text-[13px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="sticky left-0 z-10 bg-background">Institution</TableHead>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Currency</TableHead>
+                          <TableHead className="text-right">Balance</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.accounts
+                          .sort((a, b) => {
+                            const balA = convertAmount(a.balance_total_local ?? 0, a.currency ?? 'USD', fxRate)
+                            const balB = convertAmount(b.balance_total_local ?? 0, b.currency ?? 'USD', fxRate)
+                            return balB - balA
+                          })
+                          .map((account, idx) => {
+                            const balance = convertAmount(
+                              account.balance_total_local ?? 0,
+                              account.currency ?? 'USD',
+                              fxRate
+                            )
+                            return (
+                              <TableRow key={idx}>
+                                <TableCell className="sticky left-0 z-10 bg-background font-medium">
+                                  {account.institution}
+                                </TableCell>
+                                <TableCell>{account.account_name}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{account.currency}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {formatCurrency(balance)}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               ))}
             </div>

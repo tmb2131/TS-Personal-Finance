@@ -106,8 +106,9 @@ export function ImportPreview({ target, rows, onImportComplete, onBack }: Import
         </div>
       </div>
 
-      <div className="rounded-md border overflow-auto">
-        <Table>
+      <div className="relative">
+        <div className="rounded-md border overflow-x-auto overflow-y-auto scroll-touch max-h-[50vh]">
+          <Table className="min-w-[500px]">
           <TableHeader>
             {target === 'transactions' && (
               <TableRow>
@@ -185,6 +186,8 @@ export function ImportPreview({ target, rows, onImportComplete, onBack }: Import
             )}
           </TableBody>
         </Table>
+        </div>
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent rounded-r-md" aria-hidden />
       </div>
 
       <div className="flex gap-3">

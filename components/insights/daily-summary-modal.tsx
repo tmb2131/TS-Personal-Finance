@@ -727,7 +727,7 @@ export function DailySummaryModal({
         </div>
 
         <DialogClose
-          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:right-4 sm:top-4 sm:h-auto sm:w-auto sm:gap-1 sm:rounded-md sm:border sm:border-border/60 sm:bg-background/80 sm:px-2 sm:py-1.5 sm:backdrop-blur-none"
+          className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-sm backdrop-blur-sm transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:right-4 sm:top-4 sm:h-auto sm:w-auto sm:gap-1 sm:rounded-md sm:border sm:border-border/60 sm:bg-background/80 sm:px-2 sm:py-1.5 sm:backdrop-blur-none"
         >
           <X className="h-5 w-5 sm:h-4 sm:w-4" />
           <span className="sr-only">Close</span>
@@ -743,7 +743,7 @@ export function DailySummaryModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-0 pt-3 sm:px-0 sm:pb-0 sm:pt-0">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom,1rem)] pt-3 sm:px-0 sm:pb-0 sm:pt-0">
             {loading ? (
               <div className="flex min-h-full flex-col space-y-4 py-3 sm:py-4">
                 <p className="text-sm text-muted-foreground text-center">Loading your daily summary...</p>
@@ -763,7 +763,7 @@ export function DailySummaryModal({
               <div className="space-y-4 sm:space-y-3">
                 {/* Section: Budget Overview */}
                 <div>
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5">Budget Overview</p>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5 sm:text-[10px]">Budget Overview</p>
                   <Card className={cn(
                     'overflow-hidden border-l-[3px]',
                     gapToBudget >= 0
@@ -790,7 +790,7 @@ export function DailySummaryModal({
                         <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </button>
                       <div className={cn(
-                        'text-4xl sm:text-2xl font-bold tabular-nums leading-none',
+                        'text-3xl sm:text-2xl font-bold tabular-nums leading-none',
                         gapToBudget >= 0 ? 'text-green-600' : 'text-red-600'
                       )}>
                         {gapToBudget >= 0 ? 'Under' : 'Over'} {formatCurrency(Math.abs(gapToBudget))}
@@ -825,7 +825,7 @@ export function DailySummaryModal({
                 {/* Section: Today */}
                 {(hasChangeCard || hasNeutralCard) && (
                   <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5">Today</p>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5 sm:text-[10px]">Today</p>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
                       {hasNeutralCard && (
                         <Card className={cn(
@@ -976,7 +976,7 @@ export function DailySummaryModal({
                             </button>
                             {yesterdayChange !== null && (
                               <div className={cn(
-                                'text-2xl sm:text-lg font-bold tabular-nums leading-none',
+                                'text-xl sm:text-lg font-bold tabular-nums leading-none',
                                 yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
                               )}>
                                 {yesterdayChange < 0 ? (
@@ -1048,7 +1048,7 @@ export function DailySummaryModal({
 
                 {/* Section: This Month */}
                 <div>
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5">This Month</p>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5 sm:text-[10px]">This Month</p>
                   <div className="space-y-4 sm:space-y-3">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
                       <Card className="border-l-[3px] border-l-blue-500">

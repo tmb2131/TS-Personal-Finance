@@ -67,7 +67,7 @@ export function FullTableViewWrapper({
         size="icon"
         ref={closeButtonRef}
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 h-9 w-9 shrink-0 rounded-full border bg-background/95 shadow-md backdrop-blur sm:h-10 sm:w-10"
+        className="absolute top-4 right-4 z-10 h-12 w-12 min-h-[48px] min-w-[48px] shrink-0 rounded-full border bg-background/95 shadow-md backdrop-blur sm:h-10 sm:w-10 sm:min-h-0 sm:min-w-0"
         aria-label="Close full table view"
       >
         <X className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />

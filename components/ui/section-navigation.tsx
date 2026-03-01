@@ -49,9 +49,10 @@ export function SectionNavigation({
   sectionOffset = 100,
   className,
 }: SectionNavigationProps) {
-  return (
-    <div className={cn(containerClassName, className)}>
-      {items.map((item) => {
+  const content = (
+    <>
+      <div className={cn(containerClassName, className)}>
+        {items.map((item) => {
         const Icon = item.icon
         return (
           <button
@@ -79,6 +80,14 @@ export function SectionNavigation({
           </button>
         )
       })}
-    </div>
+      </div>
+      {mobileScrollable && (
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent md:hidden" aria-hidden />
+      )}
+    </>
   )
+  if (mobileScrollable) {
+    return <div className="relative">{content}</div>
+  }
+  return content
 }
