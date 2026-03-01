@@ -7,7 +7,7 @@ import { KeyInsights } from './key-insights'
 export function InsightsDataBlock({ initialData }: { initialData: InsightsDataPayload }) {
   return (
     <>
-      <div>
+      <div className="hidden md:block">
         <h1 className="text-2xl md:text-3xl font-bold">Key Insights</h1>
         <p className="text-sm md:text-base text-muted-foreground">
           Quick overview of your financial performance and trends
