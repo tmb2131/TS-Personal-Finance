@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function SummaryPage() {
   return (
-    <div className="flex h-full flex-col p-4 sm:p-6">
+    <div className="space-y-4 md:space-y-6">
       <SummaryPageContent />
     </div>
   )

@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useSync } from '@/lib/contexts/sync-context'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
-import { PullToRefresh } from '@/components/pull-to-refresh'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
@@ -200,6 +199,14 @@ export function SummaryPageContent() {
   useEffect(() => {
     void fetchData()
   }, [fetchData])
+
+  const prevSyncing = useRef(syncing)
+  useEffect(() => {
+    if (prevSyncing.current && !syncing) {
+      void fetchData({ background: true })
+    }
+    prevSyncing.current = syncing
+  }, [syncing, fetchData])
 
   const annualEstimatedSpend = useMemo(() => {
     const expenses = budgetData.filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
@@ -601,42 +608,34 @@ export function SummaryPageContent() {
   })
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {/* Page header — sticky on mobile for scroll UX */}
-      <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-sm sm:static sm:border-0 sm:bg-transparent sm:px-0 sm:pb-3 sm:pt-0 sm:backdrop-blur-none">
-        <h1 className="text-2xl font-bold sm:text-xl">Daily Summary</h1>
-        <p className="text-sm sm:text-xs text-muted-foreground">
-          <span>{todayFormatted}</span>
-          {lastSyncDate && (
-            <span className="text-muted-foreground/70"> · Updated {formatLastSync()}</span>
-          )}
-        </p>
+    <>
+      <div className="rounded-xl border border-l-[3px] border-l-indigo-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold">Daily Summary</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            <span>{todayFormatted}</span>
+            {lastSyncDate && (
+              <span className="text-muted-foreground/70"> · Updated {formatLastSync()}</span>
+            )}
+          </p>
+        </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom,1rem)] pt-3 sm:px-0 sm:pb-0 sm:pt-0">
-        <PullToRefresh
-          onRefresh={async () => {
-            await handleSync()
-            await fetchData({})
-          }}
-          disabled={syncing}
-        >
-          {loading ? (
-            <div className="flex min-h-full flex-col space-y-4 py-3 sm:py-4">
+      <div>
+        {loading ? (
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
                 Loading your daily summary...
               </p>
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-28 rounded" />
-                <Skeleton className="h-36 w-full rounded-xl" />
-                <Skeleton className="h-4 w-16 rounded" />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Skeleton className="h-32 w-full rounded-xl" />
-                  <Skeleton className="h-32 w-full rounded-xl" />
-                </div>
-                <Skeleton className="h-4 w-24 rounded" />
-                <Skeleton className="h-48 w-full rounded-xl" />
+              <Skeleton className="h-4 w-28 rounded" />
+              <Skeleton className="h-36 w-full rounded-xl" />
+              <Skeleton className="h-4 w-16 rounded" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Skeleton className="h-32 w-full rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-xl" />
               </div>
+              <Skeleton className="h-4 w-24 rounded" />
+              <Skeleton className="h-48 w-full rounded-xl" />
             </div>
           ) : (
             <div className="space-y-4 sm:space-y-3">
@@ -1300,8 +1299,7 @@ export function SummaryPageContent() {
               </div>
             </div>
           )}
-        </PullToRefresh>
       </div>
-    </div>
+    </>
   )
 }
