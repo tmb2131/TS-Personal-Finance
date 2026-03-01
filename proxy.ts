@@ -52,7 +52,7 @@ export async function proxy(request: NextRequest) {
   // Allow login page (redirect to daily summary if already signed in)
   if (pathname === '/login') {
     if (user) {
-      return NextResponse.redirect(new URL('/summary', request.url))
+      return NextResponse.redirect(new URL('/', request.url))
     }
     return response
   }
