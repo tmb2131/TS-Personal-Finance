@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { LoginHeader } from '@/components/login-header'
+import { PullToRefresh } from '@/components/pull-to-refresh'
 import { Toaster } from 'sonner'
+import { useSync } from '@/lib/contexts/sync-context'
 import type { HeaderStatus } from '@/lib/data/cached-queries'
 
 const ChatWidget = dynamic(
@@ -48,6 +50,8 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
     )
   }
 
+  const { handleSync, syncing } = useSync()
+
   return (
     <>
       <a href="#main-content" className="skip-link">
@@ -62,7 +66,9 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
             tabIndex={-1}
             className="main-content flex-1 overflow-y-auto overscroll-y-contain p-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:p-6 md:pb-6"
           >
-            {children}
+            <PullToRefresh onRefresh={handleSync} disabled={syncing}>
+              {children}
+            </PullToRefresh>
           </main>
         </div>
       </div>

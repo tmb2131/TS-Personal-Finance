@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
+import { SyncProvider } from '@/lib/contexts/sync-context'
 import { DailySummaryProvider } from '@/components/insights/daily-summary-context'
 import { InsightsDataProvider } from '@/components/insights/insights-data-context'
 import { ThemeProvider } from '@/lib/contexts/theme-provider'
@@ -41,11 +42,13 @@ export default async function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <CurrencyProvider>
-            <DailySummaryProvider>
-              <InsightsDataProvider>
-                <AppShell initialHeaderData={initialHeaderData}>{children}</AppShell>
-              </InsightsDataProvider>
-            </DailySummaryProvider>
+            <SyncProvider initialHeaderData={initialHeaderData}>
+              <DailySummaryProvider>
+                <InsightsDataProvider>
+                  <AppShell initialHeaderData={initialHeaderData}>{children}</AppShell>
+                </InsightsDataProvider>
+              </DailySummaryProvider>
+            </SyncProvider>
           </CurrencyProvider>
         </ThemeProvider>
         <Analytics />

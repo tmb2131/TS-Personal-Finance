@@ -4,6 +4,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useSync } from '@/lib/contexts/sync-context'
+import { PullToRefresh } from '@/components/pull-to-refresh'
 import {
   Dialog,
   DialogClose,
@@ -174,6 +176,7 @@ export function DailySummaryModal({
   const router = useRouter()
   const pathname = usePathname()
   const { currency, fxRate, convertAmount } = useCurrency()
+  const { handleSync, syncing } = useSync()
   // Support both controlled (from context) and uncontrolled (direct prop) usage
   const [internalOpen, setInternalOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
@@ -744,6 +747,13 @@ export function DailySummaryModal({
           </DialogHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom,1rem)] pt-3 sm:px-0 sm:pb-0 sm:pt-0">
+            <PullToRefresh
+              onRefresh={async () => {
+                await handleSync()
+                await fetchData({})
+              }}
+              disabled={syncing}
+            >
             {loading ? (
               <div className="flex min-h-full flex-col space-y-4 py-3 sm:py-4">
                 <p className="text-sm text-muted-foreground text-center">Loading your daily summary...</p>
@@ -1250,6 +1260,7 @@ export function DailySummaryModal({
                 </div>
               </div>
             )}
+            </PullToRefresh>
           </div>
         </div>
       </DialogContent>
