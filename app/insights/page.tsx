@@ -3,9 +3,7 @@ import { redirect } from 'next/navigation'
 import { ConnectSheetModal } from '@/components/insights/connect-sheet-modal'
 import { DummyDataMessage } from '@/components/insights/dummy-data-message'
 import { AutoSyncOnMount } from '@/components/insights/auto-sync-on-mount'
-import { DailySummaryOnMount } from '@/components/insights/daily-summary-on-mount'
 import { InsightsHashScroll } from '@/components/insights/insights-hash-scroll'
-import { InsightsContentWithOpenDaily } from '@/components/insights/insights-content-with-open-daily'
 import { InsightsDataBlock } from '@/components/insights/insights-data-block'
 import { InsightsDataHydrator } from '@/components/insights/insights-data-context'
 import { fetchInsightsData } from '@/lib/insights-data'
@@ -37,12 +35,9 @@ export default async function InsightsPage() {
       <InsightsDataHydrator data={initialData} />
       <InsightsHashScroll />
       <AutoSyncOnMount />
-      <DailySummaryOnMount />
       <ConnectSheetModal open={needsSpreadsheet} />
       {hasDummyData && <DummyDataMessage />}
-      <InsightsContentWithOpenDaily>
-        <InsightsDataBlock initialData={initialData} />
-      </InsightsContentWithOpenDaily>
+      <InsightsDataBlock initialData={initialData} />
     </div>
   )
 }

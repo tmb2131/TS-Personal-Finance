@@ -4,7 +4,6 @@ import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
 import { SyncProvider } from '@/lib/contexts/sync-context'
-import { DailySummaryProvider } from '@/components/insights/daily-summary-context'
 import { InsightsDataProvider } from '@/components/insights/insights-data-context'
 import { ThemeProvider } from '@/lib/contexts/theme-provider'
 import { AppShell } from '@/components/app-shell'
@@ -43,11 +42,9 @@ export default async function RootLayout({
         <ThemeProvider>
           <CurrencyProvider>
             <SyncProvider initialHeaderData={initialHeaderData}>
-              <DailySummaryProvider>
-                <InsightsDataProvider>
-                  <AppShell initialHeaderData={initialHeaderData}>{children}</AppShell>
-                </InsightsDataProvider>
-              </DailySummaryProvider>
+              <InsightsDataProvider>
+                <AppShell initialHeaderData={initialHeaderData}>{children}</AppShell>
+              </InsightsDataProvider>
             </SyncProvider>
           </CurrencyProvider>
         </ThemeProvider>

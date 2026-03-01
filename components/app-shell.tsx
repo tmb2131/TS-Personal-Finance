@@ -15,11 +15,6 @@ const ChatWidget = dynamic(
   { ssr: false }
 )
 
-const DailySummaryWrapper = dynamic(
-  () => import('@/components/insights/daily-summary-wrapper').then(m => ({ default: m.DailySummaryWrapper })),
-  { ssr: false }
-)
-
 interface AppShellProps {
   children: React.ReactNode
   initialHeaderData?: HeaderStatus | null
@@ -74,7 +69,6 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
       </div>
       <Toaster position="top-right" richColors />
       <ChatWidget />
-      <DailySummaryWrapper />
     </>
   )
 }

@@ -14,8 +14,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
-import { useDailySummary } from '@/components/insights/daily-summary-context'
-
 const allNavigation = [
   { name: 'Key Insights', href: '/insights', icon: Lightbulb },
   { name: 'Daily Summary', href: '/', icon: LayoutList },
@@ -39,7 +37,6 @@ function isRouteActive(pathname: string, href: string) {
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { isOpen: isDailySummaryOpen } = useDailySummary()
   const [collapsed, setCollapsed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [hasKidsData, setHasKidsData] = useState(true) // default true to avoid flash
@@ -161,7 +158,7 @@ export function Sidebar() {
       </div>
 
       {/* Mobile Bottom Navigation - hidden on login page */}
-      {pathname !== '/login' && !isDailySummaryOpen && (
+      {pathname !== '/login' && (
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 shadow-[0_-10px_30px_-24px_hsl(var(--foreground)/0.5)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden"
         style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}

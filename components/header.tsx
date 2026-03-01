@@ -3,25 +3,15 @@
 import { CurrencyToggle } from './currency-toggle'
 import { ThemeToggle } from './theme-toggle'
 import { Button } from './ui/button'
-import { RefreshCw, BarChart3, MessageCircle } from 'lucide-react'
+import { RefreshCw, MessageCircle } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useSync } from '@/lib/contexts/sync-context'
-import { useDailySummary } from '@/components/insights/daily-summary-context'
 import { cn } from '@/utils/cn'
 import type { HeaderStatus } from '@/lib/data/cached-queries'
 
 // Re-export for consumers that imported from header
 export { SYNC_COMPLETED_EVENT } from '@/lib/contexts/sync-context'
-
-// Safe hook that returns null if context is not available
-function useDailySummarySafe() {
-  try {
-    return useDailySummary()
-  } catch {
-    return null
-  }
-}
 
 const SCROLL_THRESHOLD = 8
 const BOTTOM_BOUNDARY_PX = 100
@@ -30,7 +20,6 @@ const HIDE_MIN_DISTANCE_FROM_BOTTOM_PX = 180
 
 export function Header({ initialData: _initialData }: { initialData?: HeaderStatus | null }) {
   const isMobile = useIsMobile()
-  const dailySummary = useDailySummarySafe()
   const {
     syncing,
     handleSync,
@@ -88,19 +77,6 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
       )}
     >
       <div className="flex min-w-0 items-center gap-1.5 md:gap-4">
-        {dailySummary && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={dailySummary.openModal}
-            className="h-9 gap-1.5 px-2 text-xs md:px-3 md:text-sm"
-            title="View daily financial summary"
-          >
-            <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
-            <span className="hidden md:inline">Daily Summary</span>
-            <span className="md:hidden">Summary</span>
-          </Button>
-        )}
         <Button
           variant="outline"
           size="sm"
