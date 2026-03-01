@@ -34,6 +34,4 @@ export type TodayPageData = {
   gapToBudgetCurrent: number | null
   /** Gap to expenses budget at current YTD: expensesBudgetTotal - totalForecastAtCurrentYtd. Uses same day fraction as Dashboard. */
   gapToBudgetIfNoMoreSpend: number | null
-  /** Gap at end of yesterday (for delta vs today); matches Analysis "Gap to budget over time" chart. */
-  gapToBudgetYesterday?: number | null
 }

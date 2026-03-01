@@ -181,9 +181,6 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     Number.isFinite(totalForecastToday) ? expensesBudgetTotal - totalForecastToday : null
   const gapToBudgetIfNoMoreSpend =
     Number.isFinite(totalForecastAtCurrentYtd) ? expensesBudgetTotal - totalForecastAtCurrentYtd : null
-  const gapToBudgetYesterday =
-    Number.isFinite(totalForecastEndOfYesterday) ? expensesBudgetTotal - totalForecastEndOfYesterday : null
-
   return {
     transactions: expenseTransactions,
     spendByCategory,
@@ -200,7 +197,6 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     expensesBudgetTotal,
     gapToBudgetCurrent,
     gapToBudgetIfNoMoreSpend,
-    gapToBudgetYesterday,
   }
 }
 

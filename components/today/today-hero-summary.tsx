@@ -14,8 +14,6 @@ type TodayHeroSummaryProps = {
   totalForecastTomorrowAtZero?: number | null
   gapToBudgetCurrent: number | null
   gapToBudgetIfNoMoreSpend: number | null
-  /** Gap at end of yesterday; delta vs this matches Analysis "Gap to budget over time" chart. */
-  gapToBudgetYesterday?: number | null
   onMethodologyClick?: (methodology: string) => void
 }
 
@@ -30,7 +28,6 @@ export function TodayHeroSummary({
   totalForecastTomorrowAtZero,
   gapToBudgetCurrent,
   gapToBudgetIfNoMoreSpend,
-  gapToBudgetYesterday,
   onMethodologyClick,
 }: TodayHeroSummaryProps) {
   const { currency, fxRate, convertAmount } = useCurrency()
@@ -84,13 +81,6 @@ export function TodayHeroSummary({
     gapToBudgetIfNoMoreSpend != null && Number.isFinite(gapToBudgetIfNoMoreSpend)
       ? toDisplay(gapToBudgetIfNoMoreSpend)
       : null
-  const gapYesterday =
-    gapToBudgetYesterday != null && Number.isFinite(gapToBudgetYesterday)
-      ? toDisplay(gapToBudgetYesterday)
-      : null
-  /** Day-over-day gap change (today vs yesterday); matches Analysis "Gap to budget over time" chart. */
-  const gapDelta =
-    gapNoMoreSpend != null && gapYesterday != null ? gapNoMoreSpend - gapYesterday : null
 
   return (
     <div className="space-y-3">
@@ -159,7 +149,7 @@ export function TodayHeroSummary({
       )}
 
       {/* Q3: If no more spend today */}
-      {(hasImpliedChange || gapDelta != null) && (
+      {(hasImpliedChange || gapNoMoreSpend != null) && (
         <div
           className={cn(
             'rounded-xl border px-4 py-4',
@@ -204,35 +194,16 @@ export function TodayHeroSummary({
               </div>
             )}
 
-            {gapNoMoreSpend != null && gapDelta != null && (
+            {gapNoMoreSpend != null && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Gap to budget</span>
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      'text-sm font-semibold tabular-nums',
-                      gapNoMoreSpend >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                    )}
-                  >
-                    {gapNoMoreSpend >= 0 ? 'Under' : 'Over'} {fmt(Math.abs(gapNoMoreSpend))}
-                  </span>
-                  {Math.abs(gapDelta) >= 1 && (
-                    <span
-                      className={cn(
-                        'flex items-center gap-0.5 text-xs font-bold tabular-nums',
-                        gapDelta > 0
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-red-600 dark:text-red-400'
-                      )}
-                    >
-                      {gapDelta > 0 ? (
-                        <TrendingUp className="h-3 w-3" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3" />
-                      )}
-                      {gapDelta > 0 ? '+' : ''}{fmt(Math.abs(gapDelta))}
-                    </span>
+                <span
+                  className={cn(
+                    'text-sm font-semibold tabular-nums',
+                    gapNoMoreSpend >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                   )}
+                >
+                  {gapNoMoreSpend >= 0 ? 'Under' : 'Over'} {fmt(Math.abs(gapNoMoreSpend))}
                 </span>
               </div>
             )}

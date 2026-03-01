@@ -122,7 +122,6 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
         totalForecastTomorrowAtZero={data.totalForecastTomorrowAtZero}
         gapToBudgetCurrent={data.gapToBudgetCurrent}
         gapToBudgetIfNoMoreSpend={data.gapToBudgetIfNoMoreSpend}
-        gapToBudgetYesterday={data.gapToBudgetYesterday}
         onMethodologyClick={(methodology) => setTransactionDialog({ type: 'methodology', value: methodology })}
       />
       <TodaySpendByMethodologyChart
