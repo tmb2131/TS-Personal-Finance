@@ -1,5 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { fetchHistoricalNetWorth, fetchBudgetTargets, fetchCurrentUser } from '@/lib/data/cached-queries'
+import {
+  fetchHistoricalNetWorth,
+  fetchLatestNetWorthFromAccountBalances,
+  fetchBudgetTargets,
+  fetchCurrentUser,
+} from '@/lib/data/cached-queries'
 import { computeAnnualForecasts, computeMonthlyTrends } from '@/lib/forecasting'
 import { isExcludedCategory } from '@/lib/category-filters'
 import { DashboardAtAGlance, type DashboardAtAGlanceData } from './dashboard-at-a-glance'
@@ -17,25 +22,64 @@ export async function DashboardAtAGlanceWrapper() {
 async function fetchDashboardSummary(): Promise<DashboardAtAGlanceData> {
   const supabase = await createClient()
 
-  const [nwData, budgetData, user] = await Promise.all([
+  const [nwData, latestSnapshot, budgetData, user] = await Promise.all([
     fetchHistoricalNetWorth(),
+    fetchLatestNetWorthFromAccountBalances(),
     fetchBudgetTargets(),
     fetchCurrentUser(),
   ])
 
-  // Net worth: aggregate by year, take latest year
+  // Net worth: prefer live snapshot from account_balances (matches Net Worth Over Time chart).
+  // Otherwise use latest snapshot per category from historical_net_worth for the latest year (do not sum all rows).
   let netWorthGbp: number | null = null
   let netWorthUsd: number | null = null
   let hasTrustData = false
-  if (nwData.length) {
-    const byYearGbp: Record<number, number> = {}
-    const byYearUsd: Record<number, number> = {}
+
+  if (latestSnapshot) {
+    netWorthGbp =
+      (latestSnapshot.Personal?.amount_gbp ?? 0) +
+      (latestSnapshot.Family?.amount_gbp ?? 0) +
+      (latestSnapshot.Trust?.amount_gbp ?? 0)
+    netWorthUsd =
+      (latestSnapshot.Personal?.amount_usd ?? 0) +
+      (latestSnapshot.Family?.amount_usd ?? 0) +
+      (latestSnapshot.Trust?.amount_usd ?? 0)
+    hasTrustData =
+      Math.abs(latestSnapshot.Trust?.amount_gbp ?? 0) > 0 ||
+      Math.abs(latestSnapshot.Trust?.amount_usd ?? 0) > 0
+  } else if (nwData.length) {
+    // Fallback: latest value per (year, category), then sum for latest year only (one snapshot, not all rows).
+    const latestByYearCategory = new Map<
+      string,
+      { date: string; amount_gbp: number; amount_usd: number }
+    >()
+    const currentYear = new Date().getFullYear()
     nwData.forEach((item) => {
       const year = new Date(item.date).getFullYear()
-      byYearGbp[year] = (byYearGbp[year] ?? 0) + (item.amount_gbp ?? 0)
-      byYearUsd[year] = (byYearUsd[year] ?? 0) + (item.amount_usd ?? 0)
+      const category =
+        item.category === 'Personal' || item.category === 'Family' || item.category === 'Trust'
+          ? item.category
+          : null
+      if (!category) return
+      const dateKey = item.date?.slice(0, 10) ?? ''
+      const key = `${year}|${category}`
+      const existing = latestByYearCategory.get(key)
+      if (!existing || dateKey > existing.date) {
+        latestByYearCategory.set(key, {
+          date: dateKey,
+          amount_gbp: item.amount_gbp ?? 0,
+          amount_usd: item.amount_usd ?? 0,
+        })
+      }
     })
-    const latestYear = Math.max(...Object.keys(byYearGbp).map(Number))
+    const byYearGbp: Record<number, number> = {}
+    const byYearUsd: Record<number, number> = {}
+    latestByYearCategory.forEach((val, k) => {
+      const year = Number(k.split('|')[0])
+      byYearGbp[year] = (byYearGbp[year] ?? 0) + val.amount_gbp
+      byYearUsd[year] = (byYearUsd[year] ?? 0) + val.amount_usd
+    })
+    const latestYear = Math.max(...Object.keys(byYearGbp).map(Number), currentYear)
     netWorthGbp = byYearGbp[latestYear] ?? null
     netWorthUsd = byYearUsd[latestYear] ?? null
     hasTrustData = nwData.some(
