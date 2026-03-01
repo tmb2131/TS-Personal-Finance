@@ -967,7 +967,7 @@ export function DailySummaryModal({
                         )}>
                           <CardContent className={cardContentClass}>
                             <button
-                              onClick={() => handleNavigate('/today')}
+                              onClick={() => handleNavigate('/analysis#forecast-evolution')}
                               className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity text-left"
                             >
                               <div className="flex items-center gap-2">
@@ -1008,7 +1008,7 @@ export function DailySummaryModal({
                                   <span className="text-xs sm:text-[10px] font-bold text-muted-foreground">Top Drivers</span>
                                   <button
                                     type="button"
-                                    onClick={() => handleNavigate('/today')}
+                                    onClick={() => handleNavigate('/analysis#forecast-evolution')}
                                     className="text-xs font-medium text-primary hover:opacity-80 transition-opacity sm:hidden"
                                   >
                                     View all
