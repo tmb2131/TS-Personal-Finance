@@ -5,10 +5,10 @@ import {
   computeMonthlyTrends,
   computeAnnualForecasts,
   fetchFxRateGBPUSD,
-  fetchForecastSettingsMap,
-  fetchCategories,
+  buildForecastSettingsMapFromData,
   fetchTransactionsPaged,
 } from '@/lib/forecasting'
+import type { SnapshotPreloaded } from '@/lib/forecast-evolution'
 import {
   buildForecastBridgeFromSnapshots,
   toDateOnly,
@@ -47,24 +47,37 @@ export async function GET() {
       settingsResult,
       todayTxResult,
       rate,
-      settingsMap,
-      categories,
       transactionRows,
     ] = await Promise.all([
-      supabase.from('budget_targets').select('*'),
+      supabase.from('budget_targets').select('category, annual_budget_gbp'),
       supabase.from('sync_metadata').select('last_sync_at').single(),
       supabase
         .from('forecast_settings')
-        .select('category, current_year_method, manual_year_forecast'),
+        .select('category, current_year_method, current_month_method, manual_year_forecast, manual_month_forecast'),
       supabase
         .from('transaction_log')
         .select('date, category, amount_gbp, amount_usd')
         .in('date', todayDateCandidates),
       fetchFxRateGBPUSD(supabase),
-      fetchForecastSettingsMap(supabase, user.id),
-      fetchCategories(supabase, user.id),
       fetchTransactionsPaged(supabase, user.id, txStartDate),
     ])
+
+    const settingsMap = buildForecastSettingsMapFromData(settingsResult.data ?? [])
+
+    const categorySet = new Set<string>()
+    for (const row of budgetResult.data ?? []) if (row.category) categorySet.add(row.category)
+    for (const row of settingsResult.data ?? []) if (row.category) categorySet.add(row.category)
+    const categories = Array.from(categorySet).sort((a, b) => a.localeCompare(b))
+
+    const snapshotPreloaded: SnapshotPreloaded = {
+      fxRate: rate,
+      settingsData: (settingsResult.data ?? []).map((r) => ({
+        category: r.category,
+        current_year_method: r.current_year_method ?? null,
+        manual_year_forecast: r.manual_year_forecast ?? null,
+      })),
+      budgetsData: budgetResult.data ?? [],
+    }
 
     const preloaded = {
       rate,
@@ -101,7 +114,7 @@ export async function GET() {
         computeForecastSnapshotsForDates(supabase, user.id, [
           yesterdayStr,
           utcTodayStr,
-        ], snapshotTxRows),
+        ], snapshotTxRows, snapshotPreloaded),
         computeAnnualTrends(supabase, user.id, preloaded),
         computeMonthlyTrends(supabase, user.id, preloaded),
         computeAnnualForecasts(supabase, user.id, preloaded),

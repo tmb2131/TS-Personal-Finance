@@ -46,6 +46,12 @@ export type CategoryForecastSnapshot = {
 
 export type SnapshotByCategory = Map<string, CategoryForecastSnapshot>
 
+export type SnapshotPreloaded = {
+  fxRate?: number
+  settingsData?: { category: string; current_year_method: string | null; manual_year_forecast: number | null }[]
+  budgetsData?: { category: string; annual_budget_gbp: number | null }[]
+}
+
 const isExpense = (category: string) => !INCOME_CATEGORIES.includes(category)
 
 const toDateOnly = (value: unknown): string => {
@@ -295,7 +301,8 @@ export async function computeForecastSnapshotsForDates(
   supabase: SupabaseClient,
   userId: string,
   targetDates: string[],
-  preloadedTxRows?: TxRow[]
+  preloadedTxRows?: TxRow[],
+  preloaded?: SnapshotPreloaded
 ): Promise<Map<string, SnapshotByCategory>> {
   if (targetDates.length === 0) return new Map()
 
@@ -309,17 +316,31 @@ export async function computeForecastSnapshotsForDates(
   const minYear = parseISODateUTC(minDate).getUTCFullYear()
   const minYearStart = `${minYear}-01-01`
 
-  const [fxRate, currentSettingsRes, currentBudgetsRes, settingsHistory, budgetHistory] =
+  const [fxRate, currentSettingsData, currentBudgetsData, settingsHistory, budgetHistory] =
     await Promise.all([
-      getCurrentFxRate(supabase),
-      supabase
-        .from('forecast_settings')
-        .select('category, current_year_method, manual_year_forecast')
-        .eq('user_id', userId),
-      supabase
-        .from('budget_targets')
-        .select('category, annual_budget_gbp')
-        .eq('user_id', userId),
+      preloaded?.fxRate !== undefined
+        ? Promise.resolve(preloaded.fxRate)
+        : getCurrentFxRate(supabase),
+      preloaded?.settingsData !== undefined
+        ? Promise.resolve(preloaded.settingsData)
+        : supabase
+            .from('forecast_settings')
+            .select('category, current_year_method, manual_year_forecast')
+            .eq('user_id', userId)
+            .then((r) => {
+              if (r.error) throw new Error(`forecast_settings query failed: ${r.error.message}`)
+              return r.data ?? []
+            }),
+      preloaded?.budgetsData !== undefined
+        ? Promise.resolve(preloaded.budgetsData)
+        : supabase
+            .from('budget_targets')
+            .select('category, annual_budget_gbp')
+            .eq('user_id', userId)
+            .then((r) => {
+              if (r.error) throw new Error(`budget_targets query failed: ${r.error.message}`)
+              return r.data ?? []
+            }),
       fetchSettingsHistoryPaged(supabase, userId, maxDate),
       fetchBudgetHistoryPaged(supabase, userId, maxDate),
     ])
@@ -327,17 +348,10 @@ export async function computeForecastSnapshotsForDates(
     preloadedTxRows ??
     (await fetchTransactionsPaged(supabase, userId, minYearStart, maxDate))
 
-  if (currentSettingsRes.error) {
-    throw new Error(`forecast_settings query failed: ${currentSettingsRes.error.message}`)
-  }
-  if (currentBudgetsRes.error) {
-    throw new Error(`budget_targets query failed: ${currentBudgetsRes.error.message}`)
-  }
-
   const categories = new Set<string>()
 
   const currentSettingsByCategory = new Map<string, TimelineSetting>()
-  for (const row of currentSettingsRes.data ?? []) {
+  for (const row of currentSettingsData) {
     if (!row.category) continue
     categories.add(row.category)
     const defaultMethods = getDefaultForecastMethods(row.category)
@@ -350,7 +364,7 @@ export async function computeForecastSnapshotsForDates(
   }
 
   const currentBudgetsByCategory = new Map<string, TimelineBudget>()
-  for (const row of currentBudgetsRes.data ?? []) {
+  for (const row of currentBudgetsData) {
     if (!row.category) continue
     categories.add(row.category)
     currentBudgetsByCategory.set(row.category, {

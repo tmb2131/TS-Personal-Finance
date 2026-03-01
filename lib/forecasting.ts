@@ -71,6 +71,30 @@ export async function fetchFxRateGBPUSD(supabase: SupabaseClient): Promise<numbe
   return rate && rate > 0 ? rate : 1.25
 }
 
+/** Build a ForecastSettingRow map from already-fetched data, applying per-category defaults. */
+export function buildForecastSettingsMapFromData(
+  data: {
+    category: string
+    current_year_method?: string | null
+    current_month_method?: string | null
+    manual_year_forecast?: number | null
+    manual_month_forecast?: number | null
+  }[]
+): Map<string, ForecastSettingRow> {
+  const map = new Map<string, ForecastSettingRow>()
+  for (const row of data) {
+    const defaults = getDefaultForecastMethods(row.category)
+    map.set(row.category, {
+      category: row.category,
+      current_year_method: (row.current_year_method as YearMethod) ?? defaults.year,
+      current_month_method: (row.current_month_method as MonthMethod) ?? defaults.month,
+      manual_year_forecast: row.manual_year_forecast ?? null,
+      manual_month_forecast: row.manual_month_forecast ?? null,
+    })
+  }
+  return map
+}
+
 /** Return Map<category, { current_year_method, current_month_method }> */
 export async function fetchForecastSettingsMap(
   supabase: SupabaseClient,
@@ -95,20 +119,18 @@ export async function fetchForecastSettingsMap(
   return map
 }
 
-/** Union of categories from budgets and transactions */
+/** Union of categories from budgets and forecast settings */
 export async function fetchCategories(
   supabase: SupabaseClient,
   userId: string
 ): Promise<string[]> {
-  const [budgetRes, txRes, settingsRes] = await Promise.all([
+  const [budgetRes, settingsRes] = await Promise.all([
     supabase.from('budget_targets').select('category').eq('user_id', userId),
-    supabase.from('transaction_log').select('category').eq('user_id', userId),
     supabase.from('forecast_settings').select('category').eq('user_id', userId),
   ])
 
   const set = new Set<string>()
   ;(budgetRes.data || []).forEach((row: { category: string }) => row.category && set.add(row.category))
-  ;(txRes.data || []).forEach((row: { category: string }) => row.category && set.add(row.category))
   ;(settingsRes.data || []).forEach((row: { category: string }) => row.category && set.add(row.category))
 
   return Array.from(set).sort((a, b) => a.localeCompare(b))
@@ -169,14 +191,8 @@ export async function fetchTransactionsPaged(
   userId: string,
   startDate: string
 ): Promise<TxRowForecast[]> {
-  const all: { category: string; date: any; amount_gbp: number | null; amount_usd: number | null }[] = []
-  let page = 0
-  let hasMore = true
-
-  while (hasMore) {
-    const from = page * PAGE_SIZE
-    const to = from + PAGE_SIZE - 1
-    const { data, error } = await supabase
+  const buildQuery = (from: number, to: number) =>
+    supabase
       .from('transaction_log')
       .select('category, date, amount_gbp, amount_usd', { count: 'exact' })
       .eq('user_id', userId)
@@ -184,17 +200,25 @@ export async function fetchTransactionsPaged(
       .order('date', { ascending: true })
       .range(from, to)
 
-    if (error) {
-      console.error('fetchTransactionsPaged error', error)
-      break
-    }
-    const rows = data || []
-    all.push(...rows)
-    hasMore = rows.length === PAGE_SIZE
-    page += 1
+  const { data: firstPage, count, error } = await buildQuery(0, PAGE_SIZE - 1)
+  if (error) {
+    console.error('fetchTransactionsPaged error', error)
+    return firstPage ?? []
   }
 
-  return all
+  const rows = firstPage ?? []
+  const total = count ?? rows.length
+  const remainingPages = Math.ceil((total - rows.length) / PAGE_SIZE)
+
+  if (remainingPages <= 0) return rows
+
+  const rest = await Promise.all(
+    Array.from({ length: remainingPages }, (_, i) =>
+      buildQuery((i + 1) * PAGE_SIZE, (i + 2) * PAGE_SIZE - 1).then((r) => r.data ?? [])
+    )
+  )
+
+  return rows.concat(...rest)
 }
 
 export async function computeAnnualForecasts(
