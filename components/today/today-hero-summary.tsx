@@ -9,9 +9,13 @@ type TodayHeroSummaryProps = {
   spendByMethodology: Record<string, number>
   headroomByMethodology: Record<string, number | null>
   impliedForecastChange: number | null
+  /** Est. annual spend (same day fraction as Dashboard: dayOfYear/daysInYear). */
+  totalForecastAtCurrentYtd?: number | null
   totalForecastTomorrowAtZero?: number | null
   gapToBudgetCurrent: number | null
   gapToBudgetIfNoMoreSpend: number | null
+  /** Gap at end of yesterday; delta vs this matches Analysis "Gap to budget over time" chart. */
+  gapToBudgetYesterday?: number | null
   onMethodologyClick?: (methodology: string) => void
 }
 
@@ -22,9 +26,11 @@ export function TodayHeroSummary({
   spendByMethodology,
   headroomByMethodology,
   impliedForecastChange,
+  totalForecastAtCurrentYtd,
   totalForecastTomorrowAtZero,
   gapToBudgetCurrent,
   gapToBudgetIfNoMoreSpend,
+  gapToBudgetYesterday,
   onMethodologyClick,
 }: TodayHeroSummaryProps) {
   const { currency, fxRate, convertAmount } = useCurrency()
@@ -66,9 +72,9 @@ export function TodayHeroSummary({
 
   const hasImpliedChange =
     impliedForecastChange != null && Number.isFinite(impliedForecastChange)
-  const forecastTomorrow =
-    totalForecastTomorrowAtZero != null && Number.isFinite(totalForecastTomorrowAtZero)
-      ? toDisplay(totalForecastTomorrowAtZero)
+  const estAnnualSpendDisplay =
+    totalForecastAtCurrentYtd != null && Number.isFinite(totalForecastAtCurrentYtd)
+      ? toDisplay(totalForecastAtCurrentYtd)
       : null
   const gapCurrent =
     gapToBudgetCurrent != null && Number.isFinite(gapToBudgetCurrent)
@@ -78,8 +84,13 @@ export function TodayHeroSummary({
     gapToBudgetIfNoMoreSpend != null && Number.isFinite(gapToBudgetIfNoMoreSpend)
       ? toDisplay(gapToBudgetIfNoMoreSpend)
       : null
+  const gapYesterday =
+    gapToBudgetYesterday != null && Number.isFinite(gapToBudgetYesterday)
+      ? toDisplay(gapToBudgetYesterday)
+      : null
+  /** Day-over-day gap change (today vs yesterday); matches Analysis "Gap to budget over time" chart. */
   const gapDelta =
-    gapNoMoreSpend != null && gapCurrent != null ? gapNoMoreSpend - gapCurrent : null
+    gapNoMoreSpend != null && gapYesterday != null ? gapNoMoreSpend - gapYesterday : null
 
   return (
     <div className="space-y-3">
@@ -164,12 +175,12 @@ export function TodayHeroSummary({
           </p>
 
           <div className="mt-2 space-y-2">
-            {forecastTomorrow != null && hasImpliedChange && (
+            {estAnnualSpendDisplay != null && hasImpliedChange && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Est. annual spend</span>
                 <span className="flex items-center gap-1.5">
                   <span className="text-sm font-semibold tabular-nums">
-                    {fmt(forecastTomorrow)}
+                    {fmt(estAnnualSpendDisplay)}
                   </span>
                   <span
                     className={cn(

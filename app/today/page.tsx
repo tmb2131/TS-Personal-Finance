@@ -150,6 +150,8 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
   const {
     headroomByMethodology: headroomMap,
     totalForecastToday,
+    totalForecastEndOfYesterday,
+    totalForecastAtCurrentYtd,
     totalForecastTomorrowAtZero,
   } = computeTodayHeadroom({
     dayOfYear,
@@ -161,9 +163,10 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
   ;(['Annual', 'Budget', 'Linear', 'Manual'] as const).forEach((m) => {
     headroomByMethodology[m] = headroomMap.get(m) ?? null
   })
+  // Day-over-day change (vs yesterday); matches Analysis "Gap to budget over time" and mirrors gap delta.
   const impliedForecastChange =
-    Number.isFinite(totalForecastToday) && Number.isFinite(totalForecastTomorrowAtZero)
-      ? totalForecastTomorrowAtZero - totalForecastToday
+    Number.isFinite(totalForecastEndOfYesterday) && Number.isFinite(totalForecastAtCurrentYtd)
+      ? totalForecastAtCurrentYtd - totalForecastEndOfYesterday
       : null
 
   const budgetSumByMethodology: Record<string, number> = { Annual: 0, Budget: 0, Linear: 0, Manual: 0 }
@@ -177,7 +180,9 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
   const gapToBudgetCurrent =
     Number.isFinite(totalForecastToday) ? expensesBudgetTotal - totalForecastToday : null
   const gapToBudgetIfNoMoreSpend =
-    Number.isFinite(totalForecastTomorrowAtZero) ? expensesBudgetTotal - totalForecastTomorrowAtZero : null
+    Number.isFinite(totalForecastAtCurrentYtd) ? expensesBudgetTotal - totalForecastAtCurrentYtd : null
+  const gapToBudgetYesterday =
+    Number.isFinite(totalForecastEndOfYesterday) ? expensesBudgetTotal - totalForecastEndOfYesterday : null
 
   return {
     transactions: expenseTransactions,
@@ -187,12 +192,15 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     budgetSumByMethodology,
     impliedForecastChange,
     totalForecastToday,
+    totalForecastAtCurrentYtd,
+    totalForecastEndOfYesterday,
     totalForecastTomorrowAtZero,
     categoriesByMethodology,
     totalSpentToday,
     expensesBudgetTotal,
     gapToBudgetCurrent,
     gapToBudgetIfNoMoreSpend,
+    gapToBudgetYesterday,
   }
 }
 

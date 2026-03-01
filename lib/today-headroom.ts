@@ -215,6 +215,10 @@ export function computeTodayHeadroom(input: TodayHeadroomInput): {
   headroomByCategory: Map<string, number | null>
   headroomByMethodology: Map<YearMethod, number | null>
   totalForecastToday: number
+  /** Forecast at end of yesterday (YTD through yesterday, yesterday's day fraction); for day-over-day gap delta. */
+  totalForecastEndOfYesterday: number
+  /** Total forecast at dayOfYear/daysInYear with current YTD; matches Dashboard day fraction. */
+  totalForecastAtCurrentYtd: number
   totalForecastTomorrowAtZero: number
 } {
   const { dayOfYear, daysInYear, todaySpendByCategory, categories } = input
@@ -222,9 +226,15 @@ export function computeTodayHeadroom(input: TodayHeadroomInput): {
 
   const pctToday = Math.min(Math.max(dayOfYear / daysInYear, 0), 1)
   const pctTomorrow = Math.min(Math.max((dayOfYear + 1) / daysInYear, 0), 1)
+  /** Yesterday's day fraction; for day-over-day gap change (matches Analysis "Gap to budget over time" chart). */
+  const pctYesterday = Math.min(Math.max((dayOfYear - 1) / daysInYear, 0), 1)
 
   /** Forecast as of end of previous day (YTD excluding today's spend); stable for the day. */
   const totalForecastToday = totalForecastTodayInternal(categories, new Map<string, number>(), pctToday)
+  /** Forecast as of end of yesterday: YTD through yesterday with yesterday's day fraction. Matches chart logic. */
+  const totalForecastEndOfYesterday = totalForecastTodayInternal(categories, new Map<string, number>(), pctYesterday)
+  /** Total forecast at pctToday with current YTD (including today). Matches Dashboard day fraction (dayOfYear/daysInYear). */
+  const totalForecastAtCurrentYtd = totalForecastTodayInternal(categories, todaySpendByCategory, pctToday)
   const totalForecastTomorrowAtZero =
     totalForecastTomorrowWithExtraInMethodology(
       categories,
@@ -268,6 +278,8 @@ export function computeTodayHeadroom(input: TodayHeadroomInput): {
     headroomByCategory,
     headroomByMethodology,
     totalForecastToday,
+    totalForecastEndOfYesterday,
+    totalForecastAtCurrentYtd,
     totalForecastTomorrowAtZero,
   }
 }

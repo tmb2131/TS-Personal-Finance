@@ -118,9 +118,11 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
         spendByMethodology={data.spendByMethodology}
         headroomByMethodology={data.headroomByMethodology}
         impliedForecastChange={data.impliedForecastChange}
+        totalForecastAtCurrentYtd={data.totalForecastAtCurrentYtd}
         totalForecastTomorrowAtZero={data.totalForecastTomorrowAtZero}
         gapToBudgetCurrent={data.gapToBudgetCurrent}
         gapToBudgetIfNoMoreSpend={data.gapToBudgetIfNoMoreSpend}
+        gapToBudgetYesterday={data.gapToBudgetYesterday}
         onMethodologyClick={(methodology) => setTransactionDialog({ type: 'methodology', value: methodology })}
       />
       <TodaySpendByMethodologyChart
