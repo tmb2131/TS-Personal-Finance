@@ -13,6 +13,7 @@ import {
 import { TodayTransactions } from './today-transactions'
 import { TodaySpendByCategoryChart } from './today-spend-by-category-chart'
 import { TodaySpendByMethodologyChart } from './today-spend-by-methodology-chart'
+import { TodayHeroSummary } from './today-hero-summary'
 import type { TodayPageData, TodayTransactionRow } from '@/lib/today-types'
 import { useCurrency } from '@/lib/contexts/currency-context'
 
@@ -74,14 +75,22 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
   if (data === null) {
     return (
       <div className="space-y-4 md:space-y-6">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-[260px] w-full md:h-[320px]" />
-          </CardContent>
-        </Card>
+        <div className="space-y-3">
+          <div className="rounded-xl border bg-card px-4 py-4">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="mt-2 h-10 w-32" />
+          </div>
+          <div className="rounded-xl border bg-card px-4 py-4">
+            <Skeleton className="h-3 w-36" />
+            <Skeleton className="mt-3 h-3 w-full rounded-full" />
+            <Skeleton className="mt-3 h-3 w-full rounded-full" />
+          </div>
+          <div className="rounded-xl border bg-card px-4 py-4">
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="mt-2 h-5 w-full" />
+            <Skeleton className="mt-1 h-5 w-full" />
+          </div>
+        </div>
         <Card>
           <CardHeader>
             <Skeleton className="h-6 w-48" />
@@ -104,6 +113,16 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      <TodayHeroSummary
+        totalSpentToday={data.totalSpentToday}
+        spendByMethodology={data.spendByMethodology}
+        headroomByMethodology={data.headroomByMethodology}
+        impliedForecastChange={data.impliedForecastChange}
+        totalForecastTomorrowAtZero={data.totalForecastTomorrowAtZero}
+        gapToBudgetCurrent={data.gapToBudgetCurrent}
+        gapToBudgetIfNoMoreSpend={data.gapToBudgetIfNoMoreSpend}
+        onMethodologyClick={(methodology) => setTransactionDialog({ type: 'methodology', value: methodology })}
+      />
       <TodaySpendByMethodologyChart
         spendByMethodology={data.spendByMethodology}
         headroomByMethodology={data.headroomByMethodology}

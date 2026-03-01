@@ -22,4 +22,12 @@ export type TodayPageData = {
   totalForecastTomorrowAtZero?: number | null
   /** For each methodology, the category names that use it (for filtering transactions). */
   categoriesByMethodology: Record<string, string[]>
+  /** Total expense spend today (positive number, GBP). */
+  totalSpentToday: number
+  /** Sum of annual budgets for all expense categories (positive number, GBP). */
+  expensesBudgetTotal: number
+  /** Current gap to expenses budget: expensesBudgetTotal - totalForecastToday. Positive = under budget. */
+  gapToBudgetCurrent: number | null
+  /** Gap to expenses budget if no more spend today: expensesBudgetTotal - totalForecastTomorrowAtZero. */
+  gapToBudgetIfNoMoreSpend: number | null
 }

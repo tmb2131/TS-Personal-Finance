@@ -172,6 +172,13 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     budgetSumByMethodology[m] = (budgetSumByMethodology[m] ?? 0) + row.annualBudget
   })
 
+  const totalSpentToday = Object.values(spendByCategory).reduce((sum, v) => sum + v, 0)
+  const expensesBudgetTotal = headroomCategories.reduce((sum, row) => sum + Math.abs(row.annualBudget), 0)
+  const gapToBudgetCurrent =
+    Number.isFinite(totalForecastToday) ? expensesBudgetTotal - totalForecastToday : null
+  const gapToBudgetIfNoMoreSpend =
+    Number.isFinite(totalForecastTomorrowAtZero) ? expensesBudgetTotal - totalForecastTomorrowAtZero : null
+
   return {
     transactions: expenseTransactions,
     spendByCategory,
@@ -182,6 +189,10 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     totalForecastToday,
     totalForecastTomorrowAtZero,
     categoriesByMethodology,
+    totalSpentToday,
+    expensesBudgetTotal,
+    gapToBudgetCurrent,
+    gapToBudgetIfNoMoreSpend,
   }
 }
 
@@ -199,7 +210,7 @@ export default async function TodayPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="rounded-xl border border-l-[3px] border-l-slate-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
+      <div className="hidden md:block rounded-xl border border-l-[3px] border-l-slate-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold">Today</h1>
           <p className="text-sm md:text-base text-muted-foreground">
