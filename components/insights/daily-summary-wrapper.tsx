@@ -26,7 +26,11 @@ export function DailySummaryWrapper() {
     setCachedPayload,
   } = useDailySummary()
   const { insightsData } = useInsightsDataContext()
-  const [hasRequestedModal, setHasRequestedModal] = useState(false)
+  const [hasRequestedModal, setHasRequestedModal] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const mobile = window.innerWidth < 768
+    return mobile && window.location.pathname === '/insights'
+  })
 
   // Start prefetching daily summary data when user lands on insights page
   // This uses the correct provider instance (root layout's) and runs in parallel

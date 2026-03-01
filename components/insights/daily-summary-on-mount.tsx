@@ -1,24 +1,32 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useDailySummary } from './daily-summary-context'
 import { shouldShowDailySummary } from './daily-summary-modal'
+
+const MOBILE_BREAKPOINT = 768
 
 export function DailySummaryOnMount() {
   const searchParams = useSearchParams()
   const { openModal } = useDailySummary()
   const openDaily = searchParams.get('openDaily') === '1'
 
+  // Open modal before paint on mobile or when openDaily=1 (post-login)
+  useLayoutEffect(() => {
+    if (!shouldShowDailySummary()) return
+    const mobile = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT
+    if (openDaily || mobile) {
+      openModal()
+    }
+  }, [openModal, openDaily])
+
+  // Desktop only (no openDaily): open after async budget check + 500ms delay
   useEffect(() => {
     if (!shouldShowDailySummary()) return
-
-    // Post-login: open daily summary immediately so user doesn't see key insights first
-    if (openDaily) {
-      openModal()
-      return
-    }
+    const mobile = typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT
+    if (openDaily || mobile) return
 
     let cancelled = false
 
@@ -28,7 +36,7 @@ export function DailySummaryOnMount() {
         .from('budget_targets')
         .select('id')
         .limit(1)
-      
+
       if (!cancelled && budgetData && budgetData.length > 0) {
         setTimeout(() => {
           if (!cancelled) {

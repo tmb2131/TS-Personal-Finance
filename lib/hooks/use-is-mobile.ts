@@ -9,7 +9,10 @@ const MOBILE_BREAKPOINT = 768
  * Used for mobile-first responsive patterns (charts, tables, carousels).
  */
 export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`).matches
+  })
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)

@@ -1,16 +1,20 @@
+'use client'
+
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { WelcomeBack } from '@/components/insights/welcome-back'
+import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 
 export default function InsightsLoading() {
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    return null
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="md:hidden">
-        <WelcomeBack />
-      </div>
-
-      {/* Desktop skeleton layout - unchanged */}
-      <div className="hidden md:block">
+      {/* Desktop skeleton layout */}
+      <div>
         <div>
           <Skeleton className="h-9 w-48 mb-2" />
           <Skeleton className="h-5 w-80 max-w-full" />
