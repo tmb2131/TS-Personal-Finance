@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { TransactionLog } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
 import type { ViewMode } from './monthly-category-trends-section'
@@ -402,6 +402,7 @@ export function MonthlyCategoryTrendsChart({
               width={isMobile ? 48 : 60}
             />
             <Tooltip
+              wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
               formatter={(value: number, name: string, props: any) => {
                 const dataPoint = props.payload
                 if (name === 'topTransactionAmount') {

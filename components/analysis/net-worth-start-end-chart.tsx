@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
 import { Wallet, AlertCircle } from 'lucide-react'
@@ -175,6 +175,7 @@ export function NetWorthStartEndChart() {
               width={isMobile ? 48 : 60}
             />
             <Tooltip
+              wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
               formatter={(value: number) => formatAsMillions(value)}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
               contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}

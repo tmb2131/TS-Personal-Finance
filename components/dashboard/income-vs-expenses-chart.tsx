@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
 import { computeAnnualForecasts } from '@/lib/forecasting'
@@ -251,6 +251,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
               width={isMobile ? 60 : 80}
             />
             <Tooltip
+              wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
               formatter={(value: number) =>
                 new Intl.NumberFormat('en-US', {
                   style: 'currency',

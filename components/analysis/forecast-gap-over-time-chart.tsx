@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { AlertCircle } from 'lucide-react'
 import {
   LineChart,
@@ -170,6 +170,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
             />
             <ReferenceLine y={0} stroke={chartTheme.axisStroke} strokeDasharray="3 3" />
             <Tooltip
+              wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
               formatter={(value: number) => [formatCurrencyFull(value), 'Gap']}
               labelFormatter={(label) => chartData.find((d) => d.date === label)?.label ?? label}
               contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}

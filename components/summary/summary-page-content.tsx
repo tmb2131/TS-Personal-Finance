@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useSync } from '@/lib/contexts/sync-context'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -839,6 +839,7 @@ export function SummaryPageContent() {
                                         tick={{ fontSize: 11 }}
                                       />
                                       <Tooltip
+                                        wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
                                         formatter={(value: number, name: string) => [
                                           formatChartCurrency(value),
                                           name === 'spend' ? 'Spend' : 'Remaining headroom',

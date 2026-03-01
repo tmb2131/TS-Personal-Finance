@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import {
   BarChart,
   Bar,
@@ -168,6 +168,7 @@ export default function MonthlyExpensesVsLiquidity() {
               stroke={chartTheme.axisStroke}
             />
             <Tooltip
+              wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
               formatter={(value: number) => formatCurrency(value)}
               contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}
             />

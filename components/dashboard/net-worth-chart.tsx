@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { HistoricalNetWorth } from '@/lib/types'
 import { EditNetWorthHistoryDialog } from './edit-net-worth-history-dialog'
 import { TrendingUp, AlertCircle } from 'lucide-react'
@@ -372,6 +372,7 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
               width={isMobile ? 60 : 80}
             />
             <Tooltip
+              wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
               formatter={(value: number) =>
                 new Intl.NumberFormat('en-US', {
                   style: 'currency',

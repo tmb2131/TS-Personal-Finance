@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
@@ -346,6 +346,7 @@ export function CumulativeSpendChart() {
                 width={isMobile ? 48 : 60}
               />
               <Tooltip
+                wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
                 formatter={(value: number, name: string) => [
                   formatCurrency(value),
                   name === 'ytdSpend' ? 'YTD Spend' : 'Implied Annual Spend',

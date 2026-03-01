@@ -57,3 +57,16 @@ export function getChartTooltipContentStyle(
     ...(options?.fontSize != null ? { fontSize: options.fontSize } : {}),
   }
 }
+
+/**
+ * Returns Recharts Tooltip wrapperStyle so the outer wrapper (and any default
+ * label) use the theme background/border. Use with contentStyle for full dark-mode support.
+ */
+export function getChartTooltipWrapperStyle(theme: ChartTooltipTheme): CSSProperties {
+  return {
+    backgroundColor: theme.tooltipBg,
+    border: `1px solid ${theme.tooltipBorder}`,
+    borderRadius: '6px',
+    color: theme.tooltipText,
+  }
+}
