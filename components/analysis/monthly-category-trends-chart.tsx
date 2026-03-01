@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
 import { TransactionLog } from '@/lib/types'
 import { AlertCircle } from 'lucide-react'
 import type { ViewMode } from './monthly-category-trends-section'
@@ -436,14 +436,7 @@ export function MonthlyCategoryTrendsChart({
                 }
                 return label
               }}
-              contentStyle={{
-                backgroundColor: chartTheme.tooltipBg,
-                borderColor: chartTheme.tooltipBorder,
-                color: chartTheme.tooltipText,
-                borderRadius: '6px',
-                padding: isMobile ? '6px 10px' : '8px 12px',
-                fontSize: `${fontSizes.tooltipMin}px`,
-              }}
+              contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}
             />
             <Legend
               formatter={(value) => {

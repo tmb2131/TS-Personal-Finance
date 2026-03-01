@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 /**
  * Standard typography for Recharts (AreaChart, BarChart, LineChart).
  * Desktop and mobile both use 12px for readability; use interval/tickCount to reduce crowding.
@@ -27,5 +29,31 @@ export function getChartFontSizes(isMobile: boolean): {
     legend: size,
     iconSize: size,
     tooltipMin: size,
+  }
+}
+
+export type ChartTooltipTheme = {
+  tooltipBg: string
+  tooltipBorder: string
+  tooltipText: string
+}
+
+/**
+ * Returns a consistent Recharts Tooltip contentStyle for the current theme.
+ * Pass this to <Tooltip contentStyle={...} /> in every chart to guarantee
+ * correct contrast in both light and dark mode.
+ */
+export function getChartTooltipContentStyle(
+  theme: ChartTooltipTheme,
+  options?: { fontSize?: number; padding?: string; isMobile?: boolean }
+): CSSProperties {
+  const padding = options?.padding ?? (options?.isMobile ? '6px 10px' : '8px 12px')
+  return {
+    backgroundColor: theme.tooltipBg,
+    borderColor: theme.tooltipBorder,
+    color: theme.tooltipText,
+    borderRadius: '6px',
+    padding,
+    ...(options?.fontSize != null ? { fontSize: options.fontSize } : {}),
   }
 }

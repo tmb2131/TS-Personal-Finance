@@ -23,7 +23,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
-import { getChartFontSizes } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
 import { AlertCircle, ListIcon, Pencil } from 'lucide-react'
 import { EditDebtDialog } from './edit-debt-dialog'
 import {
@@ -292,12 +292,7 @@ export default function DebtOverview() {
             />
             <Tooltip
               formatter={(value: number) => formatCurrency(value)}
-              contentStyle={{
-                backgroundColor: chartTheme.tooltipBg,
-                borderColor: chartTheme.tooltipBorder,
-                color: chartTheme.tooltipText,
-                fontSize: `${fontSizes.tooltipMin}px`,
-              }}
+              contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}
             />
             <Bar dataKey="value">
               {chartData.map((entry, index) => (

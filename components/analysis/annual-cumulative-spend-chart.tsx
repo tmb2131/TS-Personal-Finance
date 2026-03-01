@@ -567,8 +567,16 @@ export function AnnualCumulativeSpendChart() {
     tooltipItems.sort((a, b) => b.value - a.value)
     
     return (
-      <div className="bg-popover border border-border rounded-md shadow-lg p-3">
-        <p className="font-semibold text-sm mb-2 text-popover-foreground">
+      <div
+        style={{
+          backgroundColor: chartTheme.tooltipBg,
+          border: `1px solid ${chartTheme.tooltipBorder}`,
+          borderRadius: '6px',
+          padding: isMobile ? '6px 10px' : '8px 12px',
+          fontSize: `${getChartFontSizes(isMobile).tooltipMin}px`,
+        }}
+      >
+        <p style={{ color: chartTheme.tooltipText }} className="font-semibold text-sm mb-2">
           {monthName} {day} (Day {dayOfYear + 1})
         </p>
         <div className="space-y-1">
@@ -579,9 +587,9 @@ export function AnnualCumulativeSpendChart() {
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="text-muted-foreground">{item.name}</span>
+                <span style={{ color: chartTheme.tooltipSubtext }}>{item.name}</span>
               </div>
-              <span className="font-medium text-popover-foreground">
+              <span style={{ color: chartTheme.tooltipText }} className="font-medium">
                 {formatCurrency(item.value)}
               </span>
             </div>

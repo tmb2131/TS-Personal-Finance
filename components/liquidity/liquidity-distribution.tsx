@@ -6,7 +6,8 @@ import { AccountBalance } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
-import { getChartFontSizes } from '@/lib/chart-styles'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
+import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
 import {
   PieChart,
   Pie,
@@ -26,6 +27,7 @@ const COLORS: Record<string, string> = {
 export default function LiquidityDistribution() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
+  const chartTheme = useChartTheme()
   const [loading, setLoading] = useState(true)
   const [chartData, setChartData] = useState<
     Array<{ name: string; value: number }>
@@ -167,9 +169,7 @@ export default function LiquidityDistribution() {
             </Pie>
             <Tooltip
               formatter={(value: number) => formatCurrency(value)}
-              contentStyle={{
-                fontSize: `${fontSizes.tooltipMin}px`,
-              }}
+              contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}
             />
             <Legend
               wrapperStyle={{

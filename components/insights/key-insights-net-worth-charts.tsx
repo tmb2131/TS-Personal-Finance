@@ -14,7 +14,7 @@ import {
   Legend,
   LabelList,
 } from 'recharts'
-import { getChartFontSizes } from '@/lib/chart-styles'
+import { getChartFontSizes, getChartTooltipContentStyle } from '@/lib/chart-styles'
 
 type ChartThemeProps = {
   gridStroke: string
@@ -99,6 +99,7 @@ export function KeyInsightsNetWorthCharts({
                   }}
                 />
                 <Tooltip
+                  contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: getChartFontSizes(isMobile).tooltipMin, isMobile })}
                   formatter={(v: number) => [formatCurrencyLarge(v), 'Total']}
                   labelFormatter={(label, payload) => {
                     if (!payload || payload.length === 0) return label
@@ -191,14 +192,7 @@ export function KeyInsightsNetWorthCharts({
                 </Pie>
                 <Tooltip
                   formatter={(v: number) => formatCurrencyLarge(v)}
-                  contentStyle={{
-                    backgroundColor: chartTheme.tooltipBg,
-                    borderColor: chartTheme.tooltipBorder,
-                    color: chartTheme.tooltipText,
-                    borderRadius: '6px',
-                    padding: isMobile ? '6px 10px' : '8px 12px',
-                    fontSize: `${getChartFontSizes(isMobile).tooltipMin}px`,
-                  }}
+                  contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: getChartFontSizes(isMobile).tooltipMin, isMobile })}
                 />
                 <Legend
                   wrapperStyle={{

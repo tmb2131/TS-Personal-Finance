@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useSync } from '@/lib/contexts/sync-context'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
+import { getChartTooltipContentStyle } from '@/lib/chart-styles'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import {
   Dialog,
@@ -177,6 +179,7 @@ export function DailySummaryModal({
   const pathname = usePathname()
   const { currency, fxRate, convertAmount } = useCurrency()
   const { handleSync, syncing } = useSync()
+  const chartTheme = useChartTheme()
   // Support both controlled (from context) and uncontrolled (direct prop) usage
   const [internalOpen, setInternalOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
@@ -924,7 +927,7 @@ export function DailySummaryModal({
                                             formatChartCurrency(value),
                                             name === 'spend' ? 'Spend' : 'Remaining headroom',
                                           ]}
-                                          contentStyle={{ fontSize: 12 }}
+                                          contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: 12 })}
                                         />
                                         <Legend
                                           wrapperStyle={{ fontSize: 10 }}

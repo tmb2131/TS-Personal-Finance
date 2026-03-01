@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useSync } from '@/lib/contexts/sync-context'
+import { useChartTheme } from '@/lib/hooks/use-chart-theme'
+import { getChartTooltipContentStyle } from '@/lib/chart-styles'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -152,6 +154,7 @@ export function SummaryPageContent() {
   const router = useRouter()
   const { currency, fxRate, convertAmount } = useCurrency()
   const { handleSync, syncing } = useSync()
+  const chartTheme = useChartTheme()
   const [loading, setLoading] = useState(true)
 
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
@@ -840,7 +843,7 @@ export function SummaryPageContent() {
                                           formatChartCurrency(value),
                                           name === 'spend' ? 'Spend' : 'Remaining headroom',
                                         ]}
-                                        contentStyle={{ fontSize: 12 }}
+                                        contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: 12 })}
                                       />
                                       <Legend
                                         wrapperStyle={{ fontSize: 10 }}
