@@ -88,7 +88,7 @@
 /* Mobile: extra bottom padding so content clears bottom nav + safe area (notch/home indicator) */
 @media (max-width: 767px) {
   .main-content {
-    padding-bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Toaster: respect safe area so toasts are not under the notch */

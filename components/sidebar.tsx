@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/dialog'
 import { createClient } from '@/lib/supabase/client'
 const allNavigation = [
-  { name: 'Daily Summary', href: '/', icon: LayoutList },
-  { name: 'Key Insights', href: '/insights', icon: Lightbulb },
+  { name: 'Daily Summary', mobileLabel: 'Summary', href: '/', icon: LayoutList },
+  { name: 'Key Insights', mobileLabel: 'Insights', href: '/insights', icon: Lightbulb },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Today', href: '/today', icon: Calendar },
   { name: 'Accounts', href: '/accounts', icon: Wallet },
@@ -161,10 +161,10 @@ export function Sidebar() {
       {pathname !== '/login' && (
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 shadow-[0_-10px_30px_-24px_hsl(var(--foreground)/0.5)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
         suppressHydrationWarning
       >
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-2 px-2 sm:px-3 py-2">
+        <div className="grid grid-cols-4 gap-1 sm:gap-1.5 px-2 sm:px-3 py-1">
           {mobilePrimaryNav.map((item) => {
             const isActive = isRouteActive(pathname, item.href)
             return (
@@ -173,7 +173,7 @@ export function Sidebar() {
                 href={item.href}
                 prefetch={true}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
+                  'flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1 px-1 min-h-[36px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   isActive
                     ? 'bg-primary text-primary-foreground border-primary font-semibold'
@@ -181,8 +181,8 @@ export function Sidebar() {
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <item.icon className={cn('h-5 w-5 flex-shrink-0 transition-transform duration-100', isActive && 'scale-110')} />
-                <span className="text-xs font-medium text-center leading-tight">{item.name}</span>
+                <item.icon className={cn('h-4 w-4 flex-shrink-0 transition-transform duration-100', isActive && 'scale-110')} />
+                <span className="text-[10px] font-medium text-center leading-tight">{'mobileLabel' in item ? item.mobileLabel : item.name}</span>
               </Link>
             )
           })}
@@ -191,7 +191,7 @@ export function Sidebar() {
               <button
                 type="button"
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 rounded-xl border py-2 px-1.5 min-h-[48px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
+                  'flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1 px-1 min-h-[36px] touch-manipulation transition-[transform,color,background-color,border-color] duration-100 ease-out active:scale-95',
                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   mobileMoreNav.some((item) => isRouteActive(pathname, item.href))
                     ? 'bg-primary text-primary-foreground border-primary font-semibold'
@@ -201,8 +201,8 @@ export function Sidebar() {
                 aria-haspopup="dialog"
                 aria-expanded={moreOpen}
               >
-                <MoreHorizontal className="h-5 w-5 flex-shrink-0" />
-                <span className="text-xs font-medium text-center leading-tight">More</span>
+                <MoreHorizontal className="h-4 w-4 flex-shrink-0" />
+                <span className="text-[10px] font-medium text-center leading-tight">More</span>
               </button>
             </DialogTrigger>
             <DialogContent className="fixed left-0 right-0 bottom-0 top-auto z-[130] max-h-[70vh] w-full translate-x-0 translate-y-0 rounded-t-2xl border-b-0 gap-0 p-0 sm:max-w-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
