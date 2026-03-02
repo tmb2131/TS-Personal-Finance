@@ -198,7 +198,7 @@ export function CashRunwayCards() {
                     <span className="font-semibold">{formatCurrency(gbpData.totalCash, 'GBP')}</span>
                   </p>
                   <p className="text-sm">
-                    <span className="text-xs text-muted-foreground">Avg Burn: </span>
+                    <span className="text-xs text-muted-foreground">Avg Monthly Spend: </span>
                     <span className="font-semibold">{formatCurrency(gbpData.avgMonthlyBurn, 'GBP')}/mo</span>
                   </p>
                 </div>
@@ -226,7 +226,7 @@ export function CashRunwayCards() {
                     <span className="font-semibold">{formatCurrency(usdData.totalCash, 'USD')}</span>
                   </p>
                   <p className="text-sm">
-                    <span className="text-xs text-muted-foreground">Avg Burn: </span>
+                    <span className="text-xs text-muted-foreground">Avg Monthly Spend: </span>
                     <span className="font-semibold">{formatCurrency(usdData.avgMonthlyBurn, 'USD')}/mo</span>
                   </p>
                 </div>

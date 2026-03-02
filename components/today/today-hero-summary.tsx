@@ -94,14 +94,14 @@ export function TodayHeroSummary({
         </p>
       </div>
 
-      {/* Q2: Remaining headroom by methodology */}
+      {/* Q2: Room to spend by methodology */}
       {bars.length > 0 && (
         <div className="rounded-xl border bg-card px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            Remaining headroom
+            Room to spend
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground/60">
-            How much more you can spend before the forecast increases
+            Available daily allocation based on your annual budget
           </p>
           <div className="mt-3 space-y-3">
             {bars.map((bar) => (
@@ -148,20 +148,11 @@ export function TodayHeroSummary({
         </div>
       )}
 
-      {/* Q3: If no more spend today */}
+      {/* Q3: End of day projection */}
       {(hasImpliedChange || gapNoMoreSpend != null) && (
-        <div
-          className={cn(
-            'rounded-xl border px-4 py-4',
-            hasImpliedChange && impliedForecastChange! <= 0
-              ? 'border-l-[3px] border-l-green-500 bg-green-500/5'
-              : hasImpliedChange && impliedForecastChange! > 0
-                ? 'border-l-[3px] border-l-red-500 bg-red-500/5'
-                : 'bg-card'
-          )}
-        >
+        <div className="rounded-xl border border-l-[3px] border-l-blue-500 bg-blue-500/5 px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            If no more spend today
+            End of day projection
           </p>
 
           <div className="mt-2 space-y-2">

@@ -16,7 +16,11 @@ import { cn } from '@/utils/cn'
 import { EXCLUDED_CATEGORY } from '@/lib/category-filters'
 import type { InsightsDataPayload } from '@/lib/insights-data'
 import { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
-import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare } from 'lucide-react'
+import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Calendar, CalendarDays, AlertCircle, ChevronRight, GitCompare, MinusCircle, Info, Wallet } from 'lucide-react'
+import { getBudgetStatusConfig } from '@/lib/budget-status'
+import { FinancialHealthBanner } from '@/components/financial-health-banner'
+import { useFinancialHealth } from '@/lib/hooks/use-financial-health'
+import { MilestonesBanner } from '@/components/milestones-banner'
 
 const LazyNetWorthCharts = dynamic(
   () =>
@@ -73,6 +77,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
+  const { data: healthData } = useFinancialHealth()
   const previousYear = new Date().getFullYear() - 1
   const [budgetData, setBudgetData] = useState<BudgetTarget[]>(initialData?.budgetData ?? [])
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>(initialData?.annualTrends ?? [])
@@ -430,7 +435,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
           tracking,
         }
       })
-      .filter((item) => Math.abs(item.gap) > 100) // Only show significant gaps
+      .filter((item) => Math.abs(item.gap) >= totalBudget * 0.02) // Only show material variances (≥ 2% of total budget)
       .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
 
     const underBudget = categoryGaps.filter((item) => item.gap < 0)
@@ -455,6 +460,11 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
       overBudget: overBudget.slice(0, 5), // Top 5
     }
   }, [budgetData, currency, expenseCategories, fxRate, convertAmount, forecastByCategory])
+
+  const budgetStatusInfo = useMemo(
+    () => getBudgetStatusConfig(-annualBudgetInsights.overallGap, annualBudgetInsights.totalBudget),
+    [annualBudgetInsights.overallGap, annualBudgetInsights.totalBudget]
+  )
 
   // Annual Spend Insights — estimate from computed forecast map; fallback to annual budget.
   const annualSpendInsights = useMemo(() => {
@@ -500,7 +510,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
           vsLastYear: (curEst - lastYr) * mult,
         }
       })
-      .filter((item) => Math.abs(item.vsFourYearAvg) > (1000 * mult))
+      .filter((item) => Math.abs(item.vsFourYearAvg) >= Math.abs(fourYearAvg) * mult * 0.02) // ≥ 2% of total 4-yr avg
       .sort((a, b) => Math.abs(b.vsFourYearAvg) - Math.abs(a.vsFourYearAvg))
 
     const spendingLess = categoryDiffs.filter((item) => item.vsFourYearAvg > 0).slice(0, 5)
@@ -544,7 +554,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
           diff: (curEst - avg) * mult,
         }
       })
-      .filter((item) => Math.abs(item.diff) > (100 * mult))
+      .filter((item) => Math.abs(item.diff) >= Math.abs(ttmAvg) * mult * 0.02) // ≥ 2% of total TTM avg monthly spend
       .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
 
     const spendingMore = categoryDiffs.filter((item) => item.diff < 0).slice(0, 5)
@@ -685,6 +695,20 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
 
   return (
     <div className="space-y-8">
+      {/* Financial Health Banner */}
+      {healthData && (
+        <FinancialHealthBanner
+          data={{
+            ...healthData,
+            budgetGap: annualBudgetInsights.overallGap,
+            budgetTotal: annualBudgetInsights.totalBudget,
+          }}
+        />
+      )}
+
+      {/* Milestones */}
+      <MilestonesBanner />
+
       <div className="space-y-2">
         {/* Executive Summary */}
         <Card id="executive-summary" className="border-2 scroll-mt-24">
@@ -696,7 +720,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
             <div className="relative">
               <div className={isMobile
                 ? 'flex gap-4 overflow-x-auto pt-2 pb-2 snap-x snap-mandatory scrollbar-thin -mx-1 px-1'
-                : 'grid md:grid-cols-2 lg:grid-cols-4 gap-6'
+                : 'grid md:grid-cols-2 lg:grid-cols-5 gap-6'
               }>
                 {/* Net Worth Summary — clickable to scroll to section */}
               <button
@@ -760,7 +784,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                 onClick={() => scrollToSection('annual-budget')}
                 className={cn(
                   'space-y-3 p-5 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all border-l-[3px]',
-                  annualBudgetInsights.overallGap < 0 ? 'border-l-green-500' : 'border-l-red-500',
+                  budgetStatusInfo.borderClass,
                   'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
                   isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
                 )}
@@ -778,33 +802,32 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
               <div className="space-y-2">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">vs Annual Spend</p>
-                  {annualBudgetInsights.overallGap < 0 ? (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <p className="text-lg font-bold text-green-600">Under Budget</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <XCircle className="h-5 w-5 text-red-600" />
-                      <p className="text-lg font-bold text-red-600">Over Budget</p>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {budgetStatusInfo.level === 'under' || budgetStatusInfo.level === 'on_track' ? (
+                      <CheckCircle2 className={cn('h-5 w-5', budgetStatusInfo.textClass)} />
+                    ) : budgetStatusInfo.level === 'slightly_over' ? (
+                      <MinusCircle className={cn('h-5 w-5', budgetStatusInfo.textClass)} />
+                    ) : (
+                      <Info className={cn('h-5 w-5', budgetStatusInfo.textClass)} />
+                    )}
+                    <p className={cn('text-lg font-bold', budgetStatusInfo.textClass)}>{budgetStatusInfo.label}</p>
+                  </div>
                 </div>
                 <div className="space-y-1 pt-2 border-t">
                   <p className="text-sm">
-                    <span className={cn('font-semibold', annualBudgetInsights.overallGap < 0 ? 'text-green-600' : 'text-red-600')}>
+                    <span className={cn('font-semibold', budgetStatusInfo.textClass)}>
                       {formatCurrency(Math.abs(annualBudgetInsights.overallGap))}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">
-                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
+                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'above'} budget
                     </span>
                   </p>
                   <p className="text-xs">
-                    <span className={`font-medium ${annualBudgetInsights.overallGap < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={cn('font-medium', budgetStatusInfo.textClass)}>
                       {formatPercentAbs(annualBudgetInsights.gapPercent)}
                     </span>
                     <span className="text-muted-foreground ml-1">
-                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
+                      {annualBudgetInsights.overallGap < 0 ? 'under' : 'above'} budget
                     </span>
                   </p>
                 </div>
@@ -838,12 +861,12 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                   {annualSpendInsights.vsFourYearAvg > 0 ? (
                     <div className="flex items-center gap-2">
                       <TrendingDown className="h-5 w-5 text-green-600" />
-                      <p className="text-lg font-bold text-green-600">Spending Less</p>
+                      <p className="text-lg font-bold text-green-600">Lower Than Average</p>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5 text-red-600" />
-                      <p className="text-lg font-bold text-red-600">Spending More</p>
+                      <p className="text-lg font-bold text-red-600">Higher Than Average</p>
                     </div>
                   )}
                 </div>
@@ -853,7 +876,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                       {formatCurrency(Math.abs(annualSpendInsights.vsFourYearAvg))}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">
-                      {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
+                      {annualSpendInsights.vsFourYearAvg > 0 ? 'lower' : 'higher'} than average
                     </span>
                   </p>
                   <p className="text-xs">
@@ -861,8 +884,11 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                       {formatPercentAbs(annualSpendInsights.vsFourYearAvgPercent)}
                     </span>
                     <span className="text-muted-foreground ml-1">
-                      {annualSpendInsights.vsFourYearAvg > 0 ? 'less' : 'more'} than average
+                      {annualSpendInsights.vsFourYearAvg > 0 ? 'lower' : 'higher'} than average
                     </span>
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-1">
+                    Note: ~3% annual inflation accounts for ~12% of the 4-year difference
                   </p>
                 </div>
               </div>
@@ -895,12 +921,12 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                   {monthlySpendInsights.vsTtmAvg > 0 ? (
                     <div className="flex items-center gap-2">
                       <TrendingDown className="h-5 w-5 text-green-600" />
-                      <p className="text-lg font-bold text-green-600">Spending Less</p>
+                      <p className="text-lg font-bold text-green-600">Lower Than Average</p>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5 text-red-600" />
-                      <p className="text-lg font-bold text-red-600">Spending More</p>
+                      <p className="text-lg font-bold text-red-600">Higher Than Average</p>
                     </div>
                   )}
                 </div>
@@ -910,7 +936,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                       {formatCurrency(Math.abs(monthlySpendInsights.vsTtmAvg))}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">
-                      {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
+                      {monthlySpendInsights.vsTtmAvg > 0 ? 'lower' : 'higher'} than average
                     </span>
                   </p>
                   <p className="text-xs">
@@ -918,12 +944,50 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                       {formatPercentAbs(monthlySpendInsights.vsTtmAvgPercent)}
                     </span>
                     <span className="text-muted-foreground ml-1">
-                      {monthlySpendInsights.vsTtmAvg > 0 ? 'less' : 'more'} than average
+                      {monthlySpendInsights.vsTtmAvg > 0 ? 'lower' : 'higher'} than average
                     </span>
                   </p>
                 </div>
               </div>
               </button>
+
+              {/* Cash Runway Summary */}
+              {healthData?.cashRunwayMonths != null && isFinite(healthData.cashRunwayMonths) && (
+                <Link
+                  href="/analysis#cash-runway"
+                  className={cn(
+                    'space-y-3 p-5 rounded-lg border bg-card shrink-0 text-left w-full cursor-pointer transition-all border-l-[3px] border-l-blue-500 block',
+                    'hover:shadow-md hover:border-primary/50 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+                    isMobile && 'shrink-0 min-w-[85%] max-w-[85%] snap-center'
+                  )}
+                  aria-label="Cash runway summary, go to Analysis page"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/15">
+                        <Wallet className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="font-semibold text-sm uppercase tracking-wide">Cash Runway</h3>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Months of Expenses Covered</p>
+                      <p className="text-2xl font-bold tabular-nums text-blue-600">
+                        {healthData.cashRunwayMonths === Infinity
+                          ? 'Fully Covered'
+                          : `${healthData.cashRunwayMonths.toFixed(1)} months`}
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">
+                        Based on average monthly spend over the last 3 months
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              )}
               </div>
               {isMobile && (
                 <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent" aria-hidden />
@@ -1052,7 +1116,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
           <CardTitle className="text-lg">Annual Budget</CardTitle>
           <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center sm:gap-2">
             <p className="text-sm text-muted-foreground">
-              {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Over'} budget by{' '}
+              {annualBudgetInsights.overallGap < 0 ? 'Under' : 'Above'} budget by{' '}
               <span className={cn('font-semibold', annualBudgetInsights.overallGap < 0 ? 'text-green-600' : 'text-red-600')}>
                 {formatCurrency(Math.abs(annualBudgetInsights.overallGap))}
               </span>
@@ -1119,11 +1183,11 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
               <span className={cn(annualBudgetInsights.overallGap < 0 ? 'text-green-600' : 'text-red-600')}>
                 {formatPercentAbs(annualBudgetInsights.gapPercent)}
               </span>
-              {' '}{annualBudgetInsights.overallGap < 0 ? 'under' : 'over'} budget
+              {' '}{annualBudgetInsights.overallGap < 0 ? 'under' : 'above'} budget
             </p>
           </div>
 
-          {/* Under / Over budget — horizontal bars (shared scale across both cards) */}
+          {/* Under / Above budget — horizontal bars (shared scale across both cards) */}
           {/* Order tables dynamically: if under budget overall, show "Under budget" on left */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Under budget — show first if overall under budget */}
@@ -1165,7 +1229,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                  <h3 className="font-semibold text-sm">Over budget</h3>
+                  <h3 className="font-semibold text-sm">Above budget</h3>
                 </div>
                 {annualBudgetInsights.overBudget.length > 0 ? (
                   (() => {
@@ -1192,16 +1256,16 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories over budget</p>
+                  <p className="text-sm text-muted-foreground italic">No categories above budget</p>
                 )}
               </div>
             )}
-            {/* Over budget — show second if overall under budget, first if over budget */}
+            {/* Above budget — show second if overall under budget, first if over budget */}
             {annualBudgetInsights.overallGap < 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                  <h3 className="font-semibold text-sm">Over budget</h3>
+                  <h3 className="font-semibold text-sm">Above budget</h3>
                 </div>
                 {annualBudgetInsights.overBudget.length > 0 ? (
                   (() => {
@@ -1228,7 +1292,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories over budget</p>
+                  <p className="text-sm text-muted-foreground italic">No categories above budget</p>
                 )}
               </div>
             ) : (
@@ -1282,7 +1346,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href="/#annual-trends"
+                href="/dashboard#annual-trends"
                 className={cn(
                   'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
                   'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
@@ -1326,7 +1390,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Vs 4-year average</p>
                 <p className={cn('text-lg font-bold', annualSpendInsights.vsFourYearAvg > 0 ? 'text-green-600' : 'text-red-600')}>
-                  {annualSpendInsights.vsFourYearAvg > 0 ? 'Spending Less' : 'Spending More'}
+                  {annualSpendInsights.vsFourYearAvg > 0 ? 'Lower Than Average' : 'Higher Than Average'}
                 </p>
               </div>
               <p className="text-sm">
@@ -1338,16 +1402,30 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                 </span>
               </p>
             </div>
+            {(() => {
+              const inflationAdjusted = annualSpendInsights.vsFourYearAvgPercent + 12
+              const inflationAdjustedText =
+                inflationAdjusted >= 2
+                  ? 'lower in real terms after adjusting for inflation'
+                  : inflationAdjusted >= -2
+                    ? 'roughly flat after adjusting for inflation'
+                    : `~${Math.abs(Math.round(inflationAdjusted))}% higher in real terms after adjusting for inflation`
+              return (
+                <p className="text-xs text-muted-foreground/70 italic mt-2">
+                  Adjusted for ~3% annual inflation, real spending change is approximately {inflationAdjustedText}
+                </p>
+              )
+            })()}
           </div>
 
           {showAnnualSpendBreakdown ? (
             <div className="grid md:grid-cols-2 gap-6">
-            {/* Spending less vs average — show first if overall spending is less */}
+            {/* Lower than average — show first if overall spending is less */}
             {annualSpendInsights.vsFourYearAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                  <h3 className="font-semibold text-sm">Lower than average</h3>
                 </div>
                 {annualSpendInsights.spendingLess.length > 0 ? (
                   (() => {
@@ -1374,14 +1452,14 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories lower than average</p>
                 )}
               </div>
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                  <h3 className="font-semibold text-sm">Higher than average</h3>
                 </div>
                 {annualSpendInsights.spendingMore.length > 0 ? (
                   (() => {
@@ -1408,16 +1486,16 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories higher than average</p>
                 )}
               </div>
             )}
-            {/* Spending more vs average — show second if overall spending is less, first if spending more */}
+            {/* Higher than average — show second if overall spending is less, first if spending more */}
             {annualSpendInsights.vsFourYearAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                  <h3 className="font-semibold text-sm">Higher than average</h3>
                 </div>
                 {annualSpendInsights.spendingMore.length > 0 ? (
                   (() => {
@@ -1444,14 +1522,14 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories higher than average</p>
                 )}
               </div>
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                  <h3 className="font-semibold text-sm">Lower than average</h3>
                 </div>
                 {annualSpendInsights.spendingLess.length > 0 ? (
                   (() => {
@@ -1478,7 +1556,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories lower than average</p>
                 )}
               </div>
             )}
@@ -1505,7 +1583,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href="/#monthly-trends"
+                href="/dashboard#monthly-trends"
                 className={cn(
                   'inline-flex items-center gap-1.5 w-fit shrink-0 rounded-lg border bg-background px-3 py-2 text-sm font-medium shadow-sm',
                   'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
@@ -1549,7 +1627,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Vs TTM average</p>
                 <p className={cn('text-lg font-bold', monthlySpendInsights.vsTtmAvg > 0 ? 'text-green-600' : 'text-red-600')}>
-                  {monthlySpendInsights.vsTtmAvg > 0 ? 'Spending Less' : 'Spending More'}
+                  {monthlySpendInsights.vsTtmAvg > 0 ? 'Lower Than Average' : 'Higher Than Average'}
                 </p>
               </div>
               <p className="text-sm">
@@ -1567,12 +1645,12 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
           {/* Order tables dynamically: if spending less overall, show "Spending less" on left */}
           {showMonthlySpendBreakdown ? (
             <div className="grid md:grid-cols-2 gap-6">
-            {/* Spending less vs average — show first if overall spending is less */}
+            {/* Lower than average — show first if overall spending is less */}
             {monthlySpendInsights.vsTtmAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                  <h3 className="font-semibold text-sm">Lower than average</h3>
                 </div>
                 {monthlySpendInsights.spendingLess.length > 0 ? (
                   (() => {
@@ -1599,14 +1677,14 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories lower than average</p>
                 )}
               </div>
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                  <h3 className="font-semibold text-sm">Higher than average</h3>
                 </div>
                 {monthlySpendInsights.spendingMore.length > 0 ? (
                   (() => {
@@ -1633,16 +1711,16 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories higher than average</p>
                 )}
               </div>
             )}
-            {/* Spending more vs average — show second if overall spending is less, first if spending more */}
+            {/* Higher than average — show second if overall spending is less, first if spending more */}
             {monthlySpendInsights.vsTtmAvg > 0 ? (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending more vs average</h3>
+                  <h3 className="font-semibold text-sm">Higher than average</h3>
                 </div>
                 {monthlySpendInsights.spendingMore.length > 0 ? (
                   (() => {
@@ -1669,14 +1747,14 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending more than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories higher than average</p>
                 )}
               </div>
             ) : (
               <div>
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                  <h3 className="font-semibold text-sm">Spending less vs average</h3>
+                  <h3 className="font-semibold text-sm">Lower than average</h3>
                 </div>
                 {monthlySpendInsights.spendingLess.length > 0 ? (
                   (() => {
@@ -1703,7 +1781,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
                     )
                   })()
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No categories spending less than average</p>
+                  <p className="text-sm text-muted-foreground italic">No categories lower than average</p>
                 )}
               </div>
             )}

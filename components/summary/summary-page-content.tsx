@@ -33,9 +33,15 @@ import {
   ChevronRight,
   CheckCircle2,
   AlertCircle,
+  MinusCircle,
+  Info,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { toLocalDateString } from '@/lib/daily-summary-utils'
+import { getBudgetStatusConfig } from '@/lib/budget-status'
+import { FinancialHealthBanner } from '@/components/financial-health-banner'
+import { useFinancialHealth } from '@/lib/hooks/use-financial-health'
+import { MilestonesBanner } from '@/components/milestones-banner'
 
 const SPEND_FILL = '#64748b'
 const SPEND_FILL_ALT = '#475569'
@@ -168,6 +174,7 @@ export function SummaryPageContent() {
   const [forecastSettings, setForecastSettings] = useState<ForecastSettingsRow[]>([])
   const [todayTransactions, setTodayTransactions] = useState<TransactionForDayRow[]>([])
   const [mobileMonthlyDriversView, setMobileMonthlyDriversView] = useState<'less' | 'more'>('less')
+  const { data: healthData } = useFinancialHealth()
 
   const fetchData = useCallback(async ({ background = false }: { background?: boolean } = {}) => {
     if (!background) setLoading(true)
@@ -229,7 +236,7 @@ export function SummaryPageContent() {
     return { lastYearDisplay, diff, percent }
   }, [annualTrends, annualEstimatedSpend, currency, fxRate, convertAmount])
 
-  const gapToBudget = useMemo(() => {
+  const { gapToBudget, budgetTotal } = useMemo(() => {
     const expenses = budgetData.filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))
     const budgetTotalGBP = expenses.reduce((sum, b) => sum + Math.abs(b.annual_budget_gbp ?? 0), 0)
     const forecastTotalGBP = expenses.reduce((sum, b) => {
@@ -237,8 +244,14 @@ export function SummaryPageContent() {
       return sum + Math.abs(forecast)
     }, 0)
     const gapGBP = budgetTotalGBP - forecastTotalGBP
-    return currency === 'USD' ? convertAmount(gapGBP, 'GBP', fxRate) : gapGBP
+    const toDisplay = (v: number) => currency === 'USD' ? convertAmount(v, 'GBP', fxRate) : v
+    return { gapToBudget: toDisplay(gapGBP), budgetTotal: toDisplay(budgetTotalGBP) }
   }, [budgetData, currency, fxRate, convertAmount, forecastByCategory])
+
+  const budgetStatusInfo = useMemo(
+    () => getBudgetStatusConfig(gapToBudget, budgetTotal),
+    [gapToBudget, budgetTotal]
+  )
 
   const yesterdayChange = useMemo(() => {
     if (!forecastBridge) return null
@@ -639,6 +652,20 @@ export function SummaryPageContent() {
             </div>
           ) : (
             <div className="space-y-4 sm:space-y-3">
+              {/* Financial Health Banner */}
+              {healthData && (
+                <FinancialHealthBanner
+                  data={{
+                    ...healthData,
+                    budgetGap: gapToBudget,
+                    budgetTotal: budgetTotal,
+                  }}
+                />
+              )}
+
+              {/* Milestones */}
+              <MilestonesBanner />
+
               {/* Section: Budget Overview */}
               <div>
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5 sm:text-[10px]">
@@ -647,9 +674,14 @@ export function SummaryPageContent() {
                 <Card
                   className={cn(
                     'overflow-hidden border-l-[3px]',
-                    gapToBudget >= 0
-                      ? 'border-l-green-500 bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent'
-                      : 'border-l-red-500 bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent'
+                    budgetStatusInfo.borderClass,
+                    budgetStatusInfo.level === 'under'
+                      ? 'bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent'
+                      : budgetStatusInfo.level === 'on_track'
+                        ? 'bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent'
+                        : budgetStatusInfo.level === 'slightly_over'
+                          ? 'bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent'
+                          : 'bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent'
                   )}
                 >
                   <CardContent className={cardContentClass}>
@@ -658,31 +690,37 @@ export function SummaryPageContent() {
                       className="flex items-center justify-between w-full gap-1.5 mb-3 group hover:opacity-70 transition-opacity text-left"
                     >
                       <div className="flex items-center gap-2">
-                        <div
-                          className={cn(
-                            'flex h-7 w-7 items-center justify-center rounded-full',
-                            gapToBudget >= 0 ? 'bg-green-500/15' : 'bg-red-500/15'
-                          )}
-                        >
-                          {gapToBudget >= 0 ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <div className={cn('flex h-7 w-7 items-center justify-center rounded-full', budgetStatusInfo.bgClass)}>
+                          {budgetStatusInfo.level === 'under' || budgetStatusInfo.level === 'on_track' ? (
+                            <CheckCircle2 className={cn('h-4 w-4', budgetStatusInfo.textClass)} />
+                          ) : budgetStatusInfo.level === 'slightly_over' ? (
+                            <MinusCircle className={cn('h-4 w-4', budgetStatusInfo.textClass)} />
                           ) : (
-                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <Info className={cn('h-4 w-4', budgetStatusInfo.textClass)} />
                           )}
                         </div>
                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                          Gap to Budget
+                          Budget Status
                         </span>
                       </div>
                       <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
-                    <div
-                      className={cn(
-                        'text-3xl sm:text-2xl font-bold tabular-nums leading-none',
-                        gapToBudget >= 0 ? 'text-green-600' : 'text-red-600'
-                      )}
-                    >
-                      {gapToBudget >= 0 ? 'Under' : 'Over'} {formatCurrency(Math.abs(gapToBudget))}
+                    <div>
+                      <div className={cn('text-3xl sm:text-2xl font-bold leading-none', budgetStatusInfo.textClass)}>
+                        {budgetStatusInfo.label}
+                      </div>
+                      {gapToBudget !== 0 && budgetTotal > 0 && (() => {
+                        const pct = ((Math.abs(gapToBudget) / budgetTotal) * 100).toFixed(1)
+                        const amt = formatCurrency(Math.abs(gapToBudget))
+                        return (
+                          <div className={cn('text-sm mt-1.5 tabular-nums', budgetStatusInfo.textClass, 'opacity-80')}>
+                            {budgetStatusInfo.level === 'under' && <>{amt} to spare</>}
+                            {budgetStatusInfo.level === 'on_track' && <>just {amt} ({pct}%) above budget</>}
+                            {budgetStatusInfo.level === 'slightly_over' && <>{amt} ({pct}%) above budget</>}
+                            {budgetStatusInfo.level === 'over' && <>{amt} ({pct}%) over budget</>}
+                          </div>
+                        )
+                      })()}
                     </div>
                     <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-t border-border/40 pt-3">
                       <Link
@@ -841,14 +879,14 @@ export function SummaryPageContent() {
                                         wrapperStyle={getChartTooltipWrapperStyle(chartTheme)}
                                         formatter={(value: number, name: string) => [
                                           formatChartCurrency(value),
-                                          name === 'spend' ? 'Spend' : 'Remaining headroom',
+                                          name === 'spend' ? 'Spend' : 'Room to spend',
                                         ]}
                                         contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: 12 })}
                                       />
                                       <Legend
                                         wrapperStyle={{ fontSize: 10 }}
                                         formatter={(value) =>
-                                          value === 'spend' ? 'Spend' : 'Remaining headroom'
+                                          value === 'spend' ? 'Spend' : 'Room to spend'
                                         }
                                       />
                                       <Bar
@@ -955,12 +993,12 @@ export function SummaryPageContent() {
                               {yesterdayChange < 0 ? (
                                 <span className="flex items-center gap-1.5">
                                   <TrendingDown className="h-4 w-4 shrink-0" />
-                                  Gap improved by {formatCurrency(Math.abs(yesterdayChange))}
+                                  Gap narrowed by {formatCurrency(Math.abs(yesterdayChange))}
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1.5">
                                   <TrendingUp className="h-4 w-4 shrink-0" />
-                                  Gap worsened by {formatCurrency(Math.abs(yesterdayChange))}
+                                  Gap widened by {formatCurrency(Math.abs(yesterdayChange))}
                                 </span>
                               )}
                             </div>
@@ -1183,7 +1221,7 @@ export function SummaryPageContent() {
                               mobileDriverMode === 'less' ? 'text-green-600' : 'text-red-600'
                             )}
                           >
-                            {mobileDriverMode === 'less' ? 'Spending Less:' : 'Spending More:'}
+                            {mobileDriverMode === 'less' ? 'Lower Than Average:' : 'Higher Than Average:'}
                           </div>
                           <div className="space-y-2">
                             {mobileDriverRows.slice(0, 3).map((driver, index) => {
@@ -1224,7 +1262,7 @@ export function SummaryPageContent() {
                           {hasSpendingLessDrivers && (
                             <div className={cn(!hasSpendingMoreDrivers && 'sm:col-span-2')}>
                               <div className="text-[10px] font-bold mb-1 text-green-600">
-                                Spending Less:
+                                Lower Than Average:
                               </div>
                               <div className="space-y-1.5">
                                 {monthlyDrivers.spendingLess.map((driver, index) => {
@@ -1259,7 +1297,7 @@ export function SummaryPageContent() {
                           {hasSpendingMoreDrivers && (
                             <div className={cn(!hasSpendingLessDrivers && 'sm:col-span-2')}>
                               <div className="text-[10px] font-bold mb-1 text-red-600">
-                                Spending More:
+                                Higher Than Average:
                               </div>
                               <div className="space-y-1.5">
                                 {monthlyDrivers.spendingMore.map((driver, index) => {

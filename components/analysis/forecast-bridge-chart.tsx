@@ -284,7 +284,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
             <span className="text-sm font-medium tabular-nums">
               {netChange < 0 && (
                 <>
-                  Gap to budget improved by{' '}
+                  Gap to budget narrowed by{' '}
                   <span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>
                     {absAmount}
                   </span>
@@ -297,7 +297,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
               )}
               {netChange > 0 && (
                 <>
-                  Gap to budget worsened by{' '}
+                  Gap to budget widened by{' '}
                   <span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>
                     {absAmount}
                   </span>

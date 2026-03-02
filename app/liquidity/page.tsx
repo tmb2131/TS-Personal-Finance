@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { EnoughCalculator } from '@/components/liquidity/enough-calculator'
 import LiquidityOverviewKPIs from '@/components/liquidity/liquidity-overview-kpis'
 import CommittedCapitalVsCash from '@/components/liquidity/committed-capital-vs-cash'
 import MonthlyExpensesVsLiquidity from '@/components/liquidity/monthly-expenses-vs-liquidity'
@@ -30,6 +31,8 @@ export default async function LiquidityPage() {
         </div>
         <AddDebtDialog />
       </div>
+
+      <EnoughCalculator />
 
       <LiquidityOverviewKPIs />
 

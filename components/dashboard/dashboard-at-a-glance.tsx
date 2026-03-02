@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/utils/cn'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getBudgetStatusConfig } from '@/lib/budget-status'
 
 export type DashboardAtAGlanceData = {
   netWorthGbp: number | null
@@ -76,7 +77,10 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
   const netIncomeTracking = data ? toDisplayCurrency(data.incomeForecastGbp - data.expensesForecastGbp) : null
   const netIncomeBudget = data ? toDisplayCurrency(data.incomeBudgetGbp - data.expensesBudgetGbp) : null
   const budgetGap = netIncomeTracking != null && netIncomeBudget != null ? netIncomeTracking - netIncomeBudget : null
-  const budgetStatus = budgetGap != null ? (budgetGap >= 0 ? 'under' : 'over') : null
+  const budgetStatusInfo = budgetGap != null && netIncomeBudget != null
+    ? getBudgetStatusConfig(budgetGap, netIncomeBudget)
+    : null
+  const budgetStatus = budgetStatusInfo?.level ?? null
 
   const loading = data === null
 
@@ -88,10 +92,10 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
     }
     if (sectionId === 'budget-table') {
       if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
-      if (budgetStatus) {
+      if (budgetStatusInfo) {
         return (
-          <span className={cn('text-2xl font-bold tabular-nums', budgetStatus === 'under' ? 'text-green-600' : 'text-red-600')}>
-            {budgetStatus === 'under' ? 'Under' : 'Over'}
+          <span className={cn('text-2xl font-bold tabular-nums', budgetStatusInfo.textClass)}>
+            {budgetStatusInfo.labelShort}
             {budgetGap != null && ` ${symbol}${formatCompact(Math.abs(budgetGap))}`}
           </span>
         )
@@ -175,7 +179,7 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
             }
             const borderColor = (() => {
               if (section.id === 'net-worth-chart') return 'border-l-blue-500'
-              if (section.id === 'budget-table') return budgetStatus === 'under' ? 'border-l-green-500' : budgetStatus === 'over' ? 'border-l-red-500' : 'border-l-purple-500'
+              if (section.id === 'budget-table') return budgetStatusInfo?.borderClass ?? 'border-l-purple-500'
               if (section.id === 'income-vs-expenses') return 'border-l-orange-500'
               if (section.id === 'annual-trends') return data?.expensesForecastGbp != null ? 'border-l-indigo-500' : 'border-l-muted-foreground/30'
               if (section.id === 'monthly-trends') return data?.monthlyEstGbp != null ? 'border-l-indigo-500' : 'border-l-muted-foreground/30'

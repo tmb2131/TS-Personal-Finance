@@ -218,7 +218,7 @@ export default async function TodayPage() {
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold">Today</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Today&apos;s expenses: transactions, spend by category, and by forecast methodology
+            Today&apos;s spending snapshot: transactions, spend by category, and by forecast methodology
           </p>
         </div>
       </div>

@@ -700,12 +700,12 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 {topMovers.totalVariance < 0 ? (
                   <div className="flex items-center gap-1.5">
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                    <p className="text-base font-bold text-red-600">Spending More</p>
+                    <p className="text-base font-bold text-red-600">Higher Than Average</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                    <p className="text-base font-bold text-green-600">Spending Less</p>
+                    <p className="text-base font-bold text-green-600">Lower Than Average</p>
                   </div>
                 )}
               </div>
@@ -760,7 +760,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {topMovers.topIncreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
                         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                        <p className="text-base font-bold text-red-600">Top Categories Spending More</p>
+                        <p className="text-base font-bold text-red-600">Top Categories Higher Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Increases</p>
@@ -798,7 +798,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {topMovers.topDecreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
                         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                        <p className="text-base font-bold text-green-600">Top Categories Spending Less</p>
+                        <p className="text-base font-bold text-green-600">Top Categories Lower Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Decreases</p>
@@ -839,7 +839,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {topMovers.topDecreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
                         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                        <p className="text-base font-bold text-green-600">Top Categories Spending Less</p>
+                        <p className="text-base font-bold text-green-600">Top Categories Lower Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Decreases</p>
@@ -877,7 +877,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     {topMovers.topIncreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
                         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                        <p className="text-base font-bold text-red-600">Top Categories Spending More</p>
+                        <p className="text-base font-bold text-red-600">Top Categories Higher Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Increases</p>

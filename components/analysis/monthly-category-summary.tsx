@@ -559,12 +559,12 @@ export function MonthlyCategorySummary({
                     isSpendingLess ? (
                       <div className="flex items-center gap-1.5">
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-4 w-4 text-green-600" /></div>
-                        <p className="text-lg font-bold text-green-600">Spending Less</p>
+                        <p className="text-lg font-bold text-green-600">Lower Than Average</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
                         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-4 w-4 text-red-600" /></div>
-                        <p className="text-lg font-bold text-red-600">Spending More</p>
+                        <p className="text-lg font-bold text-red-600">Higher Than Average</p>
                       </div>
                     )
                   ) : (

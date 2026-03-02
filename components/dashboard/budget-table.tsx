@@ -19,13 +19,16 @@ import { computeAnnualForecasts } from '@/lib/forecasting'
 import { cn } from '@/utils/cn'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
-import { ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Receipt, CheckCircle2, XCircle, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, AlertCircle, Receipt, CheckCircle2, XCircle, TrendingUp, TrendingDown, ChevronDown, ChevronUp, MinusCircle, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BudgetSummaryTable } from './budget-summary-table'
 import { BudgetIncomeTable } from './budget-income-table'
 import { EditBudgetDialog } from '@/components/budgets/edit-budget-dialog'
 import { CategoryPlanningDialog } from '@/components/category-planning/category-planning-dialog'
 import { isExcludedCategory } from '@/lib/category-filters'
+import { getBudgetStatusConfig } from '@/lib/budget-status'
+
+const MATERIALITY_THRESHOLD = 0.02 // 2% of total budget
 
 type SortField = 'category' | 'annualBudget' | 'tracking' | 'ytd' | 'gap'
 type SortDirection = 'asc' | 'desc' | null
@@ -292,8 +295,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   const expenseRightRows = expenseData.slice(expenseMid)
   const expenseCompactClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
 
-  // Calculate top categories above/below budget
+  // Calculate top categories above/below budget — only surface material variances (≥ 2% of total budget)
   const topCategories = useMemo(() => {
+    const materialThreshold = expenseTotals.annualBudget * MATERIALITY_THRESHOLD
     const categoriesWithGaps = expenseData.map((row) => {
       const gap = row.tracking - row.annualBudget
       return {
@@ -305,13 +309,13 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
 
     // Top categories above budget (positive gap = spending less = good)
     const aboveBudget = [...categoriesWithGaps]
-      .filter((c) => c.gap > 0)
+      .filter((c) => c.gap > 0 && c.gapAbs >= materialThreshold)
       .sort((a, b) => b.gap - a.gap)
       .slice(0, 3)
 
     // Top categories below budget (negative gap = spending more = bad)
     const belowBudget = [...categoriesWithGaps]
-      .filter((c) => c.gap < 0)
+      .filter((c) => c.gap < 0 && c.gapAbs >= materialThreshold)
       .sort((a, b) => a.gap - b.gap) // Most negative first
       .slice(0, 3)
 
@@ -319,7 +323,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       aboveBudget,
       belowBudget,
     }
-  }, [expenseData])
+  }, [expenseData, expenseTotals.annualBudget])
 
   // Shared scale for executive summary cards (above + below budget)
   const maxGapCards = useMemo(() => {
@@ -547,69 +551,72 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
           <div className="mb-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {/* Expenses Status */}
-              <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card", expenseTotals.gap >= 0 ? "border-l-green-500" : "border-l-red-500")}>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/15">
-                    <Receipt className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <h3 className="font-semibold text-xs uppercase tracking-wide">Expenses Status</h3>
-                </div>
-                <div className="space-y-1">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">vs Budget</p>
-                    {expenseTotals.gap >= 0 ? (
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                        <p className="text-base font-bold text-green-600">Under Budget</p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                        <p className="text-base font-bold text-red-600">Over Budget</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-0.5 pt-1.5 border-t">
-                    <p className="text-sm">
-                      <span className={cn('font-semibold', expenseTotals.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
-                        {formatCurrencyCompact(Math.abs(expenseTotals.gap))}
-                      </span>
-                      <span className="text-xs text-muted-foreground ml-1">
-                        {expenseTotals.gap >= 0 ? 'under' : 'over'} budget
-                      </span>
-                    </p>
-                    <p className="text-xs">
-                      <span className={`font-medium ${expenseTotals.gap >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatPercentAbs(expenseTotals.annualBudget !== 0 ? ((Math.abs(expenseTotals.gap) / expenseTotals.annualBudget) * 100) : 0)}
-                      </span>
-                      <span className="text-muted-foreground ml-1">
-                        {expenseTotals.gap >= 0 ? 'under' : 'over'} budget
-                      </span>
-                    </p>
-                    <div className="pt-1.5 mt-0.5 border-t">
-                      <p className="text-xs text-muted-foreground">
-                        Expenses Tracking: <span className="font-medium">{formatCurrencyLarge(expenseTotals.tracking)}</span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Expenses Budget: <span className="font-medium">{formatCurrencyLarge(expenseTotals.annualBudget)}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Order: card to the right of Status explains the net change (Under → Above Budget first; Over → Below Budget first) */}
-              {expenseTotals.gap >= 0 ? (
-                <>
-                  {/* Top Categories Above Budget (Spending Less) */}
-                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
+              {(() => {
+                const expStatus = getBudgetStatusConfig(expenseTotals.gap, expenseTotals.annualBudget)
+                const expIcon = expStatus.level === 'under' || expStatus.level === 'on_track'
+                  ? <CheckCircle2 className={cn('h-3.5 w-3.5', expStatus.textClass)} />
+                  : expStatus.level === 'slightly_over'
+                    ? <MinusCircle className={cn('h-3.5 w-3.5', expStatus.textClass)} />
+                    : <Info className={cn('h-3.5 w-3.5', expStatus.textClass)} />
+                return (
+                  <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card", expStatus.borderClass)}>
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/15">
+                        <Receipt className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Expenses Status</h3>
                     </div>
                     <div className="space-y-1">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
+                        <p className="text-xs text-muted-foreground mb-1">vs Budget</p>
+                        <div className="flex items-center gap-1.5">
+                          <div className={cn('flex h-5 w-5 items-center justify-center rounded-full', expStatus.bgClass)}>{expIcon}</div>
+                          <p className={cn('text-base font-bold', expStatus.textClass)}>{expStatus.label}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-0.5 pt-1.5 border-t">
+                        <p className="text-sm">
+                          <span className={cn('font-semibold', expStatus.textClass)}>
+                            {formatCurrencyCompact(Math.abs(expenseTotals.gap))}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            {expenseTotals.gap >= 0 ? 'under' : 'above'} budget
+                          </span>
+                        </p>
+                        <p className="text-xs">
+                          <span className={cn('font-medium', expStatus.textClass)}>
+                            {formatPercentAbs(expenseTotals.annualBudget !== 0 ? ((Math.abs(expenseTotals.gap) / expenseTotals.annualBudget) * 100) : 0)}
+                          </span>
+                          <span className="text-muted-foreground ml-1">
+                            {expenseTotals.gap >= 0 ? 'under' : 'above'} budget
+                          </span>
+                        </p>
+                        <div className="pt-1.5 mt-0.5 border-t">
+                          <p className="text-xs text-muted-foreground">
+                            Expenses Tracking: <span className="font-medium">{formatCurrencyLarge(expenseTotals.tracking)}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Expenses Budget: <span className="font-medium">{formatCurrencyLarge(expenseTotals.annualBudget)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Order: card to the right of Status explains the net change (Under → Above Budget first; Above → Below Budget first) */}
+              {expenseTotals.gap >= 0 ? (
+                <>
+                  {/* Top Categories Under Budget (Lower Than Budgeted) */}
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Under Budget</h3>
+                    </div>
+                    <div className="space-y-1">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-0.5">Lower Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
                             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
@@ -634,24 +641,24 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             )
                           })
                         ) : (
-                          <p className="text-xs text-muted-foreground">No categories above budget</p>
+                          <p className="text-xs text-muted-foreground">No categories under budget</p>
                         )}
                       </div>
                     </div>
                   </div>
-                  {/* Top Categories Below Budget (Spending More) */}
-                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-red-500 bg-card">
+                  {/* Top Categories Above Budget (Higher Than Budgeted) */}
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-amber-500 bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><TrendingUp className="h-3.5 w-3.5 text-amber-600" /></div>
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
                     </div>
                     <div className="space-y-1">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">Higher Than Budgeted</p>
                         {topCategories.belowBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                            <p className="text-base font-bold text-red-600">Over Budget</p>
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><MinusCircle className="h-3.5 w-3.5 text-amber-600" /></div>
+                            <p className="text-base font-bold text-amber-600">Above Budget</p>
                           </div>
                         ) : (
                           <p className="text-base font-bold text-muted-foreground">None</p>
@@ -665,14 +672,14 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                               <div key={item.category} className="flex items-center gap-1.5">
                                 <span className="text-xs w-24 truncate">{item.category}</span>
                                 <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                  <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
+                                <span className="text-xs font-medium text-amber-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
                               </div>
                             )
                           })
                         ) : (
-                          <p className="text-xs text-muted-foreground">No categories below budget</p>
+                          <p className="text-xs text-muted-foreground">No categories above budget</p>
                         )}
                       </div>
                     </div>
@@ -680,19 +687,19 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                 </>
               ) : (
                 <>
-                  {/* Top Categories Below Budget (Spending More) — first when Over Budget */}
-                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-red-500 bg-card">
+                  {/* Top Categories Above Budget (Higher Than Budgeted) — first when above budget overall */}
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-amber-500 bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Below Budget</h3>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><TrendingUp className="h-3.5 w-3.5 text-amber-600" /></div>
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
                     </div>
                     <div className="space-y-1">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Spending More Than Budgeted</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">Higher Than Budgeted</p>
                         {topCategories.belowBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                            <p className="text-base font-bold text-red-600">Over Budget</p>
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><MinusCircle className="h-3.5 w-3.5 text-amber-600" /></div>
+                            <p className="text-base font-bold text-amber-600">Above Budget</p>
                           </div>
                         ) : (
                           <p className="text-base font-bold text-muted-foreground">None</p>
@@ -706,27 +713,27 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                               <div key={item.category} className="flex items-center gap-1.5">
                                 <span className="text-xs w-24 truncate">{item.category}</span>
                                 <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                  <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-xs font-medium text-red-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
+                                <span className="text-xs font-medium text-amber-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
                               </div>
                             )
                           })
                         ) : (
-                          <p className="text-xs text-muted-foreground">No categories below budget</p>
+                          <p className="text-xs text-muted-foreground">No categories above budget</p>
                         )}
                       </div>
                     </div>
                   </div>
-                  {/* Top Categories Above Budget (Spending Less) */}
+                  {/* Top Categories Under Budget (Lower Than Budgeted) */}
                   <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
                     <div className="flex items-center gap-1.5">
                       <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
+                      <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Under Budget</h3>
                     </div>
                     <div className="space-y-1">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-0.5">Spending Less Than Budgeted</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">Lower Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
                             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
@@ -765,6 +772,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
             {expenseData.map((row) => {
               const gap = row.tracking - row.annualBudget
               const isPositive = gap >= 0
+              const isMaterial = Math.abs(gap) >= expenseTotals.annualBudget * MATERIALITY_THRESHOLD
               return (
                 <div
                   key={row.category}
@@ -775,7 +783,9 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                     <span
                       className={cn(
                         'font-semibold tabular-nums text-sm shrink-0',
-                        isPositive ? 'text-green-600' : 'text-red-600'
+                        isMaterial
+                          ? isPositive ? 'text-green-600' : 'text-red-600'
+                          : 'text-muted-foreground'
                       )}
                     >
                       {gap === 0 ? '–' : formatCurrencyCompact(gap)}
@@ -856,6 +866,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                       const gap = row.tracking - row.annualBudget
                       const gapPercent = (Math.abs(gap) / maxGap) * 100
                       const isPositive = gap >= 0
+                      const isMaterial = Math.abs(gap) >= expenseTotals.annualBudget * MATERIALITY_THRESHOLD
                       const snapshotDay = historySnapshots.dayAgo[row.category]
                       const snapshotWeek = historySnapshots.weekAgo[row.category]
                       const snapshotMonth = historySnapshots.monthAgo[row.category]
@@ -896,14 +907,16 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                           <TableCell
                             className={cn(
                               'text-right font-medium',
-                              isPositive ? 'text-green-600' : 'text-red-600'
+                              isMaterial
+                                ? isPositive ? 'text-green-600' : 'text-red-600'
+                                : 'text-muted-foreground'
                             )}
                           >
                             {gap === 0 ? '-' : formatCurrencyCompact(gap)}
                           </TableCell>
                           <TableCell className="w-16">
                             <div className="relative h-2 w-10">
-                              {gap !== 0 && (
+                              {gap !== 0 && isMaterial && (
                                 <div
                                   className={cn(
                                     'absolute h-full',
@@ -982,6 +995,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         const gap = row.tracking - row.annualBudget
                         const gapPercent = (Math.abs(gap) / maxGap) * 100
                         const isPositive = gap >= 0
+                        const isMaterial = Math.abs(gap) >= expenseTotals.annualBudget * MATERIALITY_THRESHOLD
                         return (
                           <TableRow key={row.category}>
                             <TableCell className="font-medium">{row.category}</TableCell>
@@ -997,14 +1011,16 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <TableCell
                               className={cn(
                                 'text-right font-medium',
-                                isPositive ? 'text-green-600' : 'text-red-600'
+                                isMaterial
+                                  ? isPositive ? 'text-green-600' : 'text-red-600'
+                                  : 'text-muted-foreground'
                               )}
                             >
                               {gap === 0 ? '-' : formatCurrencyCompact(gap)}
                             </TableCell>
                             <TableCell className="w-16">
                               <div className="relative h-2 w-10">
-                                {gap !== 0 && (
+                                {gap !== 0 && isMaterial && (
                                   <div
                                     className={cn(
                                       'absolute h-full',
@@ -1038,6 +1054,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                         const gap = row.tracking - row.annualBudget
                         const gapPercent = (Math.abs(gap) / maxGap) * 100
                         const isPositive = gap >= 0
+                        const isMaterial = Math.abs(gap) >= expenseTotals.annualBudget * MATERIALITY_THRESHOLD
                         return (
                           <TableRow key={row.category}>
                             <TableCell className="font-medium">{row.category}</TableCell>
@@ -1053,14 +1070,16 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
                             <TableCell
                               className={cn(
                                 'text-right font-medium',
-                                isPositive ? 'text-green-600' : 'text-red-600'
+                                isMaterial
+                                  ? isPositive ? 'text-green-600' : 'text-red-600'
+                                  : 'text-muted-foreground'
                               )}
                             >
                               {gap === 0 ? '-' : formatCurrencyCompact(gap)}
                             </TableCell>
                             <TableCell className="w-16">
                               <div className="relative h-2 w-10">
-                                {gap !== 0 && (
+                                {gap !== 0 && isMaterial && (
                                   <div
                                     className={cn(
                                       'absolute h-full',

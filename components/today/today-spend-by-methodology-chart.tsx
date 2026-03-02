@@ -139,7 +139,7 @@ export function TodaySpendByMethodologyChart({
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Bar = today&apos;s spend; lighter segment = remaining headroom (decreases with any spend today, across all methodologies).
+          Bar = today&apos;s spend; lighter segment = room to spend (decreases with any spend today, across all methodologies).
         </p>
         {impliedChangeText != null && (
           <div className="mt-2 rounded-md bg-muted/70 px-3 py-2">
@@ -176,7 +176,7 @@ export function TodaySpendByMethodologyChart({
                 if (name?.toLowerCase() === 'spend') {
                   return [formatCurrency(value), 'Spend']
                 }
-                return [formatCurrency(value), 'Remaining headroom']
+                return [formatCurrency(value), 'Room to spend']
               }}
               contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}
             />
@@ -209,7 +209,7 @@ export function TodaySpendByMethodologyChart({
             </Bar>
             <Bar
               dataKey="headroom"
-              name="Remaining headroom"
+              name="Room to spend"
               stackId="method"
               radius={[0, 4, 4, 0]}
               stroke="transparent"

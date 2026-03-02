@@ -12,7 +12,8 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { cn } from '@/utils/cn'
-import { CheckCircle2, XCircle, Target, TrendingUp, TrendingDown } from 'lucide-react'
+import { CheckCircle2, XCircle, Target, TrendingUp, TrendingDown, MinusCircle, Info } from 'lucide-react'
+import { getBudgetStatusConfig } from '@/lib/budget-status'
 
 interface BudgetSummaryTableProps {
   incomeData: any[]
@@ -168,12 +169,19 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
 
   const compactTableClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
 
-  const isAllGood = totals.netIncome.gap >= 0 && totals.savings.tracking >= 0
+  const budgetStatusInfo = getBudgetStatusConfig(totals.netIncome.gap, totals.netIncome.annualBudget)
+  const isAllGood = (budgetStatusInfo.level === 'under' || budgetStatusInfo.level === 'on_track') && totals.savings.tracking >= 0
   
   // Calculate gap percentage for net income
   const netIncomeGapPercent = totals.netIncome.annualBudget !== 0
     ? ((totals.netIncome.gap / Math.abs(totals.netIncome.annualBudget)) * 100)
     : 0
+
+  const statusIcon = budgetStatusInfo.level === 'under' || budgetStatusInfo.level === 'on_track'
+    ? <CheckCircle2 className={cn('h-3.5 w-3.5', budgetStatusInfo.textClass)} />
+    : budgetStatusInfo.level === 'slightly_over'
+      ? <MinusCircle className={cn('h-3.5 w-3.5', budgetStatusInfo.textClass)} />
+      : <Info className={cn('h-3.5 w-3.5', budgetStatusInfo.textClass)} />
 
   return (
     <Card>
@@ -191,7 +199,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
       <CardContent className="pt-2 md:pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* Summary card - left; on mobile show first (order-1) */}
-          <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card min-w-0 max-md:order-1", totals.netIncome.gap >= 0 ? "border-l-green-500" : "border-l-red-500")}>
+          <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card min-w-0 max-md:order-1", budgetStatusInfo.borderClass)}>
             <div className="flex items-center gap-1.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/15">
                 <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
@@ -201,31 +209,24 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
             <div className="space-y-1">
               <div>
                 <p className="text-xs text-muted-foreground mb-0.5">Net Income vs Budget</p>
-                {totals.netIncome.gap >= 0 ? (
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                    <p className="text-base font-bold text-green-600">Under Budget</p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                    <p className="text-base font-bold text-red-600">Over Budget</p>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <div className={cn('flex h-5 w-5 items-center justify-center rounded-full', budgetStatusInfo.bgClass)}>{statusIcon}</div>
+                  <p className={cn('text-base font-bold', budgetStatusInfo.textClass)}>{budgetStatusInfo.label}</p>
+                </div>
               </div>
               <div className="space-y-0.5 pt-1.5 border-t">
                 <p className="text-xs">
-                  <span className={cn('font-semibold', totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600')}>{formatCurrency(Math.abs(totals.netIncome.gap))}</span>
+                  <span className={cn('font-semibold', budgetStatusInfo.textClass)}>{formatCurrency(Math.abs(totals.netIncome.gap))}</span>
                   <span className="text-muted-foreground ml-1">
-                    {totals.netIncome.gap >= 0 ? 'under' : 'over'} budget
+                    {totals.netIncome.gap >= 0 ? 'under' : 'above'} budget
                   </span>
                 </p>
                 <p className="text-xs">
-                  <span className={`font-medium ${totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={cn('font-medium', budgetStatusInfo.textClass)}>
                     {formatPercentAbs(netIncomeGapPercent)}
                   </span>
                   <span className="text-muted-foreground ml-1">
-                    {totals.netIncome.gap >= 0 ? 'under' : 'over'} budget
+                    {totals.netIncome.gap >= 0 ? 'under' : 'above'} budget
                   </span>
                 </p>
                 <div className="pt-1.5 mt-0.5 border-t">

@@ -143,7 +143,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Gap to budget over time</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
-          📉 Downward slope: Under Budget (Improved) | 📈 Upward slope: Over Budget (Worsened)
+          📉 Downward slope: Under Budget (Narrowing) | 📈 Upward slope: Above Budget (Widening)
         </p>
       </CardHeader>
       <CardContent>

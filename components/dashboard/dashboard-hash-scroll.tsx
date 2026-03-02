@@ -52,7 +52,7 @@ export function DashboardHashScroll() {
   }, [])
 
   useEffect(() => {
-    if (pathname !== '/') return
+    if (pathname !== '/dashboard') return
 
     const getTargetId = () =>
       typeof window !== 'undefined' ? (window.location.hash.slice(1) || '') : ''
