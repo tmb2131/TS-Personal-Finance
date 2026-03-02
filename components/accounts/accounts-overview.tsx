@@ -157,6 +157,16 @@ export function AccountsOverview() {
     }).format(value)
   }
 
+  const formatCurrencyByCode = (value: number, currencyCode: 'USD' | 'GBP' | 'EUR') => {
+    const locale = currencyCode === 'GBP' ? 'en-GB' : 'en-US'
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'
     const date = new Date(dateString)
@@ -778,116 +788,194 @@ export function AccountsOverview() {
           <FullTableViewWrapper
             fullView={fullTableOpen}
             onClose={() => setFullTableOpen(false)}
+            fullViewContainerClassName="w-[96vw] max-w-[96vw]"
             className={`relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}
           >
-            <table className="w-full caption-bottom text-sm">
-              <TableHeader>
-                <TableRow className="border-b bg-muted">
-                  <TableHead className="sticky left-0 top-0 z-30 bg-muted">Category</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-muted">Institution</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-muted">Account Name</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-muted">Currency</TableHead>
-                  <TableHead className="sticky top-0 z-20 text-right bg-muted">Balance</TableHead>
-                  <TableHead className="sticky top-0 z-20 w-16 bg-muted"></TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-muted">Last Updated</TableHead>
-                  <TableHead className="sticky top-0 z-20 bg-muted w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groupedByCategory.map((group) => (
-                  <Fragment key={group.category}>
-                    {group.accounts.map((account) => {
-                      const convertedBalance = convertAmount(
-                        account.balance_total_local,
-                        account.currency,
-                        fxRate
-                      )
-                      return (
-                        <TableRow key={`${account.institution}-${account.account_name}`}>
-                          <TableCell className="sticky left-0 z-20 bg-background font-medium">
-                            {account.category}
+            {fullTableOpen ? (
+              <table className="w-full table-fixed caption-bottom border-collapse text-[11px] leading-4">
+                <TableHeader>
+                  <TableRow className="border-b bg-muted/80">
+                    <TableHead className="w-[12%] font-semibold">Account Category</TableHead>
+                    <TableHead className="w-[17%] font-semibold">Institution</TableHead>
+                    <TableHead className="w-[19%] font-semibold">Account Name</TableHead>
+                    <TableHead className="w-[6%] text-center font-semibold">CCY</TableHead>
+                    <TableHead className="w-[10%] text-right font-semibold">Personal</TableHead>
+                    <TableHead className="w-[10%] text-right font-semibold">Family</TableHead>
+                    <TableHead className="w-[11%] text-right font-semibold">Total Local</TableHead>
+                    <TableHead className="w-[10%] text-right font-semibold">Total {currency}</TableHead>
+                    <TableHead className="w-[9%] text-right font-semibold">Last Updated</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {groupedByCategory.map((group) => {
+                    const groupCurrencies = Array.from(new Set(group.accounts.map((account) => account.currency)))
+                    const singleCurrency = groupCurrencies.length === 1 ? groupCurrencies[0] : null
+                    const subtotalPersonalLocal = group.accounts.reduce((sum, account) => sum + account.balance_personal_local, 0)
+                    const subtotalFamilyLocal = group.accounts.reduce((sum, account) => sum + account.balance_family_local, 0)
+                    const subtotalTotalLocal = group.accounts.reduce((sum, account) => sum + account.balance_total_local, 0)
+
+                    return (
+                      <Fragment key={group.category}>
+                        {group.accounts.map((account) => {
+                          const convertedBalance = convertAmount(
+                            account.balance_total_local,
+                            account.currency,
+                            fxRate
+                          )
+
+                          return (
+                            <TableRow key={`${account.institution}-${account.account_name}`} className="border-b border-border/70">
+                              <TableCell className="truncate font-medium">
+                                {CATEGORY_DISPLAY_NAMES[account.category] || account.category}
+                              </TableCell>
+                              <TableCell className="truncate">{account.institution}</TableCell>
+                              <TableCell className="truncate">{account.account_name}</TableCell>
+                              <TableCell className="text-center">{account.currency}</TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrencyByCode(account.balance_personal_local, account.currency)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrencyByCode(account.balance_family_local, account.currency)}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrencyByCode(account.balance_total_local, account.currency)}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">{formatCurrency(convertedBalance)}</TableCell>
+                              <TableCell className="text-right">{formatDate(account.date_updated)}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                        <TableRow className="border-y bg-muted/60">
+                          <TableCell colSpan={4} className="font-semibold">
+                            {(CATEGORY_DISPLAY_NAMES[group.category] || group.category)} Subtotal
                           </TableCell>
-                          <TableCell>{account.institution}</TableCell>
-                          <TableCell>{account.account_name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{account.currency}</Badge>
+                          <TableCell className="text-right font-semibold">
+                            {singleCurrency ? formatCurrencyByCode(subtotalPersonalLocal, singleCurrency) : '-'}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {bulkEditMode && isEditableSource(account.data_source) ? (
-                              <div className="flex justify-end">
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={bulkDrafts[account.id]?.balance_total_local ?? ''}
-                                  onChange={(e) => updateBulkDraft(account.id, 'balance_total_local', e.target.value)}
-                                  className="h-8 w-32 text-right"
+                          <TableCell className="text-right font-semibold">
+                            {singleCurrency ? formatCurrencyByCode(subtotalFamilyLocal, singleCurrency) : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {singleCurrency ? formatCurrencyByCode(subtotalTotalLocal, singleCurrency) : '-'}
+                          </TableCell>
+                          <TableCell className="text-right text-sm font-bold">{formatCurrency(group.subtotal)}</TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      </Fragment>
+                    )
+                  })}
+                </TableBody>
+              </table>
+            ) : (
+              <table className="w-full caption-bottom text-sm">
+                <TableHeader>
+                  <TableRow className="border-b bg-muted">
+                    <TableHead className="sticky left-0 top-0 z-30 bg-muted">Category</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-muted">Institution</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-muted">Account Name</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-muted">Currency</TableHead>
+                    <TableHead className="sticky top-0 z-20 text-right bg-muted">Balance</TableHead>
+                    <TableHead className="sticky top-0 z-20 w-16 bg-muted"></TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-muted">Last Updated</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-muted w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {groupedByCategory.map((group) => (
+                    <Fragment key={group.category}>
+                      {group.accounts.map((account) => {
+                        const convertedBalance = convertAmount(
+                          account.balance_total_local,
+                          account.currency,
+                          fxRate
+                        )
+                        return (
+                          <TableRow key={`${account.institution}-${account.account_name}`}>
+                            <TableCell className="sticky left-0 z-20 bg-background font-medium">
+                              {account.category}
+                            </TableCell>
+                            <TableCell>{account.institution}</TableCell>
+                            <TableCell>{account.account_name}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{account.currency}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {bulkEditMode && isEditableSource(account.data_source) ? (
+                                <div className="flex justify-end">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={bulkDrafts[account.id]?.balance_total_local ?? ''}
+                                    onChange={(e) => updateBulkDraft(account.id, 'balance_total_local', e.target.value)}
+                                    className="h-8 w-32 text-right"
+                                  />
+                                </div>
+                              ) : (
+                                formatCurrency(convertedBalance)
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                                  style={{
+                                    width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
+                                  }}
                                 />
                               </div>
-                            ) : (
-                              formatCurrency(convertedBalance)
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
-                                style={{
-                                  width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
-                                }}
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {bulkEditMode && isEditableSource(account.data_source) ? (
-                              <Input
-                                type="date"
-                                value={bulkDrafts[account.id]?.date_updated ?? toDateInputValue(account.date_updated)}
-                                onChange={(e) => updateBulkDraft(account.id, 'date_updated', e.target.value)}
-                                className="h-8"
-                              />
-                            ) : (
-                              formatDate(account.date_updated)
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {!bulkEditMode && isEditableSource(account.data_source) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-11 w-11 min-h-[44px] min-w-[44px] p-0"
-                                onClick={() => setEditingAccount(account)}
-                              >
-                                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                    <TableRow key={`subtotal-${group.category}`} className="bg-muted/50">
-                      <TableCell colSpan={4} className="sticky left-0 z-20 bg-muted/50 font-semibold">
-                        {group.category} Subtotal
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatCurrency(group.subtotal)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
-                            style={{
-                              width: `${Math.min((Math.abs(group.subtotal) / maxAccountBalance) * 100, 100)}%`,
-                            }}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell></TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  </Fragment>
-                ))}
-              </TableBody>
-            </table>
+                            </TableCell>
+                            <TableCell>
+                              {bulkEditMode && isEditableSource(account.data_source) ? (
+                                <Input
+                                  type="date"
+                                  value={bulkDrafts[account.id]?.date_updated ?? toDateInputValue(account.date_updated)}
+                                  onChange={(e) => updateBulkDraft(account.id, 'date_updated', e.target.value)}
+                                  className="h-8"
+                                />
+                              ) : (
+                                formatDate(account.date_updated)
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {!bulkEditMode && isEditableSource(account.data_source) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-11 w-11 min-h-[44px] min-w-[44px] p-0"
+                                  onClick={() => setEditingAccount(account)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      <TableRow key={`subtotal-${group.category}`} className="bg-muted/50">
+                        <TableCell colSpan={4} className="sticky left-0 z-20 bg-muted/50 font-semibold">
+                          {group.category} Subtotal
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(group.subtotal)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                              style={{
+                                width: `${Math.min((Math.abs(group.subtotal) / maxAccountBalance) * 100, 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </table>
+            )}
           </FullTableViewWrapper>
         </CardContent>
       </Card>
