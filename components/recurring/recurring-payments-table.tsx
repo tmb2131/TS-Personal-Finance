@@ -216,12 +216,15 @@ export function RecurringPaymentsTable() {
   // Calculate KPI values
   const kpiData = useMemo(() => {
     const totalAnnualized = aggregatedPayments.reduce((sum, payment) => sum + Math.abs(payment.annualizedAmount), 0)
-    const flaggedCount = aggregatedPayments.filter((payment) => payment.needsReview).length
+    const flaggedPayments = aggregatedPayments.filter((payment) => payment.needsReview)
+    const flaggedCount = flaggedPayments.length
+    const flaggedAnnualized = flaggedPayments.reduce((sum, payment) => sum + Math.abs(payment.annualizedAmount), 0)
     const paymentCount = aggregatedPayments.length
 
     return {
       totalAnnualized,
       flaggedCount,
+      flaggedAnnualized,
       paymentCount,
     }
   }, [aggregatedPayments])
@@ -312,7 +315,14 @@ export function RecurringPaymentsTable() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{kpiData.flaggedCount}</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold tabular-nums">{kpiData.flaggedCount}</span>
+                  {kpiData.flaggedAnnualized > 0 && (
+                    <span className="text-sm text-muted-foreground tabular-nums">
+                      ({formatCurrency(kpiData.flaggedAnnualized)}/yr)
+                    </span>
+                  )}
+                </div>
               </CardContent>
             </Card>
             <Card className={cn('h-full w-full min-w-0 border-l-[3px] border-l-blue-500')}>
