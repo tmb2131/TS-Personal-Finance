@@ -51,7 +51,10 @@ export function TodaySpendByMethodologyChart({
   totalForecastTomorrowAtZero,
   onBarClick,
 }: TodaySpendByMethodologyChartProps) {
-  const { currency } = useCurrency()
+  const { currency, fxRate, convertAmount } = useCurrency()
+
+  const toDisplay = (gbp: number) =>
+    currency === 'USD' ? convertAmount(gbp, 'GBP', fxRate) : gbp
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
 
@@ -110,26 +113,31 @@ export function TodaySpendByMethodologyChart({
 
   const startingForecastText =
     totalForecastToday != null && Number.isFinite(totalForecastToday)
-      ? `Starting forecast today: ${formatCurrency(totalForecastToday)}. `
+      ? `Starting forecast today: ${formatCurrency(toDisplay(totalForecastToday))}. `
       : ''
 
-  const impliedChangeText =
+  const displayedChange =
     impliedForecastChange != null && Number.isFinite(impliedForecastChange)
+      ? toDisplay(impliedForecastChange)
+      : null
+
+  const impliedChangeText =
+    displayedChange != null
       ? startingForecastText +
-        (impliedForecastChange > 0
-          ? `If no more spend today: overall forecast rises by ${formatCurrency(impliedForecastChange)}.`
-          : impliedForecastChange < 0
-            ? `If no more spend today: overall forecast falls by ${formatCurrency(-impliedForecastChange)}.`
+        (displayedChange > 0
+          ? `If no more spend today: overall forecast rises by ${formatCurrency(displayedChange)}.`
+          : displayedChange < 0
+            ? `If no more spend today: overall forecast falls by ${formatCurrency(-displayedChange)}.`
             : 'If no more spend today: overall forecast unchanged.')
       : startingForecastText
         ? startingForecastText.slice(0, -1)
         : null
 
   const impliedChangeClassName =
-    impliedForecastChange != null && Number.isFinite(impliedForecastChange)
-      ? impliedForecastChange > 0
+    displayedChange != null
+      ? displayedChange > 0
         ? 'text-sm font-bold text-red-600 dark:text-red-400 mt-1'
-        : impliedForecastChange < 0
+        : displayedChange < 0
           ? 'text-sm font-bold text-green-600 dark:text-green-400 mt-1'
           : 'text-sm font-bold text-foreground mt-1'
       : 'text-sm font-bold text-foreground mt-1'

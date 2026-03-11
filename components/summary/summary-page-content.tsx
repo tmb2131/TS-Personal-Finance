@@ -464,7 +464,8 @@ export function SummaryPageContent() {
       usedSpend,
       usedPercent: neutralResult.usedPercent,
       direction,
-      impliedForecastChange,
+      impliedForecastChange:
+        impliedForecastChange != null ? toDisplayCurrency(impliedForecastChange) : null,
       spendByMethodology,
       headroomByMethodology,
     }
