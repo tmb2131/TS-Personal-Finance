@@ -12,7 +12,7 @@ import { isExcludedCategory } from '@/lib/category-filters'
 import { Loader2 } from 'lucide-react'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
-type MonthMethod = 'Linear' | 'Average' | 'Manual'
+type MonthMethod = 'Linear' | 'Average' | 'Manual' | 'MTD'
 
 interface RowState {
   category: string
@@ -43,6 +43,7 @@ const monthMethodHelp: Record<MonthMethod, string> = {
   Linear: 'Run-rate: MTD ÷ % month elapsed',
   Average: 'Average: last 3 full months; if MTD exceeds avg, use MTD',
   Manual: 'Manual: use your override value',
+  MTD: 'MTD: actual month-to-date spend as the forecast',
 }
 
 export function ForecastSettingsSection({ initialSettings }: ForecastSettingsSectionProps) {
@@ -170,6 +171,10 @@ export function ForecastSettingsSection({ initialSettings }: ForecastSettingsSec
       title: 'Linear Month (Run-rate MTD)',
       body: 'MTD actual ÷ % of month elapsed. Assumes the rest of the month follows current pace.',
     },
+    {
+      title: 'MTD (Actuals)',
+      body: 'Uses the raw month-to-date actual spend as the forecast with no extrapolation.',
+    },
   ], [])
 
   return (
@@ -226,6 +231,7 @@ export function ForecastSettingsSection({ initialSettings }: ForecastSettingsSec
                       <option value="Linear">Linear</option>
                       <option value="Average">Average</option>
                       <option value="Manual">Manual</option>
+                      <option value="MTD">MTD</option>
                     </select>
                     <p className="text-xs text-muted-foreground mt-1">{monthMethodHelp[row.current_month_method]}</p>
                     {row.current_month_method === 'Manual' && (

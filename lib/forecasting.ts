@@ -4,7 +4,7 @@ import { ForecastSetting, AnnualTrend, MonthlyTrend } from '@/lib/types'
 const INCOME_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
-type MonthMethod = 'Linear' | 'Average' | 'Manual'
+type MonthMethod = 'Linear' | 'Average' | 'Manual' | 'MTD'
 
 interface ForecastSettingRow {
   category: string
@@ -517,6 +517,8 @@ export async function computeMonthlyTrends(
       }
     } else if (monthMethod === 'Linear') {
       curMonthEst = pctMonthElapsed > 0 ? mtd / pctMonthElapsed : mtd
+    } else if (monthMethod === 'MTD') {
+      curMonthEst = mtd
     }
 
     // Last 3 full months

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/tooltip'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
-type MonthMethod = 'Linear' | 'Average' | 'Manual'
+type MonthMethod = 'Linear' | 'Average' | 'Manual' | 'MTD'
 
 interface RowState {
   category: string
@@ -45,6 +45,7 @@ const monthMethodHelp: Record<MonthMethod, string> = {
   Linear: 'MTD ÷ % month elapsed (run-rate)',
   Average: 'Last 3 full months average (or MTD if higher)',
   Manual: 'Use your manual monthly override',
+  MTD: 'Actual month-to-date spend as the forecast',
 }
 
 const selectInputClass =
@@ -373,6 +374,7 @@ export function CategoryPlanningSection() {
                         <option value="Linear">Linear</option>
                         <option value="Average">Average</option>
                         <option value="Manual">Manual</option>
+                        <option value="MTD">MTD</option>
                       </select>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -500,6 +502,7 @@ export function CategoryPlanningSection() {
                         <option value="Linear">Linear</option>
                         <option value="Average">Average</option>
                         <option value="Manual">Manual</option>
+                        <option value="MTD">MTD</option>
                       </select>
                       <Tooltip>
                         <TooltipTrigger asChild>

@@ -92,7 +92,7 @@ export interface ForecastSetting {
   user_id: string
   category: string
   current_year_method: 'Annual' | 'Linear' | 'Budget' | 'Manual'
-  current_month_method: 'Linear' | 'Average' | 'Manual'
+  current_month_method: 'Linear' | 'Average' | 'Manual' | 'MTD'
   manual_year_forecast?: number | null
   manual_month_forecast?: number | null
   created_at: string

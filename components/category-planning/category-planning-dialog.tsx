@@ -17,7 +17,7 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { isExcludedCategory, isIncomeCategory } from '@/lib/category-filters'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
-type MonthMethod = 'Linear' | 'Average' | 'Manual'
+type MonthMethod = 'Linear' | 'Average' | 'Manual' | 'MTD'
 
 interface RowState {
   category: string
@@ -243,6 +243,7 @@ export function CategoryPlanningDialog({
                     <option value="Linear">Linear</option>
                     <option value="Average">Average</option>
                     <option value="Manual">Manual</option>
+                    <option value="MTD">MTD</option>
                   </select>
                   {selectedRow.current_month_method === 'Manual' && (
                     <Input

@@ -174,9 +174,9 @@ ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 
 ## Database Migrations
 
-There are currently **35** migrations (`001` through `035`).
+There are currently **36** migrations (`001` through `036`).
 
-Next migration should be `036_*.sql`.
+Next migration should be `037_*.sql`.
 
 ## Deployment
 

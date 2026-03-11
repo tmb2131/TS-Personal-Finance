@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
 
 const YearMethodSchema = z.enum(['Annual', 'Linear', 'Budget', 'Manual'])
-const MonthMethodSchema = z.enum(['Linear', 'Average', 'Manual'])
+const MonthMethodSchema = z.enum(['Linear', 'Average', 'Manual', 'MTD'])
 
 const UpdateCategoryPlanningSchema = z.object({
   rows: z.array(
@@ -32,7 +32,7 @@ type BudgetRow = {
 type ForecastSettingsRow = {
   category: string
   current_year_method: 'Annual' | 'Linear' | 'Budget' | 'Manual' | null
-  current_month_method: 'Linear' | 'Average' | 'Manual' | null
+  current_month_method: 'Linear' | 'Average' | 'Manual' | 'MTD' | null
   manual_year_forecast: number | null
   manual_month_forecast: number | null
 }
