@@ -221,11 +221,14 @@ export async function fetchTransactionsPaged(
   return rows.concat(...rest)
 }
 
+export type AnnualForecastEntry = { forecast: number; ytd: number; annualBudget: number }
+export type AnnualForecastRecord = Record<string, AnnualForecastEntry>
+
 export async function computeAnnualForecasts(
   supabase: SupabaseClient,
   userId: string,
   preloaded?: DailySummaryPreloaded
-): Promise<Map<string, { forecast: number; ytd: number; annualBudget: number }>> {
+): Promise<Map<string, AnnualForecastEntry>> {
   const today = new Date()
   const currentYear = today.getFullYear()
   const startDate = `${currentYear}-01-01`
@@ -279,7 +282,7 @@ export async function computeAnnualForecasts(
     budgetByCategory.set(row.category, Number(row.annual_budget_gbp ?? 0))
   })
 
-  const result = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
+  const result = new Map<string, AnnualForecastEntry>()
   categories.forEach((category) => {
     const annualBudget = budgetByCategory.get(category) || 0
     const ytdValue = ytd.get(category) || 0

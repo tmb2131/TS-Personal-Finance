@@ -15,7 +15,11 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget } from '@/lib/types'
-import { computeAnnualForecasts } from '@/lib/forecasting'
+import {
+  computeAnnualForecasts,
+  type AnnualForecastEntry,
+  type AnnualForecastRecord,
+} from '@/lib/forecasting'
 import { cn } from '@/utils/cn'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
@@ -35,6 +39,8 @@ type SortDirection = 'asc' | 'desc' | null
 
 interface BudgetTableProps {
   initialData?: BudgetTarget[]
+  /** Server-serialized `computeAnnualForecasts`; when set, client state syncs on refresh. Omit for client-only fetch. */
+  initialAnnualForecasts?: AnnualForecastRecord
 }
 
 type HistoricalSnapshot = {
@@ -42,12 +48,14 @@ type HistoricalSnapshot = {
   annualBudget: number
 }
 
-export function BudgetTable({ initialData }: BudgetTableProps = {}) {
+export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTableProps = {}) {
   const { currency, fxRate, convertAmount } = useCurrency()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState<string | null>(null)
-  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, AnnualForecastEntry> | null>(() =>
+    initialAnnualForecasts !== undefined ? new Map(Object.entries(initialAnnualForecasts)) : null
+  )
   const [expenseSortField, setExpenseSortField] = useState<SortField>('gap')
   const [expenseSortDirection, setExpenseSortDirection] = useState<SortDirection>('desc')
   const [incomeSortField, setIncomeSortField] = useState<SortField>('category')
@@ -62,7 +70,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
 
   // Process data: always use GBP from data; convert to USD with current FX when currency is USD (matches Key Insights)
   const processData = useCallback(
-    (budgets: BudgetTarget[], forecastMap?: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null) => {
+    (budgets: BudgetTarget[], forecastMap?: Map<string, AnnualForecastEntry> | null) => {
       return budgets.map((budget) => {
         const forecastRow = (forecastMap ?? forecastByCategory)?.get(budget.category)
         const trackingGbp = forecastRow?.forecast ?? budget.annual_budget_gbp
@@ -124,7 +132,7 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
       setError(null)
 
       const budgets = budgetsResult.data as BudgetTarget[]
-      let forecasts: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null = null
+      let forecasts: Map<string, AnnualForecastEntry> | null = null
       if (user) {
         forecasts = await computeAnnualForecasts(supabase, user.id)
         setForecastByCategory(forecasts)
@@ -144,16 +152,27 @@ export function BudgetTable({ initialData }: BudgetTableProps = {}) {
   }, [forecastByCategory, initialData, processData])
 
   useEffect(() => {
-    if (forecastByCategory) return
+    if (initialAnnualForecasts === undefined) return
+    setForecastByCategory(new Map(Object.entries(initialAnnualForecasts)))
+  }, [initialAnnualForecasts])
+
+  useEffect(() => {
+    if (initialAnnualForecasts !== undefined) return
+    let cancelled = false
     async function fetchForecasts() {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user || cancelled) return
       const forecasts = await computeAnnualForecasts(supabase, user.id)
-      setForecastByCategory(forecasts)
+      if (!cancelled) setForecastByCategory(forecasts)
     }
     fetchForecasts()
-  }, [forecastByCategory])
+    return () => {
+      cancelled = true
+    }
+  }, [initialAnnualForecasts])
 
   // Fetch computed historical snapshots for 1d / 1w / 1mo ago for the gap
   // evolution columns in full view.

@@ -12,7 +12,11 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
-import { computeAnnualForecasts } from '@/lib/forecasting'
+import {
+  computeAnnualForecasts,
+  type AnnualForecastEntry,
+  type AnnualForecastRecord,
+} from '@/lib/forecasting'
 import { isExcludedCategory } from '@/lib/category-filters'
 import { AlertCircle } from 'lucide-react'
 import {
@@ -36,6 +40,7 @@ const EXPENSES_FILL = '#64748b'
 export interface IncomeVsExpensesChartInitialData {
   budgets: BudgetTarget[]
   investmentReturns: InvestmentReturn[]
+  initialAnnualForecasts?: AnnualForecastRecord
 }
 
 interface IncomeVsExpensesChartProps {
@@ -45,11 +50,14 @@ interface IncomeVsExpensesChartProps {
 export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProps = {}) {
   const { currency, fxRate } = useCurrency()
   const hasInitial = Boolean(initialData)
+  const initialAnnualForecasts = initialData?.initialAnnualForecasts
   const [loading, setLoading] = useState(!hasInitial)
   const [error, setError] = useState<string | null>(null)
   const [budgets, setBudgets] = useState<BudgetTarget[]>(initialData?.budgets ?? [])
   const [investmentReturns, setInvestmentReturns] = useState<InvestmentReturn[]>(initialData?.investmentReturns ?? [])
-  const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
+  const [forecastByCategory, setForecastByCategory] = useState<Map<string, AnnualForecastEntry> | null>(() =>
+    initialAnnualForecasts !== undefined ? new Map(Object.entries(initialAnnualForecasts)) : null
+  )
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
   const [mounted, setMounted] = useState(false)
@@ -107,15 +115,27 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   }, [hasInitial, retryCount, initialData])
 
   useEffect(() => {
+    if (initialAnnualForecasts === undefined) return
+    setForecastByCategory(new Map(Object.entries(initialAnnualForecasts)))
+  }, [initialAnnualForecasts])
+
+  useEffect(() => {
+    if (initialAnnualForecasts !== undefined) return
+    let cancelled = false
     async function fetchForecasts() {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user || cancelled) return
       const forecasts = await computeAnnualForecasts(supabase, user.id)
-      setForecastByCategory(forecasts)
+      if (!cancelled) setForecastByCategory(forecasts)
     }
     fetchForecasts()
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [initialAnnualForecasts])
 
   const chartData = useMemo(() => {
     const toDisplay = (gbp: number) => (currency === 'USD' ? gbp * fxRate : gbp)
