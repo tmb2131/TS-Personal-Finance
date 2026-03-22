@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, Fragment, useMemo, useCallback } from 'react'
+import { useState, Fragment, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import {
@@ -15,7 +16,6 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { KPICard } from '@/components/kpi-card'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { createClient } from '@/lib/supabase/client'
 import { AccountBalance } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Building2, LineChart, Loader2, Pencil, Wallet } from 'lucide-react'
@@ -24,6 +24,8 @@ import { EditAccountDialog } from '@/components/accounts/edit-account-dialog'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 import { toast } from 'sonner'
+import { useAccounts } from '@/lib/hooks/queries/use-accounts'
+import { queryKeys } from '@/lib/query-keys'
 
 const CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Taconic', 'House', 'Trust']
 
@@ -80,55 +82,27 @@ function isEditableSource(source: AccountBalance['data_source']) {
 
 export function AccountsOverview() {
   const { currency, convertAmount, fxRate } = useCurrency()
-  const [accounts, setAccounts] = useState<AccountBalance[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const { data: rawAccounts, isLoading: loading, error: queryError } = useAccounts()
+  const error = queryError ? 'Failed to load account data. Please try refreshing the page.' : null
   const [fullTableOpen, setFullTableOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<AccountBalance | null>(null)
   const [bulkEditMode, setBulkEditMode] = useState(false)
   const [bulkSaving, setBulkSaving] = useState(false)
   const [bulkDrafts, setBulkDrafts] = useState<Record<string, { balance_total_local: string; date_updated: string }>>({})
 
-  const loadAccounts = useCallback(async () => {
-    const supabase = createClient()
-    
-    const accountsResult = await supabase
-      .from('account_balances')
-      .select('*')
-      .order('category')
-      .order('institution')
-
-    if (accountsResult.error) {
-      console.error('Error fetching accounts:', accountsResult.error)
-      setError('Failed to load account data. Please try refreshing the page.')
-      setLoading(false)
-      return
-    }
-    
-    setError(null)
-
-    // Get the most recent balance for each account and normalize categories
+  const accounts = useMemo(() => {
+    if (!rawAccounts) return []
     const accountsMap = new Map<string, AccountBalance>()
-    ;(accountsResult.data ?? []).forEach((account: AccountBalance) => {
+    rawAccounts.forEach((account: AccountBalance) => {
       const key = `${account.institution}-${account.account_name}`
       const existing = accountsMap.get(key)
       if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
-        // Normalize the category before storing
-        const normalizedAccount = {
-          ...account,
-          category: normalizeCategory(account.category),
-        }
-        accountsMap.set(key, normalizedAccount)
+        accountsMap.set(key, { ...account, category: normalizeCategory(account.category) })
       }
     })
-
-    setAccounts(Array.from(accountsMap.values()))
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    loadAccounts()
-  }, [loadAccounts])
+    return Array.from(accountsMap.values())
+  }, [rawAccounts])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -276,7 +250,7 @@ export function AccountsOverview() {
         toast.error(`${failedCount} account ${failedCount === 1 ? 'update failed' : 'updates failed'}`)
       }
 
-      await loadAccounts()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.accounts })
       setBulkEditMode(false)
       setBulkDrafts({})
     } catch (error) {

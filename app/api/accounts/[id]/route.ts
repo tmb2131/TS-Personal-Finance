@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
-import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { finalizeDataPipeline } from '@/lib/ingestion'
+import { CACHE_TAGS } from '@/lib/cache-tags'
 
 const UpdateAccountSchema = z.object({
   institution: z.string().min(1).optional(),
@@ -72,14 +71,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    try {
-      await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    } catch (rebuildError) {
-      console.error('Account update: failed to rebuild derived net worth data', rebuildError)
-    }
-
-    revalidateTags(CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Account update',
+      rebuildHistoricalNetWorth: true,
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH],
+    })
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Account PATCH error:', error)
@@ -124,14 +123,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    try {
-      await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    } catch (rebuildError) {
-      console.error('Account delete: failed to rebuild derived net worth data', rebuildError)
-    }
-
-    revalidateTags(CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Account delete',
+      rebuildHistoricalNetWorth: true,
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH],
+    })
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Account DELETE error:', error)

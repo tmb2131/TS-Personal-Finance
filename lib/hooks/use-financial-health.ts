@@ -1,48 +1,44 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useAccounts } from '@/lib/hooks/queries/use-accounts'
+import { useCashRunway } from '@/lib/hooks/queries/use-cash-runway'
 import type { AccountBalance } from '@/lib/types'
 import type { FinancialHealthData } from '@/components/financial-health-banner'
+import { createClient } from '@/lib/supabase/client'
 
 type NwRow = { date: string; category: string; amount_gbp: number | null; amount_usd: number | null }
 
 const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
 
+function useHistoricalNetWorth() {
+  return useQuery({
+    queryKey: ['historical-net-worth-summary'],
+    queryFn: async (): Promise<NwRow[]> => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('historical_net_worth')
+        .select('date, category, amount_gbp, amount_usd')
+        .order('date', { ascending: false })
+      if (error) throw new Error(error.message)
+      return data ?? []
+    },
+  })
+}
+
 export function useFinancialHealth(): { data: FinancialHealthData | null; loading: boolean } {
   const { currency, fxRate, convertAmount } = useCurrency()
-  const [accounts, setAccounts] = useState<AccountBalance[] | null>(null)
-  const [historicalNw, setHistoricalNw] = useState<NwRow[] | null>(null)
-  const [burnData, setBurnData] = useState<{ gbpNet: number; usdNet: number } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: accountsRaw, isLoading: accountsLoading } = useAccounts()
+  const { data: historicalNw, isLoading: nwLoading } = useHistoricalNetWorth()
+  const { data: burnRes, isLoading: burnLoading } = useCashRunway()
 
-  useEffect(() => {
-    let cancelled = false
-    async function fetch_() {
-      const supabase = createClient()
-      const [acctRes, nwRes, burnRes] = await Promise.all([
-        supabase
-          .from('account_balances')
-          .select('*')
-          .order('date_updated', { ascending: false }),
-        supabase
-          .from('historical_net_worth')
-          .select('date, category, amount_gbp, amount_usd')
-          .order('date', { ascending: false }),
-        globalThis.fetch('/api/cash-runway', { credentials: 'include' }).then(r =>
-          r.ok ? r.json() : null
-        ),
-      ])
-      if (cancelled) return
-      setAccounts(acctRes.data ?? [])
-      setHistoricalNw(nwRes.data ?? [])
-      if (burnRes) setBurnData({ gbpNet: Number(burnRes.gbpNet ?? 0), usdNet: Number(burnRes.usdNet ?? 0) })
-      setLoading(false)
-    }
-    fetch_()
-    return () => { cancelled = true }
-  }, [])
+  const loading = accountsLoading || nwLoading || burnLoading
+  const accounts = accountsRaw ?? null
+  const burnData = burnRes
+    ? { gbpNet: Number(burnRes.gbpNet ?? 0), usdNet: Number(burnRes.usdNet ?? 0) }
+    : null
 
   const data = useMemo((): FinancialHealthData | null => {
     if (!accounts || !historicalNw) return null

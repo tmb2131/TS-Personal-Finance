@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExcludedCategory } from '@/lib/category-filters'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
+import { finalizeDataPipeline } from '@/lib/ingestion'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { CACHE_TAGS } from '@/lib/cache-tags'
 
 const YearMethodSchema = z.enum(['Annual', 'Linear', 'Budget', 'Manual'])
 const MonthMethodSchema = z.enum(['Linear', 'Average', 'Manual', 'MTD'])
@@ -230,13 +230,13 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: forecastUpsertRes.error.message }, { status: 500 })
     }
 
-    try {
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    } catch (rebuildError) {
-      console.error('Category planning save: failed to rebuild YoY net worth data', rebuildError)
-    }
-
-    revalidateTags(CACHE_TAGS.BUDGETS)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Category planning save',
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.BUDGETS, CACHE_TAGS.NET_WORTH],
+    })
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Category planning PUT error:', error)

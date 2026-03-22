@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
-import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
-import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { finalizeDataPipeline } from '@/lib/ingestion'
+import { CACHE_TAGS } from '@/lib/cache-tags'
 
 const MAX_ROWS = 200
 const PAGE_SIZE = 1000
@@ -241,9 +240,14 @@ export async function PUT(request: Request) {
       }
     }
 
-    await rebuildHistoricalNetWorthFromAccountHistory(supabase, user.id)
-    await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    revalidateTags(CACHE_TAGS.NET_WORTH)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Net worth history save',
+      rebuildHistoricalNetWorth: true,
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.NET_WORTH, CACHE_TAGS.ACCOUNTS],
+    })
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Net-worth-history PUT error:', error)

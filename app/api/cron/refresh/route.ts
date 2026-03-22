@@ -1,6 +1,5 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
-import { recordLastSync } from '@/lib/sync-metadata'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
+import { finalizeDataPipeline } from '@/lib/ingestion'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { revalidateAllData } from '@/lib/cache-tags'
@@ -43,19 +42,24 @@ export async function GET(request: Request) {
       allResults.push(...(result.results ?? []))
       if (!result.success) anySuccess = false
       if (result.success) {
-        try {
-          await rebuildYoYNetWorthFromAppData(admin, profile.id)
-          await recordLastSync(admin, profile.id)
-        } catch (error: unknown) {
+        const finalized = await finalizeDataPipeline({
+          supabase: admin,
+          userId: profile.id,
+          context: `Cron sheet sync for user ${profile.id}`,
+          rebuildYoYNetWorth: true,
+          recordSyncTimestamp: true,
+        })
+
+        if (finalized.warnings.length > 0) {
           anySuccess = false
-          const message = error instanceof Error ? error.message : 'Failed to rebuild YoY net worth data'
-          allResults.push({
-            sheet: 'YoY Net Worth (app computation)',
-            success: false,
-            error: message,
-            rowsProcessed: 0,
-          })
-          console.error(`Cron: YoY net worth rebuild failed for user ${profile.id}:`, error)
+          for (const warning of finalized.warnings) {
+            allResults.push({
+              sheet: `${warning} (app pipeline)`,
+              success: false,
+              error: `Cron follow-up step failed: ${warning}`,
+              rowsProcessed: 0,
+            })
+          }
         }
       }
     }

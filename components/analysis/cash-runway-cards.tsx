@@ -1,119 +1,88 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
-import { createClient } from '@/lib/supabase/client'
+import { useAccounts } from '@/lib/hooks/queries/use-accounts'
+import { useCashRunway } from '@/lib/hooks/queries/use-cash-runway'
 import { AccountBalance } from '@/lib/types'
 import { AlertCircle, Wallet } from 'lucide-react'
 
 const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
 
-interface CashRunwayData {
-  currency: 'GBP' | 'USD'
-  totalCash: number
-  avgMonthlyBurn: number
-  monthsOnHand: number
-}
-
 export function CashRunwayCards() {
-  const [gbpData, setGbpData] = useState<CashRunwayData | null>(null)
-  const [usdData, setUsdData] = useState<CashRunwayData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: accounts,
+    isLoading: accountsLoading,
+    error: accountsError,
+  } = useAccounts()
+  const {
+    data: cashRunway,
+    isLoading: cashRunwayLoading,
+    error: cashRunwayError,
+  } = useCashRunway()
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
+  const loading = accountsLoading || cashRunwayLoading
 
-      try {
-        // Fetch accounts
-        const accountsResult = await supabase
-          .from('account_balances')
-          .select('*')
-          .order('date_updated', { ascending: false })
+  const queryError = accountsError ?? cashRunwayError
+  const error =
+    queryError == null
+      ? null
+      : queryError instanceof Error
+        ? queryError.message
+        : 'Failed to load cash runway data'
 
-        if (accountsResult.error) {
-          throw new Error(`Failed to fetch accounts: ${accountsResult.error.message}`)
-        }
-
-        // Get latest balance for each account
-        const accountsMap = new Map<string, AccountBalance>()
-        accountsResult.data.forEach((account: AccountBalance) => {
-          const key = `${account.institution}-${account.account_name}`
-          const existing = accountsMap.get(key)
-          if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
-            accountsMap.set(key, account)
-          }
-        })
-
-        const accounts = Array.from(accountsMap.values())
-
-        // Filter to Cash/Checking/Savings accounts and sum by currency
-        const cashByCurrency = { GBP: 0, USD: 0 }
-        accounts.forEach((account) => {
-          if (CASH_CATEGORIES.includes(account.category)) {
-            const currency = account.currency.toUpperCase() as 'GBP' | 'USD'
-            if (currency === 'GBP' || currency === 'USD') {
-              cashByCurrency[currency] += account.balance_total_local || 0
-            }
-          }
-        })
-
-        // Net burn from API (last 3 full calendar months UTC; aggregated in DB — no row limit; same filters as SQL).
-        const burnRes = await fetch('/api/cash-runway', {
-          credentials: 'include',
-        })
-        if (!burnRes.ok) {
-          const errorText = await burnRes.text().catch(() => '')
-          let errorMessage = `Failed to fetch burn: ${burnRes.status}`
-          try {
-            const errorJson = JSON.parse(errorText)
-            errorMessage = errorJson.error || errorMessage
-          } catch {
-            // Use default error message
-          }
-          throw new Error(errorMessage)
-        }
-        const burnJson = await burnRes.json()
-        const gbpNet = Number(burnJson.gbpNet ?? 0)
-        const usdNet = Number(burnJson.usdNet ?? 0)
-
-        // Net spend is negative when expenses > refunds. Burn = max(0, -net) / 3 so refunds offset expenses.
-        const gbpAvgBurn = Math.max(0, -gbpNet) / 3
-        const usdAvgBurn = Math.max(0, -usdNet) / 3
-
-        // Calculate months on hand (if no burn, set to Infinity or a large number)
-        const gbpMonthsOnHand = gbpAvgBurn > 0 ? cashByCurrency.GBP / gbpAvgBurn : (cashByCurrency.GBP > 0 ? Infinity : 0)
-        const usdMonthsOnHand = usdAvgBurn > 0 ? cashByCurrency.USD / usdAvgBurn : (cashByCurrency.USD > 0 ? Infinity : 0)
-
-        setGbpData({
-          currency: 'GBP',
-          totalCash: cashByCurrency.GBP,
-          avgMonthlyBurn: gbpAvgBurn,
-          monthsOnHand: gbpMonthsOnHand,
-        })
-
-        setUsdData({
-          currency: 'USD',
-          totalCash: cashByCurrency.USD,
-          avgMonthlyBurn: usdAvgBurn,
-          monthsOnHand: usdMonthsOnHand,
-        })
-
-        setError(null)
-      } catch (err) {
-        console.error('Error fetching cash runway data:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load cash runway data')
-      } finally {
-        setLoading(false)
+  const { gbpData, usdData } = useMemo(() => {
+    const accountsList = accounts ?? []
+    const accountsMap = new Map<string, AccountBalance>()
+    accountsList.forEach((account: AccountBalance) => {
+      const key = `${account.institution}-${account.account_name}`
+      const existing = accountsMap.get(key)
+      if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
+        accountsMap.set(key, account)
       }
-    }
+    })
 
-    fetchData()
-  }, [])
+    const latestAccounts = Array.from(accountsMap.values())
+
+    const cashByCurrency = { GBP: 0, USD: 0 }
+    latestAccounts.forEach((account) => {
+      if (CASH_CATEGORIES.includes(account.category)) {
+        const currency = account.currency.toUpperCase() as 'GBP' | 'USD'
+        if (currency === 'GBP' || currency === 'USD') {
+          cashByCurrency[currency] += account.balance_total_local || 0
+        }
+      }
+    })
+
+    const burnJson = cashRunway ?? {}
+    const gbpNet = Number(burnJson.gbpNet ?? 0)
+    const usdNet = Number(burnJson.usdNet ?? 0)
+
+    const gbpAvgBurn = Math.max(0, -gbpNet) / 3
+    const usdAvgBurn = Math.max(0, -usdNet) / 3
+
+    const gbpMonthsOnHand =
+      gbpAvgBurn > 0 ? cashByCurrency.GBP / gbpAvgBurn : cashByCurrency.GBP > 0 ? Infinity : 0
+    const usdMonthsOnHand =
+      usdAvgBurn > 0 ? cashByCurrency.USD / usdAvgBurn : cashByCurrency.USD > 0 ? Infinity : 0
+
+    return {
+      gbpData: {
+        currency: 'GBP' as const,
+        totalCash: cashByCurrency.GBP,
+        avgMonthlyBurn: gbpAvgBurn,
+        monthsOnHand: gbpMonthsOnHand,
+      },
+      usdData: {
+        currency: 'USD' as const,
+        totalCash: cashByCurrency.USD,
+        avgMonthlyBurn: usdAvgBurn,
+        monthsOnHand: usdMonthsOnHand,
+      },
+    }
+  }, [accounts, cashRunway])
 
   const formatCurrency = (value: number, currency: 'GBP' | 'USD') => {
     const currencySymbol = currency === 'USD' ? '$' : '£'

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -8,10 +9,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SourceHealthPanel } from '@/components/ingestion/source-health-panel'
 import { toast } from 'sonner'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { SYNC_COMPLETED_EVENT } from '@/lib/contexts/sync-context'
-import { ExternalLink, Copy, FileUp } from 'lucide-react'
+import { SYNC_COMPLETED_EVENT, useSync } from '@/lib/contexts/sync-context'
+import { ExternalLink, Copy, FileUp, FileSpreadsheet, Landmark, PencilLine } from 'lucide-react'
 
 const TEMPLATE_SHEET_ID = '1LsbT4ahDlq7Lyf04d5nyr4bsjqmkDq-kqQoA2t66Kgg'
 const TEMPLATE_COPY_URL = `https://docs.google.com/spreadsheets/d/${TEMPLATE_SHEET_ID}/copy`
@@ -32,6 +34,7 @@ export function SettingsForm({
   serviceAccountEmail,
 }: SettingsFormProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [copiedEmail, setCopiedEmail] = useState(false)
 
   const [spreadsheetId, setSpreadsheetId] = useState(initialSpreadsheetId)
@@ -39,6 +42,7 @@ export function SettingsForm({
   const [defaultCurrency, setDefaultCurrency] = useState<CurrencyOption>(initialDefaultCurrency)
   const [saving, setSaving] = useState(false)
   const { setCurrency } = useCurrency()
+  const { refreshIngestionStatus } = useSync()
 
   const handleSave = async () => {
     setSaving(true)
@@ -70,18 +74,22 @@ export function SettingsForm({
 
       const savedSpreadsheetId = spreadsheetId.trim()
       if (savedSpreadsheetId) {
-        toast.info('Syncing Transaction Log from your sheet...')
+        toast.info('Refreshing your Google Sheet source...')
         const response = await fetch('/api/sync', { method: 'POST' })
         const result = await response.json().catch(() => ({}))
         if (response.ok && result.success) {
-          toast.success('Transaction Log synced successfully')
+          toast.success('Google Sheet source connected')
+          queryClient.invalidateQueries()
           window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
+          await refreshIngestionStatus()
           router.refresh()
         } else if (!response.ok) {
           toast.error(result.error || 'Sync failed')
         } else {
           toast.warning(result.error || 'Sync completed with errors')
         }
+      } else {
+        await refreshIngestionStatus()
       }
     } catch (e) {
       toast.error('Failed to save settings')
@@ -103,11 +111,54 @@ export function SettingsForm({
 
   return (
     <div className="space-y-6">
+      <SourceHealthPanel
+        title="Source control"
+        description="Run the app without a spreadsheet, then layer in imports or sheet refreshes where they help."
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Choose your ingestion path</CardTitle>
+          <CardDescription>
+            Findash now works best when you pick the lightest-weight source for each dataset instead of forcing everything through one spreadsheet.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border bg-background p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <PencilLine className="h-4 w-4 text-primary" />
+              Manual first
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Add balances and transactions directly in-app when you only need a few edits or want fast setup.
+            </p>
+          </div>
+          <div className="rounded-xl border bg-background p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <FileUp className="h-4 w-4 text-primary" />
+              CSV for bulk loads
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Import transactions, balances, or recurring payments in batches without maintaining a live sheet.
+            </p>
+          </div>
+          <div className="rounded-xl border bg-background p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Landmark className="h-4 w-4 text-primary" />
+              Native connectors next
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The ingestion pipeline is now source-agnostic, so bank and broker connectors can plug into the same rebuild path.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card id="google-sheet">
         <CardHeader>
-          <CardTitle>Google Sheet Setup (Transaction Log Only)</CardTitle>
+          <CardTitle>Optional Google Sheet connector</CardTitle>
           <CardDescription>
-            Use Google Sheets only for Transaction Log sync. Accounts, Kids, Recurring, and Investment Return are managed in-app.
+            Keep Sheets only if you want a refreshable Transaction Log source. Accounts and most day-to-day edits are better handled in-app or through CSV import.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -119,7 +170,7 @@ export function SettingsForm({
                 rel="noopener noreferrer"
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Copy Template to My Drive
+                Copy Sheet Template
               </a>
             </Button>
             <Button asChild variant="outline">
@@ -130,7 +181,7 @@ export function SettingsForm({
             </Button>
           </div>
           <div className="rounded-md bg-muted p-3 text-sm space-y-2">
-            <p className="font-medium">After copying, share your new sheet with our service account:</p>
+            <p className="font-medium">If you keep using Sheets, share the copied file with the service account:</p>
             <div className="flex items-center gap-2">
               <code className="text-xs bg-background px-2 py-1 rounded border break-all">
                 {serviceAccountEmail}
@@ -146,7 +197,7 @@ export function SettingsForm({
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              Open your copied sheet → click Share → paste this email → grant Viewer access.
+              Open the copied sheet, click Share, paste this email, and grant Viewer access so Findash can refresh the Transaction Log tab.
             </p>
           </div>
         </CardContent>
@@ -154,21 +205,32 @@ export function SettingsForm({
 
     <Card>
       <CardHeader>
-        <CardTitle>Connect Transaction Log Sheet</CardTitle>
+        <CardTitle>Preferences and source settings</CardTitle>
         <CardDescription>
-          Paste your spreadsheet ID to sync Transaction Log rows. Find it in the sheet URL:
-          https://docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit
+          Save your preferred currency, display name, and optional spreadsheet ID. Leave the sheet blank if you plan to rely on CSV or manual entry.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="rounded-xl border border-dashed bg-muted/20 p-3 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <FileSpreadsheet className="h-4 w-4 text-primary" />
+            Spreadsheet ID format
+          </div>
+          <p className="mt-2 text-muted-foreground">
+            Paste only the ID from `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`.
+          </p>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="spreadsheet-id">Transaction Log Spreadsheet ID</Label>
           <Input
             id="spreadsheet-id"
-            placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+            placeholder="Optional: 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
             value={spreadsheetId}
             onChange={(e) => setSpreadsheetId(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground">
+            Leave blank if you do not want a live Google Sheet connector.
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="display-name">Display name (optional)</Label>
@@ -195,7 +257,7 @@ export function SettingsForm({
           </p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving & syncing...' : 'Save'}
+          {saving ? 'Saving source settings...' : 'Save settings'}
         </Button>
       </CardContent>
     </Card>

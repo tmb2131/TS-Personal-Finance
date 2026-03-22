@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { createClient } from '@/lib/supabase/client'
+import { useAccounts } from '@/lib/hooks/queries/use-accounts'
+import { useDailySummary } from '@/lib/hooks/queries/use-daily-summary'
+import type { AccountBalance } from '@/lib/types'
 import { Info, Shield, TrendingUp } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -112,113 +114,95 @@ function computeYearsUntilDepletion(
 
 export function EnoughCalculator() {
   const { currency, fxRate, convertAmount } = useCurrency()
-  const [loading, setLoading] = useState(true)
-  const [netWorth, setNetWorth] = useState<number>(0)
-  const [liquidAssets, setLiquidAssets] = useState<number>(0)
-  const [annualIncome, setAnnualIncome] = useState<number>(0)
-  const [annualGiftMoney, setAnnualGiftMoney] = useState<number>(0)
-  const [annualExpenses, setAnnualExpenses] = useState<number>(0)
-  const [annualNetOutflow, setAnnualNetOutflow] = useState<number>(0)
-  const [totalAssetMix, setTotalAssetMix] = useState<AssetMixEntry[]>([])
-  const [liquidAssetMix, setLiquidAssetMix] = useState<AssetMixEntry[]>([])
+  const { data: accountsData, isLoading: accountsLoading } = useAccounts()
+  const { data: dailySummaryData, isLoading: dailySummaryLoading } = useDailySummary()
+  const loading = accountsLoading || dailySummaryLoading
   const [returnProfile, setReturnProfile] = useState<ReturnProfile>('Conservative')
 
-  useEffect(() => {
-    let cancelled = false
-    async function fetchData() {
-      const supabase = createClient()
-
-      const [acctRes, summaryRes] = await Promise.all([
-        supabase
-          .from('account_balances')
-          .select('*')
-          .order('date_updated', { ascending: false }),
-        globalThis.fetch('/api/daily-summary', { credentials: 'include' }).then(r =>
-          r.ok ? r.json() : null
-        ),
-      ])
-
-      if (cancelled) return
-
-      const accounts = acctRes.data ?? []
-      // Deduplicate to latest per account
-      const accountsMap = new Map<string, any>()
-      accounts.forEach((a: any) => {
-        const key = `${a.institution}-${a.account_name}`
-        const existing = accountsMap.get(key)
-        if (!existing || new Date(a.date_updated) > new Date(existing.date_updated)) {
-          accountsMap.set(key, a)
-        }
-      })
-      const latest = Array.from(accountsMap.values())
-      const converted = latest.map((a: any) => ({
-        ...a,
-        balanceConverted: convertAmount(a.balance_total_local, a.currency, fxRate),
-      }))
-
-      // Net worth (excl. Trust)
-      const nw = converted.reduce((sum: number, a: any) => {
-        if (a.category === 'Trust') return sum
-        return sum + a.balanceConverted
-      }, 0)
-      const totalMix = converted
-        .filter((a: any) => a.category !== 'Trust' && a.balanceConverted > 0)
-        .map((a: any) => ({ category: a.category, balance: a.balanceConverted }))
-
-      // Liquid assets (Cash, Checking, Savings, Brokerage)
-      const liquid = converted.reduce((sum: number, a: any) => {
-        if (!LIQUID_CATEGORIES.includes(a.category)) return sum
-        return sum + a.balanceConverted
-      }, 0)
-      const liquidMix = converted
-        .filter((a: any) => LIQUID_CATEGORIES.includes(a.category) && a.balanceConverted > 0)
-        .map((a: any) => ({ category: a.category, balance: a.balanceConverted }))
-
-      // Annual net outflow from app forecasts:
-      // estimated expenses minus estimated income minus gift money.
-      let estimatedIncome = 0
-      let estimatedGiftMoney = 0
-      let estimatedExpenses = 0
-      if (summaryRes?.forecastByCategory) {
-        const rows = Array.isArray(summaryRes.forecastByCategory) ? summaryRes.forecastByCategory : []
-        for (const row of rows) {
-          const forecastGBP = Number(row?.forecast ?? 0)
-          if (!Number.isFinite(forecastGBP)) continue
-
-          if (row.category === 'Income') {
-            estimatedIncome += Math.abs(forecastGBP)
-            continue
-          }
-          if (row.category === 'Gift Money') {
-            estimatedGiftMoney += Math.abs(forecastGBP)
-            continue
-          }
-          if (EXCLUDED_EXPENSE_CATEGORIES.includes(row.category)) continue
-          estimatedExpenses += Math.abs(forecastGBP)
-        }
+  const {
+    netWorth,
+    liquidAssets,
+    annualIncome,
+    annualGiftMoney,
+    annualExpenses,
+    annualNetOutflow,
+    totalAssetMix,
+    liquidAssetMix,
+  } = useMemo(() => {
+    const accounts = accountsData ?? []
+    const accountsMap = new Map<string, AccountBalance>()
+    accounts.forEach((a) => {
+      const key = `${a.institution}-${a.account_name}`
+      const existing = accountsMap.get(key)
+      if (!existing || new Date(a.date_updated) > new Date(existing.date_updated)) {
+        accountsMap.set(key, a)
       }
+    })
+    const latest = Array.from(accountsMap.values())
+    const converted = latest.map((a) => ({
+      ...a,
+      balanceConverted: convertAmount(a.balance_total_local, a.currency, fxRate),
+    }))
 
-      const toDisplayCurrency = (valueGBP: number) =>
-        currency === 'USD' ? convertAmount(valueGBP, 'GBP', fxRate) : valueGBP
+    const nw = converted.reduce((sum, a) => {
+      if (a.category === 'Trust') return sum
+      return sum + a.balanceConverted
+    }, 0)
+    const totalMix = converted
+      .filter((a) => a.category !== 'Trust' && a.balanceConverted > 0)
+      .map((a) => ({ category: a.category, balance: a.balanceConverted }))
 
-      const incomeDisplay = toDisplayCurrency(estimatedIncome)
-      const giftMoneyDisplay = toDisplayCurrency(estimatedGiftMoney)
-      const expensesDisplay = toDisplayCurrency(estimatedExpenses)
-      const netOutflow = Math.max(0, expensesDisplay - incomeDisplay - giftMoneyDisplay)
+    const liquid = converted.reduce((sum, a) => {
+      if (!LIQUID_CATEGORIES.includes(a.category)) return sum
+      return sum + a.balanceConverted
+    }, 0)
+    const liquidMix = converted
+      .filter((a) => LIQUID_CATEGORIES.includes(a.category) && a.balanceConverted > 0)
+      .map((a) => ({ category: a.category, balance: a.balanceConverted }))
 
-      setNetWorth(nw)
-      setLiquidAssets(liquid)
-      setAnnualIncome(incomeDisplay)
-      setAnnualGiftMoney(giftMoneyDisplay)
-      setAnnualExpenses(expensesDisplay)
-      setAnnualNetOutflow(netOutflow)
-      setTotalAssetMix(totalMix)
-      setLiquidAssetMix(liquidMix)
-      setLoading(false)
+    let estimatedIncome = 0
+    let estimatedGiftMoney = 0
+    let estimatedExpenses = 0
+    if (dailySummaryData?.forecastByCategory) {
+      const rows = Array.isArray(dailySummaryData.forecastByCategory)
+        ? dailySummaryData.forecastByCategory
+        : []
+      for (const row of rows) {
+        const forecastGBP = Number(row?.forecast ?? 0)
+        if (!Number.isFinite(forecastGBP)) continue
+
+        if (row.category === 'Income') {
+          estimatedIncome += Math.abs(forecastGBP)
+          continue
+        }
+        if (row.category === 'Gift Money') {
+          estimatedGiftMoney += Math.abs(forecastGBP)
+          continue
+        }
+        if (EXCLUDED_EXPENSE_CATEGORIES.includes(row.category)) continue
+        estimatedExpenses += Math.abs(forecastGBP)
+      }
     }
-    fetchData()
-    return () => { cancelled = true }
-  }, [currency, fxRate, convertAmount])
+
+    const toDisplayCurrency = (valueGBP: number) =>
+      currency === 'USD' ? convertAmount(valueGBP, 'GBP', fxRate) : valueGBP
+
+    const incomeDisplay = toDisplayCurrency(estimatedIncome)
+    const giftMoneyDisplay = toDisplayCurrency(estimatedGiftMoney)
+    const expensesDisplay = toDisplayCurrency(estimatedExpenses)
+    const netOutflow = Math.max(0, expensesDisplay - incomeDisplay - giftMoneyDisplay)
+
+    return {
+      netWorth: nw,
+      liquidAssets: liquid,
+      annualIncome: incomeDisplay,
+      annualGiftMoney: giftMoneyDisplay,
+      annualExpenses: expensesDisplay,
+      annualNetOutflow: netOutflow,
+      totalAssetMix: totalMix,
+      liquidAssetMix: liquidMix,
+    }
+  }, [accountsData, dailySummaryData, currency, fxRate, convertAmount])
 
   const metrics = useMemo(() => {
     const assumptions = RETURN_ASSUMPTIONS_BY_PROFILE[returnProfile]

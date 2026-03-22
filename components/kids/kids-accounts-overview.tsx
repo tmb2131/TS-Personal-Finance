@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, Fragment, useMemo, useCallback } from 'react'
+import { useState, Fragment, useMemo, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import {
@@ -12,8 +13,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { createClient } from '@/lib/supabase/client'
 import { KidsAccount } from '@/lib/types'
+import { useKidsAccounts } from '@/lib/hooks/queries/use-kids-accounts'
+import { queryKeys } from '@/lib/query-keys'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { AlertCircle, Loader2, Pencil, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -53,39 +55,18 @@ function isEditableSource(source: KidsAccount['data_source']) {
 }
 
 export function KidsAccountsOverview() {
+  const queryClient = useQueryClient()
   const { currency, convertAmount, fxRate } = useCurrency()
-  const [accounts, setAccounts] = useState<KidsAccount[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, isLoading, error } = useKidsAccounts()
   const [editingAccount, setEditingAccount] = useState<KidsAccount | null>(null)
   const [bulkEditMode, setBulkEditMode] = useState(false)
   const [bulkSaving, setBulkSaving] = useState(false)
   const [bulkDrafts, setBulkDrafts] = useState<Record<string, { balance_usd: string; date_updated: string }>>({})
 
-  const loadKidsAccounts = useCallback(async () => {
-    const supabase = createClient()
-    
-    const accountsResult = await supabase
-      .from('kids_accounts')
-      .select('*')
-      .order('child_name')
-      .order('account_type')
-      .order('date_updated', { ascending: false })
-
-    if (accountsResult.error) {
-      console.error('Error fetching kids accounts:', accountsResult.error)
-      setError('Failed to load kids account data. Please try refreshing the page.')
-      setLoading(false)
-      return
-    }
-    
-    setError(null)
-
-    // Get the most recent balance for each account (grouped by child_name, account_type, and notes)
-    // This allows multiple accounts of the same type for the same child if they have different notes
+  const accounts = useMemo(() => {
     const accountsMap = new Map<string, KidsAccount>()
-    const data = accountsResult.data ?? []
-    data.forEach((account: KidsAccount) => {
+    const rows = data ?? []
+    rows.forEach((account: KidsAccount) => {
       if (!account?.child_name || account.account_type == null) return
       const notesKey = account.notes ?? 'no-notes'
       const key = `${account.child_name}-${account.account_type}-${notesKey}`
@@ -94,14 +75,8 @@ export function KidsAccountsOverview() {
         accountsMap.set(key, account)
       }
     })
-
-    setAccounts(Array.from(accountsMap.values()))
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    loadKidsAccounts()
-  }, [loadKidsAccounts])
+    return Array.from(accountsMap.values())
+  }, [data])
 
   const formatCurrency = useCallback((value: number) => {
     const num = Number(value)
@@ -207,7 +182,7 @@ export function KidsAccountsOverview() {
         toast.error(`${failedCount} kids account ${failedCount === 1 ? 'update failed' : 'updates failed'}`)
       }
 
-      await loadKidsAccounts()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.kids })
       setBulkEditMode(false)
       setBulkDrafts({})
     } catch (error) {
@@ -282,7 +257,7 @@ export function KidsAccountsOverview() {
     return Math.max(...items.map((item) => Math.abs(item.total)), 1)
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -311,7 +286,7 @@ export function KidsAccountsOverview() {
           <EmptyState
             icon={AlertCircle}
             title="Error loading kids accounts"
-            description={error}
+            description="Failed to load kids account data. Please try refreshing the page."
           />
         </CardContent>
       </Card>

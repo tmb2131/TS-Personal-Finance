@@ -26,6 +26,7 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
     lastRefreshDate,
     latestTransactionDate,
     maxAccountDate,
+    ingestionStatus,
     formatLastSheetSync,
     formatDate,
   } = useSync()
@@ -81,19 +82,20 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
           variant="outline"
           size="sm"
           onClick={handleSync}
-          disabled={syncing}
+          disabled={syncing || (!!ingestionStatus && !ingestionStatus.sheetConnected)}
           className="h-9 gap-1.5 px-2 text-xs md:px-3 md:text-sm"
+          title={ingestionStatus && !ingestionStatus.sheetConnected ? 'Connect a Google Sheet source in Settings to enable refresh.' : undefined}
         >
           <RefreshCw className={`h-3 w-3 md:h-4 md:w-4 ${syncing ? 'animate-spin' : ''}`} />
           {mounted ? (
             <>
-              <span className="hidden md:inline">Sync Transaction Log</span>
-              <span className="md:hidden">Sync Log</span>
+              <span className="hidden md:inline">Refresh Sheet</span>
+              <span className="md:hidden">Sheet</span>
             </>
           ) : (
             <>
-              <span className="hidden md:inline">Sync Transaction Log</span>
-              <span className="md:hidden">Sync Log</span>
+              <span className="hidden md:inline">Refresh Sheet</span>
+              <span className="md:hidden">Sheet</span>
             </>
           )}
         </Button>
@@ -102,13 +104,17 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
           <>
             <div className="min-w-0 text-xs text-muted-foreground md:hidden">
               <span className="text-foreground">
-                {syncing ? 'Syncing...' : formatLastSheetSync(lastRefreshDate)}
+                {syncing ? 'Refreshing...' : ingestionStatus?.freshness === 'setup' ? 'Add a source' : formatLastSheetSync(lastRefreshDate)}
               </span>
             </div>
             <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground md:flex md:gap-3 lg:gap-4">
               <div className="hidden md:block">
-                <span className="font-medium">Last Sheet Sync:</span>{' '}
-                <span className="text-foreground">{formatLastSheetSync(lastRefreshDate)}</span>
+                <span className="font-medium">Source Health:</span>{' '}
+                <span className="text-foreground">{ingestionStatus?.freshnessLabel ?? formatLastSheetSync(lastRefreshDate)}</span>
+              </div>
+              <div className="hidden md:block">
+                <span className="font-medium">Sources:</span>{' '}
+                <span className="text-foreground">{ingestionStatus?.connectedSources ?? 0}</span>
               </div>
               <div className="hidden lg:block">
                 <span className="font-medium">Latest Transaction:</span>{' '}

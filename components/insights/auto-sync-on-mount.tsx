@@ -1,14 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { DUMMY_SHEET_ID } from '@/lib/ingestion-shared'
 import { SYNC_COMPLETED_EVENT } from '@/lib/contexts/sync-context'
-
-const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
 export function AutoSyncOnMount() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [hasChecked, setHasChecked] = useState(false)
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export function AutoSyncOnMount() {
             const result = await response.json().catch(() => ({}))
 
             if (response.ok && result.success) {
+              queryClient.invalidateQueries()
               window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
               router.refresh()
             } else {

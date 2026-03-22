@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
-import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { finalizeDataPipeline } from '@/lib/ingestion'
+import { CACHE_TAGS } from '@/lib/cache-tags'
 
 const UpdateTransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -67,13 +67,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    try {
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    } catch (rebuildError) {
-      console.error('Transaction update: failed to rebuild YoY net worth data', rebuildError)
-    }
-
-    revalidateTags(CACHE_TAGS.TRANSACTIONS)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Transaction update',
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.TRANSACTIONS, CACHE_TAGS.NET_WORTH],
+    })
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Transaction PATCH error:', error)
@@ -118,13 +118,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    try {
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    } catch (rebuildError) {
-      console.error('Transaction delete: failed to rebuild YoY net worth data', rebuildError)
-    }
-
-    revalidateTags(CACHE_TAGS.TRANSACTIONS)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Transaction delete',
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.TRANSACTIONS, CACHE_TAGS.NET_WORTH],
+    })
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Transaction DELETE error:', error)

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Pencil, Plus, Trash2, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -23,11 +24,13 @@ import {
 } from '@/components/ui/table'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
+import { queryKeys } from '@/lib/query-keys'
 
 const EXCLUDED_CATEGORIES = ['Excluded']
 
 export function EditBudgetDialog() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { currency, fxRate, convertAmount } = useCurrency()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -331,6 +334,7 @@ export function EditBudgetDialog() {
   const handleClose = (isOpen: boolean) => {
     setOpen(isOpen)
     if (!isOpen) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgets })
       router.refresh()
     }
   }

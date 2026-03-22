@@ -15,6 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget } from '@/lib/types'
+import { useBudgets } from '@/lib/hooks/queries/use-budgets'
 import {
   computeAnnualForecasts,
   type AnnualForecastEntry,
@@ -103,8 +104,12 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
     [currency, fxRate, convertAmount, forecastByCategory]
   )
 
+  const { data: queryBudgets } = useBudgets()
+
   useEffect(() => {
-    // If we have initial data, reprocess it when currency changes
+    const budgetSource = initialData ?? queryBudgets
+    if (!budgetSource) return
+
     if (initialData) {
       const joined = processData(initialData, forecastByCategory)
       setData(joined)
@@ -112,38 +117,23 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
       return
     }
 
-    // Otherwise fetch fresh data
-    async function fetchData() {
+    async function fetchWithForecasts() {
       setLoading(true)
-      const supabase = createClient()
-      
-      const [budgetsResult, { data: { user } }] = await Promise.all([
-        supabase.from('budget_targets').select('*'),
-        supabase.auth.getUser(),
-      ])
-
-      if (budgetsResult.error) {
-        console.error('Error fetching budget data:', budgetsResult.error)
-        setError('Failed to load budget data. Please try refreshing the page.')
-        setLoading(false)
-        return
-      }
-      
       setError(null)
-
-      const budgets = budgetsResult.data as BudgetTarget[]
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
       let forecasts: Map<string, AnnualForecastEntry> | null = null
       if (user) {
         forecasts = await computeAnnualForecasts(supabase, user.id)
         setForecastByCategory(forecasts)
       }
-      const joined = processData(budgets, forecasts)
+      const joined = processData(budgetSource!, forecasts)
       setData(joined)
       setLoading(false)
     }
 
-    fetchData()
-  }, [currency, initialData, processData])
+    fetchWithForecasts()
+  }, [currency, initialData, queryBudgets, processData])
 
   useEffect(() => {
     if (!initialData || !forecastByCategory) return

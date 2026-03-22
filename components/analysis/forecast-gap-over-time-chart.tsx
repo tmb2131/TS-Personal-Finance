@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useForecastGapOverTime } from '@/lib/hooks/queries/use-forecast-gap-over-time'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -34,33 +34,17 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
-  const [data, setData] = useState<ForecastGapOverTimePoint[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const params = new URLSearchParams({ startDate, endDate })
-      const res = await fetch(`/api/forecast-gap-over-time?${params}`)
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `HTTP ${res.status}`)
-      }
-      const json: { data: ForecastGapOverTimePoint[] } = await res.json()
-      setData(json.data ?? [])
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load gap over time data')
-      setData([])
-    } finally {
-      setLoading(false)
-    }
-  }, [startDate, endDate])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  const { data: apiData, isLoading: loading, error: queryError } = useForecastGapOverTime(
+    startDate,
+    endDate,
+  )
+  const data: ForecastGapOverTimePoint[] = apiData?.data ?? []
+  const error: string | null =
+    queryError == null
+      ? null
+      : queryError instanceof Error
+        ? queryError.message
+        : String(queryError)
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-GB', {

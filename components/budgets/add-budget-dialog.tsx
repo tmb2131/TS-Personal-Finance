@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,9 +16,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { queryKeys } from '@/lib/query-keys'
 
 export function AddBudgetDialog() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { currency, fxRate } = useCurrency()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -76,6 +79,7 @@ export function AddBudgetDialog() {
       toast.success('Budget added')
       setOpen(false)
       resetForm()
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgets })
       router.refresh()
     } catch {
       toast.error('Failed to add budget')

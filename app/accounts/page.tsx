@@ -24,7 +24,7 @@ export default async function AccountsPage() {
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="rounded-full border bg-background px-2.5 py-1 font-medium">Input Mode: In-App</span>
-              <span className="rounded-full border bg-background px-2.5 py-1 font-medium">Sheet Sync: Transaction Log Only</span>
+              <span className="rounded-full border bg-background px-2.5 py-1 font-medium">Optional refresh: Google Sheet transactions</span>
             </div>
           </div>
           <div className="md:w-auto">

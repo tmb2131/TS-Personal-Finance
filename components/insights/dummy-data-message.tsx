@@ -12,12 +12,12 @@ export function DummyDataMessage() {
           <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
           <div className="flex-1">
             <h3 className="font-semibold text-sm mb-1 text-blue-900 dark:text-blue-100">
-              Dummy Data Loaded
+              Sample data loaded
             </h3>
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              You're viewing sample data to help you explore the app. To sync your own data,{' '}
+              You&apos;re viewing sample data to explore the product. You can replace it with CSV imports, manual entries, or an optional Google Sheet connector in{' '}
               <Link href="/settings" className="font-medium underline hover:no-underline">
-                update your Google Sheet ID in Settings
+                Settings
               </Link>
               .
             </p>

@@ -68,17 +68,17 @@ const TARGET_OPTIONS: Array<{ value: CsvImportTarget; title: string; description
   {
     value: 'transactions',
     title: 'Transactions',
-    description: 'Import bank activity, spending, and income rows.',
+    description: 'Load bank activity, spending, and income without a live sheet.',
   },
   {
     value: 'account_balances',
     title: 'Account Balances',
-    description: 'Import account-level balances by institution and account.',
+    description: 'Backfill institutions and balance snapshots in one pass.',
   },
   {
     value: 'recurring_payments',
     title: 'Recurring Payments',
-    description: 'Import annual recurring subscriptions and commitments.',
+    description: 'Seed subscriptions and commitments for liquidity planning.',
   },
 ]
 
@@ -457,9 +457,9 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
     <div className="rounded-xl border bg-background p-3">
       <ol className="grid grid-cols-3 gap-2 text-xs">
         {[
-          { index: 1, label: 'Upload' },
+          { index: 1, label: 'Upload CSV' },
           { index: 2, label: 'Map Columns' },
-          { index: 3, label: 'Review & Import' },
+          { index: 3, label: 'Review & Ingest' },
         ].map((item) => {
           const active = item.index === currentStep
           const done = item.index < currentStep
@@ -507,7 +507,7 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
               Import Complete
             </CardTitle>
             <CardDescription>
-              {TARGET_OPTIONS.find((option) => option.value === target)?.title} import finished.
+              {TARGET_OPTIONS.find((option) => option.value === target)?.title} is now part of your native ingestion pipeline.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -540,8 +540,8 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
         {renderStepProgress()}
         <Card>
           <CardHeader>
-            <CardTitle>Import Target</CardTitle>
-            <CardDescription>Select the dataset you want to import, then upload a CSV file.</CardDescription>
+            <CardTitle>Choose a CSV source</CardTitle>
+            <CardDescription>Select the dataset you want to bulk load, then upload the file you want Findash to normalize.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-3">
@@ -585,7 +585,7 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
               <p className="text-sm font-medium">Drag and drop your CSV file here</p>
               <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
               <p className="text-xs text-muted-foreground mt-3">
-                Target: <span className="font-medium">{TARGET_OPTIONS.find((option) => option.value === target)?.title}</span>
+                Target dataset: <span className="font-medium">{TARGET_OPTIONS.find((option) => option.value === target)?.title}</span>
               </p>
               <input
                 ref={fileInputRef}
@@ -615,7 +615,7 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
               Map Columns
             </CardTitle>
             <CardDescription>
-              {fileName} - {rows.length} rows detected for {TARGET_ROW_LABEL[target]}. Map your CSV columns to our fields.
+              {fileName} - {rows.length} rows detected for {TARGET_ROW_LABEL[target]}. Map your source columns to Findash fields before ingestion.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -727,9 +727,9 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
       {renderStepProgress()}
       <Card>
         <CardHeader>
-          <CardTitle>Review & Import</CardTitle>
+            <CardTitle>Review & Ingest</CardTitle>
           <CardDescription>
-            Review the mapped {TARGET_ROW_LABEL[target]} before importing.
+              Review the mapped {TARGET_ROW_LABEL[target]} before they are written into the app.
           </CardDescription>
         </CardHeader>
         <CardContent>

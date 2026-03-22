@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { queryKeys } from '@/lib/query-keys'
 
 interface AddRecurringPaymentDialogProps {
   triggerLabel?: string
@@ -30,6 +32,7 @@ export function AddRecurringPaymentDialog({
   triggerClassName,
 }: AddRecurringPaymentDialogProps = {}) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { currency, fxRate } = useCurrency()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -104,6 +107,7 @@ export function AddRecurringPaymentDialog({
       toast.success('Recurring payment added')
       resetForm()
       setOpen(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.recurring })
       router.refresh()
     } catch {
       toast.error('Failed to add recurring payment')

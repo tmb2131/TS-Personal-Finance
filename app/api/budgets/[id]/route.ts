@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
-import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { finalizeDataPipeline } from '@/lib/ingestion'
+import { CACHE_TAGS } from '@/lib/cache-tags'
 
 const UpdateBudgetSchema = z.object({
   annual_budget_gbp: z.number().optional(),
@@ -51,13 +51,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    try {
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    } catch (rebuildError) {
-      console.error('Budget update: failed to rebuild YoY net worth data', rebuildError)
-    }
-
-    revalidateTags(CACHE_TAGS.BUDGETS)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Budget update',
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.BUDGETS, CACHE_TAGS.NET_WORTH],
+    })
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('Budget PATCH error:', error)
@@ -100,13 +100,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    try {
-      await rebuildYoYNetWorthFromAppData(supabase, user.id)
-    } catch (rebuildError) {
-      console.error('Budget delete: failed to rebuild YoY net worth data', rebuildError)
-    }
-
-    revalidateTags(CACHE_TAGS.BUDGETS)
+    await finalizeDataPipeline({
+      supabase,
+      userId: user.id,
+      context: 'Budget delete',
+      rebuildYoYNetWorth: true,
+      revalidate: [CACHE_TAGS.BUDGETS, CACHE_TAGS.NET_WORTH],
+    })
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Budget DELETE error:', error)

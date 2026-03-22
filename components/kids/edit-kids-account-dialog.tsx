@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { KidsAccount } from '@/lib/types'
+import { queryKeys } from '@/lib/query-keys'
 
 const COMMON_ACCOUNT_TYPES = ['529', 'UGMA', 'Savings', 'Checking', 'Trust', 'Other']
 
@@ -29,6 +31,7 @@ interface EditKidsAccountDialogProps {
 
 export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsAccountDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -82,6 +85,7 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
 
       toast.success('Account updated')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.kids })
       router.refresh()
     } catch {
       toast.error('Failed to update account')
@@ -103,6 +107,7 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
 
       toast.success('Account deleted')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.kids })
       router.refresh()
     } catch {
       toast.error('Failed to delete account')

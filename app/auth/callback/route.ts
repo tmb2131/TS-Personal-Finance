@@ -1,13 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { finalizeDataPipeline } from '@/lib/ingestion'
+import { DUMMY_SHEET_ID } from '@/lib/ingestion-shared'
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
-import { recordLastSync } from '@/lib/sync-metadata'
-import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
 
 const POST_LOGIN_REDIRECT = '/'
-const DUMMY_SHEET_ID = '1BxVuJ-DViN5nqpLc-8tGXex_pYiPY8dfL8UV5czCrHY'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -93,9 +91,13 @@ export async function GET(request: Request) {
         })
           .then(async (result) => {
             if (result.success) {
-              await rebuildHistoricalNetWorthFromAccountHistory(supabase, data.user.id)
-              await rebuildYoYNetWorthFromAppData(supabase, data.user.id)
-              await recordLastSync(supabase, data.user.id)
+              await finalizeDataPipeline({
+                supabase,
+                userId: data.user.id,
+                context: 'Auth callback sample data sync',
+                rebuildYoYNetWorth: true,
+                recordSyncTimestamp: true,
+              })
               console.log(`[auth/callback] Successfully synced dummy data for user ${data.user.id}`)
             } else {
               console.error(`[auth/callback] Sync completed with errors for user ${data.user.id}:`, result.error)

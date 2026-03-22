@@ -11,7 +11,9 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
-import { TransactionLog, BudgetTarget, AnnualTrend } from '@/lib/types'
+import { useBudgets } from '@/lib/hooks/queries/use-budgets'
+import { useTransactions } from '@/lib/hooks/queries/use-transactions'
+import { TransactionLog, AnnualTrend } from '@/lib/types'
 import { computeAnnualTrends, computeAnnualForecasts } from '@/lib/forecasting'
 import { AlertCircle } from 'lucide-react'
 import {
@@ -32,12 +34,12 @@ export function AnnualCumulativeSpendChart() {
   const { currency, fxRate } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
-  const [transactions, setTransactions] = useState<TransactionLog[]>([])
-  const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
+  const { data: budgetsData, isLoading: budgetsLoading, error: budgetsError } = useBudgets()
+  const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } =
+    useTransactions(null)
   const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
   const [forecastByCategory, setForecastByCategory] = useState<Map<string, { forecast: number; ytd: number; annualBudget: number }> | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [trendsAndForecastsReady, setTrendsAndForecastsReady] = useState(false)
   // On mobile, default to only Current Year + Budget; on desktop show all years
   const [showHistoricalYears, setShowHistoricalYears] = useState(false)
   const [showYTDOnly, setShowYTDOnly] = useState(false)
@@ -45,138 +47,75 @@ export function AnnualCumulativeSpendChart() {
     setShowHistoricalYears(!isMobile)
   }, [isMobile])
 
-  // Fetch transactions, budget data, and annual_trends (authoritative year totals)
+  const budgetData = budgetsData ?? []
+  const transactions = useMemo(() => {
+    const all = transactionsData ?? []
+    return all.filter(
+      (tx: TransactionLog) => !EXCLUDED_CATEGORIES.includes(tx.category || '')
+    ) as TransactionLog[]
+  }, [transactionsData])
+
+  const hookError = budgetsError ?? transactionsError
+  const error =
+    budgetsError != null
+      ? budgetsError instanceof Error
+        ? budgetsError.message
+        : String(budgetsError)
+      : transactionsError != null
+        ? transactionsError instanceof Error
+          ? transactionsError.message
+          : String(transactionsError)
+        : null
+
+  const loading =
+    budgetsLoading ||
+    transactionsLoading ||
+    (!hookError && !trendsAndForecastsReady)
+
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
-      
-      const currentYear = new Date().getFullYear()
-      
-      // Fetch budget data and annual_trends in parallel with transactions
-      const [{ data: { user } }, budgetsResult, annualTrendsComputed] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.from('budget_targets').select('*'),
-        supabase.auth.getUser().then(({ data: { user } }) => user ? computeAnnualTrends(supabase, user.id) : []),
-      ])
-      if (user) {
-        const forecasts = await computeAnnualForecasts(supabase, user.id)
-        setForecastByCategory(forecasts)
-      }
-      
-      // Fetch all transactions with pagination
-      let allTransactions: TransactionLog[] = []
-      let page = 0
-      const pageSize = 1000
-      let hasMore = true
-      
-      while (hasMore) {
-        const from = page * pageSize
-        const to = from + pageSize - 1
-        
-        const transactionsResult = await supabase
-          .from('transaction_log')
-          .select('*', { count: 'exact' })
-          .order('date', { ascending: true })
-          .range(from, to)
-        
-        if (transactionsResult.error) {
-          console.error('Error fetching transactions:', transactionsResult.error)
-          setError('Failed to load transaction data. Please try refreshing the page.')
-          setLoading(false)
-          return
-        }
-        
-        const pageTransactions = transactionsResult.data || []
-        allTransactions = [...allTransactions, ...pageTransactions]
-        
-        // If we got fewer results than requested, we've reached the end
-        hasMore = pageTransactions.length === pageSize
-        
-        if (page === 0) {
-          console.log(`Total transactions in database: ${transactionsResult.count}`)
-        }
-        
-        page++
-      }
-      
-      console.log(`Fetched ${allTransactions.length} transactions total`)
+    if (budgetsLoading || transactionsLoading) return
 
-      if (budgetsResult.error) {
-        console.error('Error fetching budget data:', budgetsResult.error)
-        setError('Failed to load budget data. Please try refreshing the page.')
-        setLoading(false)
-        return
-      }
-
-      if (Array.isArray(annualTrendsComputed)) {
-        setAnnualTrends(annualTrendsComputed as AnnualTrend[])
-      }
-
-      setError(null)
-      
-      // Filter out excluded categories
-      const expenseTransactions = allTransactions.filter(
-        (tx: TransactionLog) => !EXCLUDED_CATEGORIES.includes(tx.category || '')
-      )
-      
-      // Debug: Log transaction counts by year with sample dates
-      const transactionsByYear = new Map<number, number>()
-      const sampleDatesByYear = new Map<number, string[]>()
-      const dateRange = { min: '', max: '' }
-      
-      expenseTransactions.forEach((tx: TransactionLog, idx: number) => {
-        if (!tx.date) return
-        
-        // Parse date - Supabase returns DATE as string in YYYY-MM-DD format
-        const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
-        const year = parseInt(dateStr.split('-')[0])
-        
-        if (isNaN(year)) {
-          console.warn(`Invalid year parsed from date: ${tx.date} -> ${dateStr}`)
-          return
-        }
-        
-        transactionsByYear.set(year, (transactionsByYear.get(year) || 0) + 1)
-        
-        // Track date range
-        if (!dateRange.min || dateStr < dateRange.min) dateRange.min = dateStr
-        if (!dateRange.max || dateStr > dateRange.max) dateRange.max = dateStr
-        
-        // Store sample dates for each year
-        if (!sampleDatesByYear.has(year)) {
-          sampleDatesByYear.set(year, [])
-        }
-        const samples = sampleDatesByYear.get(year)!
-        if (samples.length < 5) {
-          samples.push(dateStr)
-        }
-      })
-      
-      console.log('Date range in transactions:', dateRange)
-      console.log('Transactions by year:', Array.from(transactionsByYear.entries()))
-      console.log('Sample dates by year:', Array.from(sampleDatesByYear.entries()))
-      console.log('Total expense transactions:', expenseTransactions.length)
-      
-      // Log first and last few transactions to see their date format
-      console.log('First 3 transactions:', expenseTransactions.slice(0, 3).map(tx => ({
-        date: tx.date,
-        dateType: typeof tx.date,
-        category: tx.category
-      })))
-      console.log('Last 3 transactions:', expenseTransactions.slice(-3).map(tx => ({
-        date: tx.date,
-        dateType: typeof tx.date,
-        category: tx.category
-      })))
-      
-      setTransactions(expenseTransactions as TransactionLog[])
-      setBudgetData((budgetsResult.data as BudgetTarget[]) || [])
-      setLoading(false)
+    if (budgetsError || transactionsError) {
+      setTrendsAndForecastsReady(true)
+      return
     }
 
-    fetchData()
-  }, [currency])
+    let cancelled = false
+    setTrendsAndForecastsReady(false)
+
+    ;(async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        if (!cancelled) {
+          setAnnualTrends([])
+          setForecastByCategory(null)
+          setTrendsAndForecastsReady(true)
+        }
+        return
+      }
+      const annualTrendsComputed = await computeAnnualTrends(supabase, user.id)
+      const forecasts = await computeAnnualForecasts(supabase, user.id)
+      if (!cancelled) {
+        if (Array.isArray(annualTrendsComputed)) {
+          setAnnualTrends(annualTrendsComputed as AnnualTrend[])
+        }
+        setForecastByCategory(forecasts)
+        setTrendsAndForecastsReady(true)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    budgetsLoading,
+    transactionsLoading,
+    budgetsError,
+    transactionsError,
+    budgetsData,
+    transactionsData,
+  ])
 
   // Calculate chart data
   const chartData = useMemo(() => {

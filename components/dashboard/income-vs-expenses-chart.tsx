@@ -12,6 +12,8 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { BudgetTarget, InvestmentReturn } from '@/lib/types'
+import { useBudgets } from '@/lib/hooks/queries/use-budgets'
+import { useInvestmentReturns } from '@/lib/hooks/queries/use-investment-returns'
 import {
   computeAnnualForecasts,
   type AnnualForecastEntry,
@@ -62,8 +64,10 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   const chartTheme = useChartTheme()
   const [mounted, setMounted] = useState(false)
   const [includeInvestmentIncome, setIncludeInvestmentIncome] = useState(false)
-  const [retryCount, setRetryCount] = useState(0)
   const fontSizes = getChartFontSizes(isMobile)
+
+  const { data: queryBudgets } = useBudgets()
+  const { data: queryInvestmentReturns } = useInvestmentReturns()
 
   useEffect(() => {
     setMounted(true)
@@ -77,42 +81,24 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
       return
     }
 
-    async function fetchData() {
-      setLoading(true)
+    const budgetList = queryBudgets as BudgetTarget[] | undefined
+    const investmentList = queryInvestmentReturns as InvestmentReturn[] | undefined
+    if (!budgetList || !investmentList) return
+
+    async function applyQueryData() {
+      setBudgets(budgetList!)
+      setInvestmentReturns(investmentList!)
       const supabase = createClient()
-      const [budgetsRes, investmentRes, { data: { user } }] = await Promise.all([
-        supabase.from('budget_targets').select('*'),
-        supabase.from('investment_return').select('*'),
-        supabase.auth.getUser(),
-      ])
-      if (budgetsRes.error) {
-        setError(budgetsRes.error.message)
-        setLoading(false)
-        return
-      }
-      if (investmentRes.error) {
-        setError(investmentRes.error.message)
-        setLoading(false)
-        return
-      }
-      const budgetList = (budgetsRes.data as BudgetTarget[]) || []
-      const investmentList = (investmentRes.data as InvestmentReturn[]) || []
-      setBudgets(budgetList)
-      setInvestmentReturns(investmentList)
+      const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const forecasts = await computeAnnualForecasts(supabase, user.id)
         setForecastByCategory(forecasts)
       }
       setError(null)
       setLoading(false)
-
-      // Retry once if we got empty data (session may not have been ready on first load)
-      if (retryCount === 0 && budgetList.length === 0 && investmentList.length === 0) {
-        setTimeout(() => setRetryCount(1), 500)
-      }
     }
-    fetchData()
-  }, [hasInitial, retryCount, initialData])
+    applyQueryData()
+  }, [hasInitial, initialData, queryBudgets, queryInvestmentReturns])
 
   useEffect(() => {
     if (initialAnnualForecasts === undefined) return

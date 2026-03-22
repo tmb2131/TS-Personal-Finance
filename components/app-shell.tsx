@@ -45,7 +45,7 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
     )
   }
 
-  const { handleSync, syncing } = useSync()
+  const { handleSync, syncing, ingestionStatus } = useSync()
 
   return (
     <>
@@ -61,7 +61,10 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
             tabIndex={-1}
             className="main-content flex-1 overflow-y-auto overscroll-y-contain p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:p-6 md:pb-6"
           >
-            <PullToRefresh onRefresh={handleSync} disabled={syncing}>
+            <PullToRefresh
+              onRefresh={handleSync}
+              disabled={syncing || (!!ingestionStatus && !ingestionStatus.sheetConnected)}
+            >
               {children}
             </PullToRefresh>
           </main>

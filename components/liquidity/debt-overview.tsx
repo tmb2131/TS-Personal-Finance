@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useMemo, useState } from 'react'
+import { useAccounts } from '@/lib/hooks/queries/use-accounts'
+import { useDebt } from '@/lib/hooks/queries/use-debt'
 import { AccountBalance, Debt } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -41,93 +42,72 @@ export default function DebtOverview() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
-  const [loading, setLoading] = useState(true)
-  const [totalDebt, setTotalDebt] = useState(0)
-  const [totalAssets, setTotalAssets] = useState(0)
-  const [debtRatio, setDebtRatio] = useState<number | null>(null)
-  const [debtItems, setDebtItems] = useState<Debt[]>([])
+  const {
+    data: accountsData,
+    isLoading: accountsLoading,
+    error: accountsError,
+  } = useAccounts()
+  const { data: debtData, isLoading: debtLoading, error: debtError } = useDebt()
+  const loading = accountsLoading || debtLoading
+  const error = accountsError?.message ?? debtError?.message ?? null
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [hasTrust, setHasTrust] = useState(false)
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null)
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
+  const debtItems = useMemo(() => {
+    if (!debtData) return []
+    return debtData.filter((d) => d.type !== 'Committed Capital') as Debt[]
+  }, [debtData])
 
-      // Fetch debt (excluding Committed Capital)
-      const { data: debts } = await supabase
-        .from('debt')
-        .select('*')
-        .neq('type', 'Committed Capital')
+  const latestAccounts = useMemo(() => {
+    if (!accountsData) return []
+    const accountsMap = new Map<string, AccountBalance>()
+    accountsData.forEach((account) => {
+      const key = `${account.institution}-${account.account_name}`
+      const existing = accountsMap.get(key)
+      if (
+        !existing ||
+        new Date(account.date_updated) > new Date(existing.date_updated)
+      ) {
+        accountsMap.set(key, account)
+      }
+    })
+    return Array.from(accountsMap.values())
+  }, [accountsData])
 
-      // Fetch account balances for assets calculation
-      const { data: accounts } = await supabase
-        .from('account_balances')
-        .select('*')
-        .order('date_updated', { ascending: false })
+  const totalDebt = useMemo(() => {
+    let debt = 0
+    debtItems.forEach((debtItem: Debt) => {
+      const amount =
+        (currency === 'USD' ? debtItem.amount_usd : debtItem.amount_gbp) ?? 0
+      debt += amount
+    })
+    return debt
+  }, [debtItems, currency])
 
-      if (!debts || !accounts) {
-        setLoading(false)
+  const { totalAssets, hasTrust } = useMemo(() => {
+    let assets = 0
+    let trustExists = false
+    latestAccounts.forEach((account) => {
+      if (account.category === 'Trust') {
+        trustExists = true
         return
       }
+      const amount = convertAmount(
+        account.balance_total_local ?? 0,
+        account.currency ?? 'USD',
+        fxRate
+      )
+      assets += amount
+    })
+    return { totalAssets: assets, hasTrust: trustExists }
+  }, [latestAccounts, convertAmount, fxRate])
 
-      // Store debt items for dialog
-      setDebtItems(debts)
-
-      // Calculate total debt
-      let debt = 0
-      debts.forEach((debtItem: Debt) => {
-        const amount =
-          (currency === 'USD' ? debtItem.amount_usd : debtItem.amount_gbp) ?? 0
-        debt += amount
-      })
-
-      // Deduplicate accounts by institution + account_name
-      const accountsMap = new Map<string, AccountBalance>()
-      accounts.forEach((account) => {
-        const key = `${account.institution}-${account.account_name}`
-        const existing = accountsMap.get(key)
-        if (
-          !existing ||
-          new Date(account.date_updated) > new Date(existing.date_updated)
-        ) {
-          accountsMap.set(key, account)
-        }
-      })
-
-      const latestAccounts = Array.from(accountsMap.values())
-
-      // Calculate total assets (excluding Trust accounts)
-      let assets = 0
-      let trustExists = false
-      latestAccounts.forEach((account) => {
-        if (account.category === 'Trust') {
-          trustExists = true
-          return
-        }
-        const amount = convertAmount(
-          account.balance_total_local ?? 0,
-          account.currency ?? 'USD',
-          fxRate
-        )
-        assets += amount
-      })
-      setHasTrust(trustExists)
-
-      setTotalDebt(debt)
-      setTotalAssets(assets)
-
-      // Calculate debt ratio
-      if (assets > 0) {
-        setDebtRatio((debt / assets) * 100)
-      }
-
-      setLoading(false)
+  const debtRatio = useMemo(() => {
+    if (totalAssets > 0) {
+      return (totalDebt / totalAssets) * 100
     }
-
-    fetchData()
-  }, [currency, convertAmount, fxRate])
+    return null
+  }, [totalDebt, totalAssets])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

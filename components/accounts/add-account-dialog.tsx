@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { queryKeys } from '@/lib/query-keys'
 
 const ACCOUNT_CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Property', 'Trust', 'Other']
 const LIQUIDITY_PROFILES = ['Instant', 'Within 6 Months', 'Locked Up']
@@ -68,6 +70,7 @@ export function AddAccountDialog({
   triggerClassName,
 }: AddAccountDialogProps = {}) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -142,6 +145,7 @@ export function AddAccountDialog({
       toast.success('Account added')
       setOpen(false)
       resetForm()
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts })
       router.refresh()
     } catch {
       toast.error('Failed to add account')

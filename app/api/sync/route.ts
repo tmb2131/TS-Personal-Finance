@@ -1,8 +1,7 @@
 import { syncGoogleSheet } from '@/lib/sync-google-sheet'
-import { recordLastSync } from '@/lib/sync-metadata'
+import { finalizeDataPipeline } from '@/lib/ingestion'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { revalidateAllData } from '@/lib/cache-tags'
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +23,7 @@ export async function POST(request: Request) {
 
     if (!profile?.google_spreadsheet_id) {
       return NextResponse.json(
-        { success: false, error: 'Connect your Transaction Log sheet first in Settings.' },
+        { success: false, error: 'No Google Sheet source is connected. Use CSV import, manual entry, or add a sheet in Settings.' },
         { status: 400 }
       )
     }
@@ -37,8 +36,20 @@ export async function POST(request: Request) {
     console.log('Sync API: Sync completed', { success: result.success, resultsCount: result.results?.length })
 
     if (result.success) {
-      await recordLastSync(supabase, user.id)
-      revalidateAllData()
+      const finalized = await finalizeDataPipeline({
+        supabase,
+        userId: user.id,
+        context: 'Manual sheet sync',
+        rebuildYoYNetWorth: true,
+        recordSyncTimestamp: true,
+        revalidate: 'all',
+      })
+      return NextResponse.json({
+        success: result.success,
+        results: result.results || [],
+        error: result.error || null,
+        warnings: finalized.warnings,
+      })
     }
 
     // Ensure consistent response format

@@ -10,11 +10,12 @@ import {
   type ReactNode,
 } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import type { HeaderStatus } from '@/lib/data/cached-queries'
+import type { IngestionStatusSnapshot } from '@/lib/ingestion-shared'
 
-/** Custom event dispatched after a successful sync so client components can re-fetch. */
+/** @deprecated Prefer queryClient.invalidateQueries() — kept for backward compat only. */
 export const SYNC_COMPLETED_EVENT = 'sync-completed'
 
 type SyncResultRow = { sheet: string; success: boolean; rowsProcessed: number }
@@ -25,6 +26,8 @@ interface SyncContextValue {
   lastRefreshDate: string | null
   latestTransactionDate: string | null
   maxAccountDate: string | null
+  ingestionStatus: IngestionStatusSnapshot | null
+  refreshIngestionStatus: () => Promise<void>
   formatLastSheetSync: (dateString: string | null) => string
   formatDate: (dateString: string | null) => string
 }
@@ -82,33 +85,44 @@ interface SyncProviderProps {
 
 export function SyncProvider({ children, initialHeaderData }: SyncProviderProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [syncing, setSyncing] = useState(false)
   const [lastRefreshDate, setLastRefreshDate] = useState<string | null>(initialHeaderData?.lastSyncAt ?? null)
   const [latestTransactionDate, setLatestTransactionDate] = useState<string | null>(
     initialHeaderData?.latestTransactionDate ?? null
   )
   const [maxAccountDate, setMaxAccountDate] = useState<string | null>(initialHeaderData?.maxAccountDate ?? null)
+  const [ingestionStatus, setIngestionStatus] = useState<IngestionStatusSnapshot | null>(null)
   const syncStartTimeRef = useRef<number | null>(null)
 
-  const fetchLatestDates = useCallback(async () => {
-    try {
-      const supabase = createClient()
-      const [syncResult, txResult, acctResult] = await Promise.all([
-        supabase.from('sync_metadata').select('last_sync_at').maybeSingle(),
-        supabase.from('transaction_log').select('date').order('date', { ascending: false }).limit(1),
-        supabase.from('account_balances').select('date_updated').order('date_updated', { ascending: false }).limit(1),
-      ])
-      if (syncResult.data?.last_sync_at) setLastRefreshDate(syncResult.data.last_sync_at)
-      if (txResult.data?.[0]?.date) setLatestTransactionDate(txResult.data[0].date)
-      if (acctResult.data?.[0]?.date_updated) setMaxAccountDate(acctResult.data[0].date_updated)
-    } catch (error) {
-      console.error('Error fetching latest dates:', error)
-    }
+  const applyIngestionStatus = useCallback((status: IngestionStatusSnapshot) => {
+    setIngestionStatus(status)
+    setLastRefreshDate(status.lastSyncAt)
+    setLatestTransactionDate(status.latestTransactionDate)
+    setMaxAccountDate(status.maxAccountDate)
   }, [])
 
+  const refreshIngestionStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/ingestion/status', { cache: 'no-store' })
+      if (!response.ok) return
+      const result = await response.json()
+      if (result.success && result.data) {
+        applyIngestionStatus(result.data as IngestionStatusSnapshot)
+      }
+    } catch (error) {
+      console.error('Error fetching ingestion status:', error)
+    }
+  }, [applyIngestionStatus])
+
   useEffect(() => {
-    if (!initialHeaderData) fetchLatestDates()
-  }, [initialHeaderData, fetchLatestDates])
+    refreshIngestionStatus()
+  }, [refreshIngestionStatus])
+
+  const invalidateAllQueries = useCallback(() => {
+    queryClient.invalidateQueries()
+    window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
+  }, [queryClient])
 
   const handleSync = useCallback(async () => {
     setSyncing(true)
@@ -147,13 +161,11 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
         toast.success('Sync Complete', {
           description: formatSyncResults(result.results ?? []),
         })
-        window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
-        setLastRefreshDate(new Date().toISOString())
-        fetchLatestDates()
-        // Refresh all server-rendered data and rerender current screen
+        invalidateAllQueries()
+        await refreshIngestionStatus()
         setTimeout(() => router.refresh(), 0)
       } else {
-        const errorMsg = result.error || 'Transaction Log sync failed'
+        const errorMsg = result.error || 'Google Sheet refresh failed'
         const failedSheets = result.results
           ?.filter((r: SyncResultRow) => !r.success)
           .map((r: SyncResultRow) => r.sheet)
@@ -172,7 +184,7 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
       console.error('Sync error:', error)
       if (isAborted) {
         toast.warning('Sync taking longer than expected', {
-          description: 'Transaction Log sync may still be running. Refresh in a minute to check.',
+          description: 'Google Sheet refresh may still be running. Refresh in a minute to check.',
         })
       } else {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
@@ -182,7 +194,7 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
         })
       }
     }
-  }, [fetchLatestDates, router])
+  }, [refreshIngestionStatus, router, invalidateAllQueries])
 
   useEffect(() => {
     const onVisibilityChange = async () => {
@@ -192,21 +204,25 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
       if (startedAt == null) return
       await new Promise((r) => setTimeout(r, 1500))
       try {
-        const supabase = createClient()
-        const { data } = await supabase.from('sync_metadata').select('last_sync_at').maybeSingle()
-        const lastSyncAt = data?.last_sync_at ? new Date(data.last_sync_at).getTime() : 0
+        const response = await fetch('/api/ingestion/status', { cache: 'no-store' })
+        const result = await response.json().catch(() => ({}))
+        const lastSyncAt = result?.data?.lastSyncAt ? new Date(result.data.lastSyncAt).getTime() : 0
         if (lastSyncAt >= startedAt) {
           setSyncing(false)
           syncStartTimeRef.current = null
-          await fetchLatestDates()
-          toast.success('Sync Complete', { description: 'Sheet sync completed while you were away.' })
-          window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
+          if (result?.success && result?.data) {
+            applyIngestionStatus(result.data as IngestionStatusSnapshot)
+          } else {
+            await refreshIngestionStatus()
+          }
+          toast.success('Sync Complete', { description: 'Sheet refresh completed while you were away.' })
+          invalidateAllQueries()
           setTimeout(() => router.refresh(), 0)
         } else {
           setSyncing(false)
           syncStartTimeRef.current = null
           toast.info('Sync interrupted', {
-            description: 'Tap Sync Transaction Log to try again.',
+            description: 'Tap Refresh Sheet to try again.',
             action: { label: 'Sync Now', onClick: handleSync },
           })
         }
@@ -214,14 +230,14 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
         setSyncing(false)
         syncStartTimeRef.current = null
         toast.info('Sync interrupted', {
-          description: 'Tap Sync Transaction Log to try again.',
+          description: 'Tap Refresh Sheet to try again.',
           action: { label: 'Sync Now', onClick: handleSync },
         })
       }
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => document.removeEventListener('visibilitychange', onVisibilityChange)
-  }, [syncing, fetchLatestDates, router, handleSync])
+  }, [syncing, applyIngestionStatus, refreshIngestionStatus, router, handleSync, invalidateAllQueries])
 
   const value: SyncContextValue = {
     syncing,
@@ -229,6 +245,8 @@ export function SyncProvider({ children, initialHeaderData }: SyncProviderProps)
     lastRefreshDate,
     latestTransactionDate,
     maxAccountDate,
+    ingestionStatus,
+    refreshIngestionStatus,
     formatLastSheetSync,
     formatDate,
   }

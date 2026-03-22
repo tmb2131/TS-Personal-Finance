@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -9,6 +9,7 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { cn } from '@/utils/cn'
+import { useForecastBridge } from '@/lib/hooks/queries/use-forecast-bridge'
 import { AlertCircle, TrendingUp } from 'lucide-react'
 import {
   BarChart,
@@ -60,33 +61,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
   const { currency } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
-  const [data, setData] = useState<ForecastBridgeData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const params = new URLSearchParams({ startDate, endDate })
-      const res = await fetch(`/api/forecast-bridge?${params}`)
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `HTTP ${res.status}`)
-      }
-      const json: ForecastBridgeData = await res.json()
-      setData(json)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load forecast bridge data')
-      setData(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [startDate, endDate])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  const { data, isLoading: loading, error } = useForecastBridge(startDate, endDate)
 
   const waterfallData = useMemo((): WaterfallBar[] => {
     if (!data) return []
@@ -199,7 +174,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
           <EmptyState
             icon={AlertCircle}
             title="Error loading data"
-            description={error}
+            description={(error as Error)?.message ?? 'Failed to load forecast bridge data'}
           />
         </CardContent>
       </Card>

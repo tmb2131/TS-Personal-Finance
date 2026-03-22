@@ -6,6 +6,7 @@ import { CurrencyProvider } from '@/lib/contexts/currency-context'
 import { SyncProvider } from '@/lib/contexts/sync-context'
 import { InsightsDataProvider } from '@/components/insights/insights-data-context'
 import { ThemeProvider } from '@/lib/contexts/theme-provider'
+import { QueryProvider } from '@/lib/contexts/query-provider'
 import { AppShell } from '@/components/app-shell'
 import { fetchHeaderStatus } from '@/lib/data/cached-queries'
 
@@ -40,13 +41,15 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
-          <CurrencyProvider>
-            <SyncProvider initialHeaderData={initialHeaderData}>
-              <InsightsDataProvider>
-                <AppShell initialHeaderData={initialHeaderData}>{children}</AppShell>
-              </InsightsDataProvider>
-            </SyncProvider>
-          </CurrencyProvider>
+          <QueryProvider>
+            <CurrencyProvider>
+              <SyncProvider initialHeaderData={initialHeaderData}>
+                <InsightsDataProvider>
+                  <AppShell initialHeaderData={initialHeaderData}>{children}</AppShell>
+                </InsightsDataProvider>
+              </SyncProvider>
+            </CurrencyProvider>
+          </QueryProvider>
         </ThemeProvider>
         <Analytics />
       </body>

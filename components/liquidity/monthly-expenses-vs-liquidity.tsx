@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useMemo } from 'react'
+import { useAccounts } from '@/lib/hooks/queries/use-accounts'
+import { useCashRunway } from '@/lib/hooks/queries/use-cash-runway'
 import { AccountBalance } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrency } from '@/lib/contexts/currency-context'
@@ -23,92 +24,63 @@ export default function MonthlyExpensesVsLiquidity() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
-  const [loading, setLoading] = useState(true)
-  const [chartData, setChartData] = useState<
-    Array<{ name: string; value: number; color: string }>
-  >([])
+  const { data: accounts, isLoading: accountsLoading } = useAccounts()
+  const { data: cashRunway, isLoading: cashRunwayLoading } = useCashRunway()
+  const loading = accountsLoading || cashRunwayLoading
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
+  const chartData = useMemo(() => {
+    const burnJson = cashRunway ?? {}
+    const monthlyExpenses =
+      currency === 'USD'
+        ? Math.max(0, -Number(burnJson.usdNet ?? 0)) / 3
+        : Math.max(0, -Number(burnJson.gbpNet ?? 0)) / 3
 
-      // Fetch monthly expenses from cash-runway API
-      const burnRes = await fetch('/api/cash-runway', { credentials: 'include' })
-      const burnJson = await burnRes.json()
+    const accountsList = accounts ?? []
+    const accountsMap = new Map<string, AccountBalance>()
+    accountsList.forEach((account) => {
+      const key = `${account.institution}-${account.account_name}`
+      const existing = accountsMap.get(key)
+      if (
+        !existing ||
+        new Date(account.date_updated) > new Date(existing.date_updated)
+      ) {
+        accountsMap.set(key, account)
+      }
+    })
 
-      const monthlyExpenses =
-        currency === 'USD'
-          ? Math.max(0, -Number(burnJson.usdNet ?? 0)) / 3
-          : Math.max(0, -Number(burnJson.gbpNet ?? 0)) / 3
+    const latestAccounts = Array.from(accountsMap.values())
 
-      // Fetch account balances
-      const { data: accounts } = await supabase
-        .from('account_balances')
-        .select('*')
-        .order('date_updated', { ascending: false })
+    let cashTotal = 0
+    let liquidTotal = 0
+    let instantTotal = 0
 
-      if (!accounts) {
-        setLoading(false)
-        return
+    latestAccounts.forEach((account) => {
+      const amount = convertAmount(
+        account.balance_total_local ?? 0,
+        account.currency ?? 'USD',
+        fxRate
+      )
+
+      if (account.category === 'Cash') {
+        cashTotal += amount
       }
 
-      // Deduplicate accounts
-      const accountsMap = new Map<string, AccountBalance>()
-      accounts.forEach((account) => {
-        const key = `${account.institution}-${account.account_name}`
-        const existing = accountsMap.get(key)
-        if (
-          !existing ||
-          new Date(account.date_updated) > new Date(existing.date_updated)
-        ) {
-          accountsMap.set(key, account)
-        }
-      })
+      if (account.category === 'Cash' || account.category === 'Brokerage') {
+        liquidTotal += amount
+      }
 
-      const latestAccounts = Array.from(accountsMap.values())
+      if (account.liquidity_profile === 'Instant') {
+        instantTotal += amount
+      }
+    })
 
-      // Calculate liquidity totals
-      let cashTotal = 0
-      let liquidTotal = 0
-      let instantTotal = 0
-
-      latestAccounts.forEach((account) => {
-        const amount = convertAmount(
-          account.balance_total_local ?? 0,
-          account.currency ?? 'USD',
-          fxRate
-        )
-
-        // Cash: Cash category
-        if (account.category === 'Cash') {
-          cashTotal += amount
-        }
-
-        // Liquid: Cash + Brokerage categories
-        if (account.category === 'Cash' || account.category === 'Brokerage') {
-          liquidTotal += amount
-        }
-
-        // Instant: Instant liquidity profile
-        if (account.liquidity_profile === 'Instant') {
-          instantTotal += amount
-        }
-      })
-
-      const data = [
-        { name: 'Monthly Expenses', value: monthlyExpenses, color: '#3b82f6' },
-        { name: 'Cash', value: cashTotal, color: '#10b981' },
-        { name: 'Instant', value: instantTotal, color: '#34d399' },
-        { name: 'Liquid', value: liquidTotal, color: '#22c55e' },
-      ]
-
-      setChartData(data)
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [currency, convertAmount, fxRate])
+    return [
+      { name: 'Monthly Expenses', value: monthlyExpenses, color: '#3b82f6' },
+      { name: 'Cash', value: cashTotal, color: '#10b981' },
+      { name: 'Instant', value: instantTotal, color: '#34d399' },
+      { name: 'Liquid', value: liquidTotal, color: '#22c55e' },
+    ]
+  }, [currency, convertAmount, fxRate, accounts, cashRunway])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

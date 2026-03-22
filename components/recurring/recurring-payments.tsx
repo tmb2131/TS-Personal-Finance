@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -21,6 +22,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { createClient } from '@/lib/supabase/client'
+import { queryKeys } from '@/lib/query-keys'
+import { useRecurringTransactions, useRecurringPreferences } from '@/lib/hooks/queries/use-recurring'
 import { TransactionLog, RecurringPreference } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { detectRecurringPayments, DetectedRecurringPayment } from '@/lib/utils/detect-recurring-payments'
@@ -47,76 +50,30 @@ function getTransactionsForPattern(
 }
 
 export function RecurringPayments() {
+  const queryClient = useQueryClient()
   const { currency, fxRate } = useCurrency()
-  const [transactions, setTransactions] = useState<TransactionLog[]>([])
-  const [preferences, setPreferences] = useState<RecurringPreference[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: transactionsData,
+    isLoading: transactionsLoading,
+    error: transactionsError,
+  } = useRecurringTransactions()
+  const {
+    data: preferencesData,
+    isLoading: preferencesLoading,
+    error: preferencesError,
+  } = useRecurringPreferences()
+  const transactions = transactionsData ?? []
+  const preferences = (preferencesData ?? []) as RecurringPreference[]
+  const loading = transactionsLoading || preferencesLoading
+  const fetchErr = transactionsError ?? preferencesError
+  const error = fetchErr
+    ? fetchErr instanceof Error
+      ? fetchErr.message
+      : 'Failed to load recurring payments data'
+    : null
   const [selectedPayment, setSelectedPayment] = useState<DetectedRecurringPayment | null>(null)
   const [editingNotesPayment, setEditingNotesPayment] = useState<DetectedRecurringPayment | null>(null)
   const [notesDraft, setNotesDraft] = useState('')
-
-  // Fetch transactions and preferences
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
-
-      try {
-        // Fetch transactions from last 30 months (2.5 years) to detect annual recurring payments
-        const thirtyMonthsAgo = new Date()
-        thirtyMonthsAgo.setMonth(thirtyMonthsAgo.getMonth() - 30)
-        const startDateStr = thirtyMonthsAgo.toISOString().split('T')[0]
-
-        // Fetch all transactions with pagination
-        let allTransactions: TransactionLog[] = []
-        let page = 0
-        const pageSize = 1000
-        let hasMore = true
-
-        while (hasMore) {
-          const from = page * pageSize
-          const to = from + pageSize - 1
-
-          const transactionsResult = await supabase
-            .from('transaction_log')
-            .select('*')
-            .gte('date', startDateStr)
-            .order('date', { ascending: true })
-            .range(from, to)
-
-          if (transactionsResult.error) {
-            throw new Error(`Failed to fetch transactions: ${transactionsResult.error.message}`)
-          }
-
-          const pageTransactions = transactionsResult.data || []
-          allTransactions = [...allTransactions, ...pageTransactions]
-          hasMore = pageTransactions.length === pageSize
-          page++
-        }
-
-        // Fetch preferences
-        const preferencesResult = await supabase
-          .from('recurring_preferences')
-          .select('*')
-
-        if (preferencesResult.error) {
-          throw new Error(`Failed to fetch preferences: ${preferencesResult.error.message}`)
-        }
-
-        setTransactions(allTransactions)
-        setPreferences((preferencesResult.data as RecurringPreference[]) || [])
-        setError(null)
-      } catch (err) {
-        console.error('Error fetching data:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load recurring payments data')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
 
   // Detect recurring payments
   const detectedPayments = useMemo(() => {
@@ -183,8 +140,7 @@ export function RecurringPayments() {
         if (error) throw error
       }
 
-      const { data: updated } = await supabase.from('recurring_preferences').select('*')
-      if (updated) setPreferences(updated as RecurringPreference[])
+      await queryClient.invalidateQueries({ queryKey: queryKeys.recurringPreferences })
       setEditingNotesPayment(null)
       setNotesDraft('')
       toast.success(trimmed ? 'Note saved' : 'Note cleared')
@@ -295,14 +251,7 @@ export function RecurringPayments() {
         if (error) throw error
       }
 
-      // Refresh preferences
-      const { data: updatedPreferences } = await supabase
-        .from('recurring_preferences')
-        .select('*')
-
-      if (updatedPreferences) {
-        setPreferences(updatedPreferences as RecurringPreference[])
-      }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.recurringPreferences })
 
       toast.success(
         currentlyIgnored

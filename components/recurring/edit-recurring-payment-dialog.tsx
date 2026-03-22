@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { RecurringPayment } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { queryKeys } from '@/lib/query-keys'
 
 interface EditRecurringPaymentDialogProps {
   payment: RecurringPayment
@@ -23,6 +25,7 @@ interface EditRecurringPaymentDialogProps {
 
 export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: EditRecurringPaymentDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { currency, fxRate } = useCurrency()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -105,6 +108,7 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
 
       toast.success('Payment updated')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.recurring })
       router.refresh()
     } catch {
       toast.error('Failed to update payment')
@@ -126,6 +130,7 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
 
       toast.success('Payment deleted')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.recurring })
       router.refresh()
     } catch {
       toast.error('Failed to delete payment')

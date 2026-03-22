@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { queryKeys } from '@/lib/query-keys'
 
 const COMMON_ACCOUNT_TYPES = ['529', 'UGMA', 'Savings', 'Checking', 'Trust', 'Other']
 
@@ -35,6 +37,7 @@ export function AddKidsAccountDialog({
   triggerClassName,
 }: AddKidsAccountDialogProps = {}) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -98,6 +101,7 @@ export function AddKidsAccountDialog({
       toast.success('Kids account added')
       resetForm()
       setOpen(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.kids })
       router.refresh()
     } catch {
       toast.error('Failed to add kids account')

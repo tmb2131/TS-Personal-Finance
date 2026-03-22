@@ -2,9 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { normalizeCounterparty } from '@/lib/csv-parser'
-import { rebuildYoYNetWorthFromAppData } from '@/lib/yoy-net-worth'
-import { rebuildHistoricalNetWorthFromAccountHistory } from '@/lib/snapshot-historical-net-worth'
-import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { finalizeDataPipeline } from '@/lib/ingestion'
+import { CACHE_TAGS } from '@/lib/cache-tags'
 
 const CsvTransactionSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -157,14 +156,6 @@ async function importTransactions(
     }
   }
 
-  if (imported > 0) {
-    try {
-      await rebuildYoYNetWorthFromAppData(supabase, userId)
-    } catch (rebuildError) {
-      console.error('CSV transaction import: failed to rebuild YoY net worth data', rebuildError)
-    }
-  }
-
   return {
     imported,
     duplicates,
@@ -242,15 +233,6 @@ async function importAccountBalances(
       errors += chunk.length
     } else {
       imported += chunk.length
-    }
-  }
-
-  if (imported > 0) {
-    try {
-      await rebuildHistoricalNetWorthFromAccountHistory(supabase, userId)
-      await rebuildYoYNetWorthFromAppData(supabase, userId)
-    } catch (rebuildError) {
-      console.error('CSV account balance import: failed to rebuild derived net worth data', rebuildError)
     }
   }
 
@@ -364,17 +346,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid input' }, { status: 400 })
     }
 
+    let warnings: string[] = []
+
     if (result.imported > 0) {
       if (parsed.success) {
         if (parsed.data.target === 'transactions') {
-          revalidateTags(CACHE_TAGS.TRANSACTIONS)
+          warnings = (
+            await finalizeDataPipeline({
+              supabase,
+              userId: user.id,
+              context: 'CSV transaction import',
+              rebuildYoYNetWorth: true,
+              revalidate: [CACHE_TAGS.TRANSACTIONS, CACHE_TAGS.NET_WORTH],
+            })
+          ).warnings
         } else if (parsed.data.target === 'account_balances') {
-          revalidateTags(CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH)
+          warnings = (
+            await finalizeDataPipeline({
+              supabase,
+              userId: user.id,
+              context: 'CSV account balance import',
+              rebuildHistoricalNetWorth: true,
+              rebuildYoYNetWorth: true,
+              revalidate: [CACHE_TAGS.ACCOUNTS, CACHE_TAGS.NET_WORTH],
+            })
+          ).warnings
         } else {
-          revalidateTags(CACHE_TAGS.RECURRING)
+          warnings = (
+            await finalizeDataPipeline({
+              supabase,
+              userId: user.id,
+              context: 'CSV recurring payment import',
+              revalidate: [CACHE_TAGS.RECURRING],
+            })
+          ).warnings
         }
       } else {
-        revalidateTags(CACHE_TAGS.TRANSACTIONS)
+        warnings = (
+          await finalizeDataPipeline({
+            supabase,
+            userId: user.id,
+            context: 'Legacy CSV transaction import',
+            rebuildYoYNetWorth: true,
+            revalidate: [CACHE_TAGS.TRANSACTIONS, CACHE_TAGS.NET_WORTH],
+          })
+        ).warnings
       }
     }
 
@@ -384,6 +400,7 @@ export async function POST(request: Request) {
       duplicates: result.duplicates,
       errors: result.errors,
       total: result.total,
+      warnings,
     })
   } catch (error: any) {
     console.error('CSV import API error:', error)

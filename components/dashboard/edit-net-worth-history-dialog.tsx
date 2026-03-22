@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { Pencil, Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { useNetWorthHistory } from '@/lib/hooks/queries/use-net-worth-history'
+import { queryKeys } from '@/lib/query-keys'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -73,66 +76,48 @@ function isDifferent(a: number, b: number): boolean {
 
 export function EditNetWorthHistoryDialog() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { currency } = useCurrency()
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState<EditorRow[]>([])
   const [baselineByYear, setBaselineByYear] = useState<Record<number, BaselineRow>>({})
 
   const currentYear = useMemo(() => new Date().getUTCFullYear(), [])
 
-  const load = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/net-worth-history', { cache: 'no-store' })
-      const result = await response.json()
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to load net worth history')
-      }
-
-      const apiRows = (result.rows || []) as ApiRow[]
-      const nextRows: EditorRow[] = apiRows.map((row) => {
-        const personal = currency === 'GBP' ? row.personal_gbp : row.personal_usd
-        const family = currency === 'GBP' ? row.family_gbp : row.family_usd
-        const trust = currency === 'GBP' ? row.trust_gbp : row.trust_usd
-
-        return {
-          id: `year-${row.year}`,
-          year: String(row.year),
-          personal: formatInputValue(personal),
-          family: formatInputValue(family),
-          trust: formatInputValue(trust),
-          hasManualOverride: !!row.has_manual_override,
-          isNew: false,
-        }
-      })
-
-      const baseline: Record<number, BaselineRow> = {}
-      apiRows.forEach((row) => {
-        baseline[row.year] = {
-          personal: currency === 'GBP' ? row.personal_gbp : row.personal_usd,
-          family: currency === 'GBP' ? row.family_gbp : row.family_usd,
-          trust: currency === 'GBP' ? row.trust_gbp : row.trust_usd,
-        }
-      })
-
-      setRows(nextRows)
-      setBaselineByYear(baseline)
-    } catch (error: any) {
-      console.error('EditNetWorthHistoryDialog load error:', error)
-      toast.error(error.message || 'Failed to load net worth history')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: nwData, isLoading: loading } = useNetWorthHistory(open)
 
   useEffect(() => {
-    if (open) {
-      load()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, currency])
+    if (!nwData || !open) return
+    const apiRows = (nwData.rows || []) as ApiRow[]
+    const nextRows: EditorRow[] = apiRows.map((row) => {
+      const personal = currency === 'GBP' ? row.personal_gbp : row.personal_usd
+      const family = currency === 'GBP' ? row.family_gbp : row.family_usd
+      const trust = currency === 'GBP' ? row.trust_gbp : row.trust_usd
+
+      return {
+        id: `year-${row.year}`,
+        year: String(row.year),
+        personal: formatInputValue(personal),
+        family: formatInputValue(family),
+        trust: formatInputValue(trust),
+        hasManualOverride: !!row.has_manual_override,
+        isNew: false,
+      }
+    })
+
+    const baseline: Record<number, BaselineRow> = {}
+    apiRows.forEach((row) => {
+      baseline[row.year] = {
+        personal: currency === 'GBP' ? row.personal_gbp : row.personal_usd,
+        family: currency === 'GBP' ? row.family_gbp : row.family_usd,
+        trust: currency === 'GBP' ? row.trust_gbp : row.trust_usd,
+      }
+    })
+
+    setRows(nextRows)
+    setBaselineByYear(baseline)
+  }, [nwData, open, currency])
 
   const addYear = () => {
     const existingYears = new Set(rows.map((row) => Number(row.year)))
@@ -230,6 +215,7 @@ export function EditNetWorthHistoryDialog() {
 
       toast.success('Historical net worth updated')
       setOpen(false)
+      await queryClient.invalidateQueries({ queryKey: queryKeys.netWorthHistory })
       router.refresh()
     } catch (error: any) {
       console.error('EditNetWorthHistoryDialog save error:', error)

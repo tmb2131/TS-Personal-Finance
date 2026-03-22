@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -15,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { SYNC_COMPLETED_EVENT } from '@/lib/contexts/sync-context'
+import { SYNC_COMPLETED_EVENT, useSync } from '@/lib/contexts/sync-context'
 
 interface ConnectSheetModalProps {
   open: boolean
@@ -23,6 +24,8 @@ interface ConnectSheetModalProps {
 
 export function ConnectSheetModal({ open }: ConnectSheetModalProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const { refreshIngestionStatus } = useSync()
   const [showModal, setShowModal] = useState(open)
   const [spreadsheetId, setSpreadsheetId] = useState('')
   const [saving, setSaving] = useState(false)
@@ -58,12 +61,14 @@ export function ConnectSheetModal({ open }: ConnectSheetModalProps) {
         toast.error(error.message)
         return
       }
-      toast.info('Syncing data from your sheet…')
+      toast.info('Refreshing your Google Sheet source…')
       const response = await fetch('/api/sync', { method: 'POST' })
       const result = await response.json().catch(() => ({}))
       if (response.ok && result.success) {
-        toast.success('Data synced successfully')
+        toast.success('Google Sheet source connected')
+        queryClient.invalidateQueries()
         window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
+        await refreshIngestionStatus()
         router.refresh()
         return
       }
@@ -84,9 +89,9 @@ export function ConnectSheetModal({ open }: ConnectSheetModalProps) {
     <Dialog open={showModal} onOpenChange={setShowModal}>
       <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Connect your Google Sheet</DialogTitle>
+          <DialogTitle>Connect an optional Google Sheet</DialogTitle>
           <DialogDescription>
-            Enter your Google Spreadsheet ID to load your data. Find it in the sheet URL:{' '}
+            Enter a Spreadsheet ID only if you want a refreshable Transaction Log source. Find it in the sheet URL:{' '}
             <span className="font-mono text-xs">docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit</span>
           </DialogDescription>
         </DialogHeader>

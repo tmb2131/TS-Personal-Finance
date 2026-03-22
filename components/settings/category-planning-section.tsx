@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useCategoryPlanning } from '@/lib/hooks/queries/use-category-planning'
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
 type MonthMethod = 'Linear' | 'Average' | 'Manual' | 'MTD'
@@ -53,32 +54,37 @@ const selectInputClass =
 
 export function CategoryPlanningSection() {
   const { currency, fxRate } = useCurrency()
+  const { data, isLoading: loading, isSuccess, error } = useCategoryPlanning()
   const [rows, setRows] = useState<RowState[]>([])
-  const [loading, setLoading] = useState(true)
+  const [hydrated, setHydrated] = useState(false)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [newCategory, setNewCategory] = useState('')
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      try {
-        const response = await fetch('/api/category-planning', { cache: 'no-store' })
-        const result = await response.json()
-        if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Failed to load category planning data')
-        }
-        setRows(result.rows ?? [])
-      } catch (error: any) {
-        console.error('CategoryPlanningSection load error', error)
-        toast.error(error.message || 'Failed to load category planning data')
-      } finally {
-        setLoading(false)
-      }
-    }
+  const serverRows = useMemo((): RowState[] => {
+    const list = Array.isArray(data) ? data : []
+    return list.map((r) => ({
+      category: r.category,
+      annual_budget_gbp: Number(r.annual_budget_gbp ?? 0),
+      annual_budget_usd: Number(r.annual_budget_usd ?? 0),
+      current_year_method: r.current_year_method as YearMethod,
+      current_month_method: r.current_month_method as MonthMethod,
+      manual_year_forecast: r.manual_year_forecast ?? null,
+      manual_month_forecast: r.manual_month_forecast ?? null,
+    }))
+  }, [data])
 
-    load()
-  }, [])
+  useLayoutEffect(() => {
+    if (!isSuccess || hydrated) return
+    setRows(serverRows)
+    setHydrated(true)
+  }, [isSuccess, serverRows, hydrated])
+
+  useEffect(() => {
+    if (!error) return
+    console.error('CategoryPlanningSection load error', error)
+    toast.error(error instanceof Error ? error.message : 'Failed to load category planning data')
+  }, [error])
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -200,7 +206,7 @@ export function CategoryPlanningSection() {
     }
   }
 
-  if (loading) {
+  if (loading || (isSuccess && !hydrated)) {
     return (
       <Card className="border" id="category-planning">
         <CardHeader>

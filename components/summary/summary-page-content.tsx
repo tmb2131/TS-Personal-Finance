@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useSync } from '@/lib/contexts/sync-context'
+import { useDailySummary } from '@/lib/hooks/queries/use-daily-summary'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { Card, CardContent } from '@/components/ui/card'
@@ -112,108 +113,36 @@ interface ForecastBridgeResponse {
   }>
 }
 
-function applyDailySummaryData(
-  data: unknown,
-  setters: {
-    setBudgetData: (v: BudgetTarget[]) => void
-    setAnnualTrends: (v: AnnualTrend[]) => void
-    setMonthlyTrends: (v: MonthlyTrend[]) => void
-    setForecastBridge: (v: ForecastBridgeResponse | null) => void
-    setLastSyncDate: (v: string | null) => void
-    setForecastSettings: (v: ForecastSettingsRow[]) => void
-    setTodayTransactions: (v: TransactionForDayRow[]) => void
-    setForecastByCategory: (
-      v: Map<string, { forecast: number; ytd: number; annualBudget: number }> | null
-    ) => void
-  }
-) {
-  const d = data as Record<string, unknown>
-  if (d.budgetData) setters.setBudgetData(d.budgetData as BudgetTarget[])
-  if (Array.isArray(d.annualTrends)) setters.setAnnualTrends(d.annualTrends as AnnualTrend[])
-  if (Array.isArray(d.monthlyTrends)) setters.setMonthlyTrends(d.monthlyTrends as MonthlyTrend[])
-  if (d.forecastBridge && !(d.forecastBridge as { error?: unknown }).error) {
-    setters.setForecastBridge(d.forecastBridge as ForecastBridgeResponse)
-  }
-  if (d.lastSyncDate) setters.setLastSyncDate(d.lastSyncDate as string)
-  if (Array.isArray(d.forecastSettings)) {
-    setters.setForecastSettings(d.forecastSettings as ForecastSettingsRow[])
-  }
-  if (Array.isArray(d.todayTransactions)) {
-    setters.setTodayTransactions(d.todayTransactions as TransactionForDayRow[])
-  }
-  if (Array.isArray(d.forecastByCategory)) {
-    const map = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
-    for (const e of d.forecastByCategory as {
-      category: string
-      forecast: number
-      ytd: number
-      annualBudget: number
-    }[]) {
-      map.set(e.category, { forecast: e.forecast, ytd: e.ytd, annualBudget: e.annualBudget })
-    }
-    setters.setForecastByCategory(map)
-  }
-}
 
 export function SummaryPageContent() {
   const router = useRouter()
   const { currency, fxRate, convertAmount } = useCurrency()
   const { handleSync, syncing } = useSync()
   const chartTheme = useChartTheme()
-  const [loading, setLoading] = useState(true)
-
-  const [budgetData, setBudgetData] = useState<BudgetTarget[]>([])
-  const [annualTrends, setAnnualTrends] = useState<AnnualTrend[]>([])
-  const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([])
-  const [forecastBridge, setForecastBridge] = useState<ForecastBridgeResponse | null>(null)
-  const [lastSyncDate, setLastSyncDate] = useState<string | null>(null)
-  const [forecastByCategory, setForecastByCategory] = useState<Map<
-    string,
-    { forecast: number; ytd: number; annualBudget: number }
-  > | null>(null)
-  const [forecastSettings, setForecastSettings] = useState<ForecastSettingsRow[]>([])
-  const [todayTransactions, setTodayTransactions] = useState<TransactionForDayRow[]>([])
   const [mobileMonthlyDriversView, setMobileMonthlyDriversView] = useState<'less' | 'more'>('less')
   const { data: healthData } = useFinancialHealth()
 
-  const fetchData = useCallback(async ({ background = false }: { background?: boolean } = {}) => {
-    if (!background) setLoading(true)
-    const setters = {
-      setBudgetData,
-      setAnnualTrends,
-      setMonthlyTrends,
-      setForecastBridge,
-      setLastSyncDate,
-      setForecastSettings,
-      setTodayTransactions,
-      setForecastByCategory,
-    }
-    try {
-      const res = await fetch('/api/daily-summary')
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error((err as { error?: string }).error ?? 'Failed to fetch daily summary')
-      }
-      const data = await res.json()
-      applyDailySummaryData(data, setters)
-    } catch (error) {
-      console.error('Error fetching daily summary data:', error)
-    } finally {
-      if (!background) setLoading(false)
-    }
-  }, [])
+  const { data: rawData, isLoading: loading } = useDailySummary()
 
-  useEffect(() => {
-    void fetchData()
-  }, [fetchData])
-
-  const prevSyncing = useRef(syncing)
-  useEffect(() => {
-    if (prevSyncing.current && !syncing) {
-      void fetchData({ background: true })
+  const budgetData = useMemo(() => (rawData?.budgetData as BudgetTarget[]) ?? [], [rawData])
+  const annualTrends = useMemo(() => (rawData?.annualTrends as AnnualTrend[]) ?? [], [rawData])
+  const monthlyTrends = useMemo(() => (rawData?.monthlyTrends as MonthlyTrend[]) ?? [], [rawData])
+  const forecastBridge = useMemo((): ForecastBridgeResponse | null => {
+    const fb = rawData?.forecastBridge
+    if (fb && !(fb as { error?: unknown }).error) return fb as ForecastBridgeResponse
+    return null
+  }, [rawData])
+  const lastSyncDate = useMemo(() => (rawData?.lastSyncDate as string) ?? null, [rawData])
+  const forecastSettings = useMemo(() => (rawData?.forecastSettings as ForecastSettingsRow[]) ?? [], [rawData])
+  const todayTransactions = useMemo(() => (rawData?.todayTransactions as TransactionForDayRow[]) ?? [], [rawData])
+  const forecastByCategory = useMemo((): Map<string, { forecast: number; ytd: number; annualBudget: number }> | null => {
+    if (!Array.isArray(rawData?.forecastByCategory)) return null
+    const map = new Map<string, { forecast: number; ytd: number; annualBudget: number }>()
+    for (const e of rawData.forecastByCategory as { category: string; forecast: number; ytd: number; annualBudget: number }[]) {
+      map.set(e.category, { forecast: e.forecast, ytd: e.ytd, annualBudget: e.annualBudget })
     }
-    prevSyncing.current = syncing
-  }, [syncing, fetchData])
+    return map
+  }, [rawData])
 
   const annualEstimatedSpend = useMemo(() => {
     const expenses = budgetData.filter((b) => !EXCLUDED_CATEGORIES.includes(b.category))

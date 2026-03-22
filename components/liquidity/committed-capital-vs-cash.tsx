@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useMemo } from 'react'
 import { AccountBalance, Debt } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
+import { useAccounts } from '@/lib/hooks/queries/use-accounts'
+import { useDebt } from '@/lib/hooks/queries/use-debt'
 import {
   BarChart,
   Bar,
@@ -23,95 +24,65 @@ export default function CommittedCapitalVsCash() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
-  const [loading, setLoading] = useState(true)
-  const [chartData, setChartData] = useState<
-    Array<{ name: string; value: number; color: string }>
-  >([])
+  const { data: accounts = [], isLoading: accountsLoading } = useAccounts()
+  const { data: debtList = [], isLoading: debtLoading } = useDebt()
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      const supabase = createClient()
+  const loading = accountsLoading || debtLoading
 
-      // Fetch committed capital
-      const { data: commitments } = await supabase
-        .from('debt')
-        .select('*')
-        .eq('type', 'Committed Capital')
+  const chartData = useMemo(() => {
+    const commitments = debtList.filter((item) => item.type === 'Committed Capital')
 
-      const totalCommitted =
-        commitments?.reduce((sum, item: Debt) => {
-          const amount = (currency === 'USD' ? item.amount_usd : item.amount_gbp) ?? 0
-          return sum + amount
-        }, 0) ?? 0
+    const totalCommitted =
+      commitments.reduce((sum, item: Debt) => {
+        const amount = (currency === 'USD' ? item.amount_usd : item.amount_gbp) ?? 0
+        return sum + amount
+      }, 0)
 
-      // Fetch account balances
-      const { data: accounts } = await supabase
-        .from('account_balances')
-        .select('*')
-        .order('date_updated', { ascending: false })
+    const accountsMap = new Map<string, AccountBalance>()
+    accounts.forEach((account) => {
+      const key = `${account.institution}-${account.account_name}`
+      const existing = accountsMap.get(key)
+      if (
+        !existing ||
+        new Date(account.date_updated) > new Date(existing.date_updated)
+      ) {
+        accountsMap.set(key, account)
+      }
+    })
 
-      if (!accounts) {
-        setLoading(false)
-        return
+    const latestAccounts = Array.from(accountsMap.values())
+
+    let cash = 0
+    let instant = 0
+    let within6Months = 0
+
+    latestAccounts.forEach((account) => {
+      const amount = convertAmount(
+        account.balance_total_local ?? 0,
+        account.currency ?? 'USD',
+        fxRate
+      )
+
+      if (account.category === 'Cash') {
+        cash += amount
       }
 
-      // Deduplicate accounts
-      const accountsMap = new Map<string, AccountBalance>()
-      accounts.forEach((account) => {
-        const key = `${account.institution}-${account.account_name}`
-        const existing = accountsMap.get(key)
-        if (
-          !existing ||
-          new Date(account.date_updated) > new Date(existing.date_updated)
-        ) {
-          accountsMap.set(key, account)
-        }
-      })
+      if (account.liquidity_profile === 'Instant') {
+        instant += amount
+      }
 
-      const latestAccounts = Array.from(accountsMap.values())
+      if (account.liquidity_profile === 'Within 6 Months') {
+        within6Months += amount
+      }
+    })
 
-      // Calculate liquidity totals
-      let cash = 0
-      let instant = 0
-      let within6Months = 0
-
-      latestAccounts.forEach((account) => {
-        const amount = convertAmount(
-          account.balance_total_local ?? 0,
-          account.currency ?? 'USD',
-          fxRate
-        )
-
-        // Cash: Cash category
-        if (account.category === 'Cash') {
-          cash += amount
-        }
-
-        // Instant: Instant liquidity profile
-        if (account.liquidity_profile === 'Instant') {
-          instant += amount
-        }
-
-        // Within 6 Months: Within 6 Months liquidity profile
-        if (account.liquidity_profile === 'Within 6 Months') {
-          within6Months += amount
-        }
-      })
-
-      const data = [
-        { name: 'Committed Capital', value: totalCommitted, color: '#ef4444' },
-        { name: 'Cash', value: cash, color: '#10b981' },
-        { name: 'Instant', value: instant, color: '#34d399' },
-        { name: 'Within 6 Months', value: within6Months, color: '#3b82f6' },
-      ]
-
-      setChartData(data)
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [currency, convertAmount, fxRate])
+    return [
+      { name: 'Committed Capital', value: totalCommitted, color: '#ef4444' },
+      { name: 'Cash', value: cash, color: '#10b981' },
+      { name: 'Instant', value: instant, color: '#34d399' },
+      { name: 'Within 6 Months', value: within6Months, color: '#3b82f6' },
+    ]
+  }, [accounts, debtList, currency, convertAmount, fxRate])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -12,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { SYNC_COMPLETED_EVENT, useSync } from '@/lib/contexts/sync-context'
 
 export type CsvImportTarget = 'transactions' | 'account_balances' | 'recurring_payments'
 
@@ -69,6 +72,9 @@ function formatCurrencyAmount(value: number, currency: string): string {
 }
 
 export function ImportPreview({ target, rows, onImportComplete, onBack }: ImportPreviewProps) {
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { refreshIngestionStatus } = useSync()
   const [importing, setImporting] = useState(false)
 
   const handleImport = async () => {
@@ -88,6 +94,10 @@ export function ImportPreview({ target, rows, onImportComplete, onBack }: Import
       }
 
       onImportComplete(result)
+      queryClient.invalidateQueries()
+      window.dispatchEvent(new CustomEvent(SYNC_COMPLETED_EVENT))
+      await refreshIngestionStatus()
+      router.refresh()
     } catch {
       toast.error('Failed to import CSV data')
     } finally {
@@ -198,10 +208,10 @@ export function ImportPreview({ target, rows, onImportComplete, onBack }: Import
           {importing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Importing...
+              Ingesting...
             </>
           ) : (
-            `Import ${rows.length} ${rowLabel}`
+            `Ingest ${rows.length} ${rowLabel}`
           )}
         </Button>
       </div>

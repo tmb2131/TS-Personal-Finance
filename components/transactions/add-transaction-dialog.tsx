@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import {
 
 export function AddTransactionDialog() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -74,6 +76,7 @@ export function AddTransactionDialog() {
       toast.success('Transaction added')
       setOpen(false)
       resetForm()
+      queryClient.invalidateQueries()
       router.refresh()
     } catch {
       toast.error('Failed to add transaction')

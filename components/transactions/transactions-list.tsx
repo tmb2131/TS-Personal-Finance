@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { Input } from '@/components/ui/input'
@@ -10,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Search, Filter, Receipt } from 'lucide-react'
 import { cn } from '@/utils/cn'
-import { SYNC_COMPLETED_EVENT } from '@/components/header'
+import { useTransactions } from '@/lib/hooks/queries/use-transactions'
 
 const DATE_RANGE_OPTIONS = [
   { label: 'Last 7 days', days: 7 },
@@ -19,83 +18,16 @@ const DATE_RANGE_OPTIONS = [
   { label: 'All', days: null },
 ] as const
 
-function formatDateStr(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
 export function TransactionsList() {
   const { currency, fxRate } = useCurrency()
-  const [transactions, setTransactions] = useState<TransactionLog[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [dateRangeDays, setDateRangeDays] = useState<number | null>(90)
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [filterOpen, setFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
-  const [fetchVersion, setFetchVersion] = useState(0)
 
-  // Re-fetch when sync completes
-  useEffect(() => {
-    const onSyncCompleted = () => setFetchVersion((v) => v + 1)
-    window.addEventListener(SYNC_COMPLETED_EVENT, onSyncCompleted)
-    return () => window.removeEventListener(SYNC_COMPLETED_EVENT, onSyncCompleted)
-  }, [])
-
-  // Fetch transactions (all in range; we filter client-side for search/category)
-  useEffect(() => {
-    async function fetchTransactions() {
-      setLoading(true)
-      const supabase = createClient()
-
-      const today = new Date()
-      const endDateStr = formatDateStr(today)
-      let startDateStr: string
-      if (dateRangeDays === null) {
-        startDateStr = '2000-01-01' // effective "all"
-      } else {
-        const start = new Date(today)
-        start.setDate(start.getDate() - dateRangeDays)
-        startDateStr = formatDateStr(start)
-      }
-
-      const all: TransactionLog[] = []
-      const pageSize = 1000
-      let page = 0
-      let hasMore = true
-
-      while (hasMore) {
-        const from = page * pageSize
-        const to = from + pageSize - 1
-        const { data, error: fetchError } = await supabase
-          .from('transaction_log')
-          .select('*')
-          .gte('date', startDateStr)
-          .lte('date', endDateStr)
-          .order('date', { ascending: false })
-          .range(from, to)
-
-        if (fetchError) {
-          setError(fetchError.message)
-          setLoading(false)
-          return
-        }
-        const rows = (data || []) as TransactionLog[]
-        all.push(...rows)
-        hasMore = rows.length === pageSize
-        page++
-      }
-
-      setTransactions(all)
-      setError(null)
-      setLoading(false)
-    }
-
-    fetchTransactions()
-  }, [dateRangeDays, fetchVersion])
+  const { data: transactions = [], isLoading: loading, error: queryError } = useTransactions(dateRangeDays)
+  const error = queryError?.message ?? null
 
   // Unique categories from fetched data (for filter dropdown)
   const categories = useMemo(() => {

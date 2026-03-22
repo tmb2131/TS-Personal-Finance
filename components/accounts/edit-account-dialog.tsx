@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { AccountBalance } from '@/lib/types'
+import { queryKeys } from '@/lib/query-keys'
 
 const ACCOUNT_CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Property', 'Trust', 'Other']
 const LIQUIDITY_PROFILES = ['Instant', 'Within 6 Months', 'Locked Up']
@@ -63,6 +65,7 @@ interface EditAccountDialogProps {
 
 export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -124,6 +127,7 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
 
       toast.success('Account updated')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts })
       router.refresh()
     } catch {
       toast.error('Failed to update account')
@@ -145,6 +149,7 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
 
       toast.success('Account deleted')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts })
       router.refresh()
     } catch {
       toast.error('Failed to delete account')

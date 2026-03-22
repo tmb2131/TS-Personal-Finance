@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Debt } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { queryKeys } from '@/lib/query-keys'
 
 const DEBT_TYPES = ['Mortgage', 'Credit Card', 'Personal Loan', 'Committed Capital', 'Other']
 
@@ -25,6 +27,7 @@ interface EditDebtDialogProps {
 
 export function EditDebtDialog({ debt, open, onOpenChange }: EditDebtDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { currency, fxRate } = useCurrency()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -78,6 +81,7 @@ export function EditDebtDialog({ debt, open, onOpenChange }: EditDebtDialogProps
 
       toast.success('Debt entry updated')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.debt })
       router.refresh()
     } catch {
       toast.error('Failed to update debt entry')
@@ -99,6 +103,7 @@ export function EditDebtDialog({ debt, open, onOpenChange }: EditDebtDialogProps
 
       toast.success('Debt entry deleted')
       onOpenChange(false)
+      queryClient.invalidateQueries({ queryKey: queryKeys.debt })
       router.refresh()
     } catch {
       toast.error('Failed to delete debt entry')
