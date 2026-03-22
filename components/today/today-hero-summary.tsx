@@ -152,7 +152,10 @@ export function TodayHeroSummary({
       {(hasImpliedChange || gapNoMoreSpend != null) && (
         <div className="rounded-xl border border-l-[3px] border-l-blue-500 bg-blue-500/5 px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            End of day projection
+            Tomorrow if no more spend
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+            Compared with the start of today
           </p>
 
           <div className="mt-2 space-y-2">

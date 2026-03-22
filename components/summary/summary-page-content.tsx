@@ -791,7 +791,7 @@ export function SummaryPageContent() {
                                 <Target className="h-4 w-4 text-blue-600" />
                               </div>
                               <span className="text-xs font-medium text-muted-foreground">
-                                Forecast-Neutral Today
+                                Tomorrow If No More Spend
                               </span>
                             </div>
                             <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -811,23 +811,23 @@ export function SummaryPageContent() {
                               {dailyNeutralInsights.impliedForecastChange > 0 ? (
                                 <>
                                   <TrendingUp className="h-4 w-4 shrink-0" />
-                                  If no more spend today: overall forecast rises by{' '}
+                                  By tomorrow, overall forecast rises by{' '}
                                   {formatCurrency(
                                     Math.abs(dailyNeutralInsights.impliedForecastChange)
                                   )}
-                                  .
+                                  {' '}vs the start of today if you spend nothing else today.
                                 </>
                               ) : dailyNeutralInsights.impliedForecastChange < 0 ? (
                                 <>
                                   <TrendingDown className="h-4 w-4 shrink-0" />
-                                  If no more spend today: overall forecast falls by{' '}
+                                  By tomorrow, overall forecast falls by{' '}
                                   {formatCurrency(
                                     Math.abs(dailyNeutralInsights.impliedForecastChange)
                                   )}
-                                  .
+                                  {' '}vs the start of today if you spend nothing else today.
                                 </>
                               ) : (
-                                'If no more spend today: overall forecast unchanged.'
+                                'By tomorrow, overall forecast is unchanged vs the start of today if you spend nothing else today.'
                               )}
                             </div>
                           ) : null}

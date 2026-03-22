@@ -125,10 +125,10 @@ export function TodaySpendByMethodologyChart({
     displayedChange != null
       ? startingForecastText +
         (displayedChange > 0
-          ? `If no more spend today: overall forecast rises by ${formatCurrency(displayedChange)}.`
+          ? `By tomorrow, if you spend nothing else today, overall forecast rises by ${formatCurrency(displayedChange)} vs the start of today.`
           : displayedChange < 0
-            ? `If no more spend today: overall forecast falls by ${formatCurrency(-displayedChange)}.`
-            : 'If no more spend today: overall forecast unchanged.')
+            ? `By tomorrow, if you spend nothing else today, overall forecast falls by ${formatCurrency(-displayedChange)} vs the start of today.`
+            : 'By tomorrow, if you spend nothing else today, overall forecast is unchanged vs the start of today.')
       : startingForecastText
         ? startingForecastText.slice(0, -1)
         : null
