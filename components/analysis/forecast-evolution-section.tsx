@@ -11,10 +11,12 @@ const PRESETS = [
   { id: 'yesterday', label: 'Yesterday', daysAgo: 1 },
   { id: 'last-week', label: 'Last Week', daysAgo: 7 },
   { id: 'last-month', label: 'Last Month', daysAgo: 30 },
+  { id: 'ytd', label: 'YTD' },
   { id: 'custom', label: 'Custom' },
 ] as const
 
-const MAX_CUSTOM_DAYS = 60
+/** Max span for Custom; 366 covers Jan 1 → Dec 31 in a leap year. */
+const MAX_CUSTOM_DAYS = 366
 
 function toDateString(d: Date): string {
   return d.toISOString().split('T')[0]
@@ -34,6 +36,13 @@ export function ForecastEvolutionSection() {
   const { startDate, endDate } = useMemo(() => {
     const today = toDateString(new Date())
     const lastWeekStart = addDays(today, -7)
+
+    if (presetId === 'ytd') {
+      return {
+        startDate: `${today.slice(0, 4)}-01-01`,
+        endDate: today,
+      }
+    }
 
     if (presetId !== 'custom') {
       const preset = PRESETS.find(
