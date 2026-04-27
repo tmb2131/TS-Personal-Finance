@@ -201,9 +201,10 @@ Sidebar order (`components/sidebar.tsx`):
 7. `Liquidity` (`/liquidity`)
 8. `Kids Accounts` (`/kids`) - hidden if no kids data
 9. `Analysis` (`/analysis`)
-10. `Recurring` (`/recurring`)
-11. `Import` (`/import`)
-12. `Settings` (`/settings`)
+10. `Forecast` (`/forecast`)
+11. `Recurring` (`/recurring`)
+12. `Import` (`/import`)
+13. `Settings` (`/settings`)
 
 ## API Routes
 
