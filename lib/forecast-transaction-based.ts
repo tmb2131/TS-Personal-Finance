@@ -134,6 +134,27 @@ export type BacktestResult = {
   bestOverall: MethodologyId
 }
 
+export type BestFitCategoryPick = {
+  category: string
+  picked: MethodologyId
+  /** MAPE that drove the pick. null if fallback used (no backtest entry for this category). */
+  mape: number | null
+  fallback: boolean
+}
+
+export type BestFitResult = {
+  /** Per-category forecast pulled from the picked methodology. */
+  byCategory: CategoryMonthlyForecast[]
+  /** Why each pick was made — same length & order as byCategory. */
+  picks: BestFitCategoryPick[]
+  /** Sum of months across all categories (length 12). */
+  monthsTotal: number[]
+  monthType: ('actual' | 'partial' | 'forecast')[]
+  fullYearTotal: number
+  ytdTotal: number
+  pickCounts: { m1: number; m2: number; m3: number; fallback: number }
+}
+
 export type TransactionForecastResult = {
   /** As-of date (typically today). */
   asOf: string
@@ -141,6 +162,7 @@ export type TransactionForecastResult = {
   currentMonth: number
   ensemble: ForecastEnsemble
   methodologies: MethodologyResult[]
+  bestFit: BestFitResult | null
   backtest: BacktestResult | null
 }
 
@@ -760,6 +782,100 @@ function buildEnsemble(
 }
 
 // ---------------------------------------------------------------------------
+// Best Fit
+// ---------------------------------------------------------------------------
+
+/**
+ * For each category, pick the methodology with the lowest backtest MAPE and use its
+ * current-year forecast for that category. Sum across categories for portfolio totals.
+ *
+ * Categories without a backtest entry (new spend areas, or zero prior-year actuals) fall
+ * back to the methodology with the lowest overall portfolio MAPE (`backtest.bestOverall`).
+ *
+ * MAPE ties resolve in order: m1 → m2 → m3.
+ */
+function buildBestFit(
+  methodologies: MethodologyResult[],
+  backtest: BacktestResult,
+): BestFitResult {
+  const m1 = methodologies.find((m) => m.id === 'm1')!
+  const m2 = methodologies.find((m) => m.id === 'm2')!
+  const m3 = methodologies.find((m) => m.id === 'm3')!
+  const byId: Record<MethodologyId, MethodologyResult> = { m1, m2, m3 }
+
+  const categorySet = new Set<string>()
+  methodologies.forEach((m) => m.byCategory.forEach((c) => categorySet.add(c.category)))
+  const categories = Array.from(categorySet).sort((a, b) => a.localeCompare(b))
+
+  const pickByMape = (
+    e1: number,
+    e2: number,
+    e3: number,
+  ): MethodologyId => {
+    let best: MethodologyId = 'm1'
+    let bestErr = e1
+    if (e2 < bestErr) {
+      best = 'm2'
+      bestErr = e2
+    }
+    if (e3 < bestErr) {
+      best = 'm3'
+    }
+    return best
+  }
+
+  const byCategory: CategoryMonthlyForecast[] = []
+  const picks: BestFitCategoryPick[] = []
+  const pickCounts = { m1: 0, m2: 0, m3: 0, fallback: 0 }
+
+  for (const category of categories) {
+    const bt = backtest.categories.find((c) => c.category === category)
+    let picked: MethodologyId
+    let mape: number | null
+    let fallback: boolean
+    if (bt) {
+      picked = pickByMape(bt.m1Mape, bt.m2Mape, bt.m3Mape)
+      mape = picked === 'm1' ? bt.m1Mape : picked === 'm2' ? bt.m2Mape : bt.m3Mape
+      fallback = false
+    } else {
+      picked = backtest.bestOverall
+      mape = null
+      fallback = true
+      pickCounts.fallback += 1
+    }
+    pickCounts[picked] += 1
+
+    const cat = byId[picked].byCategory.find((c) => c.category === category)
+    if (!cat) continue
+    byCategory.push(cat)
+    picks.push({ category, picked, mape, fallback })
+  }
+
+  const monthsTotal = new Array(12).fill(0)
+  const monthType: ('actual' | 'partial' | 'forecast')[] = new Array(12).fill('forecast')
+  let fullYearTotal = 0
+  let ytdTotal = 0
+  for (const cat of byCategory) {
+    for (let i = 0; i < 12; i++) {
+      monthsTotal[i] += cat.months[i]
+      monthType[i] = cat.monthType[i]
+    }
+    fullYearTotal += cat.fullYear
+    ytdTotal += cat.ytd
+  }
+
+  return {
+    byCategory,
+    picks,
+    monthsTotal: monthsTotal.map(round),
+    monthType,
+    fullYearTotal: round(fullYearTotal),
+    ytdTotal: round(ytdTotal),
+    pickCounts,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Backtest
 // ---------------------------------------------------------------------------
 
@@ -898,6 +1014,7 @@ export function computeTransactionForecast(
 
   const ensemble = buildEnsemble(methodologies, grid, year, currentMonth, monthProgress)
   const backtest = runBacktest(rows, gbpUsdRate, year)
+  const bestFit = backtest ? buildBestFit(methodologies, backtest) : null
 
   return {
     asOf: asOf.toISOString().split('T')[0],
@@ -905,6 +1022,7 @@ export function computeTransactionForecast(
     currentMonth,
     methodologies,
     ensemble,
+    bestFit,
     backtest,
   }
 }

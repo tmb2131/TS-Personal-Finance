@@ -41,6 +41,8 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
   const m1ByMonth = sumAllCategories(m1)
   const m2ByMonth = sumAllCategories(m2)
   const m3ByMonth = sumAllCategories(m3)
+  const bestFit = data.bestFit
+  const bestFitByMonth = bestFit?.monthsTotal ?? null
 
   const chartData = MONTH_LABELS.map((label, i) => {
     const type = t.monthType[i]
@@ -56,6 +58,8 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
       m1: showForecast ? convertAmount(m1ByMonth[i], 'GBP') : null,
       m2: showForecast ? convertAmount(m2ByMonth[i], 'GBP') : null,
       m3: showForecast ? convertAmount(m3ByMonth[i], 'GBP') : null,
+      bestFit:
+        showForecast && bestFitByMonth ? convertAmount(bestFitByMonth[i], 'GBP') : null,
       monthType: type,
     }
   })
@@ -114,6 +118,9 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
               <div>M1 Seasonal: {fmtFull(row.m1 ?? 0)}</div>
               <div>M2 Seasonal+Trend: {fmtFull(row.m2 ?? 0)}</div>
               <div>M3 Fixed+Variable: {fmtFull(row.m3 ?? 0)}</div>
+              {row.bestFit != null && (
+                <div className="font-medium">Best fit: {fmtFull(row.bestFit)}</div>
+              )}
             </div>
           </>
         )}
@@ -129,6 +136,7 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
           Solid bars are completed-month actuals. The current month is MTD plus a remaining-days projection
           ({progressPct}% elapsed). Lighter bars are ensemble base forecast for future months; shaded band
           shows the low/high range across the three methodologies.
+          {bestFit && ' The dashed amber line is the Best Fit forecast — per category, the methodology with the lowest backtest error.'}
         </p>
       </CardHeader>
       <CardContent className="px-2 md:px-6">
@@ -178,6 +186,20 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
               />
               <Bar dataKey="actual" name="Actual" fill="#10b981" radius={[3, 3, 0, 0]} />
               <Bar dataKey="forecast" name="Forecast (base)" fill="#6366f1" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
+              {bestFit && (
+                <Line
+                  type="monotone"
+                  dataKey="bestFit"
+                  name="Best fit"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  strokeDasharray="4 3"
+                  dot={{ r: 2.5, fill: '#f59e0b' }}
+                  activeDot={{ r: 4 }}
+                  connectNulls={false}
+                  isAnimationActive={false}
+                />
+              )}
               <ReferenceLine
                 x={MONTH_LABELS[Math.max(0, data.currentMonth - 1)]}
                 stroke={chartTheme.axisStroke}

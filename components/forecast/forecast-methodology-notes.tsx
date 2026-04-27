@@ -42,6 +42,16 @@ export function ForecastMethodologyNotes({ data }: { data: TransactionForecastRe
               </p>
             </div>
             <div>
+              <div className="font-semibold">Best fit</div>
+              <p className="text-muted-foreground">
+                Each year, the backtest re-runs M1 / M2 / M3 against the most recently completed year and
+                computes a per-category error % (MAPE). Best Fit picks the methodology with the lowest
+                backtest error <em>per category</em> — for example M1 for one category, M2 for another, M3
+                for a third — and sums those picks across categories. Categories with no prior-year data
+                fall back to the methodology with the lowest overall portfolio error.
+              </p>
+            </div>
+            <div>
               <div className="font-semibold">Range across methodologies</div>
               <p className="text-muted-foreground">
                 For every month and every category, we take the min / median / max across the three

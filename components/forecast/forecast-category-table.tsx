@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import type {
+  BestFitCategoryPick,
   EnsembleCategory,
+  MethodologyId,
   TransactionForecastResult,
 } from '@/lib/forecast-transaction-based'
 import { ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react'
@@ -16,6 +18,7 @@ type SortKey =
   | 'm1'
   | 'm2'
   | 'm3'
+  | 'bestFit'
   | 'fullYearBase'
   | 'range'
   | 'priorYear'
@@ -44,11 +47,24 @@ export function ForecastCategoryTable({
       maximumFractionDigits: 0,
     }).format(convertAmount(gbp, 'GBP'))
 
+  const bestFit = data.bestFit
+  const pickByCategory = useMemo(() => {
+    const map = new Map<string, BestFitCategoryPick>()
+    bestFit?.picks.forEach((p) => map.set(p.category, p))
+    return map
+  }, [bestFit])
+
+  const bestFitFy = (cat: EnsembleCategory): number | null => {
+    const pick = pickByCategory.get(cat.category)
+    if (!pick) return null
+    return cat.byMethodology[pick.picked]
+  }
+
   const sorted = useMemo(() => {
     const list = [...categories]
     list.sort((a, b) => {
-      const av = readKey(a, sortKey)
-      const bv = readKey(b, sortKey)
+      const av = readKey(a, sortKey, bestFitFy)
+      const bv = readKey(b, sortKey, bestFitFy)
       if (typeof av === 'string' && typeof bv === 'string') {
         return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
       }
@@ -57,7 +73,8 @@ export function ForecastCategoryTable({
       return sortDir === 'asc' ? ax - bx : bx - ax
     })
     return list
-  }, [categories, sortKey, sortDir])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, sortKey, sortDir, pickByCategory])
 
   const setSort = (k: SortKey) => {
     if (k === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -102,6 +119,11 @@ export function ForecastCategoryTable({
                 <Th onClick={() => setSort('m3')} icon={sortIcon('m3')} align="right">
                   M3 FY
                 </Th>
+                {bestFit && (
+                  <Th onClick={() => setSort('bestFit')} icon={sortIcon('bestFit')} align="right">
+                    Best fit
+                  </Th>
+                )}
                 <Th onClick={() => setSort('range')} icon={sortIcon('range')} align="right">
                   Range
                 </Th>
@@ -135,6 +157,25 @@ export function ForecastCategoryTable({
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.byMethodology.m1)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.byMethodology.m2)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.byMethodology.m3)}</td>
+                    {bestFit && (
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {(() => {
+                          const pick = pickByCategory.get(c.category)
+                          if (!pick) return <span className="text-muted-foreground">—</span>
+                          const fy = c.byMethodology[pick.picked]
+                          return (
+                            <span className="inline-flex items-center gap-1.5">
+                              <MethodologyBadge
+                                picked={pick.picked}
+                                fallback={pick.fallback}
+                                mape={pick.mape}
+                              />
+                              <span className="font-medium">{fmt(fy)}</span>
+                            </span>
+                          )
+                        })()}
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-right tabular-nums text-xs text-muted-foreground">
                       {fmt(c.fullYearLow)}
                       <span className="px-1">–</span>
@@ -166,6 +207,22 @@ export function ForecastCategoryTable({
                 <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.byMethodology.m1)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.byMethodology.m2)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.byMethodology.m3)}</td>
+                {bestFit && (
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    <span className="inline-flex flex-col items-end leading-tight">
+                      <span>{fmt(bestFit.fullYearTotal)}</span>
+                      <span className="text-[10px] font-normal text-muted-foreground">
+                        {[
+                          bestFit.pickCounts.m1 ? `M1×${bestFit.pickCounts.m1}` : null,
+                          bestFit.pickCounts.m2 ? `M2×${bestFit.pickCounts.m2}` : null,
+                          bestFit.pickCounts.m3 ? `M3×${bestFit.pickCounts.m3}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </span>
+                  </td>
+                )}
                 <td className="px-3 py-2 text-right tabular-nums text-xs">
                   {fmt(totals.fullYearLow)}
                   <span className="px-1">–</span>
@@ -201,7 +258,11 @@ export function ForecastCategoryTable({
   )
 }
 
-function readKey(c: EnsembleCategory, k: SortKey): number | string {
+function readKey(
+  c: EnsembleCategory,
+  k: SortKey,
+  bestFitFy: (cat: EnsembleCategory) => number | null,
+): number | string {
   switch (k) {
     case 'category':
       return c.category
@@ -213,6 +274,8 @@ function readKey(c: EnsembleCategory, k: SortKey): number | string {
       return c.byMethodology.m2
     case 'm3':
       return c.byMethodology.m3
+    case 'bestFit':
+      return bestFitFy(c) ?? 0
     case 'fullYearBase':
       return c.fullYearBase
     case 'range':
@@ -220,6 +283,41 @@ function readKey(c: EnsembleCategory, k: SortKey): number | string {
     case 'priorYear':
       return c.priorYearActual > 0 ? c.fullYearBase / c.priorYearActual : 0
   }
+}
+
+const BADGE_STYLES: Record<MethodologyId, string> = {
+  m1: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  m2: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  m3: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+}
+
+function MethodologyBadge({
+  picked,
+  fallback,
+  mape,
+}: {
+  picked: MethodologyId
+  fallback: boolean
+  mape: number | null
+}) {
+  const label = picked.toUpperCase()
+  const tooltip = fallback
+    ? `No backtest data — falling back to overall best (${label})`
+    : mape != null
+      ? `${label} picked — ${(mape * 100).toFixed(0)}% backtest error`
+      : label
+  return (
+    <span
+      title={tooltip}
+      className={
+        'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ' +
+        (fallback ? 'bg-muted text-muted-foreground' : BADGE_STYLES[picked])
+      }
+    >
+      {label}
+      {fallback && <span className="ml-0.5 opacity-70">*</span>}
+    </span>
+  )
 }
 
 function Th({

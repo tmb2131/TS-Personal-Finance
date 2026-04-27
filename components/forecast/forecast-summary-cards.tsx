@@ -20,9 +20,19 @@ export function ForecastSummaryCards({ data }: { data: TransactionForecastResult
   const pyDelta = t.priorYearActual > 0 ? ((t.fullYearBase - t.priorYearActual) / t.priorYearActual) * 100 : null
   const range = t.fullYearHigh - t.fullYearLow
   const rangePct = t.fullYearBase > 0 ? (range / t.fullYearBase) * 100 : 0
+  const bestFit = data.bestFit
+  const pickSummary = bestFit
+    ? [
+        bestFit.pickCounts.m1 ? `M1×${bestFit.pickCounts.m1}` : null,
+        bestFit.pickCounts.m2 ? `M2×${bestFit.pickCounts.m2}` : null,
+        bestFit.pickCounts.m3 ? `M3×${bestFit.pickCounts.m3}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : null
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className={'grid grid-cols-2 gap-3 ' + (bestFit ? 'md:grid-cols-5' : 'md:grid-cols-4')}>
       <Card>
         <CardContent className="p-4">
           <div className="text-xs uppercase tracking-wide text-muted-foreground">YTD actual</div>
@@ -91,6 +101,25 @@ export function ForecastSummaryCards({ data }: { data: TransactionForecastResult
           </div>
         </CardContent>
       </Card>
+
+      {bestFit && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              Best fit FY
+            </div>
+            <div className="mt-1 text-xl md:text-2xl font-semibold">
+              {fmt(bestFit.fullYearTotal)}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {pickSummary || 'Per-category best methodology'}
+              {bestFit.pickCounts.fallback > 0 && (
+                <span> · {bestFit.pickCounts.fallback} fallback</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
