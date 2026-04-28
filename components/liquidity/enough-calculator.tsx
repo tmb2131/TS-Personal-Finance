@@ -1,19 +1,33 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useDailySummary } from '@/lib/hooks/queries/use-daily-summary'
 import type { AccountBalance } from '@/lib/types'
-import { Info, Shield, TrendingUp } from 'lucide-react'
+import { Info, Shield, SlidersHorizontal, TrendingUp } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const INFLATION_RATE = 0.03
 const LIQUID_CATEGORIES = ['Cash', 'Checking', 'Savings', 'Brokerage']
+const SELECTABLE_CATEGORIES = [
+  'Cash',
+  'Checking',
+  'Savings',
+  'Brokerage',
+  'Retirement',
+  'Alt Inv',
+  'Taconic',
+  'House',
+  'Property',
+  'Other',
+] as const
+const CUSTOM_MIX_STORAGE_KEY = 'liquidity-custom-mix-categories'
 const EXCLUDED_EXPENSE_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 type ReturnProfile = 'Conservative' | 'Base' | 'Optimistic'
 type ReturnAssumptions = {
@@ -118,16 +132,56 @@ export function EnoughCalculator() {
   const { data: dailySummaryData, isLoading: dailySummaryLoading } = useDailySummary()
   const loading = accountsLoading || dailySummaryLoading
   const [returnProfile, setReturnProfile] = useState<ReturnProfile>('Conservative')
+  const [customCategories, setCustomCategories] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [...LIQUID_CATEGORIES]
+    try {
+      const raw = window.localStorage.getItem(CUSTOM_MIX_STORAGE_KEY)
+      if (!raw) return [...LIQUID_CATEGORIES]
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) {
+        return parsed
+      }
+    } catch {}
+    return [...LIQUID_CATEGORIES]
+  })
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(CUSTOM_MIX_STORAGE_KEY, JSON.stringify(customCategories))
+    } catch {}
+  }, [customCategories])
+
+  useEffect(() => {
+    if (!pickerOpen) return
+    function onDocClick(e: MouseEvent) {
+      if (!pickerRef.current) return
+      if (!pickerRef.current.contains(e.target as Node)) setPickerOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setPickerOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [pickerOpen])
 
   const {
     netWorth,
     liquidAssets,
+    customAssets,
     annualIncome,
     annualGiftMoney,
     annualExpenses,
     annualNetOutflow,
     totalAssetMix,
     liquidAssetMix,
+    customAssetMix,
   } = useMemo(() => {
     const accounts = accountsData ?? []
     const accountsMap = new Map<string, AccountBalance>()
@@ -158,6 +212,14 @@ export function EnoughCalculator() {
     }, 0)
     const liquidMix = converted
       .filter((a) => LIQUID_CATEGORIES.includes(a.category) && a.balanceConverted > 0)
+      .map((a) => ({ category: a.category, balance: a.balanceConverted }))
+
+    const custom = converted.reduce((sum, a) => {
+      if (!customCategories.includes(a.category)) return sum
+      return sum + a.balanceConverted
+    }, 0)
+    const customMix = converted
+      .filter((a) => customCategories.includes(a.category) && a.balanceConverted > 0)
       .map((a) => ({ category: a.category, balance: a.balanceConverted }))
 
     let estimatedIncome = 0
@@ -195,39 +257,50 @@ export function EnoughCalculator() {
     return {
       netWorth: nw,
       liquidAssets: liquid,
+      customAssets: custom,
       annualIncome: incomeDisplay,
       annualGiftMoney: giftMoneyDisplay,
       annualExpenses: expensesDisplay,
       annualNetOutflow: netOutflow,
       totalAssetMix: totalMix,
       liquidAssetMix: liquidMix,
+      customAssetMix: customMix,
     }
-  }, [accountsData, dailySummaryData, currency, fxRate, convertAmount])
+  }, [accountsData, dailySummaryData, currency, fxRate, convertAmount, customCategories])
 
   const metrics = useMemo(() => {
     const assumptions = RETURN_ASSUMPTIONS_BY_PROFILE[returnProfile]
     const totalRealReturn = weightedRealReturn(totalAssetMix, assumptions)
     const liquidRealReturn = weightedRealReturn(liquidAssetMix, assumptions)
+    const customRealReturn = weightedRealReturn(customAssetMix, assumptions)
     const yearsTotal = computeYearsUntilDepletion(netWorth, annualNetOutflow, totalRealReturn)
     const yearsLiquid = computeYearsUntilDepletion(liquidAssets, annualNetOutflow, liquidRealReturn)
+    const yearsCustom = computeYearsUntilDepletion(customAssets, annualNetOutflow, customRealReturn)
     const totalBreakevenExpenses =
       annualIncome + annualGiftMoney + Math.max(0, netWorth * totalRealReturn)
     const liquidBreakevenExpenses =
       annualIncome + annualGiftMoney + Math.max(0, liquidAssets * liquidRealReturn)
+    const customBreakevenExpenses =
+      annualIncome + annualGiftMoney + Math.max(0, customAssets * customRealReturn)
     return {
       yearsTotal,
       yearsLiquid,
+      yearsCustom,
       totalRealReturn,
       liquidRealReturn,
+      customRealReturn,
       totalBreakevenExpenses,
       liquidBreakevenExpenses,
+      customBreakevenExpenses,
     }
   }, [
     netWorth,
     liquidAssets,
+    customAssets,
     annualNetOutflow,
     totalAssetMix,
     liquidAssetMix,
+    customAssetMix,
     returnProfile,
     annualIncome,
     annualGiftMoney,
@@ -314,7 +387,7 @@ export function EnoughCalculator() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {/* Total Net Worth */}
           <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-indigo-500 bg-card">
             <div className="flex items-center gap-2">
@@ -388,6 +461,92 @@ export function EnoughCalculator() {
                 <p className="text-sm">
                   <span className="text-xs text-muted-foreground">Breakeven Annual Expenses: </span>
                   <span className="font-semibold">{formatCompact(metrics.liquidBreakevenExpenses)}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Mix */}
+          <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-emerald-500 bg-card">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
+                  <SlidersHorizontal className="h-5 w-5 text-emerald-600" />
+                </div>
+                <h3 className="font-semibold text-sm uppercase tracking-wide">Custom Mix</h3>
+              </div>
+              <div className="relative" ref={pickerRef}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setPickerOpen((o) => !o)}
+                  aria-haspopup="listbox"
+                  aria-expanded={pickerOpen}
+                >
+                  {customCategories.length} selected
+                </Button>
+                {pickerOpen ? (
+                  <div
+                    role="listbox"
+                    className="absolute right-0 z-20 mt-1 w-56 rounded-md border bg-popover p-2 shadow-md"
+                  >
+                    <div className="space-y-0.5">
+                      {SELECTABLE_CATEGORIES.map((cat) => {
+                        const id = `custom-mix-${cat}`
+                        const checked = customCategories.includes(cat)
+                        return (
+                          <label
+                            key={cat}
+                            htmlFor={id}
+                            className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted cursor-pointer"
+                          >
+                            <Checkbox
+                              id={id}
+                              checked={checked}
+                              onCheckedChange={(v) =>
+                                setCustomCategories((prev) =>
+                                  v ? Array.from(new Set([...prev, cat])) : prev.filter((c) => c !== cat)
+                                )
+                              }
+                            />
+                            <span>{cat}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Years from Custom Mix</p>
+                <p className={cn(
+                  'text-2xl font-bold tabular-nums',
+                  metrics.yearsCustom >= 5 ? 'text-emerald-600' : metrics.yearsCustom >= 2 ? 'text-emerald-600' : 'text-amber-600'
+                )}>
+                  {yearsLabel(metrics.yearsCustom)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {returnLabel(metrics.customRealReturn)}
+                </p>
+              </div>
+              <div className="space-y-1 pt-2 border-t">
+                <p className="text-sm">
+                  <span className="text-xs text-muted-foreground">Custom Mix Assets: </span>
+                  <span className="font-semibold">{formatCompact(customAssets)}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {customCategories.length === 0 ? 'No categories selected' : customCategories.join(', ')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Income {formatCompact(annualIncome)} + Gift {formatCompact(annualGiftMoney)} vs Expenses {formatCompact(annualExpenses)}
+                </p>
+                <p className="text-sm">
+                  <span className="text-xs text-muted-foreground">Breakeven Annual Expenses: </span>
+                  <span className="font-semibold">{formatCompact(metrics.customBreakevenExpenses)}</span>
                 </p>
               </div>
             </div>
