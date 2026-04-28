@@ -24,6 +24,29 @@ export const EXCLUDED_FROM_FORECAST = new Set([
 
 export const TRAINING_YEARS = 3
 
+// Annual-total CV above which a category's seasonal pattern is considered noise; M1/M2 fall back
+// to a flat annual median split across 12 months instead of trying to fit the seasonality.
+const LUMPY_CV_THRESHOLD = 0.5
+
+// Min months of last 12 a counterparty must fire for M3 to consider it recurring. 6 catches
+// quarterly, bimonthly, and annually-billed-but-monthly-amortised subscriptions.
+const RECURRING_MIN_ACTIVE_MONTHS = 6
+
+// Max month-to-month CV for an M3 recurring cluster. 0.25 tolerates real-world price drift on
+// subscriptions (annual price increases, FX-priced services).
+const RECURRING_MAX_CV = 0.25
+
+// Backtest err% is meaningful only when the actual amount is large enough that small absolute
+// errors don't dominate the percentage. Below this threshold, mark the row low-confidence.
+const LOW_CONFIDENCE_MIN_ACTUAL_GBP = 100
+
+// A category with fewer observed training years than this is mostly fallback-driven; flag it.
+const LOW_CONFIDENCE_MIN_OBSERVED_YEARS = 2
+
+// Number of recent completed years to backtest and average across. Single-year backtest is too
+// noisy — one anomalous year can make a methodology look terrible.
+const BACKTEST_LOOKBACK_YEARS = 2
+
 export type ForecastTxRow = {
   date: string // YYYY-MM-DD
   category: string
@@ -115,11 +138,15 @@ export type BacktestCategoryEntry = {
   m1Mape: number
   m2Mape: number
   m3Mape: number
+  /** Sparse history, lumpy spend, or small absolute actual — interpret err% with care. */
+  lowConfidence: boolean
 }
 
 export type BacktestResult = {
   /** Year that was forecast (most recent completed year). */
   year: number
+  /** Years included in the backtest. Length > 1 means err% is averaged across years. */
+  backtestYears: number[]
   categories: BacktestCategoryEntry[]
   totals: {
     actual: number
@@ -267,8 +294,9 @@ function computeSeasonalMeans(
   // For training years where the category had ANY activity, missing months count as £0
   // (legitimate zero — the user didn't spend in that month). Years with no activity at
   // all are treated as missing to avoid penalizing newly-tracked categories.
-  const means = new Array(12).fill(0)
-  const counts = new Array(12).fill(0)
+  // Central tendency is the median across observed years — robust to one-off spikes
+  // (a single £2k vacation in July of one year doesn't propagate as a £667 July expectation).
+  const monthValues: number[][] = Array.from({ length: 12 }, () => [])
   let observedYears = 0
   for (const y of trainingYears) {
     let yearHasData = false
@@ -281,12 +309,11 @@ function computeSeasonalMeans(
     if (!yearHasData) continue
     observedYears += 1
     for (let m = 1; m <= 12; m++) {
-      means[m - 1] += grid[category]?.[ymKey(y, m)] ?? 0
-      counts[m - 1] += 1
+      monthValues[m - 1].push(grid[category]?.[ymKey(y, m)] ?? 0)
     }
   }
   return {
-    means: means.map((sum, i) => (counts[i] > 0 ? sum / counts[i] : 0)),
+    means: monthValues.map((vs) => median(vs)),
     observedYears,
   }
 }
@@ -326,7 +353,16 @@ function methodologyM1(
   const trainingYears = [year - 3, year - 2, year - 1]
   const categories = Object.keys(grid).sort((a, b) => a.localeCompare(b))
   const byCategory: CategoryMonthlyForecast[] = categories.map((category) => {
-    const { means: seasonal, observedYears } = computeSeasonalMeans(grid, category, trainingYears)
+    const { means: rawSeasonal, observedYears } = computeSeasonalMeans(grid, category, trainingYears)
+    const annualValues = computeAnnualValues(grid, category, trainingYears)
+    const annualCV = computeAnnualCV(annualValues)
+    // Lumpy-category fallback: when YoY annual totals swing wildly, the seasonal pattern is
+    // noise. Flatten to median annual / 12 — preserves the typical annual scale without
+    // pretending to know which month the lumps will land in.
+    const seasonal =
+      annualCV > LUMPY_CV_THRESHOLD && annualValues.length >= 2
+        ? new Array(12).fill(median(annualValues) / 12)
+        : rawSeasonal
     const fallback = trailing12Mean(grid, category, year, currentMonth)
     const monthlyEstimate = (idx: number) => (observedYears > 0 ? seasonal[idx] : fallback)
 
@@ -390,6 +426,58 @@ function computeAnnualTotal(
   return sum
 }
 
+/**
+ * Annual totals for the years where the category had any activity. Years with zero activity are
+ * skipped (mirrors `computeSeasonalMeans` so a newly-tracked category isn't dragged toward 0).
+ */
+function computeAnnualValues(
+  grid: MonthlyGrid,
+  category: string,
+  trainingYears: number[],
+): number[] {
+  const values: number[] = []
+  for (const y of trainingYears) {
+    let yearHasData = false
+    for (let m = 1; m <= 12; m++) {
+      if (grid[category]?.[ymKey(y, m)] != null) {
+        yearHasData = true
+        break
+      }
+    }
+    if (!yearHasData) continue
+    values.push(computeAnnualTotal(grid, category, y))
+  }
+  return values
+}
+
+/** CV across annual totals. 0 when fewer than 2 values or mean ≤ 0. */
+function computeAnnualCV(annualValues: number[]): number {
+  if (annualValues.length < 2) return 0
+  const mean = annualValues.reduce((s, v) => s + v, 0) / annualValues.length
+  if (mean <= 0) return 0
+  const variance =
+    annualValues.reduce((s, v) => s + (v - mean) ** 2, 0) / annualValues.length
+  return Math.sqrt(variance) / mean
+}
+
+/**
+ * A category's backtest err% is "low confidence" when one of:
+ *  - too few observed training years (mostly fallback-driven)
+ *  - high YoY annual-total volatility (lumpy spend — any forecast will look bad)
+ *  - small absolute actual (small denominator inflates the percentage)
+ */
+function isLowConfidence(args: {
+  observedYears: number
+  annualCV: number
+  actual: number
+}): boolean {
+  return (
+    args.observedYears < LOW_CONFIDENCE_MIN_OBSERVED_YEARS ||
+    args.annualCV > LUMPY_CV_THRESHOLD ||
+    args.actual < LOW_CONFIDENCE_MIN_ACTUAL_GBP
+  )
+}
+
 function computeYoYGrowth(grid: MonthlyGrid, category: string, year: number): number {
   // Geometric mean of YoY ratios across the trailing 3 windows: (y-1/y-2), (y-2/y-3).
   // If trailing data is sparse, return 0.
@@ -417,17 +505,29 @@ function methodologyM2(
 
   const byCategory: CategoryMonthlyForecast[] = categories.map((category) => {
     const { means: seasonal, observedYears } = computeSeasonalMeans(grid, category, trainingYears)
-    const seasonalSum = seasonal.reduce((s, v) => s + v, 0)
-    // Seasonal index normalized to mean=1 across observed months
-    const seasonalIndex =
-      seasonalSum > 0 ? seasonal.map((v) => safeDiv(v * 12, seasonalSum, 1)) : new Array(12).fill(1)
+    const annualValues = computeAnnualValues(grid, category, trainingYears)
+    const annualCV = computeAnnualCV(annualValues)
+    const isLumpy = annualCV > LUMPY_CV_THRESHOLD && annualValues.length >= 2
 
-    const priorYearTotal = computeAnnualTotal(grid, category, year - 1)
-    const growth = computeYoYGrowth(grid, category, year)
-    const projectedAnnual =
-      priorYearTotal > 0 ? priorYearTotal * (1 + growth) : seasonalSum // fallback to M1's annual
+    let monthlyProjected: number[]
+    if (isLumpy) {
+      // Lumpy: a category swinging ±100% YoY has no meaningful trend signal. Skip the YoY
+      // scaling and project a flat annual median split evenly across months.
+      const flat = median(annualValues) / 12
+      monthlyProjected = new Array(12).fill(flat)
+    } else {
+      const seasonalSum = seasonal.reduce((s, v) => s + v, 0)
+      // Seasonal index normalized to mean=1 across observed months
+      const seasonalIndex =
+        seasonalSum > 0 ? seasonal.map((v) => safeDiv(v * 12, seasonalSum, 1)) : new Array(12).fill(1)
 
-    const monthlyProjected = seasonalIndex.map((idx) => (projectedAnnual / 12) * idx)
+      const priorYearTotal = computeAnnualTotal(grid, category, year - 1)
+      const growth = computeYoYGrowth(grid, category, year)
+      const projectedAnnual =
+        priorYearTotal > 0 ? priorYearTotal * (1 + growth) : seasonalSum // fallback to M1's annual
+
+      monthlyProjected = seasonalIndex.map((idx) => (projectedAnnual / 12) * idx)
+    }
 
     const fallback = trailing12Mean(grid, category, year, currentMonth)
     const monthlyEstimate = (idx: number) =>
@@ -534,15 +634,16 @@ function detectRecurring(
     }
     const clusters: RecurringCluster[] = []
     for (const [cp, entry] of byFingerprint.entries()) {
-      if (entry.months.size < 9) continue // require 9 of last 12 months
-      // Gate on month-to-month amount stability: coefficient of variation ≤ 0.15.
+      // Min active months: catches quarterly/bimonthly/term-time bills, not just strictly monthly.
+      if (entry.months.size < RECURRING_MIN_ACTIVE_MONTHS) continue
+      // Gate on month-to-month amount stability: tolerates real-world price drift.
       const monthly = Array.from(entry.monthAmount.values())
       const mean = monthly.reduce((s, v) => s + v, 0) / monthly.length
       if (mean <= 0) continue
       const variance =
         monthly.reduce((s, v) => s + (v - mean) ** 2, 0) / monthly.length
       const cv = Math.sqrt(variance) / mean
-      if (cv > 0.15) continue
+      if (cv > RECURRING_MAX_CV) continue
       clusters.push({
         fingerprint: cp,
         category,
@@ -637,7 +738,7 @@ function methodologyM3(
     id: 'm3',
     label: 'Fixed + Variable',
     description:
-      'Detects recurring fixed spend (counterparty + amount, ≥9 of last 12 months) and projects only the variable portion seasonally.',
+      'Detects recurring fixed spend (counterparty + amount, ≥6 of last 12 months) and projects only the variable portion seasonally.',
     byCategory,
     fullYearTotal: round(fullYearTotal),
     ytdTotal: round(ytdTotal),
@@ -880,16 +981,45 @@ function buildBestFit(
 // ---------------------------------------------------------------------------
 
 /**
- * Backtest re-runs each methodology as if it were 1 January of the most recent completed year,
- * using ONLY data strictly before that year. Compares full-year forecast to actual full-year spend.
+ * Per-year backtest result used internally by `runBacktest` to merge multiple years.
+ * Holds the forecast and actual GBP values per category plus the absolute error so
+ * the orchestrator can compute weighted MAPE across years correctly.
  */
-function runBacktest(
+type BacktestYearResult = {
+  year: number
+  categories: {
+    category: string
+    actual: number
+    m1: number
+    m2: number
+    m3: number
+    m1AbsErr: number
+    m2AbsErr: number
+    m3AbsErr: number
+    /** Per-category MAPE for this single year (capped at 1000%). */
+    m1Mape: number
+    m2Mape: number
+    m3Mape: number
+    /** From `computeSeasonalMeans` against this year's training set. */
+    observedYears: number
+    /** From `computeAnnualCV` against this year's training set. */
+    annualCV: number
+  }[]
+}
+
+const MAPE_CAP = 10 // 1000%
+const capMape = (x: number) => Math.min(MAPE_CAP, Math.max(0, x))
+
+/**
+ * Backtest a single historical year: re-run each methodology as if it were 1 Jan of that year,
+ * using ONLY data strictly before it, then compare to actual full-year spend.
+ * Returns null if training data doesn't reach far enough back.
+ */
+function runBacktestForYear(
   rows: ForecastTxRow[],
   gbpUsdRate: number,
-  currentYear: number,
-): BacktestResult | null {
-  const backtestYear = currentYear - 1
-  // Keep only rows strictly before the backtest year for training.
+  backtestYear: number,
+): BacktestYearResult | null {
   const trainingRows = rows.filter((r) => toDateOnly(r.date) < `${backtestYear}-01-01`)
   // Need at least 1 prior year of training data.
   const earliestTraining = trainingRows.reduce(
@@ -908,7 +1038,6 @@ function runBacktest(
     trainingTxByCategory[row.category].push({ ...row, date: toDateOnly(row.date) })
   }
 
-  // Run each methodology with currentMonth = 0 (no YTD), forecasting all 12 months of backtestYear.
   const ytdByCategory: Record<string, number[]> = {}
   for (const cat of Object.keys(trainingGrid)) {
     ytdByCategory[cat] = new Array(12).fill(0)
@@ -918,7 +1047,6 @@ function runBacktest(
   const m2 = methodologyM2(trainingGrid, backtestYear, 0, 1, ytdByCategory)
   const m3 = methodologyM3(trainingGrid, trainingTxByCategory, backtestYear, 0, 1, ytdByCategory, gbpUsdRate)
 
-  // Actuals for backtestYear come from rows IN that year.
   const actualRows = rows.filter((r) => {
     const d = toDateOnly(r.date)
     return d >= `${backtestYear}-01-01` && d < `${backtestYear + 1}-01-01`
@@ -933,10 +1061,9 @@ function runBacktest(
     ...Object.keys(actualByCategory),
     ...m1.byCategory.map((c) => c.category),
   ])
+  const trainingYearsForBacktest = [backtestYear - 3, backtestYear - 2, backtestYear - 1]
 
-  const cap = (x: number) => Math.min(10, Math.max(0, x)) // cap MAPE entries at 1000%
-
-  const categories: BacktestCategoryEntry[] = Array.from(allCats)
+  const categories = Array.from(allCats)
     .sort((a, b) => a.localeCompare(b))
     .map((category) => {
       const actual = actualByCategory[category] ?? 0
@@ -944,41 +1071,126 @@ function runBacktest(
       const v2 = m2.byCategory.find((c) => c.category === category)?.fullYear ?? 0
       const v3 = m3.byCategory.find((c) => c.category === category)?.fullYear ?? 0
       const mape = (forecast: number) =>
-        actual === 0 ? (forecast === 0 ? 0 : 1) : cap(Math.abs(forecast - actual) / actual)
+        actual === 0 ? (forecast === 0 ? 0 : 1) : capMape(Math.abs(forecast - actual) / actual)
+      const { observedYears } = computeSeasonalMeans(
+        trainingGrid,
+        category,
+        trainingYearsForBacktest,
+      )
+      const annualCV = computeAnnualCV(
+        computeAnnualValues(trainingGrid, category, trainingYearsForBacktest),
+      )
       return {
         category,
         actual: round(actual),
         m1: round(v1),
         m2: round(v2),
         m3: round(v3),
+        m1AbsErr: Math.abs(v1 - actual),
+        m2AbsErr: Math.abs(v2 - actual),
+        m3AbsErr: Math.abs(v3 - actual),
         m1Mape: mape(v1),
         m2Mape: mape(v2),
         m3Mape: mape(v3),
+        observedYears,
+        annualCV,
       }
     })
     .filter((c) => c.actual > 0 || c.m1 + c.m2 + c.m3 > 0)
 
+  return { year: backtestYear, categories }
+}
+
+/**
+ * Backtest re-runs each methodology against the most recent completed years, using only data
+ * strictly before each year. Per-category err% is averaged across years; portfolio weighted MAPE
+ * is recomputed from the combined absolute errors and combined actuals (not an average of ratios).
+ */
+function runBacktest(
+  rows: ForecastTxRow[],
+  gbpUsdRate: number,
+  currentYear: number,
+): BacktestResult | null {
+  const candidateYears: number[] = []
+  for (let i = 1; i <= BACKTEST_LOOKBACK_YEARS; i++) candidateYears.push(currentYear - i)
+
+  const yearResults = candidateYears
+    .map((y) => runBacktestForYear(rows, gbpUsdRate, y))
+    .filter((r): r is BacktestYearResult => r !== null)
+    .sort((a, b) => a.year - b.year) // oldest → newest
+
+  if (yearResults.length === 0) return null
+
+  const mostRecent = yearResults[yearResults.length - 1]
+  const backtestYears = yearResults.map((r) => r.year)
+
+  // Aggregate per-category across years. Display GBP columns from the most-recent year so the
+  // "Actual" column has a single year's meaning; average the MAPEs across the years where the
+  // category appeared.
+  const allCategories = new Set<string>()
+  for (const yr of yearResults) for (const c of yr.categories) allCategories.add(c.category)
+
+  const categories: BacktestCategoryEntry[] = Array.from(allCategories)
+    .sort((a, b) => a.localeCompare(b))
+    .map((category) => {
+      const recent = mostRecent.categories.find((c) => c.category === category)
+      const m1Mapes: number[] = []
+      const m2Mapes: number[] = []
+      const m3Mapes: number[] = []
+      for (const yr of yearResults) {
+        const c = yr.categories.find((cc) => cc.category === category)
+        if (!c) continue
+        m1Mapes.push(c.m1Mape)
+        m2Mapes.push(c.m2Mape)
+        m3Mapes.push(c.m3Mape)
+      }
+      const avg = (arr: number[]) =>
+        arr.length === 0 ? 0 : arr.reduce((s, v) => s + v, 0) / arr.length
+      const actual = recent?.actual ?? 0
+      return {
+        category,
+        actual: round(actual),
+        m1: round(recent?.m1 ?? 0),
+        m2: round(recent?.m2 ?? 0),
+        m3: round(recent?.m3 ?? 0),
+        m1Mape: avg(m1Mapes),
+        m2Mape: avg(m2Mapes),
+        m3Mape: avg(m3Mapes),
+        lowConfidence: isLowConfidence({
+          observedYears: recent?.observedYears ?? 0,
+          annualCV: recent?.annualCV ?? 0,
+          actual,
+        }),
+      }
+    })
+
+  // Totals: GBP columns from most-recent year (matches the per-row "Actual"); weighted MAPE
+  // uses Σ|err| over ALL backtested years divided by Σ actual over ALL backtested years —
+  // averaging two ratios biases small years.
+  const totalsActualAllYears = yearResults.reduce(
+    (s, yr) => s + yr.categories.reduce((ss, c) => ss + c.actual, 0),
+    0,
+  )
+  const totalsAbsErrAllYears = (key: 'm1AbsErr' | 'm2AbsErr' | 'm3AbsErr') =>
+    yearResults.reduce(
+      (s, yr) => s + yr.categories.reduce((ss, c) => ss + c[key], 0),
+      0,
+    )
   const totals = {
-    actual: round(categories.reduce((s, c) => s + c.actual, 0)),
-    m1: round(categories.reduce((s, c) => s + c.m1, 0)),
-    m2: round(categories.reduce((s, c) => s + c.m2, 0)),
-    m3: round(categories.reduce((s, c) => s + c.m3, 0)),
-    m1Mape: 0,
-    m2Mape: 0,
-    m3Mape: 0,
+    actual: round(mostRecent.categories.reduce((s, c) => s + c.actual, 0)),
+    m1: round(mostRecent.categories.reduce((s, c) => s + c.m1, 0)),
+    m2: round(mostRecent.categories.reduce((s, c) => s + c.m2, 0)),
+    m3: round(mostRecent.categories.reduce((s, c) => s + c.m3, 0)),
+    m1Mape: totalsActualAllYears > 0 ? totalsAbsErrAllYears('m1AbsErr') / totalsActualAllYears : 0,
+    m2Mape: totalsActualAllYears > 0 ? totalsAbsErrAllYears('m2AbsErr') / totalsActualAllYears : 0,
+    m3Mape: totalsActualAllYears > 0 ? totalsAbsErrAllYears('m3AbsErr') / totalsActualAllYears : 0,
   }
-  // Weighted MAPE = sum(|forecast-actual|) / sum(actual)
-  const sumAbsErr = (key: 'm1' | 'm2' | 'm3') =>
-    categories.reduce((s, c) => s + Math.abs(c[key] - c.actual), 0)
-  totals.m1Mape = totals.actual > 0 ? sumAbsErr('m1') / totals.actual : 0
-  totals.m2Mape = totals.actual > 0 ? sumAbsErr('m2') / totals.actual : 0
-  totals.m3Mape = totals.actual > 0 ? sumAbsErr('m3') / totals.actual : 0
 
   let bestOverall: MethodologyId = 'm1'
   if (totals.m2Mape < totals.m1Mape && totals.m2Mape <= totals.m3Mape) bestOverall = 'm2'
   else if (totals.m3Mape < totals.m1Mape && totals.m3Mape < totals.m2Mape) bestOverall = 'm3'
 
-  return { year: backtestYear, categories, totals, bestOverall }
+  return { year: mostRecent.year, backtestYears, categories, totals, bestOverall }
 }
 
 // ---------------------------------------------------------------------------

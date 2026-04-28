@@ -30,8 +30,9 @@ export function ForecastBacktestPanel({ backtest }: { backtest: BacktestResult }
       <CardHeader className="pb-2">
         <CardTitle className="text-lg md:text-xl">Backtest — {backtest.year} accuracy</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Each methodology was run on 1 Jan {backtest.year} using only data from before that year, then
-          compared to actual {backtest.year} spend.
+          {backtest.backtestYears.length > 1
+            ? `Each methodology was backtested against ${backtest.backtestYears[0]}–${backtest.backtestYears[backtest.backtestYears.length - 1]}; per-category err% is averaged across years.`
+            : `Each methodology was run on 1 Jan ${backtest.year} using only data from before that year, then compared to actual ${backtest.year} spend.`}
         </p>
       </CardHeader>
       <CardContent className="px-0 md:px-6">
@@ -65,7 +66,17 @@ export function ForecastBacktestPanel({ backtest }: { backtest: BacktestResult }
                 const best = bestOf(c.m1Mape, c.m2Mape, c.m3Mape)
                 return (
                   <tr key={c.category} className="border-b border-border/50">
-                    <td className="px-3 py-2 font-medium">{c.category}</td>
+                    <td className="px-3 py-2 font-medium">
+                      <span className="inline-flex items-center gap-1.5">
+                        {c.category}
+                        {c.lowConfidence && (
+                          <span
+                            className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/40"
+                            title="Low confidence: limited history, lumpy spend, or small absolute amount."
+                          />
+                        )}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmt(c.actual)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.m1)}</td>
                     <td className={'px-3 py-2 text-right tabular-nums ' + mapeClass(c.m1Mape, best === 0)}>
