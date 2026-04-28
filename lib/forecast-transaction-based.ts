@@ -265,13 +265,18 @@ export function buildMonthlyGrid(
     if (EXCLUDED_FROM_FORECAST.has(row.category)) continue
     const amount = normalizeAmountGBP(row.amount_gbp, row.amount_usd, gbpUsdRate)
     if (amount === 0) continue
-    // Expenses: only count negative-sign entries for an expense category (treat as positive spend).
-    if (amount > 0) continue // income/refunds in expense category — ignore for forecast
     const date = toDateOnly(row.date)
     if (!date) continue
     const ym = date.slice(0, 7)
+    // Grid stores NET expense for the (category, month) bucket: negate the signed amount so
+    // outflows (negative txns) become positive spend and refunds (positive txns) reduce the
+    // bucket. Matches `lib/forecasting.ts` `computeAnnualTrends` so backtest "Actual" lines up
+    // with the Dashboard's Annual Trends magnitude.
     grid[row.category] ??= {}
-    grid[row.category][ym] = (grid[row.category][ym] ?? 0) + Math.abs(amount)
+    grid[row.category][ym] = (grid[row.category][ym] ?? 0) - amount
+    // M3 recurring detection is about repeating outflows — refunds don't form clusters, and
+    // including them would inflate the CV gate and hide real subscriptions. Skip positive rows.
+    if (amount > 0) continue
     txByCategory[row.category] ??= []
     txByCategory[row.category].push({ ...row, date })
   }
