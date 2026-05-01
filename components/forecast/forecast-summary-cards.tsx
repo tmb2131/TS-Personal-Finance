@@ -49,7 +49,7 @@ export function ForecastSummaryCards({ data }: { data: TransactionForecastResult
             Full-year base
           </div>
           <div className="mt-1 text-xl md:text-2xl font-semibold">{fmt(t.fullYearBase)}</div>
-          <div className="mt-1 text-xs text-muted-foreground">Median across methodologies</div>
+          <div className="mt-1 text-xs text-muted-foreground">Mean across methodologies</div>
         </CardContent>
       </Card>
 

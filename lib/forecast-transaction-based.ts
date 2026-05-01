@@ -3,7 +3,7 @@
  *
  * Forecasts the current year's expense spend per category using ONLY the data in
  * `transaction_log`. Three independent methodologies are computed and surfaced as a
- * low / base / high range (min / median / max across the three).
+ * low / base / high range (min / mean / max across the three).
  *
  * All amounts are returned in GBP. Caller converts at display time.
  *
@@ -87,8 +87,8 @@ export type MethodologyResult = {
 export type EnsembleCategory = {
   category: string
   ytd: number
-  /** Length 12. Past months: actuals. Current month: MTD + median of methodologies'
-   *  remaining-days projections. Future months: median across methodologies. */
+  /** Length 12. Past months: actuals. Current month: MTD + mean of methodologies'
+   *  remaining-days projections. Future months: mean across methodologies. */
   monthsBase: number[]
   monthsLow: number[]
   monthsHigh: number[]
@@ -98,7 +98,7 @@ export type EnsembleCategory = {
   isActual: boolean[]
   /** Per-methodology full-year totals for this category. */
   byMethodology: { m1: number; m2: number; m3: number }
-  /** Min / median / max across methodologies for full year. */
+  /** Min / mean / max across methodologies for full year. */
   fullYearLow: number
   fullYearBase: number
   fullYearHigh: number
@@ -214,6 +214,11 @@ const median = (values: number[]): number => {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+}
+
+const mean = (values: number[]): number => {
+  if (values.length === 0) return 0
+  return values.reduce((a, b) => a + b, 0) / values.length
 }
 
 const round = (n: number) => Math.round(n * 100) / 100
@@ -809,7 +814,7 @@ function buildEnsemble(
         monthsHigh[i] = vs[0]
       } else {
         // 'partial' and 'forecast' both have methodology spread.
-        monthsBase[i] = median(vs)
+        monthsBase[i] = mean(vs)
         monthsLow[i] = Math.min(...vs)
         monthsHigh[i] = Math.max(...vs)
       }
@@ -829,7 +834,7 @@ function buildEnsemble(
       isActual: monthType.map((t) => t !== 'forecast'),
       byMethodology: { m1: m1?.fullYear ?? 0, m2: m2?.fullYear ?? 0, m3: m3?.fullYear ?? 0 },
       fullYearLow: round(Math.min(...fyVs)),
-      fullYearBase: round(median(fyVs)),
+      fullYearBase: round(mean(fyVs)),
       fullYearHigh: round(Math.max(...fyVs)),
       priorYearActual: round(priorYearActual),
     }

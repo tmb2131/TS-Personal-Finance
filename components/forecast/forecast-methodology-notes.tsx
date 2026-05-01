@@ -18,9 +18,9 @@ export function ForecastMethodologyNotes({ data }: { data: TransactionForecastRe
             <div>
               <div className="font-semibold">M1 — Seasonal Average</div>
               <p className="text-muted-foreground">
-                For each category, takes the trailing 3-year mean of every calendar month. Each remaining
-                month of {data.year} is forecast as that month&apos;s historical mean. Stable; captures
-                seasonality (e.g. holidays, annual subscriptions); ignores trend.
+                For each category, takes the trailing 3-year median of every calendar month. Each remaining
+                month of {data.year} is forecast as that month&apos;s historical median — robust to one-off
+                spikes. Stable; captures seasonality (e.g. holidays, annual subscriptions); ignores trend.
               </p>
             </div>
             <div>
@@ -35,7 +35,7 @@ export function ForecastMethodologyNotes({ data }: { data: TransactionForecastRe
               <div className="font-semibold">M3 — Fixed + Variable</div>
               <p className="text-muted-foreground">
                 Detects recurring fixed spend by clustering transactions on counterparty + amount band that
-                fired in 9+ of the last 12 months. The fixed amount is carried forward unchanged. Variable
+                fired in 6+ of the last 12 months. The fixed amount is carried forward unchanged. Variable
                 spend (everything not classified as fixed) is forecast using the trailing-12-month variable
                 mean weighted by the seasonal index. Most informative when you have lots of subscriptions
                 and bills.
@@ -54,8 +54,8 @@ export function ForecastMethodologyNotes({ data }: { data: TransactionForecastRe
             <div>
               <div className="font-semibold">Range across methodologies</div>
               <p className="text-muted-foreground">
-                For every month and every category, we take the min / median / max across the three
-                methodologies. The base forecast is the median; the band between min and max is the
+                For every month and every category, we take the min / mean / max across the three
+                methodologies. The base forecast is the mean; the band between min and max is the
                 scenario range. A wide band means the methodologies disagree — typically a sign of high
                 variance in that category.
               </p>
