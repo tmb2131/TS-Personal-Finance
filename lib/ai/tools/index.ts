@@ -9,6 +9,7 @@ import { createGetNetWorthTrendTool } from './get-net-worth-trend'
 import { createAnalyzeMonthlyCategoryTrendsTool } from './analyze-monthly-category-trends'
 import { createGetCashRunwayTool } from './get-cash-runway'
 import { createSearchWebTool } from './search-web'
+import { createSurfaceObservationsTool } from './surface-observations'
 
 export { type ToolContext } from './types'
 
@@ -24,5 +25,6 @@ export function createChatTools(ctx: ToolContext) {
     analyze_monthly_category_trends: createAnalyzeMonthlyCategoryTrendsTool(ctx),
     get_cash_runway: createGetCashRunwayTool(ctx),
     search_web: createSearchWebTool(ctx),
+    surface_observations: createSurfaceObservationsTool(ctx),
   }
 }
