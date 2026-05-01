@@ -8,7 +8,19 @@ import {
   fetchCategories,
   fetchTransactionsPaged,
 } from '@/lib/forecasting'
-import type { BudgetTarget, AnnualTrend, MonthlyTrend, HistoricalNetWorth, AccountBalance } from '@/lib/types'
+import type {
+  BudgetTarget,
+  AnnualTrend,
+  MonthlyTrend,
+  HistoricalNetWorth,
+  AccountBalance,
+  RecurringPayment,
+} from '@/lib/types'
+import {
+  rankAllocationObservations,
+  rankSpendingObservations,
+  type Observation,
+} from '@/lib/observations'
 
 export interface ForecastByCategoryItem {
   category: string
@@ -25,6 +37,8 @@ export interface InsightsDataPayload {
   forecastByCategory: ForecastByCategoryItem[]
   historicalNetWorth: HistoricalNetWorth[]
   accountBalances: AccountBalance[]
+  allocationObservations: Observation[]
+  spendingObservations: Observation[]
   error: string | null
 }
 
@@ -46,6 +60,7 @@ export async function fetchInsightsData(
     budgetResult,
     netWorthResult,
     accountsResult,
+    recurringResult,
     rate,
     settingsMap,
     categories,
@@ -63,6 +78,7 @@ export async function fetchInsightsData(
       .select('*')
       .order('date_updated', { ascending: false })
       .limit(500),
+    supabase.from('recurring_payments').select('*').eq('user_id', userId),
     fetchFxRateGBPUSD(supabase),
     fetchForecastSettingsMap(supabase, userId),
     fetchCategories(supabase, userId),
@@ -109,6 +125,21 @@ export async function fetchInsightsData(
       }))
     : []
 
+  const recurring = (recurringResult.data ?? []) as RecurringPayment[]
+  const asOf = new Date().toISOString().slice(0, 10)
+  const observationsInput = {
+    accounts: accountBalances,
+    recurring,
+    annualTrends: annualTrends ?? [],
+    monthlyTrends: monthlyTrends ?? [],
+    forecastByCategory: forecastByCategorySerialized,
+    gbpUsdRate: rate || 1.25,
+    baseCurrency: 'GBP' as const,
+    asOf,
+  }
+  const allocationObservations = rankAllocationObservations(observationsInput, 5)
+  const spendingObservations = rankSpendingObservations(observationsInput, 5)
+
   return {
     budgetData: budgetResult.data ?? [],
     annualTrends: annualTrends ?? [],
@@ -116,6 +147,8 @@ export async function fetchInsightsData(
     forecastByCategory: forecastByCategorySerialized,
     historicalNetWorth: netWorthResult.data ?? [],
     accountBalances,
+    allocationObservations,
+    spendingObservations,
     error: budgetResult.error || netWorthResult.error || accountsResult.error ? 'Partial failure' : null,
   }
 }
