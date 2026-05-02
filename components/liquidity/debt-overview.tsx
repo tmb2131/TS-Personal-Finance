@@ -5,6 +5,7 @@ import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useDebt } from '@/lib/hooks/queries/use-debt'
 import { AccountBalance, Debt } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -138,12 +139,7 @@ export default function DebtOverview() {
           <CardTitle>Debt vs Assets</CardTitle>
         </CardHeader>
         <CardContent>
-          <div
-            className="flex items-center justify-center"
-            style={{ height: chartHeight }}
-          >
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
+          <Skeleton className="w-full" style={{ height: chartHeight }} aria-label="Loading chart" />
         </CardContent>
       </Card>
     )

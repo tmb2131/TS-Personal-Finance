@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ForecastPageWrapper } from '@/components/forecast/forecast-page-wrapper'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function ForecastPage() {
   const supabase = await createClient()
@@ -13,12 +14,11 @@ export default async function ForecastPage() {
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-3 md:space-y-4 flex flex-col">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Forecast</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Three methodologies. Same data. The range across all three is your scenario band.
-        </p>
-      </div>
+      <PageHeader
+        title="Forecast"
+        description="Three methodologies. Same data. The range across all three is your scenario band."
+        accent="emerald"
+      />
 
       <Suspense fallback={<ForecastPageSkeleton />}>
         <ForecastPageWrapper />

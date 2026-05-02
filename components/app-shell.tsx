@@ -15,6 +15,11 @@ const ChatWidget = dynamic(
   { ssr: false }
 )
 
+const QuickAdd = dynamic(
+  () => import('@/components/quick-add').then(m => ({ default: m.QuickAdd })),
+  { ssr: false }
+)
+
 interface AppShellProps {
   children: React.ReactNode
   initialHeaderData?: HeaderStatus | null
@@ -72,6 +77,7 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
       </div>
       <Toaster position="top-right" richColors />
       <ChatWidget />
+      <QuickAdd />
     </>
   )
 }

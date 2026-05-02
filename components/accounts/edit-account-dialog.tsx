@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { AccountBalance } from '@/lib/types'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -68,6 +69,7 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
   const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const [institution, setInstitution] = useState(account.institution)
   const [accountName, setAccountName] = useState(account.account_name)
@@ -285,7 +287,7 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
             <Button
               type="button"
               variant="destructive"
-              onClick={handleDelete}
+              onClick={() => setConfirmDeleteOpen(true)}
               disabled={saving || deleting}
             >
               {deleting ? 'Deleting...' : 'Delete'}
@@ -293,6 +295,21 @@ export function EditAccountDialog({ account, open, onOpenChange }: EditAccountDi
           </div>
         </form>
       </DialogContent>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete account?"
+        description={
+          <>
+            This will permanently remove <strong>{account.account_name}</strong> at{' '}
+            <strong>{account.institution}</strong> and its current balance from your records. This
+            action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDelete}
+      />
     </Dialog>
   )
 }

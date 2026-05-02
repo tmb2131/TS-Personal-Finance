@@ -1,36 +1,82 @@
 'use client'
 
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { TransactionLog } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Search, Filter, Receipt } from 'lucide-react'
+import { Receipt } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { useTransactions } from '@/lib/hooks/queries/use-transactions'
+import {
+  DATE_PRESETS,
+  fetchDaysForPreset,
+  getPriorWindow,
+  getWindowForPreset,
+  isInWindow,
+  type DatePresetId,
+} from '@/lib/date-presets'
+import {
+  TransactionFilterBar,
+  type TransactionFilterValue,
+} from './transactions-filter-bar'
+import { FilteredTotalsRow } from './filtered-totals-row'
 
-const DATE_RANGE_OPTIONS = [
-  { label: 'Last 7 days', days: 7 },
-  { label: 'Last 30 days', days: 30 },
-  { label: 'Last 90 days', days: 90 },
-  { label: 'All', days: null },
-] as const
+const VALID_PRESET_IDS = new Set<DatePresetId>(DATE_PRESETS.map((p) => p.id))
+
+function readPreset(value: string | null): DatePresetId {
+  if (value && VALID_PRESET_IDS.has(value as DatePresetId)) return value as DatePresetId
+  return 'last-3-months'
+}
+
+function readCategories(value: string | null): string[] {
+  if (!value) return []
+  return value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
 
 export function TransactionsList() {
   const { currency, fxRate } = useCurrency()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [dateRangeDays, setDateRangeDays] = useState<number | null>(90)
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [filterOpen, setFilterOpen] = useState(false)
-  const filterRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const { data: transactions = [], isLoading: loading, error: queryError } = useTransactions(dateRangeDays)
+  const initialFilter = useMemo<TransactionFilterValue>(
+    () => ({
+      search: searchParams.get('q') ?? '',
+      preset: readPreset(searchParams.get('range')),
+      categories: readCategories(searchParams.get('cat')),
+    }),
+    // Initialize from URL once on mount; subsequent updates flow through onChange.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+  const [filter, setFilter] = useState<TransactionFilterValue>(initialFilter)
+
+  // Reflect filter into URL so views are shareable.
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (filter.search) params.set('q', filter.search)
+    if (filter.preset !== 'last-3-months') params.set('range', filter.preset)
+    if (filter.categories.length > 0) params.set('cat', filter.categories.join(','))
+    const next = params.toString()
+    const current = searchParams.toString()
+    if (next !== current) {
+      router.replace(next ? `?${next}` : '?', { scroll: false })
+    }
+  }, [filter, router, searchParams])
+
+  const fetchDays = useMemo(() => fetchDaysForPreset(filter.preset), [filter.preset])
+  const { data: transactions = [], isLoading: loading, error: queryError } =
+    useTransactions(fetchDays)
   const error = queryError?.message ?? null
 
-  // Unique categories from fetched data (for filter dropdown)
-  const categories = useMemo(() => {
+  const window = useMemo(() => getWindowForPreset(filter.preset), [filter.preset])
+  const priorWindow = useMemo(() => (window ? getPriorWindow(window) : null), [window])
+
+  const availableCategories = useMemo(() => {
     const set = new Set<string>()
     transactions.forEach((t) => {
       if (t.category?.trim()) set.add(t.category.trim())
@@ -38,42 +84,64 @@ export function TransactionsList() {
     return Array.from(set).sort()
   }, [transactions])
 
-  // Reset selected category if not in list
-  useEffect(() => {
-    if (categories.length > 0 && selectedCategory && !categories.includes(selectedCategory)) {
-      setSelectedCategory('')
-    }
-  }, [categories, selectedCategory])
-
-  // Filter by search and category
   const filteredTransactions = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
+    const q = filter.search.trim().toLowerCase()
+    const catFilter = new Set(filter.categories)
     return transactions.filter((t) => {
+      if (!isInWindow(t.date, window)) return false
       const matchSearch =
         !q ||
         (t.counterparty?.toLowerCase().includes(q) ?? false) ||
         (t.category?.toLowerCase().includes(q) ?? false)
-      const matchCategory = !selectedCategory || (t.category?.trim() === selectedCategory)
+      const matchCategory = catFilter.size === 0 || (t.category && catFilter.has(t.category.trim()))
       return matchSearch && matchCategory
     })
-  }, [transactions, searchQuery, selectedCategory])
+  }, [transactions, filter.search, filter.categories, window])
 
-  // Total of displayed transactions in display currency
-  const totalDisplay = useMemo(() => {
-    let sum = 0
-    for (const t of filteredTransactions) {
+  const priorTransactions = useMemo(() => {
+    if (!priorWindow) return [] as TransactionLog[]
+    const q = filter.search.trim().toLowerCase()
+    const catFilter = new Set(filter.categories)
+    return transactions.filter((t) => {
+      if (!isInWindow(t.date, priorWindow)) return false
+      const matchSearch =
+        !q ||
+        (t.counterparty?.toLowerCase().includes(q) ?? false) ||
+        (t.category?.toLowerCase().includes(q) ?? false)
+      const matchCategory = catFilter.size === 0 || (t.category && catFilter.has(t.category.trim()))
+      return matchSearch && matchCategory
+    })
+  }, [transactions, filter.search, filter.categories, priorWindow])
+
+  const toDisplay = useMemo(() => {
+    return (t: TransactionLog) => {
       const gbp = t.amount_gbp ?? 0
       const usd = t.amount_usd ?? 0
       const hasGbp = t.amount_gbp != null
       const amountInGbp = hasGbp ? gbp : usd / (fxRate || 1)
       const amountInUsd = hasGbp ? gbp * (fxRate || 1) : usd
-      const displayValue = currency === 'GBP' ? amountInGbp : amountInUsd
-      sum += displayValue
+      return currency === 'GBP' ? amountInGbp : amountInUsd
     }
-    return sum
-  }, [filteredTransactions, currency, fxRate])
+  }, [currency, fxRate])
 
-  // Group filtered transactions by day (date string YYYY-MM-DD), sorted newest first
+  const totals = useMemo(() => {
+    let totalIn = 0
+    let totalOut = 0
+    for (const t of filteredTransactions) {
+      const v = toDisplay(t)
+      if (v >= 0) totalIn += v
+      else totalOut += v
+    }
+    return { totalIn, totalOut, net: totalIn + totalOut }
+  }, [filteredTransactions, toDisplay])
+
+  const priorNet = useMemo(() => {
+    if (!priorWindow || priorTransactions.length === 0) return null
+    let sum = 0
+    for (const t of priorTransactions) sum += toDisplay(t)
+    return sum
+  }, [priorTransactions, priorWindow, toDisplay])
+
   const transactionsByDay = useMemo(() => {
     const byDay = new Map<string, TransactionLog[]>()
     for (const t of filteredTransactions) {
@@ -85,6 +153,8 @@ export function TransactionsList() {
     return sortedDates.map((dateStr) => ({ dateStr, transactions: byDay.get(dateStr)! }))
   }, [filteredTransactions])
 
+  const symbol = currency === 'GBP' ? '£' : '$'
+
   const formatDayHeader = (dateStr: string): string => {
     const [y, m, d] = dateStr.split('-').map(Number)
     const date = new Date(y, (m ?? 1) - 1, d ?? 1)
@@ -93,44 +163,17 @@ export function TransactionsList() {
 
   const getDayTotal = (dayTransactions: TransactionLog[]): number => {
     let sum = 0
-    for (const t of dayTransactions) {
-      const gbp = t.amount_gbp ?? 0
-      const usd = t.amount_usd ?? 0
-      const hasGbp = t.amount_gbp != null
-      const amountInGbp = hasGbp ? gbp : usd / (fxRate || 1)
-      const amountInUsd = hasGbp ? gbp * (fxRate || 1) : usd
-      sum += currency === 'GBP' ? amountInGbp : amountInUsd
-    }
+    for (const t of dayTransactions) sum += toDisplay(t)
     return sum
   }
 
   const formatTotal = (value: number): string => {
     const prefix = value < 0 ? '-' : ''
-    const symbol = currency === 'GBP' ? '£' : '$'
     return `${prefix}${symbol}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
-  // Close filter when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
-        setFilterOpen(false)
-      }
-    }
-    if (filterOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [filterOpen])
-
   const formatAmount = (t: TransactionLog): string => {
-    const gbp = t.amount_gbp ?? 0
-    const usd = t.amount_usd ?? 0
-    const hasGbp = t.amount_gbp != null
-    const amountInGbp = hasGbp ? gbp : usd / (fxRate || 1)
-    const amountInUsd = hasGbp ? gbp * (fxRate || 1) : usd
-    const value = currency === 'GBP' ? amountInGbp : amountInUsd
-    const symbol = currency === 'GBP' ? '£' : '$'
+    const value = toDisplay(t)
     const formatted = Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     const prefix = value < 0 ? '-' : ''
     return `${prefix}${symbol}${formatted}`
@@ -144,87 +187,24 @@ export function TransactionsList() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl md:text-3xl font-bold">Transactions</h1>
+      <TransactionFilterBar
+        value={filter}
+        onChange={setFilter}
+        availableCategories={availableCategories}
+      />
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="relative" ref={filterRef}>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 rounded-full shrink-0"
-            onClick={() => setFilterOpen(!filterOpen)}
-            aria-label="Filter"
-          >
-            <Filter className="h-4 w-4" />
-          </Button>
-          {filterOpen && (
-            <div className="absolute right-0 top-full z-10 mt-2 w-56 rounded-lg border bg-popover p-3 shadow-md">
-              <div className="space-y-3">
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Date range</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {DATE_RANGE_OPTIONS.map((opt) => (
-                      <Button
-                        key={opt.label}
-                        variant={dateRangeDays === opt.days ? 'default' : 'outline'}
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => {
-                          setDateRangeDays(opt.days)
-                        }}
-                      >
-                        {opt.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                {categories.length > 0 && (
-                  <div>
-                    <p className="mb-1.5 text-xs font-medium text-muted-foreground">Category</p>
-                    <select
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                    >
-                      <option value="">All categories</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Recent transactions</h2>
-        {!loading && (
-          <span className={cn('text-sm font-medium', totalDisplay < 0 ? 'text-foreground' : 'text-muted-foreground')}>
-            {totalDisplay < 0 ? '-' : ''}
-            {currency === 'GBP' ? '£' : '$'}
-            {Math.abs(totalDisplay).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        )}
-      </div>
-
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
+      {!loading && filteredTransactions.length > 0 && (
+        <FilteredTotalsRow
+          count={filteredTransactions.length}
+          totalIn={totals.totalIn}
+          totalOut={totals.totalOut}
+          net={totals.net}
+          priorNet={priorNet}
+          symbol={symbol}
+        />
       )}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {loading ? (
         <div className="space-y-3">
@@ -245,8 +225,8 @@ export function TransactionsList() {
           title="No transactions"
           description={
             transactions.length === 0
-              ? "No transactions in the selected date range."
-              : "No transactions match your search or filter."
+              ? 'No transactions in the selected date range.'
+              : 'No transactions match your search or filter.'
           }
         />
       ) : (
@@ -262,7 +242,7 @@ export function TransactionsList() {
                   <span
                     className={cn(
                       'text-sm font-medium',
-                      dayTotal < 0 ? 'text-foreground' : 'text-muted-foreground'
+                      dayTotal < 0 ? 'text-foreground' : 'text-muted-foreground',
                     )}
                   >
                     {formatTotal(dayTotal)}

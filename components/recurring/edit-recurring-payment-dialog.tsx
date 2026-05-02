@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { RecurringPayment } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { queryKeys } from '@/lib/query-keys'
@@ -29,6 +30,7 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
   const { currency, fxRate } = useCurrency()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   // Show amount in active currency
   const initialAmount = currency === 'USD'
@@ -205,7 +207,7 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
             <Button
               type="button"
               variant="destructive"
-              onClick={handleDelete}
+              onClick={() => setConfirmDeleteOpen(true)}
               disabled={saving || deleting}
             >
               {deleting ? 'Deleting...' : 'Delete'}
@@ -213,6 +215,20 @@ export function EditRecurringPaymentDialog({ payment, open, onOpenChange }: Edit
           </div>
         </form>
       </DialogContent>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete recurring payment?"
+        description={
+          <>
+            This will permanently remove <strong>{payment.name}</strong> from your recurring
+            payments. This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDelete}
+      />
     </Dialog>
   )
 }

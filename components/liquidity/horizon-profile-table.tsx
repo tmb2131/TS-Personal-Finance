@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { AccountBalance } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -123,9 +124,7 @@ export default function HorizonProfileTable() {
           <CardTitle>Horizon Profile Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center" style={{ height: 200 }}>
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
+          <Skeleton className="w-full" style={{ height: 200 }} aria-label="Loading table" />
         </CardContent>
       </Card>
     )

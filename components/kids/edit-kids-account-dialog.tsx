@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { KidsAccount } from '@/lib/types'
 import { queryKeys } from '@/lib/query-keys'
 
@@ -34,6 +35,7 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
   const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const [childName, setChildName] = useState(account.child_name)
   const [accountType, setAccountType] = useState(account.account_type)
@@ -193,7 +195,7 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
             <Button
               type="button"
               variant="destructive"
-              onClick={handleDelete}
+              onClick={() => setConfirmDeleteOpen(true)}
               disabled={saving || deleting}
             >
               {deleting ? 'Deleting...' : 'Delete'}
@@ -201,6 +203,20 @@ export function EditKidsAccountDialog({ account, open, onOpenChange }: EditKidsA
           </div>
         </form>
       </DialogContent>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete kids account?"
+        description={
+          <>
+            This will permanently remove <strong>{account.child_name}</strong>'s{' '}
+            <strong>{account.account_type}</strong> account. This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDelete}
+      />
     </Dialog>
   )
 }

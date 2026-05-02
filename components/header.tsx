@@ -2,8 +2,9 @@
 
 import { CurrencyToggle } from './currency-toggle'
 import { ThemeToggle } from './theme-toggle'
+import { SyncStatusPill } from './sync-status-pill'
 import { Button } from './ui/button'
-import { RefreshCw, MessageCircle } from 'lucide-react'
+import { RefreshCw, MessageCircle, Plus } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useSync } from '@/lib/contexts/sync-context'
@@ -23,11 +24,9 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
   const {
     syncing,
     handleSync,
-    lastRefreshDate,
     latestTransactionDate,
     maxAccountDate,
     ingestionStatus,
-    formatLastSheetSync,
     formatDate,
   } = useSync()
   const [mounted, setMounted] = useState(false)
@@ -102,25 +101,18 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
         
         {mounted && (
           <>
-            <div className="min-w-0 text-xs text-muted-foreground md:hidden">
-              <span className="text-foreground">
-                {syncing ? 'Refreshing...' : ingestionStatus?.freshness === 'setup' ? 'Add a source' : formatLastSheetSync(lastRefreshDate)}
-              </span>
-            </div>
-            <div className="hidden min-w-0 items-center gap-2 text-xs text-muted-foreground md:flex md:gap-3 lg:gap-4">
-              <div className="hidden md:block">
-                <span className="font-medium">Source Health:</span>{' '}
-                <span className="text-foreground">{ingestionStatus?.freshnessLabel ?? formatLastSheetSync(lastRefreshDate)}</span>
-              </div>
-              <div className="hidden md:block">
+            <SyncStatusPill className="md:hidden" />
+            <div className="hidden min-w-0 items-center gap-2 md:flex md:gap-3 lg:gap-4">
+              <SyncStatusPill />
+              <div className="hidden text-xs text-muted-foreground md:block">
                 <span className="font-medium">Sources:</span>{' '}
                 <span className="text-foreground">{ingestionStatus?.connectedSources ?? 0}</span>
               </div>
-              <div className="hidden lg:block">
+              <div className="hidden text-xs text-muted-foreground lg:block">
                 <span className="font-medium">Latest Transaction:</span>{' '}
                 <span className="text-foreground">{formatDate(latestTransactionDate)}</span>
               </div>
-              <div className="hidden lg:block">
+              <div className="hidden text-xs text-muted-foreground lg:block">
                 <span className="font-medium">Latest Account:</span>{' '}
                 <span className="text-foreground">{formatDate(maxAccountDate)}</span>
               </div>
@@ -129,6 +121,18 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
         )}
       </div>
       <div className="flex items-center gap-1.5 md:gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => window.dispatchEvent(new Event('findash:open-quick-add'))}
+          className="hidden h-9 gap-1.5 px-2 text-xs md:inline-flex md:px-3 md:text-sm"
+          title="Quick add (⌘K)"
+          aria-label="Quick add"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="hidden lg:inline">Quick add</span>
+        </Button>
         <Button
           type="button"
           variant="ghost"
