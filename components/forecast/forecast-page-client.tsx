@@ -11,6 +11,7 @@ import { ForecastCategoryTable } from './forecast-category-table'
 import { ForecastCategoryDrilldown } from './forecast-category-drilldown'
 import { ForecastBacktestPanel } from './forecast-backtest-panel'
 import { ForecastMethodologyNotes } from './forecast-methodology-notes'
+import { ForecastTopMovers } from './forecast-top-movers'
 
 export function ForecastPageClient({
   initialData,
@@ -47,6 +48,13 @@ export function ForecastPageClient({
     <div className="space-y-4 md:space-y-6">
       <section id="forecast-summary" className="scroll-mt-24">
         <ForecastSummaryCards data={data} />
+      </section>
+
+      <section
+        id="forecast-top-movers"
+        className="scroll-mt-24 pt-3 md:pt-4 border-t border-border"
+      >
+        <ForecastTopMovers data={data} />
       </section>
 
       <section

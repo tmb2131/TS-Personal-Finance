@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { SettingsForm } from '@/components/settings/settings-form'
 import { AppearanceForm } from '@/components/settings/appearance-form'
 import { CategoryPlanningSection } from '@/components/settings/category-planning-section'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -24,23 +25,22 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Preferences, data sources, category planning, and appearance.
-        </p>
-        <nav className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm" aria-label="Settings sections">
-          <a href="#google-sheet" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-            Data sources
-          </a>
-          <a href="#category-planning" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-            Category Planning
-          </a>
-          <a href="#appearance" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-            Appearance
-          </a>
-        </nav>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Preferences, data sources, category planning, and appearance."
+        accent="slate"
+      />
+      <nav className="flex flex-wrap gap-x-4 gap-y-1 -mt-2 text-sm" aria-label="Settings sections">
+        <a href="#google-sheet" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+          Data sources
+        </a>
+        <a href="#category-planning" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+          Category Planning
+        </a>
+        <a href="#appearance" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+          Appearance
+        </a>
+      </nav>
       <SettingsForm
         initialSpreadsheetId={profile?.google_spreadsheet_id ?? ''}
         initialDisplayName={profile?.display_name ?? ''}

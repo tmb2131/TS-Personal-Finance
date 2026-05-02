@@ -5,6 +5,7 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { LineChart, Receipt, Calendar, CalendarDays, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/utils/cn'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { getBudgetStatusConfig } from '@/lib/budget-status'
@@ -86,12 +87,12 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
 
   const getCardContent = (sectionId: string) => {
     if (sectionId === 'net-worth-chart') {
-      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (loading) return <Skeleton className="h-8 w-28" aria-label="Loading" />
       if (netWorth != null) return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(netWorth)}</span>
       return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     if (sectionId === 'budget-table') {
-      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (loading) return <Skeleton className="h-8 w-28" aria-label="Loading" />
       if (budgetStatusInfo) {
         return (
           <span className={cn('text-2xl font-bold tabular-nums', budgetStatusInfo.textClass)}>
@@ -103,7 +104,7 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
       return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     if (sectionId === 'income-vs-expenses') {
-      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (loading) return <Skeleton className="h-8 w-28" aria-label="Loading" />
       if (incomeTotal != null && expensesTotal != null) {
         return (
           <span className="text-2xl font-bold tabular-nums">
@@ -114,7 +115,7 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
       return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     if (sectionId === 'annual-trends') {
-      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (loading) return <Skeleton className="h-8 w-28" aria-label="Loading" />
       if (data?.expensesForecastGbp != null) {
         const val = toDisplayCurrency(data.expensesForecastGbp)
         return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(Math.abs(val))}</span>
@@ -122,7 +123,7 @@ export function DashboardAtAGlance({ data }: { data: DashboardAtAGlanceData | nu
       return <span className="text-sm text-muted-foreground">&mdash;</span>
     }
     if (sectionId === 'monthly-trends') {
-      if (loading) return <span className="text-sm text-muted-foreground">Loading...</span>
+      if (loading) return <Skeleton className="h-8 w-28" aria-label="Loading" />
       if (data?.monthlyEstGbp != null) {
         const val = toDisplayCurrency(data.monthlyEstGbp)
         return <span className="text-2xl font-bold tabular-nums">{symbol}{formatCompact(Math.abs(val))}</span>

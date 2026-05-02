@@ -16,10 +16,25 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 
-export function AddTransactionDialog() {
+interface AddTransactionDialogProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
+}
+
+export function AddTransactionDialog({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  hideTrigger = false,
+}: AddTransactionDialogProps = {}) {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = (v: boolean) => {
+    if (controlledOnOpenChange) controlledOnOpenChange(v)
+    else setInternalOpen(v)
+  }
   const [saving, setSaving] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
@@ -87,12 +102,14 @@ export function AddTransactionDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm() }}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Add Transaction
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Transaction
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>

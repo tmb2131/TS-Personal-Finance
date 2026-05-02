@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CsvImportFlow } from '@/components/import/csv-upload'
 import { SourceHealthPanel } from '@/components/ingestion/source-health-panel'
+import { PageHeader, PageHeaderBadge } from '@/components/ui/page-header'
 
 interface ImportPageProps {
   searchParams?: Promise<{ target?: string | string[] }>
@@ -27,17 +28,18 @@ export default async function ImportPage({ searchParams }: ImportPageProps) {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="rounded-xl border bg-muted/30 p-4 md:p-5">
-        <h1 className="text-2xl md:text-3xl font-bold">Import CSV Data</h1>
-        <p className="mt-2 text-sm md:text-base text-muted-foreground">
-          Load native data into Findash without maintaining a live spreadsheet.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border bg-background px-2.5 py-1 font-medium">Bulk source: CSV</span>
-          <span className="rounded-full border bg-background px-2.5 py-1 font-medium">Works for transactions, balances, recurring</span>
-          <span className="rounded-full border bg-background px-2.5 py-1 font-medium">Feeds the same forecast pipeline</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Import CSV Data"
+        description="Load native data into Findash without maintaining a live spreadsheet."
+        accent="slate"
+        badges={
+          <>
+            <PageHeaderBadge>Bulk source: CSV</PageHeaderBadge>
+            <PageHeaderBadge>Works for transactions, balances, recurring</PageHeaderBadge>
+            <PageHeaderBadge>Feeds the same forecast pipeline</PageHeaderBadge>
+          </>
+        }
+      />
       <SourceHealthPanel
         title="Before you import"
         description="Check which datasets already exist so you can decide whether to append, review, or backfill with CSV."

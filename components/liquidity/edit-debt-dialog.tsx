@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Debt } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { queryKeys } from '@/lib/query-keys'
@@ -31,6 +32,7 @@ export function EditDebtDialog({ debt, open, onOpenChange }: EditDebtDialogProps
   const { currency, fxRate } = useCurrency()
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const initialAmount = currency === 'USD'
     ? (debt.amount_usd ?? (debt.amount_gbp ?? 0) * (fxRate || 1))
@@ -171,7 +173,7 @@ export function EditDebtDialog({ debt, open, onOpenChange }: EditDebtDialogProps
             <Button
               type="button"
               variant="destructive"
-              onClick={handleDelete}
+              onClick={() => setConfirmDeleteOpen(true)}
               disabled={saving || deleting}
             >
               {deleting ? 'Deleting...' : 'Delete'}
@@ -179,6 +181,21 @@ export function EditDebtDialog({ debt, open, onOpenChange }: EditDebtDialogProps
           </div>
         </form>
       </DialogContent>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete debt entry?"
+        description={
+          <>
+            This will permanently remove <strong>{debt.name}</strong>
+            {debt.purpose ? <> ({debt.purpose})</> : null} from your liabilities. This
+            action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleDelete}
+      />
     </Dialog>
   )
 }

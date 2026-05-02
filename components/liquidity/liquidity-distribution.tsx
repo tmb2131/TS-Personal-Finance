@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { AccountBalance } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
@@ -111,12 +112,7 @@ export default function LiquidityDistribution() {
           <CardTitle>Liquidity Distribution</CardTitle>
         </CardHeader>
         <CardContent>
-          <div
-            className="flex items-center justify-center"
-            style={{ height: chartHeight }}
-          >
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
+          <Skeleton className="w-full" style={{ height: chartHeight }} aria-label="Loading chart" />
         </CardContent>
       </Card>
     )

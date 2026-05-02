@@ -8,6 +8,7 @@ import { InsightsDataBlock } from '@/components/insights/insights-data-block'
 import { InsightsDataHydrator } from '@/components/insights/insights-data-context'
 import { DUMMY_SHEET_ID } from '@/lib/ingestion-shared'
 import { fetchInsightsData } from '@/lib/insights-data'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function InsightsPage() {
   const supabase = await createClient()
@@ -34,6 +35,11 @@ export default async function InsightsPage() {
       <InsightsDataHydrator data={initialData} />
       <InsightsHashScroll />
       <AutoSyncOnMount />
+      <PageHeader
+        title="Key Insights"
+        description="Quick overview of your financial performance and trends"
+        accent="purple"
+      />
       {needsSpreadsheet && (
         <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm md:p-5">
           <div className="font-semibold">No live sheet connected</div>

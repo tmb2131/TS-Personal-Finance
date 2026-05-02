@@ -10,6 +10,7 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/ui/page-header'
 import { BudgetTarget, MonthlyTrend, AnnualTrend } from '@/lib/types'
 import { getDefaultForecastMethods } from '@/lib/forecasting'
 import { isExpenseCategory } from '@/lib/category-filters'
@@ -552,17 +553,15 @@ export function SummaryPageContent() {
 
   return (
     <>
-      <div className="hidden md:block rounded-xl border border-l-[3px] border-l-indigo-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold">Daily Summary</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            <span>{todayFormatted}</span>
-            {lastSyncDate && (
-              <span className="text-muted-foreground/70"> · Updated {formatLastSync()}</span>
-            )}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Daily Summary"
+        description={
+          lastSyncDate
+            ? `${todayFormatted} · Updated ${formatLastSync()}`
+            : todayFormatted
+        }
+        accent="indigo"
+      />
 
       <div>
         {loading ? (

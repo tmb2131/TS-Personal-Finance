@@ -11,6 +11,7 @@ import { AnalysisHashScroll } from '@/components/analysis/analysis-hash-scroll'
 import { ForecastEvolutionSection } from '@/components/analysis/forecast-evolution-section'
 import { MonthlyCategoryTrendsSection } from '@/components/analysis/monthly-category-trends-section'
 import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
+import { PageHeader } from '@/components/ui/page-header'
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
@@ -38,17 +39,12 @@ export default async function AnalysisPage({
   return (
     <div className="space-y-4 md:space-y-6">
       <AnalysisHashScroll />
-      <div className="rounded-xl border border-l-[3px] border-l-purple-500 bg-gradient-to-r from-muted/50 to-muted/30 p-4 md:p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl md:text-3xl font-bold">Analysis & Trends</h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              Deep dive into spending patterns and year-over-year changes
-            </p>
-          </div>
-          <AddTransactionDialog />
-        </div>
-      </div>
+      <PageHeader
+        title="Analysis & Trends"
+        description="Deep dive into spending patterns and year-over-year changes"
+        accent="purple"
+        actions={<AddTransactionDialog />}
+      />
       <AnalysisNavigation />
       <div id="cash-runway" className="scroll-mt-24">
         <CashRunwayCards />

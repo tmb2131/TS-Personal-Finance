@@ -56,7 +56,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   }
 
   :where(
@@ -123,6 +123,32 @@
 /* Horizontal scroll containers: smooth touch scrolling on iOS */
 .scroll-touch {
   -webkit-overflow-scrolling: touch;
+}
+
+/* Skeleton shimmer: subtle moving highlight over the muted base */
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--foreground) / 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

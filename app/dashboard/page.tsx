@@ -16,6 +16,7 @@ import {
   IncomeVsExpensesChartSkeleton,
 } from '@/components/dashboard/skeletons'
 import { IncomeVsExpensesChartWrapper } from '@/components/dashboard/income-vs-expenses-chart-wrapper'
+import { PageHeader } from '@/components/ui/page-header'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -30,16 +31,17 @@ export default async function DashboardPage() {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-2 md:space-y-3 flex flex-col">
       <DashboardHashScroll />
-      {/* Header - Renders immediately; on mobile Executive Summary is moved to top via order */}
+      {/* Header - on mobile, the Executive Summary is shown first via order so users see data before chrome */}
       <div className="max-md:order-2">
-        <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Overview of your financial position and trends
-        </p>
+        <PageHeader
+          title="Dashboard"
+          description="Overview of your financial position and trends"
+          accent="blue"
+        />
       </div>
 
       <div className="max-md:order-1">
-        <Suspense fallback={<div className="h-48 animate-pulse rounded-lg bg-muted" />}>
+        <Suspense fallback={<div className="skeleton-shimmer h-48 rounded-lg bg-muted" />}>
           <DashboardAtAGlanceWrapper />
         </Suspense>
       </div>

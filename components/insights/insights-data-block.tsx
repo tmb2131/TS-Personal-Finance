@@ -3,17 +3,11 @@ import { KeyInsights } from './key-insights'
 import { ObservationsSection } from './observations-section'
 
 /**
- * Presentational block for Key Insights heading + preloaded payload.
+ * Presentational block for Key Insights preloaded payload.
  */
 export function InsightsDataBlock({ initialData }: { initialData: InsightsDataPayload }) {
   return (
     <>
-      <div className="hidden md:block">
-        <h1 className="text-2xl md:text-3xl font-bold">Key Insights</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Quick overview of your financial performance and trends
-        </p>
-      </div>
       <KeyInsights initialData={initialData} />
       <ObservationsSection
         allocation={initialData.allocationObservations ?? []}
