@@ -170,6 +170,33 @@ const normalizeManualForecast = (value: number | null | undefined, expense: bool
   return expense ? -Math.abs(num) : Math.abs(num)
 }
 
+/** Manual forecast with actual floor (same conservative rule as Budget year method). */
+function computeManualForecastWithActualFloor(
+  manualForecast: number | null | undefined,
+  actualValue: number,
+  expense: boolean
+): number {
+  const manual = normalizeManualForecast(manualForecast, expense)
+  if (manual == null) return actualValue
+  return expense ? Math.min(manual, actualValue) : Math.max(manual, actualValue)
+}
+
+export function computeManualYearForecast(
+  manualYearForecast: number | null | undefined,
+  ytdValue: number,
+  expense: boolean
+): number {
+  return computeManualForecastWithActualFloor(manualYearForecast, ytdValue, expense)
+}
+
+export function computeManualMonthForecast(
+  manualMonthForecast: number | null | undefined,
+  mtdValue: number,
+  expense: boolean
+): number {
+  return computeManualForecastWithActualFloor(manualMonthForecast, mtdValue, expense)
+}
+
 export type TxRowForecast = {
   category: string
   date: unknown
@@ -289,11 +316,9 @@ export async function computeAnnualForecasts(
     const settings = settingsMap.get(category)
     const method = settings?.current_year_method || getDefaultForecastMethods(category).year
     const expense = isExpense(category)
-    const manualYear = normalizeManualForecast(settings?.manual_year_forecast ?? null, expense)
-
     let forecast = ytdValue
     if (method === 'Manual') {
-      forecast = manualYear ?? ytdValue
+      forecast = computeManualYearForecast(settings?.manual_year_forecast ?? null, ytdValue, expense)
     } else if (method === 'Annual') {
       forecast = ytdValue + annualBudget * pctRemaining
     } else if (method === 'Linear') {
@@ -381,11 +406,13 @@ export async function computeAnnualTrends(
     const annualBudget = budgetByCategory.get(category) || 0
     const yearMethod = settingsMap.get(category)?.current_year_method || getDefaultForecastMethods(category).year
     const expense = true
-    const manualYear = normalizeManualForecast(settingsMap.get(category)?.manual_year_forecast ?? null, expense)
-
     let curYearEst = ytdValue
     if (yearMethod === 'Manual') {
-      curYearEst = manualYear ?? ytdValue
+      curYearEst = computeManualYearForecast(
+        settingsMap.get(category)?.manual_year_forecast ?? null,
+        ytdValue,
+        expense
+      )
     } else if (yearMethod === 'Annual') {
       curYearEst = ytdValue + annualBudget * pctRemaining
     } else if (yearMethod === 'Linear') {
@@ -503,11 +530,14 @@ export async function computeMonthlyTrends(
 
     const monthMethod = settingsMap.get(category)?.current_month_method || getDefaultForecastMethods(category).month
     const expense = true
-    const manualMonth = normalizeManualForecast(settingsMap.get(category)?.manual_month_forecast ?? null, expense)
 
     let curMonthEst = mtd
     if (monthMethod === 'Manual') {
-      curMonthEst = manualMonth ?? mtd
+      curMonthEst = computeManualMonthForecast(
+        settingsMap.get(category)?.manual_month_forecast ?? null,
+        mtd,
+        expense
+      )
     } else if (monthMethod === 'Average') {
       const values = last3Keys.map(getMonthTotal)
       const available = values.filter((v) => v !== 0)

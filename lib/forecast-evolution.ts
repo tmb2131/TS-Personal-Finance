@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getDefaultForecastMethods } from '@/lib/forecasting'
+import { computeManualYearForecast, getDefaultForecastMethods } from '@/lib/forecasting'
 
 const INCOME_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 const PAGE_SIZE = 1000
@@ -101,12 +101,6 @@ const normalizeAmountGBP = (
   if (amountGBP != null && !Number.isNaN(Number(amountGBP))) return Number(amountGBP)
   if (amountUSD != null && !Number.isNaN(Number(amountUSD))) return Number(amountUSD) / gbpUsdRate
   return 0
-}
-
-const normalizeManualForecast = (value: number | null | undefined, expense: boolean): number | null => {
-  if (value == null || Number.isNaN(Number(value))) return null
-  const num = Number(value)
-  return expense ? -Math.abs(num) : Math.abs(num)
 }
 
 const pickAsOf = <T extends { effective_date: string }>(rows: T[] | undefined, date: string): T | undefined => {
@@ -474,11 +468,10 @@ export async function computeForecastSnapshotsForDates(
       const annualBudget = budget?.annual_budget_gbp ?? 0
       const yearMethod = setting?.current_year_method ?? getDefaultForecastMethods(category).year
       const expense = isExpense(category)
-      const manualYear = normalizeManualForecast(setting?.manual_year_forecast ?? null, expense)
 
       let forecast = ytd
       if (yearMethod === 'Manual') {
-        forecast = manualYear ?? ytd
+        forecast = computeManualYearForecast(setting?.manual_year_forecast ?? null, ytd, expense)
       } else if (yearMethod === 'Annual') {
         forecast = ytd + annualBudget * pctRemaining
       } else if (yearMethod === 'Linear') {

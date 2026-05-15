@@ -1,3 +1,5 @@
+import { computeManualYearForecast } from '@/lib/forecasting'
+
 export type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
 
 export interface CategoryHeadroomInput {
@@ -30,13 +32,6 @@ function toNum(value: unknown): number {
   return Number.isFinite(p) ? p : 0
 }
 
-function normalizeManualForecast(value: number | null | undefined): number | null {
-  if (value == null) return null
-  const n = toNum(value)
-  if (!Number.isFinite(n)) return null
-  return -Math.abs(n) // expense
-}
-
 /** Single-category forecast (expense logic): matches forecast-neutral-daily-budget / forecasting. */
 function computeForecast(
   method: YearMethod,
@@ -46,7 +41,7 @@ function computeForecast(
   manualYearForecast: number | null
 ): number {
   if (method === 'Manual') {
-    return normalizeManualForecast(manualYearForecast) ?? ytdValue
+    return computeManualYearForecast(manualYearForecast, ytdValue, true)
   }
   if (method === 'Linear') {
     return pctElapsed > 0 ? ytdValue / pctElapsed : ytdValue

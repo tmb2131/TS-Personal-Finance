@@ -1,3 +1,5 @@
+import { computeManualYearForecast } from '@/lib/forecasting'
+
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
 
 export interface NeutralBudgetCategoryInput {
@@ -33,13 +35,6 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-const normalizeManualForecast = (value: number | null | undefined, expense: boolean): number | null => {
-  if (value == null) return null
-  const num = toNumber(value)
-  if (!Number.isFinite(num)) return null
-  return expense ? -Math.abs(num) : Math.abs(num)
-}
-
 const computeForecast = (
   method: YearMethod,
   annualBudget: number,
@@ -48,7 +43,7 @@ const computeForecast = (
   manualYearForecast: number | null
 ): number => {
   if (method === 'Manual') {
-    return normalizeManualForecast(manualYearForecast, true) ?? ytdValue
+    return computeManualYearForecast(manualYearForecast, ytdValue, true)
   }
 
   if (method === 'Linear') {

@@ -39,13 +39,13 @@ const yearMethodHelp: Record<YearMethod, string> = {
   Annual: 'YTD + (Annual Budget × % year remaining)',
   Linear: 'YTD ÷ % year elapsed (run-rate)',
   Budget: 'Use budget unless YTD already exceeded it',
-  Manual: 'Use your manual annual override',
+  Manual: 'Use your manual annual override; if YTD exceeds manual, use YTD',
 }
 
 const monthMethodHelp: Record<MonthMethod, string> = {
   Linear: 'MTD ÷ % month elapsed (run-rate)',
   Average: 'Last 3 full months average (or MTD if higher)',
-  Manual: 'Use your manual monthly override',
+  Manual: 'Use your manual monthly override; if MTD exceeds manual, use MTD',
   MTD: 'Actual month-to-date spend as the forecast',
 }
 
