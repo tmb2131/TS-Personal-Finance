@@ -157,23 +157,20 @@ export function buildStartOfDayExpenseGapMap(
 }
 
 /**
- * Bridge for "Change Since Yesterday": start of yesterday → end of yesterday.
- * Reflects yesterday's spending only; today's transactions do not affect the result.
+ * Bridge for "Change Since Yesterday": end of yesterday → end of today.
+ * Matches forecast-gap-over-time day-over-day gap (budget − forecast per category).
  */
-export function buildForecastBridgeForYesterdaySpend(
+export function buildForecastBridgeSinceYesterday(
   yesterdaySnapshot: SnapshotByCategory,
+  todaySnapshot: SnapshotByCategory,
   localYesterdayStr: string,
-  yesterdaySpendByCategory: Map<string, number>
+  localTodayStr: string
 ): ForecastBridgePayload {
-  const startGapMap = buildStartOfDayExpenseGapMap(
-    yesterdaySnapshot,
-    localYesterdayStr,
-    yesterdaySpendByCategory
-  )
-  const endGapMap = buildExpenseGapMapFromSnapshot(yesterdaySnapshot)
+  const startGapMap = buildExpenseGapMapFromSnapshot(yesterdaySnapshot)
+  const endGapMap = buildExpenseGapMapFromSnapshot(todaySnapshot)
   return buildForecastBridgeFromSnapshots(
     localYesterdayStr,
-    localYesterdayStr,
+    localTodayStr,
     startGapMap,
     endGapMap
   )
@@ -255,7 +252,7 @@ export type DailyTodayMetrics = {
   totalForecastTomorrowAtZero: number
   /** tomorrowAtZero − startOfToday; positive = forecast rises. */
   impliedForecastChangeIfNoMoreSpend: number | null
-  /** Gap change from start of yesterday to end of yesterday (yesterday's spend only). */
+  /** Gap change from end of yesterday to end of today (matches forecast evolution chart). */
   gapChangeSinceYesterday: number | null
 }
 
