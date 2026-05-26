@@ -11,7 +11,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useForecastGapOverTime } from '@/lib/hooks/queries/use-forecast-gap-over-time'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { getBudgetStatusConfig } from '@/lib/budget-status'
 import { toLocalDateString } from '@/lib/daily-summary-utils'
 import { addCalendarDays } from '@/lib/daily-today-metrics'
 import { cn } from '@/utils/cn'
@@ -21,8 +20,6 @@ const TREND_THRESHOLD = 0.5
 type TrendDirection = 'improving' | 'worsening' | 'stable'
 
 type ForecastWeekTrendCardProps = {
-  currentGap: number
-  budgetTotal: number
   cardContentClass?: string
   onNavigate?: (path: string) => void
 }
@@ -89,8 +86,6 @@ function deriveTrend(gaps: number[]): TrendDirection {
 }
 
 export function ForecastWeekTrendCard({
-  currentGap,
-  budgetTotal,
   cardContentClass = 'px-4 pb-4 pt-4 sm:px-5 sm:pb-4 sm:pt-5 md:pt-5',
   onNavigate,
 }: ForecastWeekTrendCardProps) {
@@ -134,17 +129,16 @@ export function ForecastWeekTrendCard({
     [chartData]
   )
   const trendConfig = TREND_CONFIG[trend]
-  const budgetStatusInfo = getBudgetStatusConfig(currentGap, budgetTotal)
 
-  const subtext = useMemo(() => {
-    if (currentGap === 0 || budgetTotal <= 0) return null
-    const pct = ((Math.abs(currentGap) / budgetTotal) * 100).toFixed(1)
-    const amt = formatCurrency(Math.abs(currentGap))
-    if (budgetStatusInfo.level === 'under') return `${amt} to spare`
-    if (budgetStatusInfo.level === 'on_track') return `just ${amt} (${pct}%) above budget`
-    if (budgetStatusInfo.level === 'slightly_over') return `${amt} (${pct}%) above budget`
-    return `${amt} (${pct}%) over budget`
-  }, [currentGap, budgetTotal, budgetStatusInfo.level, currency, fxRate, convertAmount])
+  const weeklyChange = useMemo(() => {
+    if (chartData.length < 2) return 0
+    return chartData[chartData.length - 1].gapDisplay - chartData[0].gapDisplay
+  }, [chartData])
+
+  const changeLabel = useMemo(() => {
+    if (Math.abs(weeklyChange) <= TREND_THRESHOLD) return 'Unchanged this week'
+    return weeklyChange < 0 ? 'Gap narrowed' : 'Gap widened'
+  }, [weeklyChange])
 
   const handleClick = () => {
     onNavigate?.('/analysis#forecast-evolution')
@@ -253,16 +247,14 @@ export function ForecastWeekTrendCard({
         <div
           className={cn(
             'text-3xl sm:text-2xl font-bold tabular-nums leading-none',
-            budgetStatusInfo.textClass
+            trendConfig.textClass
           )}
         >
-          {formatCurrency(Math.abs(currentGap))}
+          {formatCurrency(Math.abs(weeklyChange))}
         </div>
-        {subtext && (
-          <p className={cn('mt-1.5 text-sm tabular-nums opacity-80', budgetStatusInfo.textClass)}>
-            {subtext}
-          </p>
-        )}
+        <p className={cn('mt-1.5 text-sm opacity-80', trendConfig.textClass)}>
+          {changeLabel}
+        </p>
       </CardContent>
     </Card>
   )

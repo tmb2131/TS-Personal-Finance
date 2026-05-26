@@ -719,8 +719,6 @@ export function SummaryPageContent() {
                   This Week
                 </p>
                 <ForecastWeekTrendCard
-                  currentGap={gapToBudget}
-                  budgetTotal={budgetTotal}
                   cardContentClass={cardContentClass}
                   onNavigate={handleNavigate}
                 />
