@@ -137,7 +137,7 @@ export function ForecastWeekTrendCard({
 
   const changeLabel = useMemo(() => {
     if (Math.abs(weeklyChange) <= TREND_THRESHOLD) return 'Unchanged this week'
-    return weeklyChange < 0 ? 'Gap narrowed' : 'Gap widened'
+    return weeklyChange < 0 ? 'Gap improved' : 'Gap worsened'
   }, [weeklyChange])
 
   const handleClick = () => {
