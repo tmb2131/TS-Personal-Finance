@@ -44,15 +44,18 @@ import { getBudgetStatusConfig } from '@/lib/budget-status'
 import { FinancialHealthBanner } from '@/components/financial-health-banner'
 import { useFinancialHealth } from '@/lib/hooks/use-financial-health'
 import { MilestonesBanner } from '@/components/milestones-banner'
-import { ForecastWeekTrendCard } from '@/components/summary/forecast-week-trend-card'
+import { ForecastWeekChangeCard } from '@/components/summary/forecast-week-change-card'
+import { ForecastWeekGapTrendCard } from '@/components/summary/forecast-week-trend-card'
+import {
+  GAP_CHANGE_THRESHOLD,
+  SummaryGapChangeCard,
+} from '@/components/summary/summary-gap-change-card'
 
 const SPEND_FILL = '#64748b'
 const SPEND_FILL_ALT = '#475569'
 const HEADROOM_FILL = '#86efac'
 const HEADROOM_FILL_ALT = '#bbf7d0'
 const HEADROOM_LABEL_FILL = '#16a34a'
-
-const GAP_CHANGE_THRESHOLD = 0.5
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
@@ -206,13 +209,6 @@ export function SummaryPageContent() {
     if (Math.abs(yesterdayChange) <= GAP_CHANGE_THRESHOLD) return 'Unchanged from yesterday'
     return yesterdayChange < 0 ? 'Gap improved since yesterday' : 'Gap worsened since yesterday'
   }, [yesterdayChange])
-
-  const yesterdayChangeImproved =
-    yesterdayChange != null &&
-    yesterdayChange < -GAP_CHANGE_THRESHOLD
-  const yesterdayChangeWorsened =
-    yesterdayChange != null &&
-    yesterdayChange > GAP_CHANGE_THRESHOLD
 
   const topDrivers = useMemo(() => {
     if (!forecastBridge) return { underBudgetDrivers: [], overBudgetDrivers: [] }
@@ -608,7 +604,10 @@ export function SummaryPageContent() {
               <Skeleton className="h-4 w-28 rounded" />
               <Skeleton className="h-36 w-full rounded-xl" />
               <Skeleton className="h-4 w-20 rounded" />
-              <Skeleton className="h-44 w-full rounded-xl" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Skeleton className="h-40 w-full rounded-xl" />
+                <Skeleton className="h-40 w-full rounded-xl" />
+              </div>
               <Skeleton className="h-4 w-16 rounded" />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Skeleton className="h-32 w-full rounded-xl" />
@@ -733,10 +732,16 @@ export function SummaryPageContent() {
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5 sm:text-[10px]">
                   This Week
                 </p>
-                <ForecastWeekTrendCard
-                  cardContentClass={cardContentClass}
-                  onNavigate={handleNavigate}
-                />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+                  <ForecastWeekChangeCard
+                    cardContentClass={cardContentClass}
+                    onNavigate={handleNavigate}
+                  />
+                  <ForecastWeekGapTrendCard
+                    cardContentClass={cardContentClass}
+                    onNavigate={handleNavigate}
+                  />
+                </div>
               </div>
 
               {/* Section: Today */}
@@ -926,158 +931,21 @@ export function SummaryPageContent() {
                     )}
 
                     {hasChangeCard && (
-                      <Card
+                      <SummaryGapChangeCard
+                        title="Change Since Yesterday"
+                        footnote="End-of-day gap compared to yesterday."
+                        change={yesterdayChange}
+                        changeLabel={yesterdayChangeLabel}
+                        drivers={yesterdayDriverHighlights}
+                        otherDriverDelta={otherDriverDelta}
+                        onNavigate={handleNavigate}
+                        cardContentClass={cardContentClass}
+                        formatCurrency={formatCurrency}
                         className={cn(
-                          'order-2 sm:order-1 overflow-hidden border-l-[3px]',
-                          !hasNeutralCard && 'sm:col-span-2',
-                          yesterdayChangeImproved
-                            ? 'border-l-green-500'
-                            : yesterdayChangeWorsened
-                              ? 'border-l-red-500'
-                              : 'border-l-slate-400 dark:border-l-slate-500'
+                          'order-2 sm:order-1',
+                          !hasNeutralCard && 'sm:col-span-2'
                         )}
-                      >
-                        <CardContent className={cardContentClass}>
-                          <button
-                            onClick={() => handleNavigate('/analysis#forecast-evolution')}
-                            className="flex items-center justify-between w-full gap-1.5 mb-2 group hover:opacity-70 transition-opacity text-left"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={cn(
-                                  'flex h-7 w-7 items-center justify-center rounded-full',
-                                  yesterdayChangeImproved
-                                    ? 'bg-green-500/15'
-                                    : yesterdayChangeWorsened
-                                      ? 'bg-red-500/15'
-                                      : 'bg-muted'
-                                )}
-                              >
-                                <Calendar
-                                  className={cn(
-                                    'h-4 w-4',
-                                    yesterdayChangeImproved
-                                      ? 'text-green-600 dark:text-green-400'
-                                      : yesterdayChangeWorsened
-                                        ? 'text-red-600 dark:text-red-400'
-                                        : 'text-muted-foreground'
-                                  )}
-                                />
-                              </div>
-                              <span className="text-xs font-medium text-muted-foreground">
-                                Change Since Yesterday
-                              </span>
-                            </div>
-                            <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                          {yesterdayChange !== null && yesterdayChangeLabel && (
-                            <>
-                              <div
-                                className={cn(
-                                  'text-3xl sm:text-2xl font-bold tabular-nums leading-none',
-                                  yesterdayChangeImproved
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : yesterdayChangeWorsened
-                                      ? 'text-red-600 dark:text-red-400'
-                                      : 'text-muted-foreground'
-                                )}
-                              >
-                                {formatCurrency(Math.abs(yesterdayChange))}
-                              </div>
-                              <p
-                                className={cn(
-                                  'mt-1.5 text-sm opacity-80',
-                                  yesterdayChangeImproved
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : yesterdayChangeWorsened
-                                      ? 'text-red-600 dark:text-red-400'
-                                      : 'text-muted-foreground'
-                                )}
-                              >
-                                {yesterdayChangeLabel}
-                              </p>
-                              <p className="mt-1 text-[11px] text-muted-foreground/70">
-                                End-of-day gap compared to yesterday.
-                              </p>
-                            </>
-                          )}
-                          {yesterdayDriverHighlights.length > 0 && (
-                            <div className="mt-3">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-xs sm:text-[10px] font-bold text-muted-foreground">
-                                  Top Drivers
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleNavigate('/analysis#forecast-evolution')}
-                                  className="text-xs font-medium text-primary hover:opacity-80 transition-opacity sm:hidden"
-                                >
-                                  View all
-                                </button>
-                              </div>
-                              {(() => {
-                                const maxDelta = Math.max(
-                                  ...yesterdayDriverHighlights.map((d) => Math.abs(d.delta)),
-                                  1
-                                )
-                                return (
-                                  <div className="space-y-1.5">
-                                    {yesterdayDriverHighlights.map((driver) => {
-                                      const pct = (Math.abs(driver.delta) / maxDelta) * 100
-                                      const isWorsening = driver.delta > 0
-                                      return (
-                                        <div
-                                          key={driver.category}
-                                          className="flex items-center gap-2"
-                                        >
-                                          <span className="text-xs sm:text-[10px] w-24 sm:w-16 truncate text-muted-foreground font-medium">
-                                            {driver.category}
-                                          </span>
-                                          <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden min-w-0">
-                                            <div
-                                              className={cn(
-                                                'h-full rounded-full transition-all duration-500',
-                                                isWorsening ? 'bg-red-500' : 'bg-green-500'
-                                              )}
-                                              style={{ width: `${pct}%` }}
-                                            />
-                                          </div>
-                                          <span
-                                            className={cn(
-                                              'text-xs sm:text-[10px] font-medium tabular-nums w-14 sm:w-11 text-right shrink-0',
-                                              isWorsening ? 'text-red-600' : 'text-green-600'
-                                            )}
-                                          >
-                                            {formatCurrency(Math.abs(driver.delta))}
-                                          </span>
-                                        </div>
-                                      )
-                                    })}
-                                    {otherDriverDelta != null && (
-                                      <p className="text-[10px] text-muted-foreground pt-0.5">
-                                        Other categories:{' '}
-                                        <span
-                                          className={cn(
-                                            'font-medium tabular-nums',
-                                            otherDriverDelta < 0
-                                              ? 'text-green-600'
-                                              : otherDriverDelta > 0
-                                                ? 'text-red-600'
-                                                : ''
-                                          )}
-                                        >
-                                          {otherDriverDelta < 0 ? '−' : '+'}
-                                          {formatCurrency(Math.abs(otherDriverDelta))}
-                                        </span>
-                                      </p>
-                                    )}
-                                  </div>
-                                )
-                              })()}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
+                      />
                     )}
                   </div>
                 </div>

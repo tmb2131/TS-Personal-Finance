@@ -19,17 +19,9 @@ const TREND_THRESHOLD = 0.5
 
 type TrendDirection = 'improving' | 'worsening' | 'stable'
 
-type ForecastWeekTrendCardProps = {
+type ForecastWeekGapTrendCardProps = {
   cardContentClass?: string
   onNavigate?: (path: string) => void
-}
-
-function formatCompactCurrency(value: number, currency: 'GBP' | 'USD') {
-  const abs = Math.abs(value)
-  const symbol = currency === 'USD' ? '$' : '£'
-  if (abs >= 1_000_000) return `${symbol}${(value / 1_000_000).toFixed(1)}M`
-  if (abs >= 1_000) return `${symbol}${(value / 1_000).toFixed(1)}k`
-  return `${symbol}${Math.round(value)}`
 }
 
 const TREND_CONFIG: Record<
@@ -39,7 +31,6 @@ const TREND_CONFIG: Record<
     borderClass: string
     bgClass: string
     lineColor: string
-    textClass: string
     pillClass: string
     iconBgClass: string
     iconTextClass: string
@@ -50,7 +41,6 @@ const TREND_CONFIG: Record<
     borderClass: 'border-l-green-500',
     bgClass: 'bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent',
     lineColor: '#22c55e',
-    textClass: 'text-green-600 dark:text-green-400',
     pillClass: 'bg-green-500/15 text-green-600 dark:text-green-400',
     iconBgClass: 'bg-green-500/15',
     iconTextClass: 'text-green-600 dark:text-green-400',
@@ -60,7 +50,6 @@ const TREND_CONFIG: Record<
     borderClass: 'border-l-red-500',
     bgClass: 'bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent',
     lineColor: '#ef4444',
-    textClass: 'text-red-600 dark:text-red-400',
     pillClass: 'bg-red-500/15 text-red-600 dark:text-red-400',
     iconBgClass: 'bg-red-500/15',
     iconTextClass: 'text-red-600 dark:text-red-400',
@@ -70,7 +59,6 @@ const TREND_CONFIG: Record<
     borderClass: 'border-l-slate-400 dark:border-l-slate-500',
     bgClass: 'bg-gradient-to-br from-muted/30 via-muted/10 to-transparent',
     lineColor: '#64748b',
-    textClass: 'text-muted-foreground',
     pillClass: 'bg-muted text-muted-foreground',
     iconBgClass: 'bg-muted',
     iconTextClass: 'text-muted-foreground',
@@ -85,10 +73,10 @@ function deriveTrend(gaps: number[]): TrendDirection {
   return 'stable'
 }
 
-export function ForecastWeekTrendCard({
+export function ForecastWeekGapTrendCard({
   cardContentClass = 'px-4 pb-4 pt-4 sm:px-5 sm:pb-4 sm:pt-5 md:pt-5',
   onNavigate,
-}: ForecastWeekTrendCardProps) {
+}: ForecastWeekGapTrendCardProps) {
   const { currency, fxRate, convertAmount } = useCurrency()
 
   const { startDate, endDate } = useMemo(() => {
@@ -101,8 +89,6 @@ export function ForecastWeekTrendCard({
 
   const { data: apiData, isLoading, error } = useForecastGapOverTime(startDate, endDate)
   const series = (apiData?.data ?? []) as Array<{ date: string; gap: number }>
-
-  const formatCurrency = (value: number) => formatCompactCurrency(value, currency)
 
   const chartData = useMemo(() => {
     return series.map((point) => {
@@ -130,16 +116,6 @@ export function ForecastWeekTrendCard({
   )
   const trendConfig = TREND_CONFIG[trend]
 
-  const weeklyChange = useMemo(() => {
-    if (chartData.length < 2) return 0
-    return chartData[chartData.length - 1].gapDisplay - chartData[0].gapDisplay
-  }, [chartData])
-
-  const changeLabel = useMemo(() => {
-    if (Math.abs(weeklyChange) <= TREND_THRESHOLD) return 'Unchanged this week'
-    return weeklyChange < 0 ? 'Gap improved' : 'Gap worsened'
-  }, [weeklyChange])
-
   const handleClick = () => {
     onNavigate?.('/analysis#forecast-evolution')
   }
@@ -150,8 +126,7 @@ export function ForecastWeekTrendCard({
         <CardContent className={cardContentClass}>
           <Skeleton className="h-4 w-24 mb-3" />
           <Skeleton className="h-5 w-16 mb-4" />
-          <Skeleton className="h-16 w-full mb-4" />
-          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-16 w-full" />
         </CardContent>
       </Card>
     )
@@ -219,7 +194,7 @@ export function ForecastWeekTrendCard({
           {trendConfig.label}
         </span>
 
-        <div className="mt-3 mb-3 h-16 w-full">
+        <div className="mt-3 h-20 w-full sm:h-24">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={sparklineData}
@@ -243,19 +218,10 @@ export function ForecastWeekTrendCard({
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
-        <div
-          className={cn(
-            'text-3xl sm:text-2xl font-bold tabular-nums leading-none',
-            trendConfig.textClass
-          )}
-        >
-          {formatCurrency(Math.abs(weeklyChange))}
-        </div>
-        <p className={cn('mt-1.5 text-sm opacity-80', trendConfig.textClass)}>
-          {changeLabel}
-        </p>
       </CardContent>
     </Card>
   )
 }
+
+/** @deprecated Use ForecastWeekGapTrendCard with ForecastWeekChangeCard in a grid */
+export const ForecastWeekTrendCard = ForecastWeekGapTrendCard
