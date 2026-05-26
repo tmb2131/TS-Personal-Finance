@@ -52,6 +52,8 @@ const HEADROOM_FILL = '#86efac'
 const HEADROOM_FILL_ALT = '#bbf7d0'
 const HEADROOM_LABEL_FILL = '#16a34a'
 
+const GAP_CHANGE_THRESHOLD = 0.5
+
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
 type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
@@ -198,6 +200,19 @@ export function SummaryPageContent() {
     if (changeGBP == null || !Number.isFinite(changeGBP)) return null
     return currency === 'USD' ? convertAmount(changeGBP, 'GBP', fxRate) : changeGBP
   }, [todayMetrics, forecastBridge, currency, fxRate, convertAmount])
+
+  const yesterdayChangeLabel = useMemo(() => {
+    if (yesterdayChange == null) return null
+    if (Math.abs(yesterdayChange) <= GAP_CHANGE_THRESHOLD) return 'Unchanged since yesterday'
+    return yesterdayChange < 0 ? 'Gap improved' : 'Gap worsened'
+  }, [yesterdayChange])
+
+  const yesterdayChangeImproved =
+    yesterdayChange != null &&
+    yesterdayChange < -GAP_CHANGE_THRESHOLD
+  const yesterdayChangeWorsened =
+    yesterdayChange != null &&
+    yesterdayChange > GAP_CHANGE_THRESHOLD
 
   const topDrivers = useMemo(() => {
     if (!forecastBridge) return { underBudgetDrivers: [], overBudgetDrivers: [] }
@@ -915,9 +930,11 @@ export function SummaryPageContent() {
                         className={cn(
                           'order-2 sm:order-1 overflow-hidden border-l-[3px]',
                           !hasNeutralCard && 'sm:col-span-2',
-                          yesterdayChange !== null && yesterdayChange < 0
+                          yesterdayChangeImproved
                             ? 'border-l-green-500'
-                            : 'border-l-red-500'
+                            : yesterdayChangeWorsened
+                              ? 'border-l-red-500'
+                              : 'border-l-slate-400 dark:border-l-slate-500'
                         )}
                       >
                         <CardContent className={cardContentClass}>
@@ -929,17 +946,21 @@ export function SummaryPageContent() {
                               <div
                                 className={cn(
                                   'flex h-7 w-7 items-center justify-center rounded-full',
-                                  yesterdayChange !== null && yesterdayChange < 0
+                                  yesterdayChangeImproved
                                     ? 'bg-green-500/15'
-                                    : 'bg-red-500/15'
+                                    : yesterdayChangeWorsened
+                                      ? 'bg-red-500/15'
+                                      : 'bg-muted'
                                 )}
                               >
                                 <Calendar
                                   className={cn(
                                     'h-4 w-4',
-                                    yesterdayChange !== null && yesterdayChange < 0
-                                      ? 'text-green-600'
-                                      : 'text-red-600'
+                                    yesterdayChangeImproved
+                                      ? 'text-green-600 dark:text-green-400'
+                                      : yesterdayChangeWorsened
+                                        ? 'text-red-600 dark:text-red-400'
+                                        : 'text-muted-foreground'
                                   )}
                                 />
                               </div>
@@ -949,25 +970,33 @@ export function SummaryPageContent() {
                             </div>
                             <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                           </button>
-                          {yesterdayChange !== null && (
-                            <div
-                              className={cn(
-                                'text-xl sm:text-lg font-bold tabular-nums leading-none',
-                                yesterdayChange < 0 ? 'text-green-600' : 'text-red-600'
-                              )}
-                            >
-                              {yesterdayChange < 0 ? (
-                                <span className="flex items-center gap-1.5">
-                                  <TrendingDown className="h-4 w-4 shrink-0" />
-                                  Gap narrowed by {formatCurrency(Math.abs(yesterdayChange))}
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1.5">
-                                  <TrendingUp className="h-4 w-4 shrink-0" />
-                                  Gap widened by {formatCurrency(Math.abs(yesterdayChange))}
-                                </span>
-                              )}
-                            </div>
+                          {yesterdayChange !== null && yesterdayChangeLabel && (
+                            <>
+                              <div
+                                className={cn(
+                                  'text-3xl sm:text-2xl font-bold tabular-nums leading-none',
+                                  yesterdayChangeImproved
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : yesterdayChangeWorsened
+                                      ? 'text-red-600 dark:text-red-400'
+                                      : 'text-muted-foreground'
+                                )}
+                              >
+                                {formatCurrency(Math.abs(yesterdayChange))}
+                              </div>
+                              <p
+                                className={cn(
+                                  'mt-1.5 text-sm opacity-80',
+                                  yesterdayChangeImproved
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : yesterdayChangeWorsened
+                                      ? 'text-red-600 dark:text-red-400'
+                                      : 'text-muted-foreground'
+                                )}
+                              >
+                                {yesterdayChangeLabel}
+                              </p>
+                            </>
                           )}
                           {yesterdayDriverHighlights.length > 0 && (
                             <div className="mt-3">
