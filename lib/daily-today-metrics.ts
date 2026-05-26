@@ -7,7 +7,11 @@ import {
   dayOfYearFromCalendarDate,
   totalDaysInCalendarYear,
 } from '@/lib/forecast-evolution'
-import { toLocalDateString } from '@/lib/daily-summary-utils'
+import {
+  buildForecastBridgeFromSnapshots,
+  type ForecastBridgePayload,
+  toLocalDateString,
+} from '@/lib/daily-summary-utils'
 
 const INCOME_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
@@ -112,6 +116,87 @@ export function computeStartOfDayExpenseGap(
   return total
 }
 
+export type ExpenseGapMap = Map<string, { annualBudget: number; forecast: number; gap: number }>
+
+/** Per-category gap map from a snapshot (expense categories only). */
+export function buildExpenseGapMapFromSnapshot(snapshot: SnapshotByCategory): ExpenseGapMap {
+  const map: ExpenseGapMap = new Map()
+  for (const [category, values] of snapshot) {
+    if (!isExpenseCategory(category)) continue
+    map.set(category, {
+      annualBudget: values.annualBudget,
+      forecast: values.forecast,
+      gap: values.gap,
+    })
+  }
+  return map
+}
+
+/**
+ * Gap map at start of a calendar day: that date's day fraction, YTD excluding that date's spend.
+ */
+export function buildStartOfDayExpenseGapMap(
+  daySnapshot: SnapshotByCategory,
+  dateStr: string,
+  spendOnDateByCategory: Map<string, number>
+): ExpenseGapMap {
+  const pct = pctElapsedForCalendarDate(dateStr)
+  const map: ExpenseGapMap = new Map()
+  for (const [category, values] of daySnapshot) {
+    if (!isExpenseCategory(category)) continue
+    const spendOnDate = spendOnDateByCategory.get(category) ?? 0
+    const ytdStart = values.ytd - spendOnDate
+    const forecast = computeCategoryForecastAtPct(values, ytdStart, pct, true)
+    map.set(category, {
+      annualBudget: values.annualBudget,
+      forecast,
+      gap: values.annualBudget - forecast,
+    })
+  }
+  return map
+}
+
+/**
+ * Bridge for "Change Since Yesterday": start of yesterday → end of yesterday.
+ * Reflects yesterday's spending only; today's transactions do not affect the result.
+ */
+export function buildForecastBridgeForYesterdaySpend(
+  yesterdaySnapshot: SnapshotByCategory,
+  localYesterdayStr: string,
+  yesterdaySpendByCategory: Map<string, number>
+): ForecastBridgePayload {
+  const startGapMap = buildStartOfDayExpenseGapMap(
+    yesterdaySnapshot,
+    localYesterdayStr,
+    yesterdaySpendByCategory
+  )
+  const endGapMap = buildExpenseGapMapFromSnapshot(yesterdaySnapshot)
+  return buildForecastBridgeFromSnapshots(
+    localYesterdayStr,
+    localYesterdayStr,
+    startGapMap,
+    endGapMap
+  )
+}
+
+export function buildSpendByCategoryForDate(
+  rows: Array<{
+    category: string | null
+    date: string
+    amount_gbp: number | null
+    amount_usd: number | null
+  }>,
+  dateStr: string,
+  fxRate: number,
+  isExpense: (category: string) => boolean
+): Map<string, number> {
+  const filtered = rows.filter((row) => {
+    const d = typeof row.date === 'string' ? row.date.split('T')[0] : ''
+    return d === dateStr
+  })
+  return buildTodaySpendByCategoryFromRows(filtered, fxRate, isExpense)
+}
+
 export function sumExpenseBudgetFromSnapshot(snapshot: SnapshotByCategory): number {
   let total = 0
   for (const [category, values] of snapshot) {
@@ -170,7 +255,7 @@ export type DailyTodayMetrics = {
   totalForecastTomorrowAtZero: number
   /** tomorrowAtZero − startOfToday; positive = forecast rises. */
   impliedForecastChangeIfNoMoreSpend: number | null
-  /** Gap change yesterday → today (totalEnd − totalStart from bridge). */
+  /** Gap change from start of yesterday to end of yesterday (yesterday's spend only). */
   gapChangeSinceYesterday: number | null
 }
 

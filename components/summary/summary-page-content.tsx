@@ -203,8 +203,8 @@ export function SummaryPageContent() {
 
   const yesterdayChangeLabel = useMemo(() => {
     if (yesterdayChange == null) return null
-    if (Math.abs(yesterdayChange) <= GAP_CHANGE_THRESHOLD) return 'Unchanged since yesterday'
-    return yesterdayChange < 0 ? 'Gap improved' : 'Gap worsened'
+    if (Math.abs(yesterdayChange) <= GAP_CHANGE_THRESHOLD) return 'Unchanged from yesterday'
+    return yesterdayChange < 0 ? 'Gap improved yesterday' : 'Gap worsened yesterday'
   }, [yesterdayChange])
 
   const yesterdayChangeImproved =
@@ -995,6 +995,9 @@ export function SummaryPageContent() {
                                 )}
                               >
                                 {yesterdayChangeLabel}
+                              </p>
+                              <p className="mt-1 text-[11px] text-muted-foreground/70">
+                                Based on yesterday&apos;s spending only; unaffected by today.
                               </p>
                             </>
                           )}

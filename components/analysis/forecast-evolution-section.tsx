@@ -47,9 +47,10 @@ export function ForecastEvolutionSection() {
     }
 
     if (presetId === 'yesterday') {
+      const yesterday = addCalendarDays(today, -1)
       return {
-        startDate: addCalendarDays(today, -1),
-        endDate: today,
+        startDate: addCalendarDays(today, -2),
+        endDate: yesterday,
       }
     }
 

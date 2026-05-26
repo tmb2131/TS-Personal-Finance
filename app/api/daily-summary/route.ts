@@ -9,13 +9,11 @@ import {
   fetchTransactionsPaged,
 } from '@/lib/forecasting'
 import type { SnapshotPreloaded } from '@/lib/forecast-evolution'
-import {
-  buildForecastBridgeFromSnapshots,
-  toDateOnly,
-  toLocalDateString,
-} from '@/lib/daily-summary-utils'
+import { toDateOnly, toLocalDateString } from '@/lib/daily-summary-utils'
 import {
   addCalendarDays,
+  buildForecastBridgeForYesterdaySpend,
+  buildSpendByCategoryForDate,
   buildTodaySpendByCategoryFromRows,
   computeImpliedForecastChangeIfNoMoreSpend,
 } from '@/lib/daily-today-metrics'
@@ -128,13 +126,18 @@ export async function GET() {
         computeAnnualForecasts(supabase, user.id, preloaded),
       ])
 
-    const startSnapshot = snapshots.get(localYesterdayStr) ?? new Map()
+    const yesterdaySnapshot = snapshots.get(localYesterdayStr) ?? new Map()
     const endSnapshot = snapshots.get(localTodayStr) ?? new Map()
-    const forecastBridge = buildForecastBridgeFromSnapshots(
+    const yesterdaySpendByCategory = buildSpendByCategoryForDate(
+      snapshotTxRows,
       localYesterdayStr,
-      localTodayStr,
-      startSnapshot,
-      endSnapshot
+      rate,
+      isExpenseCategory
+    )
+    const forecastBridge = buildForecastBridgeForYesterdaySpend(
+      yesterdaySnapshot,
+      localYesterdayStr,
+      yesterdaySpendByCategory
     )
 
     const todayTxRows = todayTxResult.data ?? []
