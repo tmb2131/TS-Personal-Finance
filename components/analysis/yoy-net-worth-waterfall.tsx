@@ -9,7 +9,8 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
-import { YoYNetWorth } from '@/lib/types'
+import { YoYNetWorth, YoYBridgeMeta } from '@/lib/types'
+import { formatYoYBridgeSubtitle, parseYoYBridgeMeta } from '@/lib/yoy-bridge-ui'
 import { cn } from '@/utils/cn'
 import { TrendingUp, AlertCircle } from 'lucide-react'
 import {
@@ -30,19 +31,20 @@ export function YoYNetWorthWaterfall() {
   const chartTheme = useChartTheme()
   const fontSizes = getChartFontSizes(isMobile)
   const [data, setData] = useState<YoYNetWorth[]>([])
+  const [bridgeMeta, setBridgeMeta] = useState<YoYBridgeMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
       const supabase = createClient()
-      const { data: netWorthData, error } = await supabase
-        .from('yoy_net_worth')
-        .select('*')
-        .order('category')
+      const [netWorthResult, metaResult] = await Promise.all([
+        supabase.from('yoy_net_worth').select('*').order('category'),
+        supabase.from('sync_metadata').select('yoy_bridge_meta').maybeSingle(),
+      ])
 
-      if (error) {
-        console.error('Error fetching YoY Net Worth:', error)
+      if (netWorthResult.error) {
+        console.error('Error fetching YoY Net Worth:', netWorthResult.error)
         setError('Failed to load year-over-year net worth data. Please try refreshing the page.')
         setLoading(false)
         return
@@ -50,12 +52,19 @@ export function YoYNetWorthWaterfall() {
       
       setError(null)
 
-      setData((netWorthData as YoYNetWorth[]) || [])
+      setData((netWorthResult.data as YoYNetWorth[]) || [])
+      if (!metaResult.error) {
+        setBridgeMeta(parseYoYBridgeMeta(metaResult.data?.yoy_bridge_meta))
+      } else {
+        setBridgeMeta(null)
+      }
       setLoading(false)
     }
 
     fetchData()
   }, [currency])
+
+  const bridgeSubtitle = formatYoYBridgeSubtitle(bridgeMeta)
 
   // Extract Year Start and Year End values for summary
   const summaryValues = useMemo(() => {
@@ -275,7 +284,7 @@ export function YoYNetWorthWaterfall() {
     return (
       <Card className="border-l-[3px] border-l-emerald-500">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+          <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -292,7 +301,7 @@ export function YoYNetWorthWaterfall() {
     return (
       <Card className="border-l-[3px] border-l-emerald-500">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+          <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -324,14 +333,17 @@ export function YoYNetWorthWaterfall() {
       <CardHeader className="bg-muted/50">
         <div className="flex flex-col gap-3">
           <div>
-            <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+            <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
+            {bridgeSubtitle && (
+              <p className="text-sm text-muted-foreground mt-1">{bridgeSubtitle}</p>
+            )}
           </div>
           {netChange !== null && (
             <div className={cn("rounded-lg border border-border bg-background p-3 shadow-sm", netChange > 0 ? "border-l-[3px] border-l-green-500" : netChange < 0 ? "border-l-[3px] border-l-red-500" : "")}>
               <span className="text-sm font-medium tabular-nums">
                 {netChange > 0 && (
                   <>
-                    Net worth increased by{' '}
+                    Forecast net worth change to Dec 31: up{' '}
                     <span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>
                       {formatCurrencyFull(Math.abs(netChange))}
                     </span>
@@ -348,7 +360,7 @@ export function YoYNetWorthWaterfall() {
                 )}
                 {netChange < 0 && (
                   <>
-                    Net worth decreased by{' '}
+                    Forecast net worth change to Dec 31: down{' '}
                     <span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>
                       {formatCurrencyFull(Math.abs(netChange))}
                     </span>
@@ -365,7 +377,7 @@ export function YoYNetWorthWaterfall() {
                 )}
                 {netChange === 0 && (
                   <>
-                    Net worth unchanged
+                    Forecast net worth unchanged to Dec 31
                     {percentChange !== null && (
                       <>
                         {' '}(

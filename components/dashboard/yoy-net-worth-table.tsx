@@ -15,6 +15,7 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { YoYNetWorth } from '@/lib/types'
+import { sortYoYBridgeRows } from '@/lib/yoy-bridge-ui'
 import { AlertCircle, ArrowUpDown, TrendingUp } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -83,39 +84,23 @@ export function YoYNetWorthTable() {
   }
 
   const sortedData = useMemo(() => {
-    const sorted = [...data].sort((a, b) => {
-      let aValue: number | string
-      let bValue: number | string
+    if (sortField === 'category') {
+      const ordered = sortYoYBridgeRows(data)
+      return sortDirection === 'asc' ? ordered : [...ordered].reverse()
+    }
 
-      switch (sortField) {
-        case 'category':
-          aValue = a.category
-          bValue = b.category
-          break
-        case 'amount':
-          aValue = currency === 'USD' ? (a.amount_usd || 0) : (a.amount_gbp || 0)
-          bValue = currency === 'USD' ? (b.amount_usd || 0) : (b.amount_gbp || 0)
-          break
-        default:
-          return 0
-      }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue)
-      }
-
-      return sortDirection === 'asc' ? (aValue as number) - (bValue as number) : (bValue as number) - (aValue as number)
+    return [...data].sort((a, b) => {
+      const aValue = currency === 'USD' ? (a.amount_usd || 0) : (a.amount_gbp || 0)
+      const bValue = currency === 'USD' ? (b.amount_usd || 0) : (b.amount_gbp || 0)
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
     })
-
-    return sorted
   }, [data, sortField, sortDirection, currency])
 
   // Calculate totals
   const totals = useMemo(() => {
     return sortedData.reduce(
       (acc, item) => {
+        if (item.category === 'Year Start' || item.category === 'Year End') return acc
         const amount = currency === 'USD' ? item.amount_usd : item.amount_gbp
         return acc + (amount || 0)
       },
@@ -155,7 +140,7 @@ export function YoYNetWorthTable() {
     return (
       <Card>
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-          <CardTitle className="text-base">Year-over-Year Net Worth Change</CardTitle>
+          <CardTitle className="text-base">Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -171,7 +156,10 @@ export function YoYNetWorthTable() {
   return (
     <Card>
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
-        <CardTitle className="text-base">Year-over-Year Net Worth Change</CardTitle>
+        <CardTitle className="text-base">Forecast Net Worth Change</CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Year End is a forecast; investment return reflects YTD performance held flat.
+        </p>
       </CardHeader>
       <CardContent>
         <Table className="[&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:text-[13px] [&_td]:tabular-nums">

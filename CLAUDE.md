@@ -56,7 +56,7 @@ npm run eval:app-instructions
 3. CSV imports append `transaction_log` rows with `data_source='csv'`
 4. Derived rebuilds compute:
    - `historical_net_worth` (`app_generated`) from account history
-   - `yoy_net_worth` bridge from forecasts + snapshots + FX
+   - `yoy_net_worth` forecast bridge (prior Dec 31 → forecast Dec 31): full-year income/gift/expense forecasts, YTD FX translation, YTD investment return held flat; metadata in `sync_metadata.yoy_bridge_meta`
    - annual/monthly trends in-memory via `computeAnnualTrends` / `computeMonthlyTrends`
 
 ### Data Source Guardrails
@@ -140,7 +140,7 @@ Not synced from sheet anymore:
 - `lib/forecasting.ts`: Annual/monthly trend + forecast computation
 - `lib/forecast-evolution.ts`: rollback-based forecast snapshots and gap series
 - `lib/snapshot-historical-net-worth.ts`: rebuild app-generated historical net worth
-- `lib/yoy-net-worth.ts`: rebuild YoY bridge rows with FX impact logic
+- `lib/yoy-net-worth.ts`: rebuild YoY forecast Dec 31 bridge (full-year flows + YTD FX + YTD investment held flat)
 - `lib/csv-parser.ts`: CSV detection/parsing helpers
 - `app/api/chat/route.ts`: AI tools + telemetry logging + optional web search tool
 - `app/api/import/csv/route.ts`: CSV import endpoint
@@ -174,9 +174,9 @@ ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 
 ## Database Migrations
 
-There are currently **36** migrations (`001` through `036`).
+There are currently **37** migrations (`001` through `037`).
 
-Next migration should be `037_*.sql`.
+Next migration should be `038_*.sql`.
 
 ## Deployment
 

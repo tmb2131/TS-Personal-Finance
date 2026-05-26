@@ -106,6 +106,13 @@ export interface YoYNetWorth {
   amount_gbp: number | null
 }
 
+export interface YoYBridgeMeta {
+  forecast_year: number
+  year_start_date: string
+  actual_as_of_date: string
+  forecast_year_end_date: string
+}
+
 export interface InvestmentReturn {
   id: string
   income_source: string

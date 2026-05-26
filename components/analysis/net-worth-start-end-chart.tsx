@@ -9,7 +9,8 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
-import { YoYNetWorth } from '@/lib/types'
+import { YoYNetWorth, YoYBridgeMeta } from '@/lib/types'
+import { formatYoYBridgeSubtitle, parseYoYBridgeMeta } from '@/lib/yoy-bridge-ui'
 import { Wallet, AlertCircle } from 'lucide-react'
 import {
   BarChart,
@@ -31,31 +32,39 @@ export function NetWorthStartEndChart() {
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
   const [data, setData] = useState<YoYNetWorth[]>([])
+  const [bridgeMeta, setBridgeMeta] = useState<YoYBridgeMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
       const supabase = createClient()
-      const { data: netWorthData, error } = await supabase
-        .from('yoy_net_worth')
-        .select('*')
-        .in('category', [YEAR_START, YEAR_END])
+      const [netWorthResult, metaResult] = await Promise.all([
+        supabase.from('yoy_net_worth').select('*').in('category', [YEAR_START, YEAR_END]),
+        supabase.from('sync_metadata').select('yoy_bridge_meta').maybeSingle(),
+      ])
 
-      if (error) {
-        console.error('Error fetching YoY Net Worth:', error)
+      if (netWorthResult.error) {
+        console.error('Error fetching YoY Net Worth:', netWorthResult.error)
         setError('Failed to load net worth data. Please try refreshing the page.')
         setLoading(false)
         return
       }
 
       setError(null)
-      setData((netWorthData as YoYNetWorth[]) || [])
+      setData((netWorthResult.data as YoYNetWorth[]) || [])
+      if (!metaResult.error) {
+        setBridgeMeta(parseYoYBridgeMeta(metaResult.data?.yoy_bridge_meta))
+      } else {
+        setBridgeMeta(null)
+      }
       setLoading(false)
     }
 
     fetchData()
   }, [currency])
+
+  const bridgeSubtitle = formatYoYBridgeSubtitle(bridgeMeta)
 
   const chartData = useMemo(() => {
     if (data.length === 0) return []
@@ -79,9 +88,9 @@ export function NetWorthStartEndChart() {
     }
     if (yearEndItem) {
       rows.push({
-        name: 'Current',
+        name: 'Forecast Dec 31',
         value: getAmount(yearEndItem),
-        label: 'Current net worth',
+        label: 'Forecast Dec 31 net worth',
       })
     }
 
@@ -113,7 +122,7 @@ export function NetWorthStartEndChart() {
     return (
       <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Net Worth: Year Start vs Year End</CardTitle>
+          <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -130,7 +139,7 @@ export function NetWorthStartEndChart() {
     return (
       <Card className="border-l-[3px] border-l-blue-500">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl">Net Worth: Year Start vs Year End</CardTitle>
+          <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -149,9 +158,9 @@ export function NetWorthStartEndChart() {
   return (
     <Card className="border-l-[3px] border-l-blue-500">
       <CardHeader className="bg-muted/50">
-        <CardTitle className="text-xl">Net Worth: Year Start vs Year End</CardTitle>
+        <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
-          Prior year-end net worth compared with current net worth
+          {bridgeSubtitle ?? 'Prior year-end net worth compared with forecast Dec 31 net worth'}
         </p>
       </CardHeader>
       <CardContent>

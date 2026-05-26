@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { computeAnnualForecasts } from '@/lib/forecasting'
+import { computeAnnualForecasts, type AnnualForecastEntry } from '@/lib/forecasting'
+import { recordYoYBridgeMeta } from '@/lib/sync-metadata'
+import type { YoYBridgeMeta } from '@/lib/types'
 
 const EPSILON = 0.0001
 const DEFAULT_GBPUSD_RATE = 1.25
@@ -15,7 +17,7 @@ type HistoricalPfRow = {
   amount_usd: number | null
 }
 
-type PfSnapshot = {
+export type PfSnapshot = {
   date: string
   amount_gbp: number
   amount_usd: number
@@ -30,6 +32,36 @@ type AccountHistoryRow = {
   balance_personal_local: number | null
   balance_family_local: number | null
   date_updated: string
+}
+
+export type YoYFlowTotals = {
+  incomeGbp: number
+  giftMoneyGbp: number
+  expensesGbp: number
+  incomeYtdGbp: number
+  giftMoneyYtdGbp: number
+  expensesYtdGbp: number
+}
+
+export type YoYFxImpact = {
+  fxImpactGbp: number
+  fxImpactUsd: number
+}
+
+export type YoYForecastBridgeResult = {
+  incomeGbp: number
+  incomeUsd: number
+  giftMoneyGbp: number
+  giftMoneyUsd: number
+  expensesGbp: number
+  expensesUsd: number
+  fxImpactGbp: number
+  fxImpactUsd: number
+  investmentReturnGbp: number
+  investmentReturnUsd: number
+  yearEndForecastGbp: number
+  yearEndForecastUsd: number
+  meta: YoYBridgeMeta
 }
 
 function normalizeDate(value: string | null | undefined): string | null {
@@ -55,6 +87,121 @@ function normalizeCurrency(value: string | null | undefined): 'USD' | 'GBP' | 'E
   const ccy = (value ?? '').trim().toUpperCase()
   if (ccy === 'USD' || ccy === 'GBP' || ccy === 'EUR') return ccy
   return 'USD'
+}
+
+export function aggregateYoYFlows(forecasts: Map<string, AnnualForecastEntry>): YoYFlowTotals {
+  let incomeGbp = 0
+  let giftMoneyGbp = 0
+  let expensesGbp = 0
+  let incomeYtdGbp = 0
+  let giftMoneyYtdGbp = 0
+  let expensesYtdGbp = 0
+
+  for (const [rawCategory, values] of forecasts.entries()) {
+    const category = rawCategory.trim()
+    if (!category) continue
+
+    const forecastGbp = toFiniteNumber(values.forecast) ?? 0
+    const ytdGbp = toFiniteNumber(values.ytd) ?? 0
+
+    if (category === 'Income') {
+      incomeGbp += forecastGbp
+      incomeYtdGbp += ytdGbp
+      continue
+    }
+
+    if (category === 'Gift Money') {
+      giftMoneyGbp += forecastGbp
+      giftMoneyYtdGbp += ytdGbp
+      continue
+    }
+
+    if (!EXPENSE_EXCLUDED_CATEGORIES.has(category)) {
+      expensesGbp += forecastGbp
+      expensesYtdGbp += ytdGbp
+    }
+  }
+
+  return {
+    incomeGbp,
+    giftMoneyGbp,
+    expensesGbp,
+    incomeYtdGbp,
+    giftMoneyYtdGbp,
+    expensesYtdGbp,
+  }
+}
+
+export function computeYoYForecastBridge(input: {
+  yearStart: PfSnapshot
+  latestActual: PfSnapshot
+  flows: YoYFlowTotals
+  fx: YoYFxImpact
+  gbpUsdRate: number
+}): YoYForecastBridgeResult {
+  const { yearStart, latestActual, flows, fx, gbpUsdRate } = input
+  const forecastYear = Number(latestActual.date.slice(0, 4))
+
+  const incomeUsd = flows.incomeGbp * gbpUsdRate
+  const giftMoneyUsd = flows.giftMoneyGbp * gbpUsdRate
+  const expensesUsd = flows.expensesGbp * gbpUsdRate
+
+  const incomeYtdUsd = flows.incomeYtdGbp * gbpUsdRate
+  const giftMoneyYtdUsd = flows.giftMoneyYtdGbp * gbpUsdRate
+  const expensesYtdUsd = flows.expensesYtdGbp * gbpUsdRate
+
+  const investmentReturnGbp =
+    latestActual.amount_gbp -
+    yearStart.amount_gbp -
+    flows.incomeYtdGbp -
+    flows.giftMoneyYtdGbp -
+    flows.expensesYtdGbp -
+    fx.fxImpactGbp
+
+  const investmentReturnUsd =
+    latestActual.amount_usd -
+    yearStart.amount_usd -
+    incomeYtdUsd -
+    giftMoneyYtdUsd -
+    expensesYtdUsd -
+    fx.fxImpactUsd
+
+  const yearEndForecastGbp =
+    yearStart.amount_gbp +
+    flows.incomeGbp +
+    flows.giftMoneyGbp +
+    flows.expensesGbp +
+    fx.fxImpactGbp +
+    investmentReturnGbp
+
+  const yearEndForecastUsd =
+    yearStart.amount_usd +
+    incomeUsd +
+    giftMoneyUsd +
+    expensesUsd +
+    fx.fxImpactUsd +
+    investmentReturnUsd
+
+  return {
+    incomeGbp: flows.incomeGbp,
+    incomeUsd,
+    giftMoneyGbp: flows.giftMoneyGbp,
+    giftMoneyUsd,
+    expensesGbp: flows.expensesGbp,
+    expensesUsd,
+    fxImpactGbp: fx.fxImpactGbp,
+    fxImpactUsd: fx.fxImpactUsd,
+    investmentReturnGbp,
+    investmentReturnUsd,
+    yearEndForecastGbp,
+    yearEndForecastUsd,
+    meta: {
+      forecast_year: forecastYear,
+      year_start_date: yearStart.date,
+      actual_as_of_date: latestActual.date,
+      forecast_year_end_date: `${forecastYear}-12-31`,
+    },
+  }
 }
 
 async function fetchLatestPfSnapshotOnOrBefore(
@@ -211,8 +358,8 @@ export async function rebuildYoYNetWorthFromAppData(
   const db = supabase ?? (await createClient())
   const today = new Date().toISOString().slice(0, 10)
 
-  const yearEnd = await fetchLatestPfSnapshotOnOrBefore(db, userId, today)
-  if (!yearEnd) {
+  const latestActual = await fetchLatestPfSnapshotOnOrBefore(db, userId, today)
+  if (!latestActual) {
     // No historical net worth yet, so clear stale YoY rows.
     const { error: deleteError } = await db.from('yoy_net_worth').delete().eq('user_id', userId)
     if (deleteError) throw deleteError
@@ -220,71 +367,40 @@ export async function rebuildYoYNetWorthFromAppData(
     return { year: null, asOfDate: null, rowsWritten: 0, skipped: true }
   }
 
-  const targetYear = Number(yearEnd.date.slice(0, 4))
+  const targetYear = Number(latestActual.date.slice(0, 4))
   const previousYearEndDate = `${targetYear - 1}-12-31`
 
   const yearStart =
-    (await fetchLatestPfSnapshotOnOrBefore(db, userId, previousYearEndDate)) ?? yearEnd
+    (await fetchLatestPfSnapshotOnOrBefore(db, userId, previousYearEndDate)) ?? latestActual
 
   const forecasts = await computeAnnualForecasts(db, userId)
   const gbpUsdRate = await fetchCurrentGbpUsdRate(db)
-  const yearEndRate = await fetchGbpUsdRateOnOrBefore(db, yearStart.date, gbpUsdRate)
+  const yearStartRate = await fetchGbpUsdRateOnOrBefore(db, yearStart.date, gbpUsdRate)
 
-  let incomeGbp = 0
-  let giftMoneyGbp = 0
-  let expensesGbp = 0
-
-  for (const [rawCategory, values] of forecasts.entries()) {
-    const category = rawCategory.trim()
-    if (!category) continue
-
-    const forecastGbp = toFiniteNumber(values.forecast) ?? 0
-
-    if (category === 'Income') {
-      incomeGbp += forecastGbp
-      continue
-    }
-
-    if (category === 'Gift Money') {
-      giftMoneyGbp += forecastGbp
-      continue
-    }
-
-    if (!EXPENSE_EXCLUDED_CATEGORIES.has(category)) {
-      expensesGbp += forecastGbp
-    }
-  }
-
-  const incomeUsd = incomeGbp * gbpUsdRate
-  const giftMoneyUsd = giftMoneyGbp * gbpUsdRate
-  const expensesUsd = expensesGbp * gbpUsdRate
-
-  const deltaGbp = yearEnd.amount_gbp - yearStart.amount_gbp
-  const deltaUsd = yearEnd.amount_usd - yearStart.amount_usd
-
-  // Base investment return before separating FX impact.
-  // Signed math:
-  // investment = delta - income - gift + expenses
-  // with expense rows stored negative, this becomes subtracting the signed expense sum.
-  const baseInvestmentReturnGbp = deltaGbp - incomeGbp - giftMoneyGbp - expensesGbp
-  const baseInvestmentReturnUsd = deltaUsd - incomeUsd - giftMoneyUsd - expensesUsd
+  const flows = aggregateYoYFlows(forecasts)
 
   // FX Impact:
   // - GBP view: prior-year USD-account value (in GBP) * % change in GBPUSD, signed inverse
   //   because stronger GBP lowers GBP value of USD holdings.
   // - USD view: prior-year GBP-account value (in USD) * % change in GBPUSD.
   const { usdAccountsUsd, gbpAccountsGbp } = await fetchPriorYearCurrencyExposure(db, userId, yearStart.date)
-  const ratePctChange = yearEndRate > EPSILON ? (gbpUsdRate - yearEndRate) / yearEndRate : 0
+  const ratePctChange = yearStartRate > EPSILON ? (gbpUsdRate - yearStartRate) / yearStartRate : 0
 
-  const priorYearUsdAccountsGbp = yearEndRate > EPSILON ? usdAccountsUsd / yearEndRate : 0
-  const priorYearGbpAccountsUsd = gbpAccountsGbp * yearEndRate
+  const priorYearUsdAccountsGbp = yearStartRate > EPSILON ? usdAccountsUsd / yearStartRate : 0
+  const priorYearGbpAccountsUsd = gbpAccountsGbp * yearStartRate
 
-  const fxImpactGbp = -priorYearUsdAccountsGbp * ratePctChange
-  const fxImpactUsd = priorYearGbpAccountsUsd * ratePctChange
+  const fx: YoYFxImpact = {
+    fxImpactGbp: -priorYearUsdAccountsGbp * ratePctChange,
+    fxImpactUsd: priorYearGbpAccountsUsd * ratePctChange,
+  }
 
-  // Investment return excludes explicit FX impact.
-  const investmentReturnGbp = baseInvestmentReturnGbp - fxImpactGbp
-  const investmentReturnUsd = baseInvestmentReturnUsd - fxImpactUsd
+  const bridge = computeYoYForecastBridge({
+    yearStart,
+    latestActual,
+    flows,
+    fx,
+    gbpUsdRate,
+  })
 
   const rows = [
     {
@@ -296,42 +412,42 @@ export async function rebuildYoYNetWorthFromAppData(
     {
       user_id: userId,
       category: 'Income',
-      amount_gbp: toMoney(incomeGbp),
-      amount_usd: toMoney(incomeUsd),
+      amount_gbp: toMoney(bridge.incomeGbp),
+      amount_usd: toMoney(bridge.incomeUsd),
     },
     {
       user_id: userId,
       category: 'Gift Money',
-      amount_gbp: toMoney(giftMoneyGbp),
-      amount_usd: toMoney(giftMoneyUsd),
+      amount_gbp: toMoney(bridge.giftMoneyGbp),
+      amount_usd: toMoney(bridge.giftMoneyUsd),
     },
     {
       user_id: userId,
       category: 'Expenses',
-      amount_gbp: toMoney(expensesGbp),
-      amount_usd: toMoney(expensesUsd),
+      amount_gbp: toMoney(bridge.expensesGbp),
+      amount_usd: toMoney(bridge.expensesUsd),
     },
     ...(
-      Math.abs(fxImpactGbp) > EPSILON || Math.abs(fxImpactUsd) > EPSILON
+      Math.abs(bridge.fxImpactGbp) > EPSILON || Math.abs(bridge.fxImpactUsd) > EPSILON
         ? [{
             user_id: userId,
             category: 'FX Impact',
-            amount_gbp: toMoney(fxImpactGbp),
-            amount_usd: toMoney(fxImpactUsd),
+            amount_gbp: toMoney(bridge.fxImpactGbp),
+            amount_usd: toMoney(bridge.fxImpactUsd),
           }]
         : []
     ),
     {
       user_id: userId,
       category: 'Investment Return YTD',
-      amount_gbp: toMoney(investmentReturnGbp),
-      amount_usd: toMoney(investmentReturnUsd),
+      amount_gbp: toMoney(bridge.investmentReturnGbp),
+      amount_usd: toMoney(bridge.investmentReturnUsd),
     },
     {
       user_id: userId,
       category: 'Year End',
-      amount_gbp: toMoney(yearEnd.amount_gbp),
-      amount_usd: toMoney(yearEnd.amount_usd),
+      amount_gbp: toMoney(bridge.yearEndForecastGbp),
+      amount_usd: toMoney(bridge.yearEndForecastUsd),
     },
   ]
 
@@ -341,13 +457,15 @@ export async function rebuildYoYNetWorthFromAppData(
   const { error: insertError } = await db.from('yoy_net_worth').insert(rows)
   if (insertError) throw insertError
 
+  await recordYoYBridgeMeta(db, userId, bridge.meta)
+
   console.log(
-    `[yoyNetWorth] Rebuilt YoY rows for user ${userId}: year=${targetYear}, asOf=${yearEnd.date}, rows=${rows.length}`
+    `[yoyNetWorth] Rebuilt YoY forecast bridge for user ${userId}: year=${targetYear}, asOf=${latestActual.date}, forecastEnd=${bridge.meta.forecast_year_end_date}, rows=${rows.length}`
   )
 
   return {
     year: targetYear,
-    asOfDate: yearEnd.date,
+    asOfDate: latestActual.date,
     rowsWritten: rows.length,
     skipped: false,
   }
