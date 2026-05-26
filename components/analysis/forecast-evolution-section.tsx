@@ -6,6 +6,8 @@ import { ForecastGapOverTimeChart } from './forecast-gap-over-time-chart'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/utils/cn'
+import { toLocalDateString } from '@/lib/daily-summary-utils'
+import { addCalendarDays } from '@/lib/daily-today-metrics'
 
 const PRESETS = [
   { id: 'yesterday', label: 'Yesterday', daysAgo: 1 },
@@ -34,12 +36,19 @@ export function ForecastEvolutionSection() {
   const [customEndDate, setCustomEndDate] = useState('')
 
   const { startDate, endDate } = useMemo(() => {
-    const today = toDateString(new Date())
-    const lastWeekStart = addDays(today, -7)
+    const today = toLocalDateString(new Date())
+    const lastWeekStart = addCalendarDays(today, -7)
 
     if (presetId === 'ytd') {
       return {
         startDate: `${today.slice(0, 4)}-01-01`,
+        endDate: today,
+      }
+    }
+
+    if (presetId === 'yesterday') {
+      return {
+        startDate: addCalendarDays(today, -1),
         endDate: today,
       }
     }
@@ -49,12 +58,9 @@ export function ForecastEvolutionSection() {
         (p): p is (typeof PRESETS)[number] & { daysAgo: number } =>
           p.id === presetId && 'daysAgo' in p
       ) ?? { id: 'last-week', label: 'Last Week', daysAgo: 7 }
-      const end = new Date()
-      const start = new Date(end)
-      start.setDate(start.getDate() - preset.daysAgo)
       return {
-        startDate: toDateString(start),
-        endDate: toDateString(end),
+        startDate: addCalendarDays(today, -preset.daysAgo),
+        endDate: today,
       }
     }
 

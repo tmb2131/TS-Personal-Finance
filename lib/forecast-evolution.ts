@@ -4,8 +4,6 @@ import { computeManualYearForecast, getDefaultForecastMethods } from '@/lib/fore
 const INCOME_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 const PAGE_SIZE = 1000
 
-type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
-
 type SettingsTimelineRow = {
   category: string
   effective_date: string
@@ -37,11 +35,15 @@ type TxRow = {
   amount_usd: number | null
 }
 
+export type YearMethod = 'Annual' | 'Linear' | 'Budget' | 'Manual'
+
 export type CategoryForecastSnapshot = {
   annualBudget: number
   forecast: number
   gap: number
   ytd: number
+  yearMethod: YearMethod
+  manualYearForecast: number | null
 }
 
 export type SnapshotByCategory = Map<string, CategoryForecastSnapshot>
@@ -80,15 +82,23 @@ const addDaysUTC = (value: Date, days: number): Date => {
   return next
 }
 
-const dayOfYearUTC = (value: Date): number => {
-  const year = value.getUTCFullYear()
-  const start = Date.UTC(year, 0, 0)
-  const current = Date.UTC(year, value.getUTCMonth(), value.getUTCDate())
+/** Calendar day-of-year from YYYY-MM-DD (timezone-neutral). */
+export const dayOfYearFromCalendarDate = (dateStr: string): number => {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const start = Date.UTC(y, 0, 0)
+  const current = Date.UTC(y, m - 1, d)
   return Math.floor((current - start) / (24 * 60 * 60 * 1000))
 }
 
-const totalDaysInYear = (year: number): number => {
+export const totalDaysInCalendarYear = (dateStr: string): number => {
+  const year = Number(dateStr.slice(0, 4))
   return new Date(Date.UTC(year, 1, 29)).getUTCMonth() === 1 ? 366 : 365
+}
+
+const pctElapsedForDate = (dateStr: string): number => {
+  const year = Number(dateStr.slice(0, 4))
+  const total = totalDaysInCalendarYear(dateStr)
+  return Math.min(Math.max(dayOfYearFromCalendarDate(dateStr) / total, 0), 1)
 }
 
 const toNum = (value: unknown): number => (typeof value === 'number' ? value : Number(value) || 0)
@@ -454,10 +464,7 @@ export async function computeForecastSnapshotsForDates(
 
     if (!targetDateSet.has(dateStr)) continue
 
-    const pctElapsed = Math.min(
-      Math.max(dayOfYearUTC(cursor) / totalDaysInYear(year), 0),
-      1
-    )
+    const pctElapsed = pctElapsedForDate(dateStr)
     const pctRemaining = 1 - pctElapsed
 
     const byCategory: SnapshotByCategory = new Map()
@@ -467,11 +474,12 @@ export async function computeForecastSnapshotsForDates(
       const budget = pickAsOf(budgetTimeline.get(category), dateStr)
       const annualBudget = budget?.annual_budget_gbp ?? 0
       const yearMethod = setting?.current_year_method ?? getDefaultForecastMethods(category).year
+      const manualYearForecast = setting?.manual_year_forecast ?? null
       const expense = isExpense(category)
 
       let forecast = ytd
       if (yearMethod === 'Manual') {
-        forecast = computeManualYearForecast(setting?.manual_year_forecast ?? null, ytd, expense)
+        forecast = computeManualYearForecast(manualYearForecast, ytd, expense)
       } else if (yearMethod === 'Annual') {
         forecast = ytd + annualBudget * pctRemaining
       } else if (yearMethod === 'Linear') {
@@ -485,6 +493,8 @@ export async function computeForecastSnapshotsForDates(
         forecast,
         gap: annualBudget - forecast,
         ytd,
+        yearMethod,
+        manualYearForecast,
       })
     }
 

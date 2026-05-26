@@ -147,7 +147,7 @@ export function TodaySpendByMethodologyChart({
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Bar = today&apos;s spend; lighter segment = room to spend (decreases with any spend today, across all methodologies).
+          Bar = today&apos;s spend; lighter segment = room to spend by methodology (not the forecast change below).
         </p>
         {impliedChangeText != null && (
           <div className="mt-2 rounded-md bg-muted/70 px-3 py-2">

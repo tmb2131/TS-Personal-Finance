@@ -4,6 +4,7 @@ import {
   buildForecastBridgeFromSnapshots,
   toLocalDateString,
 } from '@/lib/daily-summary-utils'
+import { addCalendarDays } from '@/lib/daily-today-metrics'
 import { NextResponse } from 'next/server'
 
 /**
@@ -22,15 +23,13 @@ export async function GET() {
     }
 
     const now = new Date()
-    const yesterday = new Date(now)
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-    const utcTodayStr = now.toISOString().split('T')[0]
     const localTodayStr = toLocalDateString(now)
+    const localYesterdayStr = addCalendarDays(localTodayStr, -1)
+    const utcTodayStr = now.toISOString().split('T')[0]
     const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
 
     const [snapshots, syncResult, settingsResult, todayTxResult] = await Promise.all([
-      computeForecastSnapshotsForDates(supabase, user.id, [yesterdayStr, utcTodayStr]),
+      computeForecastSnapshotsForDates(supabase, user.id, [localYesterdayStr, localTodayStr]),
       supabase.from('sync_metadata').select('last_sync_at').single(),
       supabase
         .from('forecast_settings')
@@ -41,11 +40,11 @@ export async function GET() {
         .in('date', todayDateCandidates),
     ])
 
-    const startSnapshot = snapshots.get(yesterdayStr) ?? new Map()
-    const endSnapshot = snapshots.get(utcTodayStr) ?? new Map()
+    const startSnapshot = snapshots.get(localYesterdayStr) ?? new Map()
+    const endSnapshot = snapshots.get(localTodayStr) ?? new Map()
     const forecastBridge = buildForecastBridgeFromSnapshots(
-      yesterdayStr,
-      utcTodayStr,
+      localYesterdayStr,
+      localTodayStr,
       startSnapshot,
       endSnapshot
     )

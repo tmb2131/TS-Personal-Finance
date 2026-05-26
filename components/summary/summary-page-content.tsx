@@ -44,6 +44,7 @@ import { getBudgetStatusConfig } from '@/lib/budget-status'
 import { FinancialHealthBanner } from '@/components/financial-health-banner'
 import { useFinancialHealth } from '@/lib/hooks/use-financial-health'
 import { MilestonesBanner } from '@/components/milestones-banner'
+import { ForecastWeekTrendCard } from '@/components/summary/forecast-week-trend-card'
 
 const SPEND_FILL = '#64748b'
 const SPEND_FILL_ALT = '#475569'
@@ -128,6 +129,13 @@ export function SummaryPageContent() {
   const budgetData = useMemo(() => (rawData?.budgetData as BudgetTarget[]) ?? [], [rawData])
   const annualTrends = useMemo(() => (rawData?.annualTrends as AnnualTrend[]) ?? [], [rawData])
   const monthlyTrends = useMemo(() => (rawData?.monthlyTrends as MonthlyTrend[]) ?? [], [rawData])
+  const todayMetrics = rawData?.todayMetrics as
+    | {
+        impliedForecastChangeIfNoMoreSpend: number | null
+        gapChangeSinceYesterday: number | null
+      }
+    | undefined
+
   const forecastBridge = useMemo((): ForecastBridgeResponse | null => {
     const fb = rawData?.forecastBridge
     if (fb && !(fb as { error?: unknown }).error) return fb as ForecastBridgeResponse
@@ -184,10 +192,12 @@ export function SummaryPageContent() {
   )
 
   const yesterdayChange = useMemo(() => {
-    if (!forecastBridge) return null
-    const changeGBP = forecastBridge.totalEnd - forecastBridge.totalStart
+    const changeGBP =
+      todayMetrics?.gapChangeSinceYesterday ??
+      (forecastBridge ? forecastBridge.totalEnd - forecastBridge.totalStart : null)
+    if (changeGBP == null || !Number.isFinite(changeGBP)) return null
     return currency === 'USD' ? convertAmount(changeGBP, 'GBP', fxRate) : changeGBP
-  }, [forecastBridge, currency, fxRate, convertAmount])
+  }, [todayMetrics, forecastBridge, currency, fxRate, convertAmount])
 
   const topDrivers = useMemo(() => {
     if (!forecastBridge) return { underBudgetDrivers: [], overBudgetDrivers: [] }
@@ -218,6 +228,14 @@ export function SummaryPageContent() {
       .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
       .slice(0, 3)
   }, [topDrivers])
+
+  const otherDriverDelta = useMemo(() => {
+    if (!forecastBridge) return null
+    const other = forecastBridge.drivers.find((d) => d.category === 'Other')
+    if (!other || Math.abs(other.delta) < 0.5) return null
+    const deltaGBP = other.delta
+    return currency === 'USD' ? convertAmount(deltaGBP, 'GBP', fxRate) : deltaGBP
+  }, [forecastBridge, currency, fxRate, convertAmount])
 
   const dailyNeutralInsights = useMemo(() => {
     if (!forecastByCategory) return null
@@ -292,20 +310,13 @@ export function SummaryPageContent() {
       method: row.method as HeadroomYearMethod,
       manualYearForecast: row.manualYearForecast,
     }))
-    const {
-      totalForecastToday,
-      totalForecastTomorrowAtZero,
-      headroomByMethodology: headroomMap,
-    } = computeTodayHeadroom({
+    const { headroomByMethodology: headroomMap } = computeTodayHeadroom({
       dayOfYear,
       daysInYear,
       todaySpendByCategory,
       categories: headroomCategories,
     })
-    const impliedForecastChange =
-      Number.isFinite(totalForecastToday) && Number.isFinite(totalForecastTomorrowAtZero)
-        ? totalForecastTomorrowAtZero - totalForecastToday
-        : null
+    const impliedForecastChangeGbp = todayMetrics?.impliedForecastChangeIfNoMoreSpend ?? null
 
     const spendByMethodology: Record<string, number> = { Annual: 0, Linear: 0, Budget: 0, Manual: 0 }
     categoryBaseRows.forEach((row) => {
@@ -395,11 +406,21 @@ export function SummaryPageContent() {
       usedPercent: neutralResult.usedPercent,
       direction,
       impliedForecastChange:
-        impliedForecastChange != null ? toDisplayCurrency(impliedForecastChange) : null,
+        impliedForecastChangeGbp != null && Number.isFinite(impliedForecastChangeGbp)
+          ? toDisplayCurrency(impliedForecastChangeGbp)
+          : null,
       spendByMethodology,
       headroomByMethodology,
     }
-  }, [forecastByCategory, forecastSettings, todayTransactions, currency, fxRate, convertAmount])
+  }, [
+    forecastByCategory,
+    forecastSettings,
+    todayTransactions,
+    todayMetrics,
+    currency,
+    fxRate,
+    convertAmount,
+  ])
 
   const currentMonthlySpend = useMemo(() => {
     const expenses = monthlyTrends.filter((m) => !EXCLUDED_CATEGORIES.includes(m.category))
@@ -571,6 +592,8 @@ export function SummaryPageContent() {
               </p>
               <Skeleton className="h-4 w-28 rounded" />
               <Skeleton className="h-36 w-full rounded-xl" />
+              <Skeleton className="h-4 w-20 rounded" />
+              <Skeleton className="h-44 w-full rounded-xl" />
               <Skeleton className="h-4 w-16 rounded" />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Skeleton className="h-32 w-full rounded-xl" />
@@ -690,6 +713,19 @@ export function SummaryPageContent() {
                 </Card>
               </div>
 
+              {/* Section: This Week */}
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 sm:mb-1.5 sm:text-[10px]">
+                  This Week
+                </p>
+                <ForecastWeekTrendCard
+                  currentGap={gapToBudget}
+                  budgetTotal={budgetTotal}
+                  cardContentClass={cardContentClass}
+                  onNavigate={handleNavigate}
+                />
+              </div>
+
               {/* Section: Today */}
               {(hasChangeCard || hasNeutralCard) && (
                 <div>
@@ -759,6 +795,9 @@ export function SummaryPageContent() {
                               )}
                             </div>
                           ) : null}
+                          <p className="text-[11px] text-muted-foreground/70 mb-2">
+                            Room to spend by methodology (not the forecast change above).
+                          </p>
                           {dailyNeutralInsights?.spendByMethodology != null &&
                           dailyNeutralInsights?.headroomByMethodology != null ? (
                             (() => {
@@ -953,16 +992,13 @@ export function SummaryPageContent() {
                                 )
                                 return (
                                   <div className="space-y-1.5">
-                                    {yesterdayDriverHighlights.map((driver, index) => {
+                                    {yesterdayDriverHighlights.map((driver) => {
                                       const pct = (Math.abs(driver.delta) / maxDelta) * 100
                                       const isWorsening = driver.delta > 0
                                       return (
                                         <div
                                           key={driver.category}
-                                          className={cn(
-                                            'flex items-center gap-2',
-                                            index > 1 && 'hidden sm:flex'
-                                          )}
+                                          className="flex items-center gap-2"
                                         >
                                           <span className="text-xs sm:text-[10px] w-24 sm:w-16 truncate text-muted-foreground font-medium">
                                             {driver.category}
@@ -987,6 +1023,24 @@ export function SummaryPageContent() {
                                         </div>
                                       )
                                     })}
+                                    {otherDriverDelta != null && (
+                                      <p className="text-[10px] text-muted-foreground pt-0.5">
+                                        Other categories:{' '}
+                                        <span
+                                          className={cn(
+                                            'font-medium tabular-nums',
+                                            otherDriverDelta < 0
+                                              ? 'text-green-600'
+                                              : otherDriverDelta > 0
+                                                ? 'text-red-600'
+                                                : ''
+                                          )}
+                                        >
+                                          {otherDriverDelta < 0 ? '−' : '+'}
+                                          {formatCurrency(Math.abs(otherDriverDelta))}
+                                        </span>
+                                      </p>
+                                    )}
                                   </div>
                                 )
                               })()}

@@ -14,6 +14,12 @@ import {
   toDateOnly,
   toLocalDateString,
 } from '@/lib/daily-summary-utils'
+import {
+  addCalendarDays,
+  buildTodaySpendByCategoryFromRows,
+  computeImpliedForecastChangeIfNoMoreSpend,
+} from '@/lib/daily-today-metrics'
+import { isExpenseCategory } from '@/lib/category-filters'
 import { NextResponse } from 'next/server'
 
 /**
@@ -32,11 +38,10 @@ export async function GET() {
     }
 
     const now = new Date()
-    const yesterday = new Date(now)
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-    const utcTodayStr = now.toISOString().split('T')[0]
     const localTodayStr = toLocalDateString(now)
+    const localYesterdayStr = addCalendarDays(localTodayStr, -1)
+    const localTomorrowStr = addCalendarDays(localTodayStr, 1)
+    const utcTodayStr = now.toISOString().split('T')[0]
     const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
     const currentYear = now.getFullYear()
     const txStartDate = `${currentYear - 4}-01-01`
@@ -86,11 +91,12 @@ export async function GET() {
       categories,
       transactionRows,
     }
-    const snapshotMinYearStart = `${yesterdayStr.split('-')[0]}-01-01`
+    const snapshotMinYearStart = `${localYesterdayStr.split('-')[0]}-01-01`
+    const snapshotMaxDate = localTomorrowStr > utcTodayStr ? localTomorrowStr : utcTodayStr
     const snapshotTxRows = (transactionRows ?? [])
       .map((row) => {
         const date = toDateOnly(row.date)
-        if (!date || date < snapshotMinYearStart || date > utcTodayStr) return null
+        if (!date || date < snapshotMinYearStart || date > snapshotMaxDate) return null
         return {
           category: row.category,
           date,
@@ -111,23 +117,47 @@ export async function GET() {
 
     const [snapshots, annualTrends, monthlyTrends, forecastByCategory] =
       await Promise.all([
-        computeForecastSnapshotsForDates(supabase, user.id, [
-          yesterdayStr,
-          utcTodayStr,
-        ], snapshotTxRows, snapshotPreloaded),
+        computeForecastSnapshotsForDates(
+          supabase,
+          user.id,
+          [localYesterdayStr, localTodayStr, localTomorrowStr],
+          snapshotTxRows,
+          snapshotPreloaded
+        ),
         computeAnnualTrends(supabase, user.id, preloaded),
         computeMonthlyTrends(supabase, user.id, preloaded),
         computeAnnualForecasts(supabase, user.id, preloaded),
       ])
 
-    const startSnapshot = snapshots.get(yesterdayStr) ?? new Map()
-    const endSnapshot = snapshots.get(utcTodayStr) ?? new Map()
+    const startSnapshot = snapshots.get(localYesterdayStr) ?? new Map()
+    const endSnapshot = snapshots.get(localTodayStr) ?? new Map()
+    const tomorrowSnapshot = snapshots.get(localTomorrowStr) ?? new Map()
     const forecastBridge = buildForecastBridgeFromSnapshots(
-      yesterdayStr,
-      utcTodayStr,
+      localYesterdayStr,
+      localTodayStr,
       startSnapshot,
       endSnapshot
     )
+
+    const todayTxRows = todayTxResult.data ?? []
+    const todaySpendByCategory = buildTodaySpendByCategoryFromRows(
+      todayTxRows,
+      rate,
+      isExpenseCategory
+    )
+    const impliedForecastChangeIfNoMoreSpend = computeImpliedForecastChangeIfNoMoreSpend(
+      endSnapshot,
+      tomorrowSnapshot,
+      localTodayStr,
+      todaySpendByCategory
+    )
+    const todayMetrics = {
+      localTodayStr,
+      localYesterdayStr,
+      localTomorrowStr,
+      impliedForecastChangeIfNoMoreSpend,
+      gapChangeSinceYesterday: forecastBridge.totalEnd - forecastBridge.totalStart,
+    }
 
     const forecastByCategorySerialized = forecastByCategory
       ? Array.from(forecastByCategory.entries()).map(([category, value]) => ({
@@ -143,6 +173,7 @@ export async function GET() {
       annualTrends: annualTrends ?? [],
       monthlyTrends: monthlyTrends ?? [],
       forecastBridge,
+      todayMetrics,
       lastSyncDate: syncResult.data?.last_sync_at ?? null,
       forecastByCategory: forecastByCategorySerialized,
       forecastSettings: settingsResult.data ?? [],

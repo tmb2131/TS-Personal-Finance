@@ -14,9 +14,9 @@ export type TodayPageData = {
   headroomByMethodology: Record<string, number | null>
   /** Sum of annual budgets for categories in each methodology; used to exclude methodology from chart if 0. */
   budgetSumByMethodology: Record<string, number>
-  /** Day-over-day change in overall forecast (totalForecastAtCurrentYtd − totalForecastEndOfYesterday). Positive = forecast rises. Mirrors gap-to-budget change; matches Analysis chart. */
+  /** Forecast change if no more spend today (tomorrowAtZero − startOfToday). Positive = forecast rises. Snapshot-based; matches Daily Summary. */
   impliedForecastChange: number | null
-  /** Total forecast as of end of previous day (YTD excluding today's spend); stable for the day. */
+  /** Total expense forecast at start of today (snapshot aggregation, excludes today's spend from YTD). */
   totalForecastToday?: number | null
   /** Est. annual spend using same day fraction as Dashboard (dayOfYear/daysInYear). */
   totalForecastAtCurrentYtd?: number | null
