@@ -69,7 +69,7 @@ export type CategoryMonthlyForecast = {
   isActual: boolean[]
   /** Sum of months[]. */
   fullYear: number
-  /** YTD actuals only — through end of last completed month. Excludes current-month MTD. */
+  /** YTD actuals through today — completed months plus current-month MTD (no forecast portion). */
   ytd: number
 }
 
@@ -394,9 +394,7 @@ function methodologyM1(
       }
     }
     const fullYear = months.reduce((s, v) => s + v, 0)
-    const ytd = months
-      .slice(0, Math.max(0, currentMonth - 1))
-      .reduce((s, v) => s + v, 0)
+    const ytd = computeCategoryYtd(ytdByCategory, category, currentMonth)
     return {
       category,
       months,
@@ -561,9 +559,7 @@ function methodologyM2(
       }
     }
     const fullYear = months.reduce((s, v) => s + v, 0)
-    const ytd = months
-      .slice(0, Math.max(0, currentMonth - 1))
-      .reduce((s, v) => s + v, 0)
+    const ytd = computeCategoryYtd(ytdByCategory, category, currentMonth)
     return {
       category,
       months,
@@ -730,9 +726,7 @@ function methodologyM3(
       }
     }
     const fullYear = months.reduce((s, v) => s + v, 0)
-    const ytd = months
-      .slice(0, Math.max(0, currentMonth - 1))
-      .reduce((s, v) => s + v, 0)
+    const ytd = computeCategoryYtd(ytdByCategory, category, currentMonth)
     return {
       category,
       months,
@@ -773,6 +767,21 @@ function buildYtdByCategory(
     out[category] = arr
   }
   return out
+}
+
+/** Sum actual spend Jan 1 through current month MTD (matches Dashboard YTD). */
+function computeCategoryYtd(
+  ytdByCategory: Record<string, number[]>,
+  category: string,
+  currentMonth: number,
+): number {
+  const monthly = ytdByCategory[category]
+  if (!monthly) return 0
+  let sum = 0
+  for (let i = 0; i < currentMonth; i++) {
+    sum += monthly[i] ?? 0
+  }
+  return sum
 }
 
 // ---------------------------------------------------------------------------
