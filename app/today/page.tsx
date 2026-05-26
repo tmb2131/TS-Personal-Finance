@@ -51,7 +51,6 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
   const today = new Date()
   const localTodayStr = toLocalDateStringFromDate(today)
   const localYesterdayStr = addCalendarDays(localTodayStr, -1)
-  const localTomorrowStr = addCalendarDays(localTodayStr, 1)
   const utcTodayStr = today.toISOString().split('T')[0]
   const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
   const currentYear = today.getFullYear()
@@ -170,7 +169,7 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     budgetsData: budgetRes.data ?? [],
   }
   const snapshotMinYearStart = `${localYesterdayStr.split('-')[0]}-01-01`
-  const snapshotMaxDate = localTomorrowStr > utcTodayStr ? localTomorrowStr : utcTodayStr
+  const snapshotMaxDate = localTodayStr > utcTodayStr ? localTodayStr : utcTodayStr
   const snapshotTxRows = (transactionRows ?? [])
     .map((row) => {
       const date = toDateOnly(row.date)
@@ -196,13 +195,12 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
   const snapshots = await computeForecastSnapshotsForDates(
     supabase,
     user.id,
-    [localYesterdayStr, localTodayStr, localTomorrowStr],
+    [localYesterdayStr, localTodayStr],
     snapshotTxRows,
     snapshotPreloaded
   )
   const todaySnapshot = snapshots.get(localTodayStr) ?? new Map()
   const yesterdaySnapshot = snapshots.get(localYesterdayStr) ?? new Map()
-  const tomorrowSnapshot = snapshots.get(localTomorrowStr) ?? new Map()
 
   const dayOfYear = getDayOfYear(today)
   const daysInYear = getDaysInYear(today.getFullYear())
@@ -235,7 +233,6 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
 
   const impliedForecastChange = computeImpliedForecastChangeIfNoMoreSpend(
     todaySnapshot,
-    tomorrowSnapshot,
     localTodayStr,
     todaySpendByCategory
   )
@@ -245,8 +242,8 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     todaySpendByCategory
   )
   const totalForecastTomorrowAtZero = computeTomorrowAtZeroExpenseForecast(
-    tomorrowSnapshot,
-    localTomorrowStr
+    todaySnapshot,
+    addCalendarDays(localTodayStr, 1)
   )
   const totalForecastAtCurrentYtd = sumExpenseForecastFromSnapshot(todaySnapshot)
   const totalForecastEndOfYesterday = sumExpenseForecastFromSnapshot(yesterdaySnapshot)

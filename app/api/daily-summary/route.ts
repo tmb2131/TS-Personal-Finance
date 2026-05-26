@@ -40,7 +40,6 @@ export async function GET() {
     const now = new Date()
     const localTodayStr = toLocalDateString(now)
     const localYesterdayStr = addCalendarDays(localTodayStr, -1)
-    const localTomorrowStr = addCalendarDays(localTodayStr, 1)
     const utcTodayStr = now.toISOString().split('T')[0]
     const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
     const currentYear = now.getFullYear()
@@ -92,7 +91,7 @@ export async function GET() {
       transactionRows,
     }
     const snapshotMinYearStart = `${localYesterdayStr.split('-')[0]}-01-01`
-    const snapshotMaxDate = localTomorrowStr > utcTodayStr ? localTomorrowStr : utcTodayStr
+    const snapshotMaxDate = localTodayStr > utcTodayStr ? localTodayStr : utcTodayStr
     const snapshotTxRows = (transactionRows ?? [])
       .map((row) => {
         const date = toDateOnly(row.date)
@@ -120,7 +119,7 @@ export async function GET() {
         computeForecastSnapshotsForDates(
           supabase,
           user.id,
-          [localYesterdayStr, localTodayStr, localTomorrowStr],
+          [localYesterdayStr, localTodayStr],
           snapshotTxRows,
           snapshotPreloaded
         ),
@@ -131,7 +130,6 @@ export async function GET() {
 
     const startSnapshot = snapshots.get(localYesterdayStr) ?? new Map()
     const endSnapshot = snapshots.get(localTodayStr) ?? new Map()
-    const tomorrowSnapshot = snapshots.get(localTomorrowStr) ?? new Map()
     const forecastBridge = buildForecastBridgeFromSnapshots(
       localYesterdayStr,
       localTodayStr,
@@ -147,14 +145,12 @@ export async function GET() {
     )
     const impliedForecastChangeIfNoMoreSpend = computeImpliedForecastChangeIfNoMoreSpend(
       endSnapshot,
-      tomorrowSnapshot,
       localTodayStr,
       todaySpendByCategory
     )
     const todayMetrics = {
       localTodayStr,
       localYesterdayStr,
-      localTomorrowStr,
       impliedForecastChangeIfNoMoreSpend,
       gapChangeSinceYesterday: forecastBridge.totalEnd - forecastBridge.totalStart,
     }

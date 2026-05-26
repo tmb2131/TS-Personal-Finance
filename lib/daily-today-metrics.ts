@@ -50,12 +50,17 @@ export function computeCategoryForecastAtPct(
   return ytd
 }
 
-/** Sum expense forecasts — same aggregation as forecast bridge (raw forecast, not abs). */
+/** Expense categories: projected annual spend is shown as a positive magnitude (matches today-headroom). */
+function addExpenseForecastMagnitude(total: number, forecast: number): number {
+  return total + Math.abs(forecast)
+}
+
+/** Sum expense forecast magnitudes for headline / Today totals (not bridge gap math). */
 export function sumExpenseForecastFromSnapshot(snapshot: SnapshotByCategory): number {
   let total = 0
   for (const [category, values] of snapshot) {
     if (!isExpenseCategory(category)) continue
-    total += values.forecast
+    total = addExpenseForecastMagnitude(total, values.forecast)
   }
   return total
 }
@@ -85,7 +90,7 @@ export function computeStartOfDayExpenseForecast(
     const todaySpend = todaySpendByCategory.get(category) ?? 0
     const ytdStart = values.ytd - todaySpend
     const forecast = computeCategoryForecastAtPct(values, ytdStart, pctToday, true)
-    total += forecast
+    total = addExpenseForecastMagnitude(total, forecast)
   }
   return total
 }
@@ -117,43 +122,40 @@ export function sumExpenseBudgetFromSnapshot(snapshot: SnapshotByCategory): numb
 }
 
 /**
- * Total expense forecast at end of tomorrow if no more spend today: tomorrow's day fraction, YTD through today.
+ * Total expense forecast at end of tomorrow if no more spend today: tomorrow's day fraction, YTD through today (locked).
  */
 export function computeTomorrowAtZeroExpenseForecast(
-  tomorrowSnapshot: SnapshotByCategory,
+  todaySnapshot: SnapshotByCategory,
   localTomorrowStr: string
 ): number {
   const pctTomorrow = pctElapsedForCalendarDate(localTomorrowStr)
   let total = 0
-  for (const [category, values] of tomorrowSnapshot) {
+  for (const [category, values] of todaySnapshot) {
     if (!isExpenseCategory(category)) continue
     const forecast = computeCategoryForecastAtPct(values, values.ytd, pctTomorrow, true)
-    total += forecast
+    total = addExpenseForecastMagnitude(total, forecast)
   }
   return total
 }
 
 /**
  * Forecast change from start of today to tomorrow if no more spend (positive = forecast rises).
- * Uses snapshot timelines and bridge-consistent forecast sums.
+ * Start = this morning (YTD excludes today); end = tomorrow with today's spend locked in.
+ * Uses snapshot timelines and magnitude totals (matches computeTodayHeadroom).
  */
 export function computeImpliedForecastChangeIfNoMoreSpend(
   todaySnapshot: SnapshotByCategory,
-  tomorrowSnapshot: SnapshotByCategory | undefined,
   localTodayStr: string,
   todaySpendByCategory: Map<string, number>
 ): number | null {
-  if (!tomorrowSnapshot || tomorrowSnapshot.size === 0) return null
+  if (todaySnapshot.size === 0) return null
   const localTomorrowStr = addCalendarDays(localTodayStr, 1)
   const startForecast = computeStartOfDayExpenseForecast(
     todaySnapshot,
     localTodayStr,
     todaySpendByCategory
   )
-  const endForecast = computeTomorrowAtZeroExpenseForecast(
-    tomorrowSnapshot,
-    localTomorrowStr
-  )
+  const endForecast = computeTomorrowAtZeroExpenseForecast(todaySnapshot, localTomorrowStr)
   if (!Number.isFinite(startForecast) || !Number.isFinite(endForecast)) return null
   return endForecast - startForecast
 }
