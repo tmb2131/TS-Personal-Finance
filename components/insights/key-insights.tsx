@@ -676,7 +676,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
         <FinancialHealthBanner
           data={{
             ...healthData,
-            budgetGap: annualBudgetInsights.overallGap,
+            budgetGap: -annualBudgetInsights.overallGap,
             budgetTotal: annualBudgetInsights.totalBudget,
           }}
         />
