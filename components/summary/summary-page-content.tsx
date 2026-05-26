@@ -676,8 +676,8 @@ export function SummaryPageContent() {
                     </div>
                     <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-t border-border/40 pt-3">
                       <Link
-                        href="/#budget-table"
-                        onClick={() => applyHashAfterNav('/#budget-table')}
+                        href="/dashboard#budget-table"
+                        onClick={() => applyHashAfterNav('/dashboard#budget-table')}
                         className="hover:opacity-70 transition-opacity"
                       >
                         <span className="text-xs text-muted-foreground">Annual Est. Spend: </span>
@@ -1063,8 +1063,8 @@ export function SummaryPageContent() {
                     <Card className="border-l-[3px] border-l-blue-500">
                       <CardContent className={cardContentClass}>
                         <Link
-                          href="/#monthly-trends"
-                          onClick={() => applyHashAfterNav('/#monthly-trends')}
+                          href="/dashboard#monthly-trends"
+                          onClick={() => applyHashAfterNav('/dashboard#monthly-trends')}
                           className={navButtonClass}
                         >
                           <div className="flex items-center gap-2">
@@ -1095,8 +1095,8 @@ export function SummaryPageContent() {
                     >
                       <CardContent className={cardContentClass}>
                         <Link
-                          href="/#monthly-trends"
-                          onClick={() => applyHashAfterNav('/#monthly-trends')}
+                          href="/dashboard#monthly-trends"
+                          onClick={() => applyHashAfterNav('/dashboard#monthly-trends')}
                           className={navButtonClass}
                         >
                           <div className="flex items-center gap-2">
@@ -1153,8 +1153,8 @@ export function SummaryPageContent() {
                     <Card className="border-l-[3px] border-l-amber-500">
                       <CardContent className={cardContentClass}>
                         <Link
-                          href="/#monthly-trends"
-                          onClick={() => applyHashAfterNav('/#monthly-trends')}
+                          href="/dashboard#monthly-trends"
+                          onClick={() => applyHashAfterNav('/dashboard#monthly-trends')}
                           className="flex items-center justify-between w-full mb-2 group hover:opacity-70 transition-opacity"
                         >
                           <div className="flex items-center gap-2">
