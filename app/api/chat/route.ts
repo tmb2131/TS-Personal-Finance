@@ -4,6 +4,7 @@ import { buildIntentRoutingPromptContext, classifyQueryIntent } from '@/lib/ai/i
 import { buildDateContext, buildChatSystemPrompt } from '@/lib/ai/system-prompt'
 import { createTelemetryLogger } from '@/lib/ai/chat-telemetry'
 import { createChatTools } from '@/lib/ai/tools'
+import { todayInTimeZone } from '@/lib/date-utils'
 import { google } from '@ai-sdk/google'
 import { streamText } from 'ai'
 
@@ -20,10 +21,14 @@ export async function POST(req: Request) {
   }
 
   let messages: unknown
+  let timeZone: string | undefined
 
   try {
     const body = await req.json()
     messages = body?.messages ?? body
+    if (body && typeof body.timeZone === 'string') {
+      timeZone = body.timeZone
+    }
     if (!Array.isArray(messages)) {
       console.error('[chat] Invalid request: messages is not an array', { body })
       return new Response(JSON.stringify({ error: 'messages must be an array' }), {
@@ -59,8 +64,8 @@ export async function POST(req: Request) {
   console.log('[chat] Starting streamText with', modelMessages.length, 'messages')
   console.log('[chat] Model messages:', JSON.stringify(modelMessages.map(m => ({ role: m.role, contentLength: m.content.length, contentPreview: m.content.substring(0, 100) })), null, 2))
 
-  const todayISO = new Date().toISOString().split('T')[0]
-  const dateContext = buildDateContext()
+  const todayISO = todayInTimeZone(timeZone)
+  const dateContext = buildDateContext(timeZone)
   const appKnowledgeContext = buildAppKnowledgePromptContext()
   const latestUserMessage = [...modelMessages].reverse().find((m) => m.role === 'user')?.content || ''
   const inferredRouteHint = inferRouteHintFromQuery(latestUserMessage)

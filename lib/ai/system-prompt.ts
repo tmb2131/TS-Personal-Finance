@@ -1,12 +1,15 @@
-export function buildDateContext(): string {
-  const now = new Date()
-  const todayISO = now.toISOString().split('T')[0]
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth()
+import { todayInTimeZone, toLocalDateString } from '@/lib/date-utils'
+
+export function buildDateContext(timeZone?: string): string {
+  // Resolve "today" in the user's timezone (the host clock is UTC on the server),
+  // then derive year/month and the previous calendar month from that local date.
+  const todayISO = todayInTimeZone(timeZone)
+  const [currentYear, currentMonthNum] = todayISO.split('-').map(Number)
+  const currentMonth = currentMonthNum - 1 // 0-based
   const lastMonthStart = new Date(currentYear, currentMonth - 1, 1)
   const lastMonthEnd = new Date(currentYear, currentMonth, 0)
-  const lastMonthStartISO = lastMonthStart.toISOString().split('T')[0]
-  const lastMonthEndISO = lastMonthEnd.toISOString().split('T')[0]
+  const lastMonthStartISO = toLocalDateString(lastMonthStart)
+  const lastMonthEndISO = toLocalDateString(lastMonthEnd)
 
   return `CURRENT DATE CONTEXT (use this for ALL relative date resolution):
 - Today's date: ${todayISO} (YYYY-MM-DD)

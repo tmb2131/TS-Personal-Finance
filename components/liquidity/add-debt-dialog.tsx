@@ -8,6 +8,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getClientTimeZone } from '@/lib/date-utils'
 import {
   Dialog,
   DialogContent,
@@ -61,7 +62,7 @@ export function AddDebtDialog() {
     try {
       const res = await fetch('/api/debt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-timezone': getClientTimeZone() ?? '' },
         body: JSON.stringify({
           type: type.trim(),
           name: name.trim(),

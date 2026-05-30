@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { HeaderStatus } from '@/lib/data/cached-queries'
 import type { IngestionStatusSnapshot } from '@/lib/ingestion-shared'
+import { parseLocalDate } from '@/lib/date-utils'
 
 /** @deprecated Prefer queryClient.invalidateQueries() — kept for backward compat only. */
 export const SYNC_COMPLETED_EVENT = 'sync-completed'
@@ -52,7 +53,7 @@ function formatSyncResults(results: SyncResultRow[]): string {
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return 'N/A'
-  const date = new Date(dateString)
+  const date = parseLocalDate(dateString)
   return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { TransactionLog } from '@/lib/types'
+import { toLocalDateString } from '@/lib/date-utils'
 import { buildGetRateForDate } from '@/lib/utils/fx-rates'
 import { cn } from '@/utils/cn'
 import { TrendingUp, TrendingDown, Calendar } from 'lucide-react'
@@ -179,7 +180,7 @@ export function MonthlyCategorySummary({
     // Helper to parse tx date string
     const parseDateStr = (tx: TransactionLog): string | null => {
       if (!tx.date) return null
-      return typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
+      return typeof tx.date === 'string' ? tx.date.split('T')[0] : toLocalDateString(new Date(tx.date))
     }
 
     if (viewMode === 'weekly') {

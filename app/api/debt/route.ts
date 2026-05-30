@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { todayInTimeZone, getTimeZoneFromRequest } from '@/lib/date-utils'
 
 const CreateDebtSchema = z.object({
   type: z.string().min(1),
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayInTimeZone(getTimeZoneFromRequest(request))
 
     const { data, error } = await supabase.from('debt').insert({
       user_id: user.id,

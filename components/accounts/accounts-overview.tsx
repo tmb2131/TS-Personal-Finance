@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { KPICard } from '@/components/kpi-card'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { AccountBalance } from '@/lib/types'
+import { parseLocalDate, todayLocalDateString } from '@/lib/date-utils'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Building2, LineChart, Loader2, Pencil, Wallet } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -68,7 +69,7 @@ const normalizeCategory = (category: string): string => {
 }
 
 function toDateInputValue(value: string | null | undefined) {
-  if (!value) return new Date().toISOString().slice(0, 10)
+  if (!value) return todayLocalDateString()
   return value.slice(0, 10)
 }
 
@@ -143,7 +144,7 @@ export function AccountsOverview() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'
-    const date = new Date(dateString)
+    const date = parseLocalDate(dateString)
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 

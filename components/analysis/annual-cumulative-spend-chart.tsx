@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useBudgets } from '@/lib/hooks/queries/use-budgets'
 import { useTransactions } from '@/lib/hooks/queries/use-transactions'
 import { TransactionLog, AnnualTrend } from '@/lib/types'
+import { toLocalDateString } from '@/lib/date-utils'
 import { computeAnnualTrends, computeAnnualForecasts } from '@/lib/forecasting'
 import { AlertCircle } from 'lucide-react'
 import {
@@ -162,7 +163,7 @@ export function AnnualCumulativeSpendChart() {
             ? Math.abs(tx.amount_usd) / fxRate
             : 0
       if (amountGbp <= 0) return
-      const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : new Date(tx.date).toISOString().split('T')[0]
+      const dateStr = typeof tx.date === 'string' ? tx.date.split('T')[0] : toLocalDateString(new Date(tx.date))
       const amountKey = Math.round(amountGbp * 100) // pence for stability
       const logicalKey = `${dateStr}|${tx.category ?? ''}|${amountKey}`
       if (!transactionMap.has(logicalKey)) {
@@ -179,8 +180,7 @@ export function AnnualCumulativeSpendChart() {
         dateStr = tx.date.split('T')[0]
       } else {
         // Handle Date object or other formats
-        const dateObj = new Date(tx.date)
-        dateStr = dateObj.toISOString().split('T')[0]
+        dateStr = toLocalDateString(new Date(tx.date))
       }
       
       const [yearStr, monthStr, dayStr] = dateStr.split('-')

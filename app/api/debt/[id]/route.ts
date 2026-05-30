@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { revalidateTags, CACHE_TAGS } from '@/lib/cache-tags'
+import { todayInTimeZone, getTimeZoneFromRequest } from '@/lib/date-utils'
 
 const UpdateDebtSchema = z.object({
   type: z.string().min(1).optional(),
@@ -45,7 +46,7 @@ export async function PATCH(
     }
 
     const updates: Record<string, any> = { ...parsed.data }
-    updates.date_updated = new Date().toISOString().split('T')[0]
+    updates.date_updated = todayInTimeZone(getTimeZoneFromRequest(request))
 
     const { data, error } = await supabase
       .from('debt')

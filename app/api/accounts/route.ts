@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { finalizeDataPipeline } from '@/lib/ingestion'
 import { CACHE_TAGS } from '@/lib/cache-tags'
+import { todayInTimeZone, getTimeZoneFromRequest } from '@/lib/date-utils'
 
 const CreateAccountSchema = z.object({
   institution: z.string().min(1),
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayInTimeZone(getTimeZoneFromRequest(request))
     const dateUpdated = parsed.data.date_updated ?? today
 
     const { data, error } = await supabase.from('account_balances').insert({

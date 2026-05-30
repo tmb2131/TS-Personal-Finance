@@ -8,6 +8,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getClientTimeZone } from '@/lib/date-utils'
 import {
   Dialog,
   DialogContent,
@@ -80,7 +81,7 @@ export function AddKidsAccountDialog({
     try {
       const res = await fetch('/api/kids', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-timezone': getClientTimeZone() ?? '' },
         body: JSON.stringify({
           child_name: childName.trim(),
           account_type: accountType.trim(),

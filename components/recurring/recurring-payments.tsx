@@ -25,6 +25,7 @@ import { createClient } from '@/lib/supabase/client'
 import { queryKeys } from '@/lib/query-keys'
 import { useRecurringTransactions, useRecurringPreferences } from '@/lib/hooks/queries/use-recurring'
 import { TransactionLog, RecurringPreference } from '@/lib/types'
+import { parseLocalDate } from '@/lib/date-utils'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { detectRecurringPayments, DetectedRecurringPayment } from '@/lib/utils/detect-recurring-payments'
 import { AlertCircle, Calendar, FileText, X } from 'lucide-react'
@@ -508,7 +509,7 @@ export function RecurringPayments() {
                                 : 0)
                       return (
                         <TableRow key={tx.id}>
-                          <TableCell>{formatDate(new Date(tx.date))}</TableCell>
+                          <TableCell>{formatDate(parseLocalDate(tx.date))}</TableCell>
                           <TableCell>{tx.counterparty ?? '—'}</TableCell>
                           <TableCell
                             className={cn(

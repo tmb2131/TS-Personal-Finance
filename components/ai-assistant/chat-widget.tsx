@@ -17,6 +17,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { createClient } from '@/lib/supabase/client'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
+import { getClientTimeZone } from '@/lib/date-utils'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -88,7 +89,10 @@ export function ChatWidget() {
   const swipeDirectionLockedRef = useRef<boolean>(false)
   
   const chatHelpers = useChat({
-    transport: new DefaultChatTransport({ api: '/api/chat' }),
+    transport: new DefaultChatTransport({
+      api: '/api/chat',
+      body: { timeZone: getClientTimeZone() },
+    }),
     onError: (error) => {
       console.error('[ChatWidget] Error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to get response. Please try again.'

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useSync } from '@/lib/contexts/sync-context'
+import { parseLocalDate } from '@/lib/date-utils'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -155,7 +156,7 @@ export function SourceHealthPanel({
                   )}
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  {dataset.latestDate ? `Latest coverage ${new Date(dataset.latestDate).toLocaleDateString('en-GB')}.` : 'No rows yet.'}{' '}
+                  {dataset.latestDate ? `Latest coverage ${parseLocalDate(dataset.latestDate).toLocaleDateString('en-GB')}.` : 'No rows yet.'}{' '}
                   {reviewState ? `${dataset.needsReviewCount} item(s) need attention.` : 'No review blockers.'}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">

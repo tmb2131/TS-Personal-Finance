@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
+import { getClientTimeZone } from '@/lib/date-utils'
 
 export function useForecastBridge(startDate?: string, endDate?: string) {
   return useQuery({
@@ -10,6 +11,8 @@ export function useForecastBridge(startDate?: string, endDate?: string) {
       const params = new URLSearchParams()
       if (startDate) params.set('startDate', startDate)
       if (endDate) params.set('endDate', endDate)
+      const tz = getClientTimeZone()
+      if (tz) params.set('tz', tz)
       const url = `/api/forecast-bridge${params.toString() ? `?${params}` : ''}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch forecast bridge')

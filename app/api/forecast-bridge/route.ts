@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { computeForecastSnapshotsForDates } from '@/lib/forecast-evolution'
 import { NextResponse } from 'next/server'
+import { todayInTimeZone, getTimeZoneFromRequest } from '@/lib/date-utils'
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     }
 
     if (!endDate) {
-      endDate = new Date().toISOString().split('T')[0]
+      endDate = todayInTimeZone(getTimeZoneFromRequest(request))
     }
 
     const supabase = await createClient()

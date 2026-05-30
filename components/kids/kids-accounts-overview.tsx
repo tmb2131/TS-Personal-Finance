@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { KidsAccount } from '@/lib/types'
+import { parseLocalDate, todayLocalDateString } from '@/lib/date-utils'
 import { useKidsAccounts } from '@/lib/hooks/queries/use-kids-accounts'
 import { queryKeys } from '@/lib/query-keys'
 import { useCurrency } from '@/lib/contexts/currency-context'
@@ -46,7 +47,7 @@ function getSourceClass(source: KidsAccount['data_source']) {
 }
 
 function toDateInputValue(value: string | null | undefined) {
-  if (!value) return new Date().toISOString().slice(0, 10)
+  if (!value) return todayLocalDateString()
   return value.slice(0, 10)
 }
 
@@ -91,7 +92,7 @@ export function KidsAccountsOverview() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A'
-    const date = new Date(dateString)
+    const date = parseLocalDate(dateString)
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 

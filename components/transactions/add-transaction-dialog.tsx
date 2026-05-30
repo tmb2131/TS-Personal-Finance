@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { todayLocalDateString } from '@/lib/date-utils'
 
 interface AddTransactionDialogProps {
   open?: boolean
@@ -37,7 +38,7 @@ export function AddTransactionDialog({
   }
   const [saving, setSaving] = useState(false)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayLocalDateString()
   const [date, setDate] = useState(today)
   const [category, setCategory] = useState('')
   const [counterparty, setCounterparty] = useState('')

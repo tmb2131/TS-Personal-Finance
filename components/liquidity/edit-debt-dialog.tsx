@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getClientTimeZone } from '@/lib/date-utils'
 import {
   Dialog,
   DialogContent,
@@ -64,7 +65,7 @@ export function EditDebtDialog({ debt, open, onOpenChange }: EditDebtDialogProps
     try {
       const res = await fetch(`/api/debt/${debt.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-timezone': getClientTimeZone() ?? '' },
         body: JSON.stringify({
           type: type.trim(),
           name: name.trim(),

@@ -10,6 +10,7 @@ import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
+import { parseLocalDate } from '@/lib/date-utils'
 import { AlertCircle } from 'lucide-react'
 import {
   LineChart,
@@ -24,6 +25,8 @@ import {
 
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
+const START_DATE_STORAGE_KEY = 'cumulative-spend-start-date'
+
 export function CumulativeSpendChart() {
   const { currency, fxRate } = useCurrency()
   const isMobile = useIsMobile()
@@ -33,6 +36,40 @@ export function CumulativeSpendChart() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Total Expenses')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const currentYear = new Date().getFullYear()
+  const startOfYearStr = `${currentYear}-01-01`
+  const todayStr = (() => {
+    const t = new Date()
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+  })()
+
+  // Start date for the displayed window. Defaults to Jan 1 of the current year
+  // and is persisted to localStorage so the user's choice is remembered.
+  const [startDate, setStartDate] = useState<string>(startOfYearStr)
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(START_DATE_STORAGE_KEY)
+      if (stored && stored >= startOfYearStr && stored <= todayStr) {
+        setStartDate(stored)
+      }
+    } catch {
+      // Ignore storage access errors (e.g. private mode)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleStartDateChange = (value: string) => {
+    // Clamp to the valid range [Jan 1, today]
+    const clamped = value < startOfYearStr ? startOfYearStr : value > todayStr ? todayStr : value
+    setStartDate(clamped)
+    try {
+      window.localStorage.setItem(START_DATE_STORAGE_KEY, clamped)
+    } catch {
+      // Ignore storage access errors
+    }
+  }
 
   // Fetch transactions for current year
   useEffect(() => {
@@ -102,7 +139,6 @@ export function CumulativeSpendChart() {
   const chartData = useMemo(() => {
     if (!transactions.length) return []
 
-    const currentYear = new Date().getFullYear()
     const startOfYear = new Date(currentYear, 0, 1)
     startOfYear.setHours(0, 0, 0, 0)
     const today = new Date()
@@ -202,7 +238,7 @@ export function CumulativeSpendChart() {
       ytdSpend += dailySpend
       
       // Calculate % of year passed
-      const dateObj = new Date(date)
+      const dateObj = parseLocalDate(date)
       const daysSinceStartOfYear = Math.floor(
         (dateObj.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)
       ) + 1
@@ -222,14 +258,15 @@ export function CumulativeSpendChart() {
 
       return {
         date,
-        dateLabel: new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+        dateLabel: parseLocalDate(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
         ytdSpend,
         impliedAnnualSpend,
       }
     })
 
-    return chartDataPoints
-  }, [transactions, selectedCategory, currency, fxRate])
+    // Keep YTD totals cumulative from Jan 1, but only display from the chosen start date
+    return chartDataPoints.filter((point) => point.date >= startDate)
+  }, [transactions, selectedCategory, currency, fxRate, startDate, currentYear])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -275,22 +312,38 @@ export function CumulativeSpendChart() {
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle>YTD Spend Over Time</CardTitle>
-          <div className="flex items-center gap-2">
-            <label htmlFor="category-select" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              Category:
-            </label>
-            <select
-              id="category-select"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="flex h-10 w-full md:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="start-date-input" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                Start date:
+              </label>
+              <input
+                id="start-date-input"
+                type="date"
+                value={startDate}
+                min={startOfYearStr}
+                max={todayStr}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                className="flex h-10 w-full sm:w-40 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="category-select" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                Category:
+              </label>
+              <select
+                id="category-select"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="flex h-10 w-full md:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -353,7 +406,7 @@ export function CumulativeSpendChart() {
                 ]}
                 labelFormatter={(label) => {
                   const dataPoint = chartData.find((d) => d.dateLabel === label)
-                  return dataPoint ? new Date(dataPoint.date).toLocaleDateString('en-GB', {
+                  return dataPoint ? parseLocalDate(dataPoint.date).toLocaleDateString('en-GB', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',

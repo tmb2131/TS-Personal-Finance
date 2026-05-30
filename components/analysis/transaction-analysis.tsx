@@ -16,6 +16,7 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
 import { isExcludedCategory } from '@/lib/category-filters'
+import { toLocalDateString } from '@/lib/date-utils'
 import { fetchFxRatesUpTo, buildGetRateForDate } from '@/lib/utils/fx-rates'
 import { Receipt, AlertCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -93,16 +94,16 @@ export function TransactionAnalysis({
       }
 
       const endDate = periodType === 'YTD'
-        ? new Date(selectedYear, 11, 31, 23, 59, 59)
-        : new Date(selectedYear, selectedMonth, 0, 23, 59, 59)
+        ? new Date(selectedYear, 11, 31)
+        : new Date(selectedYear, selectedMonth, 0)
 
       // Fetch unique categories for the selected period
       // Fetch all rows to ensure we get all categories (Supabase may paginate by default)
       const categoriesResult = await supabase
         .from('transaction_log')
         .select('category')
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0])
+        .gte('date', toLocalDateString(startDate))
+        .lte('date', toLocalDateString(endDate))
         .limit(10000) // Set a high limit to ensure we get all transactions
 
       if (categoriesResult.error) {
@@ -160,16 +161,16 @@ export function TransactionAnalysis({
       }
 
       const endDate = periodType === 'YTD'
-        ? new Date(selectedYear, 11, 31, 23, 59, 59)
-        : new Date(selectedYear, selectedMonth, 0, 23, 59, 59)
+        ? new Date(selectedYear, 11, 31)
+        : new Date(selectedYear, selectedMonth, 0)
 
       // Fetch all matching transactions with pagination (Supabase defaults to 1,000 rows)
       let allTransactions: TransactionLog[] = []
       let page = 0
       const pageSize = 1000
       let hasMore = true
-      const startDateStr = startDate.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
+      const startDateStr = toLocalDateString(startDate)
+      const endDateStr = toLocalDateString(endDate)
 
       while (hasMore) {
         const from = page * pageSize

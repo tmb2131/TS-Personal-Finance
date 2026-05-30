@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { computeForecastGapSeries } from '@/lib/forecast-evolution'
 import { NextResponse } from 'next/server'
+import { todayInTimeZone, getTimeZoneFromRequest } from '@/lib/date-utils'
 
 export type ForecastGapOverTimePoint = {
   date: string
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
     }
 
     if (!endDate) {
-      endDate = new Date().toISOString().split('T')[0]
+      endDate = todayInTimeZone(getTimeZoneFromRequest(request))
     }
 
     const supabase = await createClient()

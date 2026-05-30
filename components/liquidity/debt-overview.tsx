@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useDebt } from '@/lib/hooks/queries/use-debt'
 import { AccountBalance, Debt } from '@/lib/types'
+import { parseLocalDate } from '@/lib/date-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -221,7 +222,7 @@ export default function DebtOverview() {
                           </TableCell>
                           <TableCell className="text-right text-sm text-muted-foreground">
                             {item.date_updated
-                              ? new Date(item.date_updated).toLocaleDateString()
+                              ? parseLocalDate(item.date_updated).toLocaleDateString()
                               : '-'}
                           </TableCell>
                           <TableCell>
