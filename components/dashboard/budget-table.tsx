@@ -30,7 +30,7 @@ import { BudgetSummaryTable } from './budget-summary-table'
 import { BudgetIncomeTable } from './budget-income-table'
 import { EditBudgetDialog } from '@/components/budgets/edit-budget-dialog'
 import { CategoryPlanningDialog } from '@/components/category-planning/category-planning-dialog'
-import { isExcludedCategory } from '@/lib/category-filters'
+import { isExpenseCategory } from '@/lib/category-filters'
 import { getBudgetStatusConfig } from '@/lib/budget-status'
 
 const MATERIALITY_THRESHOLD = 0.02 // 2% of total budget
@@ -169,7 +169,6 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
   useEffect(() => {
     if (!expenseFullView) return
 
-    const EXCLUDED = ['Income', 'Gift Money', 'Other Income', 'Excluded']
     const toNum = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0)
     const toDateStr = (d: Date) => d.toISOString().split('T')[0]
 
@@ -200,7 +199,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
           const entries = byDate[dateKey] ?? {}
           const map: Record<string, HistoricalSnapshot> = {}
           for (const [category, values] of Object.entries(entries)) {
-            if (EXCLUDED.includes(category)) continue
+            if (!isExpenseCategory(category)) continue
             map[category] = {
               forecast: toNum(values.forecast),
               annualBudget: toNum(values.annualBudget),
@@ -239,9 +238,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
     // Filter out income categories and categories with budget = 0, YTD = 0, and gap = 0
     const filtered = displayData.filter(
       (row) =>
-        row.category !== 'Income' &&
-        row.category !== 'Gift Money' &&
-        !isExcludedCategory(row.category) &&
+        isExpenseCategory(row.category) &&
         (row.annualBudget !== 0 || row.ytd !== 0 || row.gap !== 0)
     )
 

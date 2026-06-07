@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { computeExpenseYtdByCategory } from '@/lib/expense-ytd'
+import { todayLocalDateString } from '@/lib/date-utils'
 import { ForecastSetting, AnnualTrend, MonthlyTrend } from '@/lib/types'
 
 const INCOME_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
@@ -292,16 +294,10 @@ export async function computeAnnualForecasts(
     txRes = await fetchTransactionsPaged(supabase, userId, startDate)
   }
 
-  const ytd = new Map<string, number>()
-
-  ;(txRes || []).forEach((tx) => {
-    if (!tx.category) return
-    const dateStr = toDateOnly(tx.date)
-    if (!dateStr) return
-    if (!dateStr.startsWith(String(currentYear))) return
-    const amount = normalizeAmountGBP(tx.amount_gbp, tx.amount_usd, rate)
-    if (amount === 0) return
-    ytd.set(tx.category, (ytd.get(tx.category) || 0) + amount)
+  const ytd = computeExpenseYtdByCategory(txRes || [], {
+    year: currentYear,
+    asOf: todayLocalDateString(),
+    gbpUsdRate: rate,
   })
 
   const budgetByCategory = new Map<string, number>()

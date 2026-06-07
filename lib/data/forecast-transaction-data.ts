@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isExpenseCategory } from '@/lib/category-filters'
 import { createClient } from '@/lib/supabase/server'
 import {
   computeTransactionForecast,
@@ -71,11 +72,15 @@ export const fetchTransactionForecast = cache(
     const startDate = `${startYear}-01-01`
 
     try {
-      const [rows, gbpUsdRate] = await Promise.all([
+      const [rows, gbpUsdRate, budgetRes] = await Promise.all([
         fetchTransactionsForForecast(supabase, user.id, startDate),
         fetchFxRateGBPUSD(supabase),
+        supabase.from('budget_targets').select('category').eq('user_id', user.id),
       ])
-      return computeTransactionForecast(rows, gbpUsdRate, now)
+      const budgetExpenseCategories = (budgetRes.data ?? [])
+        .map((row: { category: string }) => row.category)
+        .filter((category) => isExpenseCategory(category))
+      return computeTransactionForecast(rows, gbpUsdRate, now, budgetExpenseCategories)
     } catch (err) {
       console.error('fetchTransactionForecast failed', err)
       return null

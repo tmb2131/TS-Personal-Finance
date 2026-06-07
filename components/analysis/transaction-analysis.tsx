@@ -15,7 +15,12 @@ import {
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { createClient } from '@/lib/supabase/client'
 import { TransactionLog } from '@/lib/types'
-import { isExcludedCategory } from '@/lib/category-filters'
+import { isExpenseCategory } from '@/lib/category-filters'
+import {
+  computeExpenseYtdByCategory,
+  defaultExpenseYtdAsOf,
+  expenseYtdMagnitude,
+} from '@/lib/expense-ytd'
 import { toLocalDateString } from '@/lib/date-utils'
 import { fetchFxRatesUpTo, buildGetRateForDate } from '@/lib/utils/fx-rates'
 import { Receipt, AlertCircle } from 'lucide-react'
@@ -86,24 +91,22 @@ export function TransactionAnalysis({
       setLoading(true)
       const supabase = createClient()
       
-      let startDate: Date
-      if (periodType === 'YTD') {
-        startDate = new Date(selectedYear, 0, 1)
-      } else {
-        startDate = new Date(selectedYear, selectedMonth - 1, 1)
-      }
-
-      const endDate = periodType === 'YTD'
-        ? new Date(selectedYear, 11, 31)
-        : new Date(selectedYear, selectedMonth, 0)
+      const startDateStr =
+        periodType === 'YTD'
+          ? `${selectedYear}-01-01`
+          : toLocalDateString(new Date(selectedYear, selectedMonth - 1, 1))
+      const endDateStr =
+        periodType === 'YTD'
+          ? defaultExpenseYtdAsOf(selectedYear)
+          : toLocalDateString(new Date(selectedYear, selectedMonth, 0))
 
       // Fetch unique categories for the selected period
       // Fetch all rows to ensure we get all categories (Supabase may paginate by default)
       const categoriesResult = await supabase
         .from('transaction_log')
         .select('category')
-        .gte('date', toLocalDateString(startDate))
-        .lte('date', toLocalDateString(endDate))
+        .gte('date', startDateStr)
+        .lte('date', endDateStr)
         .limit(10000) // Set a high limit to ensure we get all transactions
 
       if (categoriesResult.error) {
@@ -119,7 +122,7 @@ export function TransactionAnalysis({
           new Set(
             categoriesResult.data
               .map((row) => row.category)
-              .filter((cat): cat is string => Boolean(cat) && !isExcludedCategory(cat))
+              .filter((cat): cat is string => Boolean(cat) && isExpenseCategory(cat))
           )
         ).sort()
         
@@ -148,29 +151,25 @@ export function TransactionAnalysis({
 
   // Fetch transactions based on filters
   useEffect(() => {
-    if (!selectedCategory || isExcludedCategory(selectedCategory)) return
+    if (!selectedCategory || !isExpenseCategory(selectedCategory)) return
 
     async function fetchTransactions() {
       const supabase = createClient()
-      
-      let startDate: Date
-      if (periodType === 'YTD') {
-        startDate = new Date(selectedYear, 0, 1)
-      } else {
-        startDate = new Date(selectedYear, selectedMonth - 1, 1)
-      }
 
-      const endDate = periodType === 'YTD'
-        ? new Date(selectedYear, 11, 31)
-        : new Date(selectedYear, selectedMonth, 0)
+      const startDateStr =
+        periodType === 'YTD'
+          ? `${selectedYear}-01-01`
+          : toLocalDateString(new Date(selectedYear, selectedMonth - 1, 1))
+      const endDateStr =
+        periodType === 'YTD'
+          ? defaultExpenseYtdAsOf(selectedYear)
+          : toLocalDateString(new Date(selectedYear, selectedMonth, 0))
 
       // Fetch all matching transactions with pagination (Supabase defaults to 1,000 rows)
       let allTransactions: TransactionLog[] = []
       let page = 0
       const pageSize = 1000
       let hasMore = true
-      const startDateStr = toLocalDateString(startDate)
-      const endDateStr = toLocalDateString(endDate)
 
       while (hasMore) {
         const from = page * pageSize
@@ -304,21 +303,41 @@ export function TransactionAnalysis({
     return `${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
-  // Calculate category totals for the selected period
-  const categoryTotals = useMemo(() => {
-    const totals = new Map<string, number>()
-    
+  // Category total for the selected period (YTD uses canonical dashboard-aligned logic)
+  const selectedCategoryTotal = useMemo(() => {
+    if (!selectedCategory) return null
+
+    if (periodType === 'YTD') {
+      const ytdMap = computeExpenseYtdByCategory(transactions, {
+        year: selectedYear,
+        asOf: defaultExpenseYtdAsOf(selectedYear),
+        gbpUsdRate: fxRate,
+        expenseOnly: true,
+      })
+      const gbp = expenseYtdMagnitude(ytdMap.get(selectedCategory) ?? 0)
+      return currency === 'USD' ? convertAmount(gbp, 'GBP') : gbp
+    }
+
+    let total = 0
     transactions.forEach((tx) => {
       const rate = getRateForDate(typeof tx.date === 'string' ? tx.date : tx.date)
-      const amount = currency === 'USD'
-        ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
-        : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
-      
-      totals.set(tx.category, (totals.get(tx.category) || 0) + Math.abs(amount))
+      const amount =
+        currency === 'USD'
+          ? (tx.amount_usd ?? (tx.amount_gbp != null ? tx.amount_gbp * rate : 0))
+          : (tx.amount_gbp ?? (tx.amount_usd != null ? tx.amount_usd / rate : 0))
+      total += Math.abs(amount)
     })
-
-    return totals
-  }, [transactions, currency, getRateForDate])
+    return total
+  }, [
+    transactions,
+    currency,
+    convertAmount,
+    fxRate,
+    getRateForDate,
+    periodType,
+    selectedCategory,
+    selectedYear,
+  ])
 
   if (loading) {
     return (
@@ -452,12 +471,17 @@ export function TransactionAnalysis({
         </div>
 
         {/* Category Totals Summary */}
-        {selectedCategory && categoryTotals.has(selectedCategory) && (
+        {selectedCategory && selectedCategoryTotal != null && (
           <div className="p-4 bg-muted/50 rounded-md">
             <p className="text-sm font-semibold">
               {selectedCategory} Total ({periodType === 'YTD' ? `${selectedYear} YTD` : `${new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long' })} ${selectedYear}`}):{' '}
-              <span className="font-bold">{formatCurrency(categoryTotals.get(selectedCategory)!)}</span>
+              <span className="font-bold">{formatCurrency(selectedCategoryTotal)}</span>
             </p>
+            {periodType === 'YTD' && currency === 'USD' && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                YTD computed in GBP at current FX (matches dashboard).
+              </p>
+            )}
           </div>
         )}
 

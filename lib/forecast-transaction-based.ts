@@ -1,3 +1,10 @@
+import { isExpenseCategory } from '@/lib/category-filters'
+import {
+  computeExpenseYtdByCategory,
+  computeTotalExpenseYtd,
+  expenseYtdMagnitude,
+} from '@/lib/expense-ytd'
+
 /**
  * Transaction-based forecasting.
  *
@@ -15,6 +22,7 @@
  * The current year's months 1..currentMonth are always actuals (YTD), regardless of method.
  */
 
+/** @deprecated Use isExpenseCategory() — kept for tests/docs referencing the set. */
 export const EXCLUDED_FROM_FORECAST = new Set([
   'Excluded',
   'Income',
@@ -267,7 +275,7 @@ export function buildMonthlyGrid(
   const txByCategory: CategoryTxIndex = {}
   for (const row of rows) {
     if (!row.category) continue
-    if (EXCLUDED_FROM_FORECAST.has(row.category)) continue
+    if (!isExpenseCategory(row.category)) continue
     const amount = normalizeAmountGBP(row.amount_gbp, row.amount_usd, gbpUsdRate)
     if (amount === 0) continue
     const date = toDateOnly(row.date)
@@ -1050,7 +1058,7 @@ function runBacktestForYear(
   const { grid: trainingGrid } = buildMonthlyGrid(trainingRows, gbpUsdRate)
   const trainingTxByCategory: CategoryTxIndex = {}
   for (const row of trainingRows) {
-    if (!row.category || EXCLUDED_FROM_FORECAST.has(row.category)) continue
+    if (!row.category || !isExpenseCategory(row.category)) continue
     const amt = normalizeAmountGBP(row.amount_gbp, row.amount_usd, gbpUsdRate)
     if (amt >= 0) continue
     trainingTxByCategory[row.category] ??= []
@@ -1231,10 +1239,12 @@ export function computeTransactionForecast(
   rows: ForecastTxRow[],
   gbpUsdRate: number,
   asOf: Date,
+  budgetExpenseCategories?: string[],
 ): TransactionForecastResult {
   const year = asOf.getFullYear()
   const currentMonth = asOf.getMonth() + 1 // 1-12
   const monthProgress = computeMonthProgress(asOf)
+  const asOfDate = asOf.toISOString().split('T')[0]
   const { grid, txByCategory } = buildMonthlyGrid(rows, gbpUsdRate)
   const ytdByCategory = buildYtdByCategory(grid, year, currentMonth)
 
@@ -1244,11 +1254,25 @@ export function computeTransactionForecast(
   const methodologies = [m1, m2, m3]
 
   const ensemble = buildEnsemble(methodologies, grid, year, currentMonth, monthProgress)
+
+  const canonicalYtdSigned = computeExpenseYtdByCategory(rows, {
+    year,
+    asOf: asOfDate,
+    gbpUsdRate,
+    expenseOnly: true,
+  })
+  for (const cat of ensemble.categories) {
+    cat.ytd = expenseYtdMagnitude(canonicalYtdSigned.get(cat.category) ?? 0)
+  }
+  ensemble.totals.ytd = budgetExpenseCategories?.length
+    ? computeTotalExpenseYtd(canonicalYtdSigned, budgetExpenseCategories)
+    : computeTotalExpenseYtd(canonicalYtdSigned)
+
   const backtest = runBacktest(rows, gbpUsdRate, year)
   const bestFit = backtest ? buildBestFit(methodologies, backtest) : null
 
   return {
-    asOf: asOf.toISOString().split('T')[0],
+    asOf: asOfDate,
     year,
     currentMonth,
     methodologies,
