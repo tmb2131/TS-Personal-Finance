@@ -203,9 +203,10 @@ Sidebar order (`components/sidebar.tsx`):
 8. `Kids Accounts` (`/kids`) - hidden if no kids data
 9. `Analysis` (`/analysis`)
 10. `Forecast` (`/forecast`)
-11. `Recurring` (`/recurring`)
-12. `Import` (`/import`)
-13. `Settings` (`/settings`)
+11. `Sustainable Spend` (`/sustainable-spend`) - interactive sustainable spend range explorer
+12. `Recurring` (`/recurring`)
+13. `Import` (`/import`)
+14. `Settings` (`/settings`)
 
 ## API Routes
 
@@ -242,6 +243,7 @@ Key folders:
 - `components/dashboard/`
 - `components/analysis/`
 - `components/insights/`
+- `components/sustainable-spend/`
 - `components/liquidity/`
 - `components/accounts/`
 - `components/budgets/`

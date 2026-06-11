@@ -201,16 +201,27 @@ export function SustainableSpendingSection() {
         <div className="space-y-1 border-t pt-3">
           <p className="text-xs text-muted-foreground">{data.drivers.floor}.</p>
           <p className="text-xs text-muted-foreground">{data.drivers.ceiling}.</p>
-          <div className="flex items-center gap-1.5 pt-1">
-            <Settings2 className="h-3 w-3 text-muted-foreground" />
-            <Link
-              href="/settings#financial-assumptions"
-              className="text-xs text-muted-foreground underline-offset-4 hover:underline hover:text-foreground"
-            >
-              {data.hasCustomAssumptions
-                ? 'Adjust your financial assumptions'
-                : 'Using default assumptions — set yours in Settings'}
-            </Link>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+            <span className="flex items-center gap-1.5">
+              <Scale className="h-3 w-3 text-muted-foreground" />
+              <Link
+                href="/sustainable-spend"
+                className="text-xs font-medium text-indigo-600 underline-offset-4 hover:underline"
+              >
+                Explore the methodology and adjust assumptions live
+              </Link>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Settings2 className="h-3 w-3 text-muted-foreground" />
+              <Link
+                href="/settings#financial-assumptions"
+                className="text-xs text-muted-foreground underline-offset-4 hover:underline hover:text-foreground"
+              >
+                {data.hasCustomAssumptions
+                  ? 'Adjust your financial assumptions'
+                  : 'Using default assumptions — set yours in Settings'}
+              </Link>
+            </span>
           </div>
         </div>
       </CardContent>

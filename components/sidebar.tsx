@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { LayoutDashboard, Wallet, Receipt, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp, MessageCircle, LogOut, Calendar, LayoutList, LineChart, Plus } from 'lucide-react'
+import { LayoutDashboard, Wallet, Receipt, TrendingUp, Lightbulb, ChevronLeft, ChevronRight, Repeat, Baby, MoreHorizontal, Settings, Droplets, FileUp, MessageCircle, LogOut, Calendar, LayoutList, LineChart, Plus, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -51,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { name: 'Analysis', href: '/analysis', icon: TrendingUp },
       { name: 'Forecast', href: '/forecast', icon: LineChart },
+      { name: 'Sustainable Spend', mobileLabel: 'Sustain', href: '/sustainable-spend', icon: Scale },
       { name: 'Recurring', href: '/recurring', icon: Repeat },
     ],
   },

@@ -15,6 +15,7 @@ import {
   type SustainableSpendAssumptions,
   type SustainableSpendResult,
 } from '@/lib/sustainable-spend'
+import type { AssetMixEntry } from '@/lib/return-assumptions'
 import type { AccountBalance, Debt, FinancialAssumptions } from '@/lib/types'
 
 const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
@@ -54,45 +55,40 @@ function useRecurringPaymentRows() {
   })
 }
 
-export interface SustainableSpendData extends SustainableSpendResult {
+/** Monetary inputs to the sustainable spend computation, in the display currency. */
+export interface SustainableSpendInputsData {
   netWorth: number
+  assetMix: AssetMixEntry[]
   annualIncome: number
   annualGiftMoney: number
+  annualForecastSpend: number
   committedAnnualSpend: number
   cashRunwayMonths: number | null
-  /** Resolved assumptions used for the computation (stored row or defaults). */
-  assumptions: SustainableSpendAssumptions
-  /** False when the user has never saved assumptions and defaults are in use. */
-  hasCustomAssumptions: boolean
 }
 
-export function useSustainableSpend(): { data: SustainableSpendData | null; loading: boolean } {
+/**
+ * Assembles the monetary inputs (net worth, asset mix, forecast flows, committed
+ * recurring spend, cash runway) used by `computeSustainableSpendRange`.
+ * Returns null data while loading or when there isn't enough data to compute.
+ */
+export function useSustainableSpendInputs(includeTrust: boolean): {
+  data: SustainableSpendInputsData | null
+  loading: boolean
+} {
   const { currency, fxRate, convertAmount } = useCurrency()
   const { data: accountsRaw, isLoading: accountsLoading } = useAccounts()
   const { data: debtRaw, isLoading: debtLoading } = useDebt()
   const { data: dailySummaryData, isLoading: summaryLoading } = useDailySummary()
   const { data: burnRes, isLoading: burnLoading } = useCashRunway()
   const { data: recurringRows, isLoading: recurringLoading } = useRecurringPaymentRows()
-  const { data: storedAssumptions, isLoading: assumptionsLoading } = useFinancialAssumptions()
 
   const loading =
-    accountsLoading ||
-    debtLoading ||
-    summaryLoading ||
-    burnLoading ||
-    recurringLoading ||
-    assumptionsLoading
+    accountsLoading || debtLoading || summaryLoading || burnLoading || recurringLoading
 
-  const data = useMemo((): SustainableSpendData | null => {
+  const data = useMemo((): SustainableSpendInputsData | null => {
     if (loading) return null
     const accounts = (accountsRaw ?? []) as AccountBalance[]
     if (accounts.length === 0) return null
-
-    const raw = storedAssumptions ?? null
-    const resolved = {
-      ...DEFAULT_FINANCIAL_ASSUMPTIONS,
-      ...(raw ?? {}),
-    }
 
     // Latest balance per institution + account
     const accountsMap = new Map<string, AccountBalance>()
@@ -106,7 +102,7 @@ export function useSustainableSpend(): { data: SustainableSpendData | null; load
     const latest = Array.from(accountsMap.values())
 
     const includeAccount = (a: AccountBalance) =>
-      resolved.include_trust ? true : a.category !== 'Trust'
+      includeTrust ? true : a.category !== 'Trust'
 
     const grossAssets = latest.reduce((sum, a) => {
       if (!includeAccount(a)) return sum
@@ -216,18 +212,82 @@ export function useSustainableSpend(): { data: SustainableSpendData | null; load
       cashRunwayMonths = totalBurn > 0 ? totalCash / totalBurn : totalCash > 0 ? Infinity : 0
     }
 
-    const wealthTarget =
-      currency === 'USD'
-        ? resolved.wealth_target_usd != null
-          ? resolved.wealth_target_usd
-          : resolved.wealth_target_gbp != null
-            ? resolved.wealth_target_gbp * fxRate
-            : null
-        : resolved.wealth_target_gbp != null
-          ? resolved.wealth_target_gbp
-          : resolved.wealth_target_usd != null
-            ? resolved.wealth_target_usd / (fxRate || 1)
-            : null
+    return {
+      netWorth,
+      assetMix,
+      annualIncome,
+      annualGiftMoney,
+      annualForecastSpend,
+      committedAnnualSpend,
+      cashRunwayMonths,
+    }
+  }, [
+    loading,
+    accountsRaw,
+    debtRaw,
+    dailySummaryData,
+    burnRes,
+    recurringRows,
+    includeTrust,
+    currency,
+    fxRate,
+    convertAmount,
+  ])
+
+  return { data, loading }
+}
+
+/** Resolves the stored wealth target (or null) into the current display currency. */
+export function resolveWealthTarget(
+  resolved: Pick<FinancialAssumptions, 'wealth_target_gbp' | 'wealth_target_usd'>,
+  currency: string,
+  fxRate: number
+): number | null {
+  return currency === 'USD'
+    ? resolved.wealth_target_usd != null
+      ? resolved.wealth_target_usd
+      : resolved.wealth_target_gbp != null
+        ? resolved.wealth_target_gbp * fxRate
+        : null
+    : resolved.wealth_target_gbp != null
+      ? resolved.wealth_target_gbp
+      : resolved.wealth_target_usd != null
+        ? resolved.wealth_target_usd / (fxRate || 1)
+        : null
+}
+
+export interface SustainableSpendData extends SustainableSpendResult {
+  netWorth: number
+  annualIncome: number
+  annualGiftMoney: number
+  committedAnnualSpend: number
+  cashRunwayMonths: number | null
+  /** Resolved assumptions used for the computation (stored row or defaults). */
+  assumptions: SustainableSpendAssumptions
+  /** False when the user has never saved assumptions and defaults are in use. */
+  hasCustomAssumptions: boolean
+}
+
+export function useSustainableSpend(): { data: SustainableSpendData | null; loading: boolean } {
+  const { currency, fxRate } = useCurrency()
+  const { data: storedAssumptions, isLoading: assumptionsLoading } = useFinancialAssumptions()
+
+  const raw = storedAssumptions ?? null
+  const resolved = useMemo(
+    () => ({ ...DEFAULT_FINANCIAL_ASSUMPTIONS, ...(raw ?? {}) }),
+    [raw]
+  )
+
+  const { data: inputs, loading: inputsLoading } = useSustainableSpendInputs(
+    resolved.include_trust
+  )
+
+  const loading = inputsLoading || assumptionsLoading
+
+  const data = useMemo((): SustainableSpendData | null => {
+    if (loading || !inputs) return null
+
+    const wealthTarget = resolveWealthTarget(resolved, currency, fxRate)
 
     const assumptions: SustainableSpendAssumptions = {
       returnProfile: resolved.return_profile,
@@ -240,38 +300,27 @@ export function useSustainableSpend(): { data: SustainableSpendData | null; load
     }
 
     const result = computeSustainableSpendRange({
-      netWorth,
-      assetMix,
-      annualIncome,
-      annualGiftMoney,
-      annualForecastSpend,
-      committedAnnualSpend,
-      cashRunwayMonths,
+      netWorth: inputs.netWorth,
+      assetMix: inputs.assetMix,
+      annualIncome: inputs.annualIncome,
+      annualGiftMoney: inputs.annualGiftMoney,
+      annualForecastSpend: inputs.annualForecastSpend,
+      committedAnnualSpend: inputs.committedAnnualSpend,
+      cashRunwayMonths: inputs.cashRunwayMonths,
       assumptions,
     })
 
     return {
       ...result,
-      netWorth,
-      annualIncome,
-      annualGiftMoney,
-      committedAnnualSpend,
-      cashRunwayMonths,
+      netWorth: inputs.netWorth,
+      annualIncome: inputs.annualIncome,
+      annualGiftMoney: inputs.annualGiftMoney,
+      committedAnnualSpend: inputs.committedAnnualSpend,
+      cashRunwayMonths: inputs.cashRunwayMonths,
       assumptions,
       hasCustomAssumptions: raw != null,
     }
-  }, [
-    loading,
-    accountsRaw,
-    debtRaw,
-    dailySummaryData,
-    burnRes,
-    recurringRows,
-    storedAssumptions,
-    currency,
-    fxRate,
-    convertAmount,
-  ])
+  }, [loading, inputs, resolved, raw, currency, fxRate])
 
   return { data, loading }
 }
