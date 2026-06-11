@@ -167,7 +167,7 @@ export function AssumptionsPanel({
             <div className="space-y-2">
               <div className="flex items-baseline justify-between gap-2">
                 <Label htmlFor="explorer-wealth-target" className="text-xs">
-                  Wealth target ({symbol})
+                  Wealth target ({symbol}, today&apos;s money)
                 </Label>
               </div>
               <Input
@@ -186,6 +186,10 @@ export function AssumptionsPanel({
                 }}
                 className="h-9"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Purchasing power at the horizon, not a nominal future amount. Savings math uses real
+                returns after inflation.
+              </p>
             </div>
             <SliderRow
               label="Horizon"

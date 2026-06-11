@@ -239,7 +239,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
           <p className="text-xs text-muted-foreground">
             {draft.floorMode === 'savings_rate'
               ? 'What is left of your inflows after setting aside your target savings rate. Spending below this means out-saving your goal.'
-              : 'What is left of your inflows after the savings needed to hit your wealth target on time. Spending below this means out-saving your goal.'}
+              : 'What is left of your inflows after the savings needed to hit your wealth target on time (in today\u2019s money at the horizon). Spending below this means out-saving your goal.'}
           </p>
         </CardHeader>
         <CardContent>
@@ -258,10 +258,10 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 ? `${formatPct(draft.targetSavingsRate, 0)} of ${formatCurrency(inputs.annualIncome)} income`
                 : draft.wealthTarget != null
                   ? result.requiredAnnualSavings > 0
-                    ? `To reach ${formatCurrency(draft.wealthTarget)} in ${draft.horizonYears} years at ${formatPct(result.realReturn)} real return`
+                    ? `To reach ${formatCurrency(draft.wealthTarget)} in today\u2019s money in ${draft.horizonYears} years at ${formatPct(result.realReturn)} real return`
                     : result.requiredAnnualSavings < 0
-                      ? `Returns alone reach ${formatCurrency(draft.wealthTarget)} — you can spend this much above inflows and still hit your target`
-                      : `Your wealth target of ${formatCurrency(draft.wealthTarget)} is already on track at current returns`
+                      ? `Returns alone reach ${formatCurrency(draft.wealthTarget)} in today\u2019s money — you can spend this much above inflows and still hit your target`
+                      : `Your wealth target of ${formatCurrency(draft.wealthTarget)} in today\u2019s money is already on track at current returns`
                   : 'No wealth target set — set one in the panel'
             }
             value={formatCurrency(

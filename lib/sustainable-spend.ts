@@ -15,7 +15,7 @@ export interface SustainableSpendAssumptions {
   inflationRate: number
   floorMode: SpendingFloorMode
   targetSavingsRate: number
-  /** Net worth target in the same (display) currency as the monetary inputs. */
+  /** Net worth target in today's purchasing power at the horizon (real terms). */
   wealthTarget: number | null
   horizonYears: number
   emergencyFundMonths: number

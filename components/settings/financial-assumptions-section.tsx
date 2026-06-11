@@ -203,31 +203,37 @@ export function FinancialAssumptionsSection() {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="wealth-target">Wealth target ({symbol})</Label>
-                    <Input
-                      id="wealth-target"
-                      type="number"
-                      min="0"
-                      step="10000"
-                      placeholder={`e.g. ${symbol === '$' ? '3000000' : '2500000'}`}
-                      value={wealthTarget}
-                      onChange={(e) => setWealthTarget(e.target.value)}
-                    />
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="wealth-target">Wealth target ({symbol}, today&apos;s money)</Label>
+                      <Input
+                        id="wealth-target"
+                        type="number"
+                        min="0"
+                        step="10000"
+                        placeholder={`e.g. ${symbol === '$' ? '3000000' : '2500000'}`}
+                        value={wealthTarget}
+                        onChange={(e) => setWealthTarget(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="horizon-years">Horizon (years)</Label>
+                      <Input
+                        id="horizon-years"
+                        type="number"
+                        min="1"
+                        max="80"
+                        step="1"
+                        value={horizonYears}
+                        onChange={(e) => setHorizonYears(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="horizon-years">Horizon (years)</Label>
-                    <Input
-                      id="horizon-years"
-                      type="number"
-                      min="1"
-                      max="80"
-                      step="1"
-                      value={horizonYears}
-                      onChange={(e) => setHorizonYears(e.target.value)}
-                    />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    In today&apos;s money — the purchasing power you want at the horizon, not a
+                    nominal future amount. Projections use real returns after inflation.
+                  </p>
                 </div>
               )}
             </div>
