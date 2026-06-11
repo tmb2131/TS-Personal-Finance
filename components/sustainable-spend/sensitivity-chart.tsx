@@ -129,7 +129,7 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           Floor and ceiling as {config.label.toLowerCase()} varies, holding everything else at your
-          current settings. The vertical line marks your current value.
+          current settings. Dashed lines mark your current value and forecast spend.
         </p>
         <div className="flex flex-wrap gap-1.5 pt-1">
           {availableVars.map((v) => (
@@ -147,9 +147,25 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
         </div>
       </CardHeader>
       <CardContent>
+        <div className="mb-2 flex flex-wrap gap-2 text-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/60 px-2.5 py-1 font-medium text-foreground">
+            <span
+              className="h-3 w-0 border-l border-dashed border-foreground/70"
+              aria-hidden
+            />
+            Current {config.label.toLowerCase()}: {config.formatX(currentX, symbol)}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/60 px-2.5 py-1 font-medium text-foreground">
+            <span
+              className="h-0 w-3 border-t border-dashed border-foreground/70"
+              aria-hidden
+            />
+            Forecast spend: {formatCompact(inputs.annualForecastSpend)}
+          </span>
+        </div>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
+            <ComposedChart data={data} margin={{ top: 12, right: 16, left: 4, bottom: 4 }}>
               <XAxis
                 dataKey="x"
                 type="number"
@@ -204,25 +220,15 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
               />
               <ReferenceLine
                 y={inputs.annualForecastSpend}
-                stroke={chartTheme.axisStroke}
+                stroke={chartTheme.labelFill}
                 strokeDasharray="4 4"
-                label={{
-                  value: `Forecast spend ${formatCompact(inputs.annualForecastSpend)}`,
-                  position: 'insideTopRight',
-                  fontSize: fonts.axisTick,
-                  fill: chartTheme.labelFill,
-                }}
+                strokeOpacity={0.85}
               />
               <ReferenceLine
                 x={Math.max(config.min, Math.min(config.max, currentX))}
                 stroke={chartTheme.labelFill}
                 strokeDasharray="3 3"
-                label={{
-                  value: 'Current',
-                  position: 'top',
-                  fontSize: fonts.axisTick,
-                  fill: chartTheme.labelFill,
-                }}
+                strokeOpacity={0.85}
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -236,6 +242,10 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-4 rounded bg-green-500/25 inline-block" /> Sustainable range
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-0 w-4 border-t border-dashed border-foreground/70 inline-block" />{' '}
+            Current value
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-0 w-4 border-t border-dashed border-muted-foreground inline-block" />{' '}
