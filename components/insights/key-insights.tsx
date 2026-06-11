@@ -21,6 +21,8 @@ import { CheckCircle2, XCircle, TrendingUp, TrendingDown, DollarSign, Target, Ca
 import { getBudgetStatusConfig } from '@/lib/budget-status'
 import { FinancialHealthBanner } from '@/components/financial-health-banner'
 import { useFinancialHealth } from '@/lib/hooks/use-financial-health'
+import { useSustainableSpend } from '@/lib/hooks/use-sustainable-spend'
+import { SustainableSpendingSection } from '@/components/insights/sustainable-spending-section'
 import { MilestonesBanner } from '@/components/milestones-banner'
 
 const LazyNetWorthCharts = dynamic(
@@ -79,6 +81,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
   const { data: healthData } = useFinancialHealth()
+  const { data: sustainableSpend } = useSustainableSpend()
   const previousYear = new Date().getFullYear() - 1
 
   const { data: queryData, isLoading: queryLoading, error: queryError } = useInsights({
@@ -678,6 +681,7 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
             ...healthData,
             budgetGap: -annualBudgetInsights.overallGap,
             budgetTotal: annualBudgetInsights.totalBudget,
+            sustainableSpend,
           }}
         />
       )}
@@ -1309,6 +1313,9 @@ export function KeyInsights({ initialData }: KeyInsightsProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Sustainable Spending Section */}
+      <SustainableSpendingSection />
 
       {/* Annual Spend Section */}
       <Card id="annual-spend" className={cn("scroll-mt-24 border-l-[3px]", annualSpendInsights.vsFourYearAvg > 0 ? "border-l-green-500" : "border-l-red-500")}>

@@ -1,4 +1,4 @@
-export type BudgetStatusLevel = 'under' | 'on_track' | 'slightly_over' | 'over'
+export type BudgetStatusLevel = 'below_floor' | 'under' | 'on_track' | 'slightly_over' | 'over'
 
 const DEFAULT_ON_TRACK_THRESHOLD = 0.03
 const DEFAULT_SLIGHTLY_OVER_THRESHOLD = 0.10
@@ -30,6 +30,15 @@ export const BUDGET_STATUS_CONFIG: Record<BudgetStatusLevel, {
   bgClass: string
   pillBgClass: string
 }> = {
+  // Spending below the sustainable floor: a nudge (you can afford more), not an alarm.
+  below_floor: {
+    label: 'Below Spending Floor',
+    labelShort: 'Below Floor',
+    borderClass: 'border-l-indigo-500',
+    textClass: 'text-indigo-600',
+    bgClass: 'bg-indigo-500/15',
+    pillBgClass: 'bg-indigo-500/15',
+  },
   under: {
     label: 'Under Budget',
     labelShort: 'Under',
@@ -67,4 +76,16 @@ export const BUDGET_STATUS_CONFIG: Record<BudgetStatusLevel, {
 export function getBudgetStatusConfig(gap: number, budget: number) {
   const level = classifyBudgetStatus(gap, budget)
   return { level, ...BUDGET_STATUS_CONFIG[level] }
+}
+
+/**
+ * Escalates an 'under' budget status to 'below_floor' when forecast spend is below
+ * the sustainable spending floor — underspending vs your goal, not just your budget.
+ */
+export function refineBudgetStatusWithSpendRange(
+  level: BudgetStatusLevel,
+  spendRangePosition: 'below_floor' | 'in_range' | 'near_ceiling' | 'above_ceiling' | null | undefined
+): BudgetStatusLevel {
+  if (level === 'under' && spendRangePosition === 'below_floor') return 'below_floor'
+  return level
 }

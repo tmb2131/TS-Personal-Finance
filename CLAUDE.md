@@ -99,6 +99,7 @@ npm run eval:app-instructions
 - `historical_net_worth` (`data_source`: `app_generated` or `manual`)
 - `yoy_net_worth` (derived)
 - `debt` (app-only, manual)
+- `financial_assumptions` (app-only, one row per user; sustainable spending range + FI assumptions)
 - `kids_accounts` (`data_source`)
 - `recurring_payments` (`data_source`)
 - `recurring_preferences`
@@ -174,9 +175,9 @@ ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 
 ## Database Migrations
 
-There are currently **37** migrations (`001` through `037`).
+There are currently **38** migrations (`001` through `038`).
 
-Next migration should be `038_*.sql`.
+Next migration should be `039_*.sql`.
 
 ## Deployment
 
@@ -232,6 +233,7 @@ Sidebar order (`components/sidebar.tsx`):
 - `POST /api/recurring`, `PATCH|DELETE /api/recurring/[id]`
 - `GET|POST /api/investment-returns`, `PATCH|DELETE /api/investment-returns/[id]`
 - `GET|PUT /api/net-worth-history`
+- `GET|PUT /api/financial-assumptions`
 - `POST /api/import/csv`
 
 ## Component Organization

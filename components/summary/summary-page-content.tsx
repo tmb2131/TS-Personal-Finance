@@ -40,9 +40,14 @@ import {
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { toLocalDateString } from '@/lib/daily-summary-utils'
-import { getBudgetStatusConfig } from '@/lib/budget-status'
+import {
+  BUDGET_STATUS_CONFIG,
+  classifyBudgetStatus,
+  refineBudgetStatusWithSpendRange,
+} from '@/lib/budget-status'
 import { FinancialHealthBanner } from '@/components/financial-health-banner'
 import { useFinancialHealth } from '@/lib/hooks/use-financial-health'
+import { useSustainableSpend } from '@/lib/hooks/use-sustainable-spend'
 import { MilestonesBanner } from '@/components/milestones-banner'
 import { ForecastWeekChangeCard } from '@/components/summary/forecast-week-change-card'
 import { ForecastWeekGapTrendCard } from '@/components/summary/forecast-week-trend-card'
@@ -128,6 +133,7 @@ export function SummaryPageContent() {
   const chartTheme = useChartTheme()
   const [mobileMonthlyDriversView, setMobileMonthlyDriversView] = useState<'less' | 'more'>('less')
   const { data: healthData } = useFinancialHealth()
+  const { data: sustainableSpend } = useSustainableSpend()
 
   const { data: rawData, isLoading: loading } = useDailySummary()
 
@@ -191,10 +197,11 @@ export function SummaryPageContent() {
     return { gapToBudget: toDisplay(gapGBP), budgetTotal: toDisplay(budgetTotalGBP) }
   }, [budgetData, currency, fxRate, convertAmount, forecastByCategory])
 
-  const budgetStatusInfo = useMemo(
-    () => getBudgetStatusConfig(gapToBudget, budgetTotal),
-    [gapToBudget, budgetTotal]
-  )
+  const budgetStatusInfo = useMemo(() => {
+    const base = classifyBudgetStatus(gapToBudget, budgetTotal)
+    const level = refineBudgetStatusWithSpendRange(base, sustainableSpend?.position)
+    return { level, ...BUDGET_STATUS_CONFIG[level] }
+  }, [gapToBudget, budgetTotal, sustainableSpend])
 
   const yesterdayChange = useMemo(() => {
     const changeGBP =
@@ -625,6 +632,7 @@ export function SummaryPageContent() {
                     ...healthData,
                     budgetGap: gapToBudget,
                     budgetTotal: budgetTotal,
+                    sustainableSpend,
                   }}
                 />
               )}
@@ -641,13 +649,15 @@ export function SummaryPageContent() {
                   className={cn(
                     'overflow-hidden border-l-[3px]',
                     budgetStatusInfo.borderClass,
-                    budgetStatusInfo.level === 'under'
-                      ? 'bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent'
-                      : budgetStatusInfo.level === 'on_track'
-                        ? 'bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent'
-                        : budgetStatusInfo.level === 'slightly_over'
-                          ? 'bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent'
-                          : 'bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent'
+                    budgetStatusInfo.level === 'below_floor'
+                      ? 'bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-transparent'
+                      : budgetStatusInfo.level === 'under'
+                        ? 'bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent'
+                        : budgetStatusInfo.level === 'on_track'
+                          ? 'bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent'
+                          : budgetStatusInfo.level === 'slightly_over'
+                            ? 'bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent'
+                            : 'bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent'
                   )}
                 >
                   <CardContent className={cardContentClass}>
@@ -680,13 +690,34 @@ export function SummaryPageContent() {
                         const amt = formatCurrency(Math.abs(gapToBudget))
                         return (
                           <div className={cn('text-sm mt-1.5 tabular-nums', budgetStatusInfo.textClass, 'opacity-80')}>
-                            {budgetStatusInfo.level === 'under' && <>{amt} to spare</>}
+                            {(budgetStatusInfo.level === 'under' || budgetStatusInfo.level === 'below_floor') && <>{amt} to spare</>}
                             {budgetStatusInfo.level === 'on_track' && <>just {amt} ({pct}%) above budget</>}
                             {budgetStatusInfo.level === 'slightly_over' && <>{amt} ({pct}%) above budget</>}
                             {budgetStatusInfo.level === 'over' && <>{amt} ({pct}%) over budget</>}
                           </div>
                         )
                       })()}
+                      {sustainableSpend &&
+                        (sustainableSpend.position === 'below_floor' ||
+                          sustainableSpend.position === 'above_ceiling') && (
+                          <button
+                            onClick={() => handleNavigate('/insights#sustainable-spending')}
+                            className={cn(
+                              'block text-xs mt-1.5 tabular-nums text-left hover:underline underline-offset-4',
+                              sustainableSpend.position === 'below_floor'
+                                ? 'text-indigo-600'
+                                : 'text-red-600'
+                            )}
+                          >
+                            {sustainableSpend.position === 'below_floor'
+                              ? `Tracking ${formatCurrency(
+                                  sustainableSpend.floorAnnual - sustainableSpend.currentForecastSpend
+                                )} below your sustainable spending floor — you can afford more`
+                              : `${formatCurrency(
+                                  sustainableSpend.currentForecastSpend - sustainableSpend.ceilingAnnual
+                                )} above your sustainable spending ceiling`}
+                          </button>
+                        )}
                     </div>
                     <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-t border-border/40 pt-3">
                       <Link

@@ -1,8 +1,16 @@
 'use client'
 
 import { cn } from '@/utils/cn'
-import { Shield, TrendingUp, Wallet, Target } from 'lucide-react'
+import { Shield, TrendingUp, Wallet, Target, Scale } from 'lucide-react'
 import { classifyBudgetStatus, type BudgetStatusLevel } from '@/lib/budget-status'
+import type { SpendRangePosition } from '@/lib/sustainable-spend'
+
+export type SustainableSpendSummary = {
+  floorAnnual: number
+  ceilingAnnual: number
+  currentForecastSpend: number
+  position: SpendRangePosition
+}
 
 export type FinancialHealthData = {
   netWorth: number | null
@@ -12,13 +20,14 @@ export type FinancialHealthData = {
   budgetGap: number | null
   budgetTotal: number | null
   currencySymbol: string
+  sustainableSpend?: SustainableSpendSummary | null
 }
 
 type HealthLevel = 'strong' | 'good' | 'watch'
 type HealthResult = { level: HealthLevel; concernAreas: string[] }
 
 function classifyHealth(data: FinancialHealthData): HealthResult {
-  const { netWorthVsLastYear, cashRunwayMonths, budgetGap, budgetTotal } = data
+  const { netWorthVsLastYear, cashRunwayMonths, budgetGap, budgetTotal, sustainableSpend } = data
 
   const concernAreas: string[] = []
   const netWorthGrowing = netWorthVsLastYear != null && netWorthVsLastYear > 0
@@ -32,6 +41,8 @@ function classifyHealth(data: FinancialHealthData): HealthResult {
   if (!netWorthGrowing && netWorthVsLastYear != null) concernAreas.push('net worth')
   if (!runwayOk && cashRunwayMonths != null) concernAreas.push('cash runway')
   if (!budgetOk && budgetStatus != null) concernAreas.push('budget')
+  // Only overspending vs the sustainable ceiling is a concern; below-floor is a nudge, not an alarm.
+  if (sustainableSpend?.position === 'above_ceiling') concernAreas.push('sustainable spending')
 
   const level: HealthLevel =
     concernAreas.length === 0 ? 'strong' : concernAreas.length === 1 ? 'good' : 'watch'
@@ -106,6 +117,19 @@ export function FinancialHealthBanner({ data }: { data: FinancialHealthData }) {
             ? `Slightly above budget by ${formatCompact(Math.abs(data.budgetGap), sym)}`
             : `${formatCompact(Math.abs(data.budgetGap), sym)} above budget`
     bullets.push({ icon: Target, text: label })
+  }
+
+  if (data.sustainableSpend) {
+    const ss = data.sustainableSpend
+    const text =
+      ss.position === 'below_floor'
+        ? `Spending ${formatCompact(ss.floorAnnual - ss.currentForecastSpend, sym)} below your sustainable floor — you can afford more`
+        : ss.position === 'in_range'
+          ? `Spending within your sustainable range (${formatCompact(ss.floorAnnual, sym)}–${formatCompact(ss.ceilingAnnual, sym)})`
+          : ss.position === 'near_ceiling'
+            ? `Spending is near your sustainable ceiling of ${formatCompact(ss.ceilingAnnual, sym)}`
+            : `Spending ${formatCompact(ss.currentForecastSpend - ss.ceilingAnnual, sym)} above your sustainable ceiling`
+    bullets.push({ icon: Scale, text })
   }
 
   if (bullets.length === 0) return null

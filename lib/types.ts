@@ -154,6 +154,26 @@ export interface KidsAccount {
   data_source?: DataSource
 }
 
+// Sustainable spending range assumptions (one row per user)
+export type ReturnProfile = 'Conservative' | 'Base' | 'Optimistic'
+export type SpendingFloorMode = 'savings_rate' | 'wealth_target'
+
+export interface FinancialAssumptions {
+  id: string
+  user_id: string
+  return_profile: ReturnProfile
+  inflation_rate: number
+  floor_mode: SpendingFloorMode
+  target_savings_rate: number
+  wealth_target_gbp: number | null
+  wealth_target_usd: number | null
+  horizon_years: number
+  emergency_fund_months: number
+  include_trust: boolean
+  created_at: string
+  updated_at: string
+}
+
 // Debt tracking - mortgages, loans, credit cards
 export interface Debt {
   id: string

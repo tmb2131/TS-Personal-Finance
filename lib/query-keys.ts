@@ -17,5 +17,7 @@ export const queryKeys = {
   debt: ['debt'] as const,
   investmentReturns: ['investment-returns'] as const,
   financialHealth: ['financial-health'] as const,
+  financialAssumptions: ['financial-assumptions'] as const,
+  recurringPayments: ['recurring-payments'] as const,
   transactionForecast: ['transaction-forecast'] as const,
 }

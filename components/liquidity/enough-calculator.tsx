@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -9,11 +10,20 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useDailySummary } from '@/lib/hooks/queries/use-daily-summary'
-import type { AccountBalance } from '@/lib/types'
+import { useFinancialAssumptions } from '@/lib/hooks/queries/use-financial-assumptions'
+import { DEFAULT_FINANCIAL_ASSUMPTIONS } from '@/lib/hooks/use-sustainable-spend'
+import { queryKeys } from '@/lib/query-keys'
+import {
+  DEFAULT_INFLATION_RATE,
+  RETURN_ASSUMPTIONS_BY_PROFILE,
+  RETURN_PROFILE_OPTIONS,
+  computeYearsUntilDepletion,
+  weightedRealReturn,
+} from '@/lib/return-assumptions'
+import type { AccountBalance, ReturnProfile } from '@/lib/types'
 import { Info, Shield, SlidersHorizontal, TrendingUp } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
-const INFLATION_RATE = 0.03
 const LIQUID_CATEGORIES = ['Cash', 'Checking', 'Savings', 'Brokerage']
 const SELECTABLE_CATEGORIES = [
   'Cash',
@@ -29,109 +39,53 @@ const SELECTABLE_CATEGORIES = [
 ] as const
 const CUSTOM_MIX_STORAGE_KEY = 'liquidity-custom-mix-categories'
 const EXCLUDED_EXPENSE_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
-type ReturnProfile = 'Conservative' | 'Base' | 'Optimistic'
-type ReturnAssumptions = {
-  defaultNominalReturn: number
-  nominalReturns: Record<string, number>
-}
-const RETURN_PROFILE_OPTIONS: ReturnProfile[] = ['Conservative', 'Base', 'Optimistic']
-const RETURN_ASSUMPTIONS_BY_PROFILE: Record<ReturnProfile, ReturnAssumptions> = {
-  Conservative: {
-    defaultNominalReturn: 0.03,
-    nominalReturns: {
-      Cash: 0.02,
-      Checking: 0.02,
-      Savings: 0.02,
-      Brokerage: 0.06,
-      Retirement: 0.06,
-      'Alt Inv': 0.05,
-      Taconic: 0.05,
-      House: 0.03,
-      Property: 0.03,
-      Other: 0.03,
-    },
-  },
-  Base: {
-    defaultNominalReturn: 0.04,
-    nominalReturns: {
-      Cash: 0.03,
-      Checking: 0.03,
-      Savings: 0.03,
-      Brokerage: 0.07,
-      Retirement: 0.07,
-      'Alt Inv': 0.06,
-      Taconic: 0.06,
-      House: 0.04,
-      Property: 0.04,
-      Other: 0.04,
-    },
-  },
-  Optimistic: {
-    defaultNominalReturn: 0.05,
-    nominalReturns: {
-      Cash: 0.04,
-      Checking: 0.04,
-      Savings: 0.04,
-      Brokerage: 0.08,
-      Retirement: 0.08,
-      'Alt Inv': 0.07,
-      Taconic: 0.07,
-      House: 0.05,
-      Property: 0.05,
-      Other: 0.05,
-    },
-  },
-}
-
-type AssetMixEntry = {
-  category: string
-  balance: number
-}
-
-function nominalToRealReturn(nominalReturn: number, inflationRate = INFLATION_RATE) {
-  return (1 + nominalReturn) / (1 + inflationRate) - 1
-}
-
-function weightedRealReturn(
-  assets: AssetMixEntry[],
-  assumptions: ReturnAssumptions,
-  inflationRate = INFLATION_RATE
-) {
-  const total = assets.reduce((sum, asset) => sum + asset.balance, 0)
-  if (total <= 0) return 0
-
-  const weightedNominal = assets.reduce((sum, asset) => {
-    const rate = assumptions.nominalReturns[asset.category] ?? assumptions.defaultNominalReturn
-    return sum + (asset.balance / total) * rate
-  }, 0)
-
-  return nominalToRealReturn(weightedNominal, inflationRate)
-}
-
-function computeYearsUntilDepletion(
-  portfolio: number,
-  annualWithdrawal: number,
-  realReturn: number,
-  maxYears = 100
-) {
-  if (annualWithdrawal <= 0) return maxYears
-  if (portfolio <= 0) return 0
-
-  let balance = portfolio
-  for (let year = 1; year <= maxYears; year++) {
-    balance = balance * (1 + realReturn) - annualWithdrawal
-    if (balance <= 0) return year
-  }
-
-  return maxYears
-}
 
 export function EnoughCalculator() {
+  const queryClient = useQueryClient()
   const { currency, fxRate, convertAmount } = useCurrency()
   const { data: accountsData, isLoading: accountsLoading } = useAccounts()
   const { data: dailySummaryData, isLoading: dailySummaryLoading } = useDailySummary()
-  const loading = accountsLoading || dailySummaryLoading
-  const [returnProfile, setReturnProfile] = useState<ReturnProfile>('Conservative')
+  const { data: storedAssumptions, isLoading: assumptionsLoading } = useFinancialAssumptions()
+  const loading = accountsLoading || dailySummaryLoading || assumptionsLoading
+  const [profileOverride, setProfileOverride] = useState<ReturnProfile | null>(null)
+  const returnProfile: ReturnProfile =
+    profileOverride ?? storedAssumptions?.return_profile ?? DEFAULT_FINANCIAL_ASSUMPTIONS.return_profile
+  const inflationRate = Number(
+    storedAssumptions?.inflation_rate ?? DEFAULT_INFLATION_RATE
+  )
+
+  // Persist the chosen profile so the sustainable spending range uses the same assumptions
+  const handleSelectProfile = (profile: ReturnProfile) => {
+    setProfileOverride(profile)
+    const base = storedAssumptions ?? null
+    const wealthTarget =
+      currency === 'USD'
+        ? base?.wealth_target_usd ?? null
+        : base?.wealth_target_gbp ?? null
+    void fetch('/api/financial-assumptions', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        return_profile: profile,
+        inflation_rate: Number(base?.inflation_rate ?? DEFAULT_FINANCIAL_ASSUMPTIONS.inflation_rate),
+        floor_mode: base?.floor_mode ?? DEFAULT_FINANCIAL_ASSUMPTIONS.floor_mode,
+        target_savings_rate: Number(
+          base?.target_savings_rate ?? DEFAULT_FINANCIAL_ASSUMPTIONS.target_savings_rate
+        ),
+        wealth_target: wealthTarget,
+        currency,
+        horizon_years: Number(base?.horizon_years ?? DEFAULT_FINANCIAL_ASSUMPTIONS.horizon_years),
+        emergency_fund_months: Number(
+          base?.emergency_fund_months ?? DEFAULT_FINANCIAL_ASSUMPTIONS.emergency_fund_months
+        ),
+        include_trust: base?.include_trust ?? DEFAULT_FINANCIAL_ASSUMPTIONS.include_trust,
+      }),
+    }).then((res) => {
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.financialAssumptions })
+      }
+    })
+  }
   const [customCategories, setCustomCategories] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [...LIQUID_CATEGORIES]
     try {
@@ -270,9 +224,9 @@ export function EnoughCalculator() {
 
   const metrics = useMemo(() => {
     const assumptions = RETURN_ASSUMPTIONS_BY_PROFILE[returnProfile]
-    const totalRealReturn = weightedRealReturn(totalAssetMix, assumptions)
-    const liquidRealReturn = weightedRealReturn(liquidAssetMix, assumptions)
-    const customRealReturn = weightedRealReturn(customAssetMix, assumptions)
+    const totalRealReturn = weightedRealReturn(totalAssetMix, assumptions, inflationRate)
+    const liquidRealReturn = weightedRealReturn(liquidAssetMix, assumptions, inflationRate)
+    const customRealReturn = weightedRealReturn(customAssetMix, assumptions, inflationRate)
     const yearsTotal = computeYearsUntilDepletion(netWorth, annualNetOutflow, totalRealReturn)
     const yearsLiquid = computeYearsUntilDepletion(liquidAssets, annualNetOutflow, liquidRealReturn)
     const yearsCustom = computeYearsUntilDepletion(customAssets, annualNetOutflow, customRealReturn)
@@ -302,6 +256,7 @@ export function EnoughCalculator() {
     liquidAssetMix,
     customAssetMix,
     returnProfile,
+    inflationRate,
     annualIncome,
     annualGiftMoney,
   ])
@@ -362,7 +317,7 @@ export function EnoughCalculator() {
               <TooltipContent className="max-w-sm p-3 text-left">
                 <div className="space-y-1">
                   <p className="font-semibold">Nominal return assumptions</p>
-                  <p>Inflation assumption: {percentLabel(INFLATION_RATE)}</p>
+                  <p>Inflation assumption: {percentLabel(inflationRate)}</p>
                   <p>Cash / Checking / Savings: C {percentLabel(0.02)} | B {percentLabel(0.03)} | O {percentLabel(0.04)}</p>
                   <p>Brokerage / Retirement: C {percentLabel(0.06)} | B {percentLabel(0.07)} | O {percentLabel(0.08)}</p>
                   <p>Alt Inv / Taconic: C {percentLabel(0.05)} | B {percentLabel(0.06)} | O {percentLabel(0.07)}</p>
@@ -378,7 +333,7 @@ export function EnoughCalculator() {
               type="button"
               size="sm"
               variant={returnProfile === profile ? 'default' : 'outline'}
-              onClick={() => setReturnProfile(profile)}
+              onClick={() => handleSelectProfile(profile)}
               className="h-7 px-2 text-xs"
             >
               {profile}
@@ -553,7 +508,7 @@ export function EnoughCalculator() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground/70 mt-4 italic">
-          Uses estimated annual Income, Gift Money, and Expenses from your app forecast. Assumes {returnProfile.toLowerCase()} returns by asset type and 3% annual inflation.
+          Uses estimated annual Income, Gift Money, and Expenses from your app forecast. Assumes {returnProfile.toLowerCase()} returns by asset type and {(inflationRate * 100).toFixed(1).replace(/\.0$/, '')}% annual inflation (edit in Settings &gt; Financial Assumptions).
         </p>
       </CardContent>
     </Card>

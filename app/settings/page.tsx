@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { SettingsForm } from '@/components/settings/settings-form'
 import { AppearanceForm } from '@/components/settings/appearance-form'
 import { CategoryPlanningSection } from '@/components/settings/category-planning-section'
+import { FinancialAssumptionsSection } from '@/components/settings/financial-assumptions-section'
 import { PageHeader } from '@/components/ui/page-header'
 
 export default async function SettingsPage() {
@@ -37,6 +38,9 @@ export default async function SettingsPage() {
         <a href="#category-planning" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
           Category Planning
         </a>
+        <a href="#financial-assumptions" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+          Financial Assumptions
+        </a>
         <a href="#appearance" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
           Appearance
         </a>
@@ -48,6 +52,7 @@ export default async function SettingsPage() {
         serviceAccountEmail={process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? ''}
       />
       <CategoryPlanningSection />
+      <FinancialAssumptionsSection />
       <AppearanceForm />
     </div>
   )
