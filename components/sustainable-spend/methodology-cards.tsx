@@ -250,18 +250,26 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
             operator="+"
           />
           <FormulaRow
-            label="Required savings"
+            label={
+              result.requiredAnnualSavings < 0 ? 'Wealth-target headroom' : 'Required savings'
+            }
             detail={
               draft.floorMode === 'savings_rate'
                 ? `${formatPct(draft.targetSavingsRate, 0)} of ${formatCurrency(inputs.annualIncome)} income`
                 : draft.wealthTarget != null
                   ? result.requiredAnnualSavings > 0
                     ? `To reach ${formatCurrency(draft.wealthTarget)} in ${draft.horizonYears} years at ${formatPct(result.realReturn)} real return`
-                    : `Your wealth target of ${formatCurrency(draft.wealthTarget)} is already on track at current returns`
+                    : result.requiredAnnualSavings < 0
+                      ? `Returns alone reach ${formatCurrency(draft.wealthTarget)} — you can spend this much above inflows and still hit your target`
+                      : `Your wealth target of ${formatCurrency(draft.wealthTarget)} is already on track at current returns`
                   : 'No wealth target set — set one in the panel'
             }
-            value={formatCurrency(result.requiredAnnualSavings)}
-            operator="−"
+            value={formatCurrency(
+              result.requiredAnnualSavings < 0
+                ? Math.abs(result.requiredAnnualSavings)
+                : result.requiredAnnualSavings
+            )}
+            operator={result.requiredAnnualSavings < 0 ? '+' : '−'}
           />
           <FormulaRow
             label={result.floorClampedToCommitted ? 'Goal-derived floor' : 'Floor'}

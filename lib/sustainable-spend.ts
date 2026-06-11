@@ -67,7 +67,6 @@ function requiredSavingsForWealthTarget(
   const r = realReturn
   const grownNetWorth = netWorth * Math.pow(1 + r, n)
   const gap = wealthTarget - grownNetWorth
-  if (gap <= 0) return 0
   if (Math.abs(r) < 1e-9) return gap / n
   const annuityFactor = (Math.pow(1 + r, n) - 1) / r
   return gap / annuityFactor
@@ -134,7 +133,9 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
     : useWealthTarget
       ? requiredAnnualSavings > 0
         ? `Floor driven by your wealth target over ${assumptions.horizonYears} years`
-        : 'Your wealth target is already on track at current returns, so no extra savings are required'
+        : requiredAnnualSavings < 0
+          ? 'Returns alone reach your wealth target — you can spend above inflows and still stay on track'
+          : 'Your wealth target is already on track at current returns, so no extra savings are required'
       : `Floor driven by your ${Math.round(assumptions.targetSavingsRate * 100)}% target savings rate`
   const ceilingDriver = liquidityConstrained
     ? `Ceiling capped at income + gifts while cash runway is under your ${assumptions.emergencyFundMonths}-month target`
