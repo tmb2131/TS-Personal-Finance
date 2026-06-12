@@ -157,6 +157,8 @@ export interface KidsAccount {
 // Sustainable spending range assumptions (one row per user)
 export type ReturnProfile = 'Conservative' | 'Base' | 'Optimistic'
 export type SpendingFloorMode = 'savings_rate' | 'wealth_target'
+/** real = today's purchasing power at horizon; nominal = future account value */
+export type WealthTargetTerms = 'real' | 'nominal'
 
 export interface FinancialAssumptions {
   id: string
@@ -167,6 +169,7 @@ export interface FinancialAssumptions {
   target_savings_rate: number
   wealth_target_gbp: number | null
   wealth_target_usd: number | null
+  wealth_target_terms: WealthTargetTerms
   horizon_years: number
   emergency_fund_months: number
   include_trust: boolean

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { SustainableSpendInputsData } from '@/lib/hooks/use-sustainable-spend'
 import { RETURN_ASSUMPTIONS_BY_PROFILE } from '@/lib/return-assumptions'
 import type { SustainableSpendResult } from '@/lib/sustainable-spend'
+import { wealthTargetTermsShortLabel } from '@/lib/wealth-target-terms'
 import { cn } from '@/utils/cn'
 import { AlertTriangle, ArrowDown, ArrowUp, Percent } from 'lucide-react'
 import type { DraftAssumptions } from './spend-explorer'
@@ -106,6 +107,10 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
   const inflows = Math.max(0, inputs.annualIncome) + Math.max(0, inputs.annualGiftMoney)
   const returnsContribution = Math.max(0, inputs.netWorth * result.realReturn)
   const rawFloor = inflows - result.requiredAnnualSavings
+  const wealthTargetTermsLabel = wealthTargetTermsShortLabel(draft.wealthTargetTerms)
+  const wealthTargetGrowthRate =
+    draft.wealthTargetTerms === 'nominal' ? weightedNominal : result.realReturn
+  const wealthTargetReturnKind = draft.wealthTargetTerms === 'nominal' ? 'nominal' : 'real'
 
   const runwayLabel =
     inputs.cashRunwayMonths == null
@@ -239,7 +244,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
           <p className="text-xs text-muted-foreground">
             {draft.floorMode === 'savings_rate'
               ? 'What is left of your inflows after setting aside your target savings rate. Spending below this means out-saving your goal.'
-              : 'What is left of your inflows after the savings needed to hit your wealth target on time (in today\u2019s money at the horizon). Spending below this means out-saving your goal.'}
+              : `What is left of your inflows after the savings needed to hit your wealth target on time (${wealthTargetTermsLabel}). Spending below this means out-saving your goal.`}
           </p>
         </CardHeader>
         <CardContent>
@@ -258,10 +263,10 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 ? `${formatPct(draft.targetSavingsRate, 0)} of ${formatCurrency(inputs.annualIncome)} income`
                 : draft.wealthTarget != null
                   ? result.requiredAnnualSavings > 0
-                    ? `To reach ${formatCurrency(draft.wealthTarget)} in today\u2019s money in ${draft.horizonYears} years at ${formatPct(result.realReturn)} real return`
+                    ? `To reach ${formatCurrency(draft.wealthTarget)} (${wealthTargetTermsLabel}) in ${draft.horizonYears} years at ${formatPct(wealthTargetGrowthRate)} ${wealthTargetReturnKind} return`
                     : result.requiredAnnualSavings < 0
-                      ? `Returns alone reach ${formatCurrency(draft.wealthTarget)} in today\u2019s money — you can spend this much above inflows and still hit your target`
-                      : `Your wealth target of ${formatCurrency(draft.wealthTarget)} in today\u2019s money is already on track at current returns`
+                      ? `Returns alone reach ${formatCurrency(draft.wealthTarget)} (${wealthTargetTermsLabel}) — you can spend this much above inflows and still hit your target`
+                      : `Your wealth target of ${formatCurrency(draft.wealthTarget)} (${wealthTargetTermsLabel}) is already on track at current returns`
                   : 'No wealth target set — set one in the panel'
             }
             value={formatCurrency(

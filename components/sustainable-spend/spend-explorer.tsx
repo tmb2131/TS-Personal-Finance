@@ -18,7 +18,7 @@ import {
   computeSustainableSpendRange,
   type SustainableSpendAssumptions,
 } from '@/lib/sustainable-spend'
-import type { ReturnProfile, SpendingFloorMode } from '@/lib/types'
+import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import { Scale } from 'lucide-react'
 import { AssumptionsPanel } from './assumptions-panel'
 import { RangeVisualization } from './range-visualization'
@@ -32,6 +32,7 @@ export interface DraftAssumptions {
   floorMode: SpendingFloorMode
   targetSavingsRate: number
   wealthTarget: number | null
+  wealthTargetTerms: WealthTargetTerms
   horizonYears: number
   emergencyFundMonths: number
   includeTrust: boolean
@@ -44,6 +45,7 @@ export function toSpendAssumptions(draft: DraftAssumptions): SustainableSpendAss
     floorMode: draft.floorMode,
     targetSavingsRate: draft.targetSavingsRate,
     wealthTarget: draft.wealthTarget,
+    wealthTargetTerms: draft.wealthTargetTerms,
     horizonYears: draft.horizonYears,
     emergencyFundMonths: draft.emergencyFundMonths,
   }
@@ -57,6 +59,7 @@ function draftsEqual(a: DraftAssumptions, b: DraftAssumptions): boolean {
     Math.abs(a.targetSavingsRate - b.targetSavingsRate) < 1e-9 &&
     (a.wealthTarget == null) === (b.wealthTarget == null) &&
     (a.wealthTarget == null || Math.abs((a.wealthTarget ?? 0) - (b.wealthTarget ?? 0)) < 0.5) &&
+    a.wealthTargetTerms === b.wealthTargetTerms &&
     a.horizonYears === b.horizonYears &&
     Math.abs(a.emergencyFundMonths - b.emergencyFundMonths) < 1e-9 &&
     a.includeTrust === b.includeTrust
@@ -79,6 +82,7 @@ export function SpendExplorer() {
       floorMode: resolved.floor_mode,
       targetSavingsRate: Number(resolved.target_savings_rate),
       wealthTarget: resolveWealthTarget(resolved, currency, fxRate),
+      wealthTargetTerms: resolved.wealth_target_terms ?? 'real',
       horizonYears: Number(resolved.horizon_years),
       emergencyFundMonths: Number(resolved.emergency_fund_months),
       includeTrust: resolved.include_trust,
@@ -137,6 +141,7 @@ export function SpendExplorer() {
           horizon_years: draft.horizonYears,
           emergency_fund_months: draft.emergencyFundMonths,
           include_trust: draft.includeTrust,
+          wealth_target_terms: draft.wealthTargetTerms,
         }),
       })
       const json = await res.json().catch(() => ({}))

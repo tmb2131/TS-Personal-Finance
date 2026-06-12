@@ -15,6 +15,7 @@ const UpdateSchema = z.object({
   horizon_years: z.number().int().min(1).max(80),
   emergency_fund_months: z.number().min(0).max(60),
   include_trust: z.boolean(),
+  wealth_target_terms: z.enum(['real', 'nominal']).optional().default('real'),
 })
 
 function toMoney(value: number): number {
@@ -105,6 +106,7 @@ export async function PUT(request: Request) {
           horizon_years: parsed.data.horizon_years,
           emergency_fund_months: parsed.data.emergency_fund_months,
           include_trust: parsed.data.include_trust,
+          wealth_target_terms: parsed.data.wealth_target_terms,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }

@@ -14,8 +14,13 @@ import { useFinancialAssumptions } from '@/lib/hooks/queries/use-financial-assum
 import { DEFAULT_FINANCIAL_ASSUMPTIONS } from '@/lib/hooks/use-sustainable-spend'
 import { queryKeys } from '@/lib/query-keys'
 import { RETURN_PROFILE_OPTIONS } from '@/lib/return-assumptions'
-import type { ReturnProfile, SpendingFloorMode } from '@/lib/types'
+import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import { Scale } from 'lucide-react'
+import { WealthTargetTermsToggle } from '@/components/sustainable-spend/wealth-target-terms-toggle'
+import {
+  wealthTargetInputLabel,
+  wealthTargetTermsHelper,
+} from '@/lib/wealth-target-terms'
 
 const selectClass =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
@@ -34,6 +39,9 @@ export function FinancialAssumptionsSection() {
   )
   const [savingsRatePct, setSavingsRatePct] = useState('20')
   const [wealthTarget, setWealthTarget] = useState('')
+  const [wealthTargetTerms, setWealthTargetTerms] = useState<WealthTargetTerms>(
+    DEFAULT_FINANCIAL_ASSUMPTIONS.wealth_target_terms
+  )
   const [horizonYears, setHorizonYears] = useState('20')
   const [emergencyMonths, setEmergencyMonths] = useState('6')
   const [includeTrust, setIncludeTrust] = useState(false)
@@ -50,6 +58,7 @@ export function FinancialAssumptionsSection() {
       const target =
         currency === 'USD' ? stored.wealth_target_usd : stored.wealth_target_gbp
       setWealthTarget(target != null ? String(Math.round(target)) : '')
+      setWealthTargetTerms(stored.wealth_target_terms ?? 'real')
       setHorizonYears(String(stored.horizon_years))
       setEmergencyMonths(String(Number(stored.emergency_fund_months)))
       setIncludeTrust(stored.include_trust)
@@ -104,6 +113,7 @@ export function FinancialAssumptionsSection() {
           horizon_years: horizon,
           emergency_fund_months: emergency,
           include_trust: includeTrust,
+          wealth_target_terms: wealthTargetTerms,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -203,10 +213,16 @@ export function FinancialAssumptionsSection() {
                   />
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  <WealthTargetTermsToggle
+                    value={wealthTargetTerms}
+                    onChange={setWealthTargetTerms}
+                  />
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="wealth-target">Wealth target ({symbol}, today&apos;s money)</Label>
+                      <Label htmlFor="wealth-target">
+                        {wealthTargetInputLabel(symbol, wealthTargetTerms)}
+                      </Label>
                       <Input
                         id="wealth-target"
                         type="number"
@@ -231,8 +247,7 @@ export function FinancialAssumptionsSection() {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    In today&apos;s money — the purchasing power you want at the horizon, not a
-                    nominal future amount. Projections use real returns after inflation.
+                    {wealthTargetTermsHelper(wealthTargetTerms)}
                   </p>
                 </div>
               )}

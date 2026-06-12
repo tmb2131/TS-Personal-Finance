@@ -66,21 +66,24 @@ export function nominalToRealReturn(nominalReturn: number, inflationRate = DEFAU
   return (1 + nominalReturn) / (1 + inflationRate) - 1
 }
 
+/** Balance-weighted nominal return for an asset mix under a return profile. */
+export function weightedNominalReturn(assets: AssetMixEntry[], assumptions: ReturnAssumptions) {
+  const total = assets.reduce((sum, asset) => sum + asset.balance, 0)
+  if (total <= 0) return 0
+
+  return assets.reduce((sum, asset) => {
+    const rate = assumptions.nominalReturns[asset.category] ?? assumptions.defaultNominalReturn
+    return sum + (asset.balance / total) * rate
+  }, 0)
+}
+
 /** Balance-weighted real return for an asset mix under a return profile. */
 export function weightedRealReturn(
   assets: AssetMixEntry[],
   assumptions: ReturnAssumptions,
   inflationRate = DEFAULT_INFLATION_RATE
 ) {
-  const total = assets.reduce((sum, asset) => sum + asset.balance, 0)
-  if (total <= 0) return 0
-
-  const weightedNominal = assets.reduce((sum, asset) => {
-    const rate = assumptions.nominalReturns[asset.category] ?? assumptions.defaultNominalReturn
-    return sum + (asset.balance / total) * rate
-  }, 0)
-
-  return nominalToRealReturn(weightedNominal, inflationRate)
+  return nominalToRealReturn(weightedNominalReturn(assets, assumptions), inflationRate)
 }
 
 export function computeYearsUntilDepletion(

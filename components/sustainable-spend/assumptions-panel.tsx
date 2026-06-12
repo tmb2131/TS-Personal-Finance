@@ -9,9 +9,11 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { RETURN_PROFILE_OPTIONS } from '@/lib/return-assumptions'
 import type { ReturnProfile, SpendingFloorMode } from '@/lib/types'
+import { wealthTargetInputLabel, wealthTargetTermsHelper } from '@/lib/wealth-target-terms'
 import { cn } from '@/utils/cn'
 import { RotateCcw, Settings2 } from 'lucide-react'
 import type { DraftAssumptions } from './spend-explorer'
+import { WealthTargetTermsToggle } from './wealth-target-terms-toggle'
 
 interface AssumptionsPanelProps {
   draft: DraftAssumptions
@@ -164,10 +166,14 @@ export function AssumptionsPanel({
           />
         ) : (
           <>
+            <WealthTargetTermsToggle
+              value={draft.wealthTargetTerms}
+              onChange={(wealthTargetTerms) => onChange({ wealthTargetTerms })}
+            />
             <div className="space-y-2">
               <div className="flex items-baseline justify-between gap-2">
                 <Label htmlFor="explorer-wealth-target" className="text-xs">
-                  Wealth target ({symbol}, today&apos;s money)
+                  {wealthTargetInputLabel(symbol, draft.wealthTargetTerms)}
                 </Label>
               </div>
               <Input
@@ -187,8 +193,7 @@ export function AssumptionsPanel({
                 className="h-9"
               />
               <p className="text-[11px] text-muted-foreground">
-                Purchasing power at the horizon, not a nominal future amount. Savings math uses real
-                returns after inflation.
+                {wealthTargetTermsHelper(draft.wealthTargetTerms)}
               </p>
             </div>
             <SliderRow

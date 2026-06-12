@@ -1,6 +1,7 @@
-import type { ReturnProfile, SpendingFloorMode } from '@/lib/types'
+import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import {
   RETURN_ASSUMPTIONS_BY_PROFILE,
+  weightedNominalReturn,
   weightedRealReturn,
   type AssetMixEntry,
 } from '@/lib/return-assumptions'
@@ -15,8 +16,10 @@ export interface SustainableSpendAssumptions {
   inflationRate: number
   floorMode: SpendingFloorMode
   targetSavingsRate: number
-  /** Net worth target in today's purchasing power at the horizon (real terms). */
+  /** Target net worth at the horizon; interpret using `wealthTargetTerms`. */
   wealthTarget: number | null
+  /** real = today's purchasing power at horizon; nominal = future account value */
+  wealthTargetTerms: WealthTargetTerms
   horizonYears: number
   emergencyFundMonths: number
 }
@@ -55,16 +58,16 @@ export interface SustainableSpendResult {
 
 /**
  * Annual savings needed to grow `netWorth` to `wealthTarget` over `horizonYears`
- * at real return `r` (sinking-fund payment in real terms).
+ * at growth rate `r` (real or nominal, matching the wealth target denomination).
  */
 function requiredSavingsForWealthTarget(
   netWorth: number,
   wealthTarget: number,
   horizonYears: number,
-  realReturn: number
+  growthRate: number
 ): number {
   const n = Math.max(1, horizonYears)
-  const r = realReturn
+  const r = growthRate
   const grownNetWorth = netWorth * Math.pow(1 + r, n)
   const gap = wealthTarget - grownNetWorth
   if (Math.abs(r) < 1e-9) return gap / n
@@ -85,7 +88,10 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
   } = input
 
   const profile = RETURN_ASSUMPTIONS_BY_PROFILE[assumptions.returnProfile]
+  const nominalReturn = weightedNominalReturn(assetMix, profile)
   const realReturn = weightedRealReturn(assetMix, profile, assumptions.inflationRate)
+  const wealthTargetGrowthRate =
+    assumptions.wealthTargetTerms === 'nominal' ? nominalReturn : realReturn
 
   const inflows = Math.max(0, annualIncome) + Math.max(0, annualGiftMoney)
 
@@ -107,7 +113,7 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
         netWorth,
         assumptions.wealthTarget as number,
         assumptions.horizonYears,
-        realReturn
+        wealthTargetGrowthRate
       )
     : Math.max(0, annualIncome) * assumptions.targetSavingsRate
 

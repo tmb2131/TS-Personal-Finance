@@ -31,6 +31,7 @@ export const DEFAULT_FINANCIAL_ASSUMPTIONS: Omit<
   target_savings_rate: 0.2,
   wealth_target_gbp: null,
   wealth_target_usd: null,
+  wealth_target_terms: 'real',
   horizon_years: 20,
   emergency_fund_months: 6,
   include_trust: false,
@@ -295,6 +296,7 @@ export function useSustainableSpend(): { data: SustainableSpendData | null; load
       floorMode: resolved.floor_mode,
       targetSavingsRate: Number(resolved.target_savings_rate),
       wealthTarget,
+      wealthTargetTerms: resolved.wealth_target_terms ?? 'real',
       horizonYears: Number(resolved.horizon_years),
       emergencyFundMonths: Number(resolved.emergency_fund_months),
     }

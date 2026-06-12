@@ -79,6 +79,8 @@ export function EnoughCalculator() {
           base?.emergency_fund_months ?? DEFAULT_FINANCIAL_ASSUMPTIONS.emergency_fund_months
         ),
         include_trust: base?.include_trust ?? DEFAULT_FINANCIAL_ASSUMPTIONS.include_trust,
+        wealth_target_terms:
+          base?.wealth_target_terms ?? DEFAULT_FINANCIAL_ASSUMPTIONS.wealth_target_terms,
       }),
     }).then((res) => {
       if (res.ok) {
