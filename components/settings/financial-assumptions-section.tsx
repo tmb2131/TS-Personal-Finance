@@ -13,12 +13,12 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { useFinancialAssumptions } from '@/lib/hooks/queries/use-financial-assumptions'
 import { DEFAULT_FINANCIAL_ASSUMPTIONS } from '@/lib/hooks/use-sustainable-spend'
 import { queryKeys } from '@/lib/query-keys'
-import { RETURN_PROFILE_OPTIONS, resolveReturnAssumptions, RETURN_ASSUMPTIONS_BY_PROFILE } from '@/lib/return-assumptions'
+import { resolveReturnAssumptions, RETURN_ASSUMPTIONS_BY_PROFILE } from '@/lib/return-assumptions'
 import type { ReturnAssumptions } from '@/lib/return-assumptions'
 import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import { Scale } from 'lucide-react'
 import { WealthTargetTermsToggle } from '@/components/sustainable-spend/wealth-target-terms-toggle'
-import { NominalReturnsEditor } from '@/components/settings/nominal-returns-editor'
+import { NominalReturnsTable } from '@/components/settings/nominal-returns-table'
 import {
   wealthTargetInputLabel,
   wealthTargetTermsHelper,
@@ -159,34 +159,19 @@ export function FinancialAssumptionsSection() {
           <Skeleton className="h-48 w-full" />
         ) : (
           <>
+            <div className="space-y-4">
+              <NominalReturnsTable
+                activeProfile={returnProfile}
+                value={returnAssumptions}
+                onProfileChange={(profile) => {
+                  setReturnProfile(profile)
+                  setReturnAssumptions(RETURN_ASSUMPTIONS_BY_PROFILE[profile])
+                }}
+                onChange={setReturnAssumptions}
+              />
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="return-profile">Return profile</Label>
-                <select
-                  id="return-profile"
-                  value={returnProfile}
-                  onChange={(e) => {
-                    const profile = e.target.value as ReturnProfile
-                    setReturnProfile(profile)
-                    setReturnAssumptions(RETURN_ASSUMPTIONS_BY_PROFILE[profile])
-                  }}
-                  className={selectClass}
-                >
-                  {RETURN_PROFILE_OPTIONS.map((profile) => (
-                    <option key={profile} value={profile}>
-                      {profile}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Nominal return assumptions by asset category (shared with the FI calculator).
-                </p>
-                <NominalReturnsEditor
-                  value={returnAssumptions}
-                  onChange={setReturnAssumptions}
-                  idPrefix="settings-nominal-return"
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="inflation-rate">Inflation (% per year)</Label>
                 <Input
@@ -199,9 +184,6 @@ export function FinancialAssumptionsSection() {
                   onChange={(e) => setInflationPct(e.target.value)}
                 />
               </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="floor-mode">Spending floor based on</Label>
                 <select
