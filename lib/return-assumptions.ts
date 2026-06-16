@@ -9,6 +9,23 @@ export type ReturnAssumptions = {
 
 export const RETURN_PROFILE_OPTIONS: ReturnProfile[] = ['Conservative', 'Base', 'Optimistic']
 
+export const ASSET_RETURN_CATEGORIES = [
+  'Cash',
+  'Checking',
+  'Savings',
+  'Brokerage',
+  'Retirement',
+  'Alt Inv',
+  'Taconic',
+  'House',
+  'Property',
+  'Other',
+] as const
+
+export type AssetReturnCategory = (typeof ASSET_RETURN_CATEGORIES)[number]
+
+export const MAX_NOMINAL_RETURN = 0.5
+
 export const RETURN_ASSUMPTIONS_BY_PROFILE: Record<ReturnProfile, ReturnAssumptions> = {
   Conservative: {
     defaultNominalReturn: 0.03,
@@ -60,6 +77,59 @@ export const RETURN_ASSUMPTIONS_BY_PROFILE: Record<ReturnProfile, ReturnAssumpti
 export type AssetMixEntry = {
   category: string
   balance: number
+}
+
+export function cloneReturnAssumptions(assumptions: ReturnAssumptions): ReturnAssumptions {
+  return {
+    defaultNominalReturn: assumptions.defaultNominalReturn,
+    nominalReturns: { ...assumptions.nominalReturns },
+  }
+}
+
+/** Stored overrides, or the built-in preset for the selected profile when unset. */
+export function resolveReturnAssumptions(
+  profile: ReturnProfile,
+  stored?: ReturnAssumptions | null
+): ReturnAssumptions {
+  return stored ?? cloneReturnAssumptions(RETURN_ASSUMPTIONS_BY_PROFILE[profile])
+}
+
+export function returnAssumptionsEqual(a: ReturnAssumptions, b: ReturnAssumptions): boolean {
+  if (Math.abs(a.defaultNominalReturn - b.defaultNominalReturn) >= 1e-9) return false
+  for (const category of ASSET_RETURN_CATEGORIES) {
+    const av = a.nominalReturns[category] ?? a.defaultNominalReturn
+    const bv = b.nominalReturns[category] ?? b.defaultNominalReturn
+    if (Math.abs(av - bv) >= 1e-9) return false
+  }
+  return true
+}
+
+function isValidReturnRate(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_NOMINAL_RETURN
+}
+
+export function parseReturnAssumptions(value: unknown): ReturnAssumptions | null {
+  if (value == null) return null
+  if (typeof value !== 'object' || Array.isArray(value)) return null
+
+  const record = value as Record<string, unknown>
+  if (!isValidReturnRate(record.defaultNominalReturn)) return null
+  if (typeof record.nominalReturns !== 'object' || record.nominalReturns == null || Array.isArray(record.nominalReturns)) {
+    return null
+  }
+
+  const nominalReturns: Record<string, number> = {}
+  const returnsRecord = record.nominalReturns as Record<string, unknown>
+  for (const category of ASSET_RETURN_CATEGORIES) {
+    const rate = returnsRecord[category]
+    if (!isValidReturnRate(rate)) return null
+    nominalReturns[category] = rate
+  }
+
+  return {
+    defaultNominalReturn: record.defaultNominalReturn,
+    nominalReturns,
+  }
 }
 
 export function nominalToRealReturn(nominalReturn: number, inflationRate = DEFAULT_INFLATION_RATE) {

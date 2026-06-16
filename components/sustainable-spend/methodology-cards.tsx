@@ -3,7 +3,6 @@
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { SustainableSpendInputsData } from '@/lib/hooks/use-sustainable-spend'
-import { RETURN_ASSUMPTIONS_BY_PROFILE } from '@/lib/return-assumptions'
 import type { SustainableSpendResult } from '@/lib/sustainable-spend'
 import { wealthTargetTermsShortLabel } from '@/lib/wealth-target-terms'
 import { cn } from '@/utils/cn'
@@ -83,7 +82,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
   }
   const formatPct = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`
 
-  const profile = RETURN_ASSUMPTIONS_BY_PROFILE[draft.returnProfile]
+  const profile = draft.returnAssumptions
 
   // Group the per-account asset mix into categories for the breakdown table
   const { categories, totalAssets, weightedNominal } = useMemo(() => {
@@ -130,8 +129,9 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
             Real return on your assets
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Each asset category is assigned a {draft.returnProfile.toLowerCase()} nominal return,
-            weighted by balance, then adjusted for {formatPct(draft.inflationRate)} inflation.
+            Each asset category uses your configured nominal return (based on the{' '}
+            {draft.returnProfile.toLowerCase()} profile unless customized), weighted by balance,
+            then adjusted for {formatPct(draft.inflationRate)} inflation.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">

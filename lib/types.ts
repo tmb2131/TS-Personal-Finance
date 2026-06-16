@@ -154,6 +154,8 @@ export interface KidsAccount {
   data_source?: DataSource
 }
 
+import type { ReturnAssumptions } from '@/lib/return-assumptions'
+
 // Sustainable spending range assumptions (one row per user)
 export type ReturnProfile = 'Conservative' | 'Base' | 'Optimistic'
 export type SpendingFloorMode = 'savings_rate' | 'wealth_target'
@@ -173,6 +175,7 @@ export interface FinancialAssumptions {
   horizon_years: number
   emergency_fund_months: number
   include_trust: boolean
+  nominal_return_assumptions: ReturnAssumptions | null
   created_at: string
   updated_at: string
 }

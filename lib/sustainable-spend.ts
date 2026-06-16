@@ -1,9 +1,9 @@
 import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import {
-  RETURN_ASSUMPTIONS_BY_PROFILE,
   weightedNominalReturn,
   weightedRealReturn,
   type AssetMixEntry,
+  type ReturnAssumptions,
 } from '@/lib/return-assumptions'
 
 export type SpendRangePosition = 'below_floor' | 'in_range' | 'near_ceiling' | 'above_ceiling'
@@ -13,6 +13,7 @@ const NEAR_CEILING_FRACTION = 0.9
 
 export interface SustainableSpendAssumptions {
   returnProfile: ReturnProfile
+  returnAssumptions: ReturnAssumptions
   inflationRate: number
   floorMode: SpendingFloorMode
   targetSavingsRate: number
@@ -87,7 +88,7 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
     assumptions,
   } = input
 
-  const profile = RETURN_ASSUMPTIONS_BY_PROFILE[assumptions.returnProfile]
+  const profile = assumptions.returnAssumptions
   const nominalReturn = weightedNominalReturn(assetMix, profile)
   const realReturn = weightedRealReturn(assetMix, profile, assumptions.inflationRate)
   const wealthTargetGrowthRate =

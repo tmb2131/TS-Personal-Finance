@@ -18,6 +18,7 @@ import {
   RETURN_ASSUMPTIONS_BY_PROFILE,
   RETURN_PROFILE_OPTIONS,
   computeYearsUntilDepletion,
+  resolveReturnAssumptions,
   weightedRealReturn,
 } from '@/lib/return-assumptions'
 import type { AccountBalance, ReturnProfile } from '@/lib/types'
@@ -53,6 +54,14 @@ export function EnoughCalculator() {
   const inflationRate = Number(
     storedAssumptions?.inflation_rate ?? DEFAULT_INFLATION_RATE
   )
+  const resolvedReturnAssumptions = useMemo(
+    () =>
+      resolveReturnAssumptions(
+        returnProfile,
+        storedAssumptions?.nominal_return_assumptions ?? null
+      ),
+    [returnProfile, storedAssumptions?.nominal_return_assumptions]
+  )
 
   // Persist the chosen profile so the sustainable spending range uses the same assumptions
   const handleSelectProfile = (profile: ReturnProfile) => {
@@ -67,6 +76,7 @@ export function EnoughCalculator() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         return_profile: profile,
+        nominal_return_assumptions: RETURN_ASSUMPTIONS_BY_PROFILE[profile],
         inflation_rate: Number(base?.inflation_rate ?? DEFAULT_FINANCIAL_ASSUMPTIONS.inflation_rate),
         floor_mode: base?.floor_mode ?? DEFAULT_FINANCIAL_ASSUMPTIONS.floor_mode,
         target_savings_rate: Number(
@@ -225,7 +235,7 @@ export function EnoughCalculator() {
   }, [accountsData, dailySummaryData, currency, fxRate, convertAmount, customCategories])
 
   const metrics = useMemo(() => {
-    const assumptions = RETURN_ASSUMPTIONS_BY_PROFILE[returnProfile]
+    const assumptions = resolvedReturnAssumptions
     const totalRealReturn = weightedRealReturn(totalAssetMix, assumptions, inflationRate)
     const liquidRealReturn = weightedRealReturn(liquidAssetMix, assumptions, inflationRate)
     const customRealReturn = weightedRealReturn(customAssetMix, assumptions, inflationRate)
@@ -259,6 +269,7 @@ export function EnoughCalculator() {
     customAssetMix,
     returnProfile,
     inflationRate,
+    resolvedReturnAssumptions,
     annualIncome,
     annualGiftMoney,
   ])
@@ -291,7 +302,35 @@ export function EnoughCalculator() {
   const yearsLabel = (y: number) =>
     y >= 100 ? '100+ years' : y >= 10 ? `${Math.round(y)} years` : `${y.toFixed(1)} years`
   const returnLabel = (realReturn: number) => `${realReturn >= 0 ? '+' : ''}${(realReturn * 100).toFixed(1)}% real return`
-  const percentLabel = (value: number) => `${(value * 100).toFixed(0)}%`
+  const percentLabel = (value: number) => `${(value * 100).toFixed(1).replace(/\.0$/, '')}%`
+
+  const groupedReturnLines = useMemo(() => {
+    const groups: { label: string; categories: string[] }[] = [
+      { label: 'Cash / Checking / Savings', categories: ['Cash', 'Checking', 'Savings'] },
+      { label: 'Brokerage / Retirement', categories: ['Brokerage', 'Retirement'] },
+      { label: 'Alt Inv / Taconic', categories: ['Alt Inv', 'Taconic'] },
+      { label: 'House / Property / Other', categories: ['House', 'Property', 'Other'] },
+    ]
+
+    return groups.map(({ label, categories }) => {
+      const rates = categories.map(
+        (category) =>
+          resolvedReturnAssumptions.nominalReturns[category] ??
+          resolvedReturnAssumptions.defaultNominalReturn
+      )
+      const uniqueRates = [...new Set(rates.map((rate) => rate.toFixed(4)))]
+      const rateLabel =
+        uniqueRates.length === 1
+          ? percentLabel(Number(uniqueRates[0]))
+          : categories
+              .map(
+                (category, index) =>
+                  `${category.split(' ')[0]} ${percentLabel(rates[index] ?? resolvedReturnAssumptions.defaultNominalReturn)}`
+              )
+              .join(' · ')
+      return `${label}: ${rateLabel}`
+    })
+  }, [resolvedReturnAssumptions])
 
   return (
     <Card className="border-l-[3px] border-l-indigo-500">
@@ -319,12 +358,12 @@ export function EnoughCalculator() {
               <TooltipContent className="max-w-sm p-3 text-left">
                 <div className="space-y-1">
                   <p className="font-semibold">Nominal return assumptions</p>
+                  <p>Profile: {returnProfile}</p>
                   <p>Inflation assumption: {percentLabel(inflationRate)}</p>
-                  <p>Cash / Checking / Savings: C {percentLabel(0.02)} | B {percentLabel(0.03)} | O {percentLabel(0.04)}</p>
-                  <p>Brokerage / Retirement: C {percentLabel(0.06)} | B {percentLabel(0.07)} | O {percentLabel(0.08)}</p>
-                  <p>Alt Inv / Taconic: C {percentLabel(0.05)} | B {percentLabel(0.06)} | O {percentLabel(0.07)}</p>
-                  <p>House / Property / Other: C {percentLabel(0.03)} | B {percentLabel(0.04)} | O {percentLabel(0.05)}</p>
-                  <p className="opacity-90">C = Conservative, B = Base, O = Optimistic</p>
+                  {groupedReturnLines.map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+                  <p className="opacity-90">Edit in Settings &gt; Financial Assumptions</p>
                 </div>
               </TooltipContent>
             </Tooltip>

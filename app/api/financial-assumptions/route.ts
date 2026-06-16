@@ -1,8 +1,27 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import {
+  ASSET_RETURN_CATEGORIES,
+  MAX_NOMINAL_RETURN,
+  parseReturnAssumptions,
+} from '@/lib/return-assumptions'
 
 const DEFAULT_GBPUSD_RATE = 1.25
+
+const returnRateSchema = z.number().min(0).max(MAX_NOMINAL_RETURN)
+
+const nominalReturnsSchema = z.object(
+  Object.fromEntries(ASSET_RETURN_CATEGORIES.map((category) => [category, returnRateSchema])) as Record<
+    (typeof ASSET_RETURN_CATEGORIES)[number],
+    typeof returnRateSchema
+  >
+)
+
+const ReturnAssumptionsSchema = z.object({
+  defaultNominalReturn: returnRateSchema,
+  nominalReturns: nominalReturnsSchema,
+})
 
 const UpdateSchema = z.object({
   return_profile: z.enum(['Conservative', 'Base', 'Optimistic']),
@@ -16,6 +35,7 @@ const UpdateSchema = z.object({
   emergency_fund_months: z.number().min(0).max(60),
   include_trust: z.boolean(),
   wealth_target_terms: z.enum(['real', 'nominal']).optional().default('real'),
+  nominal_return_assumptions: ReturnAssumptionsSchema.nullable().optional(),
 })
 
 function toMoney(value: number): number {
@@ -41,7 +61,14 @@ export async function GET() {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, assumptions: data ?? null })
+    const assumptions = data
+      ? {
+          ...data,
+          nominal_return_assumptions: parseReturnAssumptions(data.nominal_return_assumptions),
+        }
+      : null
+
+    return NextResponse.json({ success: true, assumptions })
   } catch (error: any) {
     console.error('Financial-assumptions GET error:', error)
     return NextResponse.json(
@@ -107,6 +134,9 @@ export async function PUT(request: Request) {
           emergency_fund_months: parsed.data.emergency_fund_months,
           include_trust: parsed.data.include_trust,
           wealth_target_terms: parsed.data.wealth_target_terms,
+          ...(parsed.data.nominal_return_assumptions !== undefined
+            ? { nominal_return_assumptions: parsed.data.nominal_return_assumptions }
+            : {}),
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }
@@ -116,7 +146,13 @@ export async function PUT(request: Request) {
 
     if (error) throw error
 
-    return NextResponse.json({ success: true, assumptions: data })
+    return NextResponse.json({
+      success: true,
+      assumptions: {
+        ...data,
+        nominal_return_assumptions: parseReturnAssumptions(data.nominal_return_assumptions),
+      },
+    })
   } catch (error: any) {
     console.error('Financial-assumptions PUT error:', error)
     return NextResponse.json(

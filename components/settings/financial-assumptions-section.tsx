@@ -13,10 +13,12 @@ import { useCurrency } from '@/lib/contexts/currency-context'
 import { useFinancialAssumptions } from '@/lib/hooks/queries/use-financial-assumptions'
 import { DEFAULT_FINANCIAL_ASSUMPTIONS } from '@/lib/hooks/use-sustainable-spend'
 import { queryKeys } from '@/lib/query-keys'
-import { RETURN_PROFILE_OPTIONS } from '@/lib/return-assumptions'
+import { RETURN_PROFILE_OPTIONS, resolveReturnAssumptions, RETURN_ASSUMPTIONS_BY_PROFILE } from '@/lib/return-assumptions'
+import type { ReturnAssumptions } from '@/lib/return-assumptions'
 import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import { Scale } from 'lucide-react'
 import { WealthTargetTermsToggle } from '@/components/sustainable-spend/wealth-target-terms-toggle'
+import { NominalReturnsEditor } from '@/components/settings/nominal-returns-editor'
 import {
   wealthTargetInputLabel,
   wealthTargetTermsHelper,
@@ -32,6 +34,9 @@ export function FinancialAssumptionsSection() {
 
   const [returnProfile, setReturnProfile] = useState<ReturnProfile>(
     DEFAULT_FINANCIAL_ASSUMPTIONS.return_profile
+  )
+  const [returnAssumptions, setReturnAssumptions] = useState<ReturnAssumptions>(
+    resolveReturnAssumptions(DEFAULT_FINANCIAL_ASSUMPTIONS.return_profile, null)
   )
   const [inflationPct, setInflationPct] = useState('3')
   const [floorMode, setFloorMode] = useState<SpendingFloorMode>(
@@ -52,6 +57,9 @@ export function FinancialAssumptionsSection() {
     if (isLoading || hydrated) return
     if (stored) {
       setReturnProfile(stored.return_profile)
+      setReturnAssumptions(
+        resolveReturnAssumptions(stored.return_profile, stored.nominal_return_assumptions)
+      )
       setInflationPct(String(Math.round(Number(stored.inflation_rate) * 1000) / 10))
       setFloorMode(stored.floor_mode)
       setSavingsRatePct(String(Math.round(Number(stored.target_savings_rate) * 1000) / 10))
@@ -105,6 +113,7 @@ export function FinancialAssumptionsSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           return_profile: returnProfile,
+          nominal_return_assumptions: returnAssumptions,
           inflation_rate: inflation,
           floor_mode: floorMode,
           target_savings_rate: savingsRate,
@@ -156,7 +165,11 @@ export function FinancialAssumptionsSection() {
                 <select
                   id="return-profile"
                   value={returnProfile}
-                  onChange={(e) => setReturnProfile(e.target.value as ReturnProfile)}
+                  onChange={(e) => {
+                    const profile = e.target.value as ReturnProfile
+                    setReturnProfile(profile)
+                    setReturnAssumptions(RETURN_ASSUMPTIONS_BY_PROFILE[profile])
+                  }}
                   className={selectClass}
                 >
                   {RETURN_PROFILE_OPTIONS.map((profile) => (
@@ -168,6 +181,11 @@ export function FinancialAssumptionsSection() {
                 <p className="text-xs text-muted-foreground">
                   Nominal return assumptions by asset category (shared with the FI calculator).
                 </p>
+                <NominalReturnsEditor
+                  value={returnAssumptions}
+                  onChange={setReturnAssumptions}
+                  idPrefix="settings-nominal-return"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="inflation-rate">Inflation (% per year)</Label>

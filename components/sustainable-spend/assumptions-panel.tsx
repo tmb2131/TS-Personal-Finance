@@ -7,13 +7,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import { RETURN_PROFILE_OPTIONS } from '@/lib/return-assumptions'
+import { RETURN_PROFILE_OPTIONS, RETURN_ASSUMPTIONS_BY_PROFILE } from '@/lib/return-assumptions'
 import type { ReturnProfile, SpendingFloorMode } from '@/lib/types'
 import { wealthTargetInputLabel, wealthTargetTermsHelper } from '@/lib/wealth-target-terms'
 import { cn } from '@/utils/cn'
 import { RotateCcw, Settings2 } from 'lucide-react'
 import type { DraftAssumptions } from './spend-explorer'
 import { WealthTargetTermsToggle } from './wealth-target-terms-toggle'
+import { NominalReturnsEditor } from '@/components/settings/nominal-returns-editor'
 
 interface AssumptionsPanelProps {
   draft: DraftAssumptions
@@ -105,7 +106,12 @@ export function AssumptionsPanel({
                 type="button"
                 size="sm"
                 variant={draft.returnProfile === profile ? 'default' : 'outline'}
-                onClick={() => onChange({ returnProfile: profile })}
+                onClick={() =>
+                  onChange({
+                    returnProfile: profile,
+                    returnAssumptions: RETURN_ASSUMPTIONS_BY_PROFILE[profile],
+                  })
+                }
                 className="h-8 px-1 text-xs"
               >
                 {profile}
@@ -115,6 +121,12 @@ export function AssumptionsPanel({
           <p className="text-[11px] text-muted-foreground">
             Sets the nominal return assumed for each asset category.
           </p>
+          <NominalReturnsEditor
+            value={draft.returnAssumptions}
+            onChange={(returnAssumptions) => onChange({ returnAssumptions })}
+            idPrefix="explorer-nominal-return"
+            compact
+          />
         </div>
 
         <SliderRow

@@ -16,6 +16,7 @@ import {
   type SustainableSpendResult,
 } from '@/lib/sustainable-spend'
 import type { AssetMixEntry } from '@/lib/return-assumptions'
+import { resolveReturnAssumptions } from '@/lib/return-assumptions'
 import type { AccountBalance, Debt, FinancialAssumptions } from '@/lib/types'
 
 const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
@@ -35,6 +36,7 @@ export const DEFAULT_FINANCIAL_ASSUMPTIONS: Omit<
   horizon_years: 20,
   emergency_fund_months: 6,
   include_trust: false,
+  nominal_return_assumptions: null,
 }
 
 type RecurringPaymentRow = {
@@ -292,6 +294,10 @@ export function useSustainableSpend(): { data: SustainableSpendData | null; load
 
     const assumptions: SustainableSpendAssumptions = {
       returnProfile: resolved.return_profile,
+      returnAssumptions: resolveReturnAssumptions(
+        resolved.return_profile,
+        resolved.nominal_return_assumptions
+      ),
       inflationRate: Number(resolved.inflation_rate),
       floorMode: resolved.floor_mode,
       targetSavingsRate: Number(resolved.target_savings_rate),

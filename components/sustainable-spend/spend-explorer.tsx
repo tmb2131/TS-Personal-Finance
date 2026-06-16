@@ -18,6 +18,8 @@ import {
   computeSustainableSpendRange,
   type SustainableSpendAssumptions,
 } from '@/lib/sustainable-spend'
+import { resolveReturnAssumptions, returnAssumptionsEqual } from '@/lib/return-assumptions'
+import type { ReturnAssumptions } from '@/lib/return-assumptions'
 import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import { Scale } from 'lucide-react'
 import { AssumptionsPanel } from './assumptions-panel'
@@ -28,6 +30,7 @@ import { SensitivityChart } from './sensitivity-chart'
 /** Editable assumption set; wealth target is in the display currency. */
 export interface DraftAssumptions {
   returnProfile: ReturnProfile
+  returnAssumptions: ReturnAssumptions
   inflationRate: number
   floorMode: SpendingFloorMode
   targetSavingsRate: number
@@ -41,6 +44,7 @@ export interface DraftAssumptions {
 export function toSpendAssumptions(draft: DraftAssumptions): SustainableSpendAssumptions {
   return {
     returnProfile: draft.returnProfile,
+    returnAssumptions: draft.returnAssumptions,
     inflationRate: draft.inflationRate,
     floorMode: draft.floorMode,
     targetSavingsRate: draft.targetSavingsRate,
@@ -54,6 +58,7 @@ export function toSpendAssumptions(draft: DraftAssumptions): SustainableSpendAss
 function draftsEqual(a: DraftAssumptions, b: DraftAssumptions): boolean {
   return (
     a.returnProfile === b.returnProfile &&
+    returnAssumptionsEqual(a.returnAssumptions, b.returnAssumptions) &&
     Math.abs(a.inflationRate - b.inflationRate) < 1e-9 &&
     a.floorMode === b.floorMode &&
     Math.abs(a.targetSavingsRate - b.targetSavingsRate) < 1e-9 &&
@@ -78,6 +83,10 @@ export function SpendExplorer() {
     const resolved = { ...DEFAULT_FINANCIAL_ASSUMPTIONS, ...(stored ?? {}) }
     return {
       returnProfile: resolved.return_profile,
+      returnAssumptions: resolveReturnAssumptions(
+        resolved.return_profile,
+        resolved.nominal_return_assumptions
+      ),
       inflationRate: Number(resolved.inflation_rate),
       floorMode: resolved.floor_mode,
       targetSavingsRate: Number(resolved.target_savings_rate),
@@ -133,6 +142,7 @@ export function SpendExplorer() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           return_profile: draft.returnProfile,
+          nominal_return_assumptions: draft.returnAssumptions,
           inflation_rate: draft.inflationRate,
           floor_mode: draft.floorMode,
           target_savings_rate: draft.targetSavingsRate,
