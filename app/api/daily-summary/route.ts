@@ -12,7 +12,8 @@ import type { SnapshotPreloaded } from '@/lib/forecast-evolution'
 import { toDateOnly, toLocalDateString } from '@/lib/daily-summary-utils'
 import {
   addCalendarDays,
-  buildForecastBridgeSinceYesterday,
+  buildForecastBridgeOverDay,
+  buildSpendByCategoryForDate,
   buildTodaySpendByCategoryFromRows,
   computeImpliedForecastChangeIfNoMoreSpend,
 } from '@/lib/daily-today-metrics'
@@ -127,11 +128,16 @@ export async function GET() {
 
     const yesterdaySnapshot = snapshots.get(localYesterdayStr) ?? new Map()
     const endSnapshot = snapshots.get(localTodayStr) ?? new Map()
-    const forecastBridge = buildForecastBridgeSinceYesterday(
-      yesterdaySnapshot,
-      endSnapshot,
+    const yesterdaySpendByCategory = buildSpendByCategoryForDate(
+      snapshotTxRows,
       localYesterdayStr,
-      localTodayStr
+      rate,
+      isExpenseCategory
+    )
+    const forecastBridge = buildForecastBridgeOverDay(
+      yesterdaySnapshot,
+      localYesterdayStr,
+      yesterdaySpendByCategory
     )
 
     const todayTxRows = todayTxResult.data ?? []

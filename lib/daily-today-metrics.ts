@@ -176,6 +176,22 @@ export function buildForecastBridgeSinceYesterday(
   )
 }
 
+/**
+ * Bridge for the gap change that occurred over the course of a single calendar day:
+ * start of that day (day fraction, YTD excluding that day's spend) → end of that day
+ * (the day's snapshot, YTD through that day). Gap measure (budget − forecast per category).
+ * Start of a day is equivalent to the end of the prior day.
+ */
+export function buildForecastBridgeOverDay(
+  daySnapshot: SnapshotByCategory,
+  dayStr: string,
+  daySpendByCategory: Map<string, number>
+): ForecastBridgePayload {
+  const startGapMap = buildStartOfDayExpenseGapMap(daySnapshot, dayStr, daySpendByCategory)
+  const endGapMap = buildExpenseGapMapFromSnapshot(daySnapshot)
+  return buildForecastBridgeFromSnapshots(dayStr, dayStr, startGapMap, endGapMap)
+}
+
 export function buildSpendByCategoryForDate(
   rows: Array<{
     category: string | null

@@ -213,8 +213,8 @@ export function SummaryPageContent() {
 
   const yesterdayChangeLabel = useMemo(() => {
     if (yesterdayChange == null) return null
-    if (Math.abs(yesterdayChange) <= GAP_CHANGE_THRESHOLD) return 'Unchanged from yesterday'
-    return yesterdayChange < 0 ? 'Gap improved since yesterday' : 'Gap worsened since yesterday'
+    if (Math.abs(yesterdayChange) <= GAP_CHANGE_THRESHOLD) return 'Unchanged yesterday'
+    return yesterdayChange < 0 ? 'Gap improved yesterday' : 'Gap worsened yesterday'
   }, [yesterdayChange])
 
   const topDrivers = useMemo(() => {
@@ -964,7 +964,7 @@ export function SummaryPageContent() {
                     {hasChangeCard && (
                       <SummaryGapChangeCard
                         title="Change Since Yesterday"
-                        footnote="End-of-day gap compared to yesterday."
+                        footnote="Gap change over the course of yesterday."
                         change={yesterdayChange}
                         changeLabel={yesterdayChangeLabel}
                         drivers={yesterdayDriverHighlights}
