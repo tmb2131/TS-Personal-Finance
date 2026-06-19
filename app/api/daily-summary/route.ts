@@ -12,8 +12,7 @@ import type { SnapshotPreloaded } from '@/lib/forecast-evolution'
 import { toDateOnly, toLocalDateString } from '@/lib/daily-summary-utils'
 import {
   addCalendarDays,
-  buildForecastBridgeOverDay,
-  buildSpendByCategoryForDate,
+  buildForecastBridgeSinceYesterday,
   buildTodaySpendByCategoryFromRows,
   computeImpliedForecastChangeIfNoMoreSpend,
 } from '@/lib/daily-today-metrics'
@@ -38,6 +37,7 @@ export async function GET() {
     const now = new Date()
     const localTodayStr = toLocalDateString(now)
     const localYesterdayStr = addCalendarDays(localTodayStr, -1)
+    const localDayBeforeYesterdayStr = addCalendarDays(localTodayStr, -2)
     const utcTodayStr = now.toISOString().split('T')[0]
     const todayDateCandidates = Array.from(new Set([localTodayStr, utcTodayStr]))
     const currentYear = now.getFullYear()
@@ -88,7 +88,7 @@ export async function GET() {
       categories,
       transactionRows,
     }
-    const snapshotMinYearStart = `${localYesterdayStr.split('-')[0]}-01-01`
+    const snapshotMinYearStart = `${localDayBeforeYesterdayStr.split('-')[0]}-01-01`
     const snapshotMaxDate = localTodayStr > utcTodayStr ? localTodayStr : utcTodayStr
     const snapshotTxRows = (transactionRows ?? [])
       .map((row) => {
@@ -117,7 +117,7 @@ export async function GET() {
         computeForecastSnapshotsForDates(
           supabase,
           user.id,
-          [localYesterdayStr, localTodayStr],
+          [localDayBeforeYesterdayStr, localYesterdayStr, localTodayStr],
           snapshotTxRows,
           snapshotPreloaded
         ),
@@ -126,18 +126,14 @@ export async function GET() {
         computeAnnualForecasts(supabase, user.id, preloaded),
       ])
 
+    const dayBeforeYesterdaySnapshot = snapshots.get(localDayBeforeYesterdayStr) ?? new Map()
     const yesterdaySnapshot = snapshots.get(localYesterdayStr) ?? new Map()
     const endSnapshot = snapshots.get(localTodayStr) ?? new Map()
-    const yesterdaySpendByCategory = buildSpendByCategoryForDate(
-      snapshotTxRows,
-      localYesterdayStr,
-      rate,
-      isExpenseCategory
-    )
-    const forecastBridge = buildForecastBridgeOverDay(
+    const forecastBridge = buildForecastBridgeSinceYesterday(
+      dayBeforeYesterdaySnapshot,
       yesterdaySnapshot,
-      localYesterdayStr,
-      yesterdaySpendByCategory
+      localDayBeforeYesterdayStr,
+      localYesterdayStr
     )
 
     const todayTxRows = todayTxResult.data ?? []

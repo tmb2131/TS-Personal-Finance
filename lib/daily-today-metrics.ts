@@ -157,39 +157,24 @@ export function buildStartOfDayExpenseGapMap(
 }
 
 /**
- * Bridge for "Change Since Yesterday": end of yesterday → end of today.
- * Matches forecast-gap-over-time day-over-day gap (budget − forecast per category).
+ * Day-over-day gap bridge from two end-of-day snapshots (start EOD → end EOD).
+ * Matches the Forecast Evolution bridge (/api/forecast-bridge) and forecast-gap-over-time
+ * day-over-day gap (budget − forecast per category).
  */
 export function buildForecastBridgeSinceYesterday(
-  yesterdaySnapshot: SnapshotByCategory,
-  todaySnapshot: SnapshotByCategory,
-  localYesterdayStr: string,
-  localTodayStr: string
+  startSnapshot: SnapshotByCategory,
+  endSnapshot: SnapshotByCategory,
+  startDateStr: string,
+  endDateStr: string
 ): ForecastBridgePayload {
-  const startGapMap = buildExpenseGapMapFromSnapshot(yesterdaySnapshot)
-  const endGapMap = buildExpenseGapMapFromSnapshot(todaySnapshot)
+  const startGapMap = buildExpenseGapMapFromSnapshot(startSnapshot)
+  const endGapMap = buildExpenseGapMapFromSnapshot(endSnapshot)
   return buildForecastBridgeFromSnapshots(
-    localYesterdayStr,
-    localTodayStr,
+    startDateStr,
+    endDateStr,
     startGapMap,
     endGapMap
   )
-}
-
-/**
- * Bridge for the gap change that occurred over the course of a single calendar day:
- * start of that day (day fraction, YTD excluding that day's spend) → end of that day
- * (the day's snapshot, YTD through that day). Gap measure (budget − forecast per category).
- * Start of a day is equivalent to the end of the prior day.
- */
-export function buildForecastBridgeOverDay(
-  daySnapshot: SnapshotByCategory,
-  dayStr: string,
-  daySpendByCategory: Map<string, number>
-): ForecastBridgePayload {
-  const startGapMap = buildStartOfDayExpenseGapMap(daySnapshot, dayStr, daySpendByCategory)
-  const endGapMap = buildExpenseGapMapFromSnapshot(daySnapshot)
-  return buildForecastBridgeFromSnapshots(dayStr, dayStr, startGapMap, endGapMap)
 }
 
 export function buildSpendByCategoryForDate(
