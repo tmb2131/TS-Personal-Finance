@@ -17,7 +17,6 @@ import {
   addCalendarDays,
   buildTodaySpendByCategoryFromRows,
   computeImpliedForecastChangeIfNoMoreSpend,
-  computeStartOfDayExpenseForecast,
   computeStartOfDayExpenseGap,
   computeTomorrowAtZeroExpenseForecast,
   sumExpenseForecastFromSnapshot,
@@ -233,13 +232,7 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
 
   const impliedForecastChange = computeImpliedForecastChangeIfNoMoreSpend(
     todaySnapshot,
-    localTodayStr,
-    todaySpendByCategory
-  )
-  const totalForecastToday = computeStartOfDayExpenseForecast(
-    todaySnapshot,
-    localTodayStr,
-    todaySpendByCategory
+    yesterdaySnapshot
   )
   const totalForecastTomorrowAtZero = computeTomorrowAtZeroExpenseForecast(
     todaySnapshot,
@@ -269,7 +262,6 @@ async function fetchTodayData(): Promise<TodayPageData | null> {
     headroomByMethodology,
     budgetSumByMethodology,
     impliedForecastChange,
-    totalForecastToday,
     totalForecastAtCurrentYtd,
     totalForecastEndOfYesterday,
     totalForecastTomorrowAtZero,

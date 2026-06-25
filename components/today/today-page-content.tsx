@@ -129,7 +129,7 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
         headroomByMethodology={data.headroomByMethodology}
         budgetSumByMethodology={data.budgetSumByMethodology}
         impliedForecastChange={data.impliedForecastChange}
-        totalForecastToday={data.totalForecastToday}
+        totalForecastToday={data.totalForecastEndOfYesterday}
         totalForecastTomorrowAtZero={data.totalForecastTomorrowAtZero}
         onBarClick={(methodology) => setTransactionDialog({ type: 'methodology', value: methodology })}
       />

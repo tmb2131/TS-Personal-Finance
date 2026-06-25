@@ -32,7 +32,7 @@ type TodaySpendByMethodologyChartProps = {
   headroomByMethodology: Record<string, number | null>
   /** Sum of annual budgets per methodology; exclude methodology from chart if 0. */
   budgetSumByMethodology?: Record<string, number>
-  /** Implied change in overall forecast if no more spend today (tomorrow − today). Positive = rises. */
+  /** Implied change in overall forecast over today if no more spend (today's snapshot − end of yesterday). Positive = rises. */
   impliedForecastChange?: number | null
   /** Total forecast as of end of previous day (stable for the day); shown when finite. */
   totalForecastToday?: number | null

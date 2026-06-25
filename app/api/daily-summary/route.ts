@@ -13,10 +13,8 @@ import { toDateOnly, toLocalDateString } from '@/lib/daily-summary-utils'
 import {
   addCalendarDays,
   buildForecastBridgeSinceYesterday,
-  buildTodaySpendByCategoryFromRows,
   computeImpliedForecastChangeIfNoMoreSpend,
 } from '@/lib/daily-today-metrics'
-import { isExpenseCategory } from '@/lib/category-filters'
 import { NextResponse } from 'next/server'
 
 /**
@@ -136,16 +134,9 @@ export async function GET() {
       localYesterdayStr
     )
 
-    const todayTxRows = todayTxResult.data ?? []
-    const todaySpendByCategory = buildTodaySpendByCategoryFromRows(
-      todayTxRows,
-      rate,
-      isExpenseCategory
-    )
     const impliedForecastChangeIfNoMoreSpend = computeImpliedForecastChangeIfNoMoreSpend(
       endSnapshot,
-      localTodayStr,
-      todaySpendByCategory
+      yesterdaySnapshot
     )
     const todayMetrics = {
       localTodayStr,

@@ -222,23 +222,26 @@ export function computeTomorrowAtZeroExpenseForecast(
 }
 
 /**
- * Forecast change from start of today to tomorrow if no more spend (positive = forecast rises).
- * Start = this morning (YTD excludes today); end = tomorrow with today's spend locked in.
- * Uses snapshot timelines and magnitude totals (matches computeTodayHeadroom).
+ * Forecast change over today if no more spend (positive = forecast rises = more projected spend).
+ *
+ *   start = total expense forecast at the end of yesterday (= the start of today)
+ *   end   = total expense forecast from today's snapshot (today's spend locked in, nothing more)
+ *
+ * Both sides are snapshot magnitude sums over the same (yesterday → today) window that the
+ * Forecast Evolution / "Change Since Yesterday" gap bridge uses. With budgets unchanged and
+ * no further spend today, this previews exactly the gap change that "Change Since Yesterday"
+ * reports tomorrow about today, so the two cards tie out by construction.
+ *
+ * (Earlier this advanced the day fraction to pct(today)→pct(tomorrow), one day later than the
+ * realized window, which made the Linear method drift disagree even with zero spend.)
  */
 export function computeImpliedForecastChangeIfNoMoreSpend(
   todaySnapshot: SnapshotByCategory,
-  localTodayStr: string,
-  todaySpendByCategory: Map<string, number>
+  yesterdaySnapshot: SnapshotByCategory
 ): number | null {
-  if (todaySnapshot.size === 0) return null
-  const localTomorrowStr = addCalendarDays(localTodayStr, 1)
-  const startForecast = computeStartOfDayExpenseForecast(
-    todaySnapshot,
-    localTodayStr,
-    todaySpendByCategory
-  )
-  const endForecast = computeTomorrowAtZeroExpenseForecast(todaySnapshot, localTomorrowStr)
+  if (todaySnapshot.size === 0 || yesterdaySnapshot.size === 0) return null
+  const endForecast = sumExpenseForecastFromSnapshot(todaySnapshot)
+  const startForecast = sumExpenseForecastFromSnapshot(yesterdaySnapshot)
   if (!Number.isFinite(startForecast) || !Number.isFinite(endForecast)) return null
   return endForecast - startForecast
 }
@@ -251,7 +254,7 @@ export type DailyTodayMetrics = {
   totalForecastStartOfToday: number
   /** Tomorrow at zero total expense forecast. */
   totalForecastTomorrowAtZero: number
-  /** tomorrowAtZero − startOfToday; positive = forecast rises. */
+  /** today's snapshot forecast − end-of-yesterday forecast; positive = forecast rises. */
   impliedForecastChangeIfNoMoreSpend: number | null
   /** Gap change from end of yesterday to end of today (matches forecast evolution chart). */
   gapChangeSinceYesterday: number | null
