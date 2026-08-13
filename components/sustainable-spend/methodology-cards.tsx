@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { SustainableSpendInputsData } from '@/lib/hooks/use-sustainable-spend'
 import type { SustainableSpendResult } from '@/lib/sustainable-spend'
+import { getEffectiveTaxRate } from '@/lib/return-assumptions'
 import { wealthTargetTermsShortLabel } from '@/lib/wealth-target-terms'
 import { cn } from '@/utils/cn'
 import { AlertTriangle, ArrowDown, ArrowUp, Percent } from 'lucide-react'
@@ -76,35 +77,46 @@ function FormulaRow({
 export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyCardsProps) {
   const formatCurrency = (value: number) => {
     const abs = Math.abs(value)
-    if (abs >= 1_000_000) return `${symbol}${(value / 1_000_000).toFixed(2)}M`
-    if (abs >= 1_000) return `${symbol}${(value / 1_000).toFixed(1)}k`
-    return `${symbol}${Math.round(value)}`
+    const sign = value < 0 ? '−' : ''
+    if (abs >= 1_000_000) return `${sign}${symbol}${(abs / 1_000_000).toFixed(2)}M`
+    if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(1)}k`
+    return `${sign}${symbol}${Math.round(abs)}`
   }
   const formatPct = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`
 
   const profile = draft.returnAssumptions
 
-  // Group the per-account asset mix into categories for the breakdown table
-  const { categories, totalAssets, weightedNominal } = useMemo(() => {
+  // Group the per-account asset mix into categories for the breakdown table.
+  // Nominal, after-tax nominal and the weighted totals are all shown, because
+  // the gap between gross and net is the single largest adjustment on this page.
+  const { categories, totalAssets, weightedNominal, weightedNet } = useMemo(() => {
     const byCategory = new Map<string, number>()
     for (const entry of inputs.assetMix) {
       byCategory.set(entry.category, (byCategory.get(entry.category) ?? 0) + entry.balance)
     }
     const total = Array.from(byCategory.values()).reduce((sum, b) => sum + b, 0)
     const rows = Array.from(byCategory.entries())
-      .map(([category, balance]) => ({
-        category,
-        balance,
-        weight: total > 0 ? balance / total : 0,
-        nominal: profile.nominalReturns[category] ?? profile.defaultNominalReturn,
-      }))
+      .map(([category, balance]) => {
+        const nominal = profile.nominalReturns[category] ?? profile.defaultNominalReturn
+        const tax = getEffectiveTaxRate(profile, category)
+        return {
+          category,
+          balance,
+          weight: total > 0 ? balance / total : 0,
+          nominal,
+          tax,
+          // Tax applies to gains only. A loss is not grossed up.
+          net: nominal > 0 ? nominal * (1 - tax) : nominal,
+        }
+      })
       .sort((a, b) => b.balance - a.balance)
     const nominal = rows.reduce((sum, r) => sum + r.weight * r.nominal, 0)
-    return { categories: rows, totalAssets: total, weightedNominal: nominal }
+    const net = rows.reduce((sum, r) => sum + r.weight * r.net, 0)
+    return { categories: rows, totalAssets: total, weightedNominal: nominal, weightedNet: net }
   }, [inputs.assetMix, profile])
 
   const inflows = Math.max(0, inputs.annualIncome) + Math.max(0, inputs.annualGiftMoney)
-  const returnsContribution = Math.max(0, inputs.netWorth * result.realReturn)
+  const returnsContribution = inputs.netWorth * result.realReturn
   const rawFloor = inflows - result.requiredAnnualSavings
   const wealthTargetTermsLabel = wealthTargetTermsShortLabel(draft.wealthTargetTerms)
   const wealthTargetGrowthRate =
@@ -120,36 +132,53 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Step 1: real return */}
+      {/* Step 1: real after-tax return */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <StepBadge step={1} />
             <Percent className="h-4 w-4 text-muted-foreground" />
-            Real return on your assets
+            Real after-tax return on your assets
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             Each asset category uses your configured nominal return (based on the{' '}
-            {draft.returnProfile.toLowerCase()} profile unless customized), weighted by balance,
-            then adjusted for {formatPct(draft.inflationRate)} inflation.
+            {draft.returnProfile.toLowerCase()} profile unless customized), net of its effective tax
+            rate, weighted by balance, then adjusted for {formatPct(draft.inflationRate)} inflation.
+            Tax applies to gains only — a loss is not grossed up, because relief is neither
+            guaranteed nor available in the year it arises.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1.5">
             {categories.map((row) => (
               <div key={row.category} className="flex items-center gap-3 text-sm">
-                <span className="w-24 shrink-0 truncate text-muted-foreground">{row.category}</span>
+                <span className="w-28 shrink-0 truncate text-muted-foreground">{row.category}</span>
                 <div className="relative h-3 flex-1 rounded-full bg-muted overflow-hidden">
                   <div
                     className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60 transition-all duration-300 ease-out"
                     style={{ width: `${Math.max(1, row.weight * 100)}%` }}
                   />
                 </div>
-                <span className="w-12 shrink-0 text-right tabular-nums text-xs text-muted-foreground">
+                <span className="w-10 shrink-0 text-right tabular-nums text-xs text-muted-foreground">
                   {formatPct(row.weight, 0)}
                 </span>
-                <span className="w-20 shrink-0 text-right tabular-nums text-xs font-medium">
-                  {formatPct(row.nominal)} <span className="text-muted-foreground font-normal">nom</span>
+                <span
+                  className={cn(
+                    'w-14 shrink-0 text-right tabular-nums text-xs',
+                    row.nominal < 0 ? 'text-red-600' : 'text-muted-foreground'
+                  )}
+                >
+                  {formatPct(row.nominal)}
+                </span>
+                <span
+                  className={cn(
+                    'w-16 shrink-0 text-right tabular-nums text-xs font-medium',
+                    row.net < 0 ? 'text-red-600' : ''
+                  )}
+                  title={`${formatPct(row.tax, 0)} effective tax`}
+                >
+                  {formatPct(row.net)}{' '}
+                  <span className="text-muted-foreground font-normal">net</span>
                 </span>
               </div>
             ))}
@@ -162,13 +191,19 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
               <span className="tabular-nums font-medium">{formatPct(weightedNominal)}</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-muted-foreground">Tax on gains</span>
+              <span className="tabular-nums font-medium text-red-600">
+                −{formatPct(weightedNominal - weightedNet)}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-muted-foreground">Inflation adjustment</span>
               <span className="tabular-nums font-medium text-red-600">
                 −{formatPct(draft.inflationRate)}
               </span>
             </div>
             <div className="flex justify-between border-t pt-1.5">
-              <span className="font-semibold">Real return</span>
+              <span className="font-semibold">Real after-tax return</span>
               <span
                 className={cn(
                   'tabular-nums font-bold',
@@ -193,19 +228,20 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             The most you can spend in a year while your net worth keeps pace with inflation:
-            inflows plus the real return your assets generate.
+            inflows plus the real after-tax return your assets generate. When that return is
+            negative the ceiling falls below inflows, because sustaining spend at that level erodes
+            capital.
           </p>
         </CardHeader>
         <CardContent>
           <FormulaRow label="Annual income" value={formatCurrency(inputs.annualIncome)} operator="+" />
           <FormulaRow label="Gift money" value={formatCurrency(inputs.annualGiftMoney)} operator="+" />
           <FormulaRow
-            label="Real return on net worth"
-            detail={`${formatCurrency(inputs.netWorth)} net worth × ${formatPct(result.realReturn)} real return${
-              inputs.netWorth * result.realReturn < 0 ? ' (negative returns count as zero)' : ''
-            }`}
+            label="Real after-tax return on net worth"
+            detail={`${formatCurrency(inputs.netWorth)} net worth × ${formatPct(result.realReturn)} real after-tax return`}
             value={formatCurrency(returnsContribution)}
-            operator="+"
+            operator={returnsContribution < 0 ? '−' : '+'}
+            valueClass={returnsContribution < 0 ? 'text-red-600' : undefined}
           />
           <FormulaRow
             label={result.liquidityConstrained ? 'Uncapped ceiling' : 'Ceiling'}
@@ -297,6 +333,19 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
               </p>
               <p className="font-semibold tabular-nums text-foreground">
                 Floor = {formatCurrency(result.floorAnnual)}
+              </p>
+            </div>
+          )}
+          {result.floorExceedsCeiling && (
+            <div className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs space-y-1.5">
+              <p className="flex items-center gap-1.5 font-semibold text-red-600">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Floor is above the ceiling
+              </p>
+              <p className="text-muted-foreground">
+                The floor is no longer clamped down to meet the ceiling, so this gap is visible
+                rather than hidden. Committed spending exceeds sustainable spending by{' '}
+                {formatCurrency(result.floorAnnual - result.ceilingAnnual)} a year.
               </p>
             </div>
           )}
