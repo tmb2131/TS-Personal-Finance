@@ -2,9 +2,11 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   RETURN_ASSUMPTIONS_BY_PROFILE,
+  computeYearsUntilDepletion,
   getEffectiveTaxRate,
   isValidReturnRate,
   parseReturnAssumptions,
+  resolveReturnCategory,
   weightedAfterTaxRealReturn,
   weightedNominalReturn,
   weightedRealReturn,
@@ -92,5 +94,63 @@ describe('backward compatibility', () => {
       parseReturnAssumptions({ defaultNominalReturn: 0.04, nominalReturns: { Cash: 'nope' } }),
       null
     )
+  })
+})
+
+describe('category resolution', () => {
+  it('maps each Taconic account name to its sub-fund rate', () => {
+    const cases: [string, string][] = [
+      ['Taconic Credit Opportunities Fund L.P.', 'Taconic Credit Opps'],
+      ['Taconic Merger Arbitrage Fund L.P.', 'Taconic Merger Arb'],
+      ['Opportunity Fund L.P.', 'Taconic Opportunity'],
+      ['CRE Dislocation Onshore Fund II L.P.', 'Taconic Legacy'],
+      ['CRE Dislocation Onshore Fund III L.P.', 'Taconic Legacy'],
+      ['European Credit Dislocation Fund II L.P.', 'Taconic Legacy'],
+      ['European Credit Dislocation Fund III L.P.', 'Taconic Legacy'],
+      ['Market Dislocation Onshore Fund III L.P.', 'Taconic Legacy'],
+    ]
+    for (const [name, expected] of cases) {
+      assert.equal(resolveReturnCategory('Taconic', name), expected)
+    }
+  })
+
+  it('does not let Opportunity Fund shadow Credit Opportunities', () => {
+    assert.equal(
+      resolveReturnCategory('Taconic', 'Taconic Credit Opportunities Fund L.P.'),
+      'Taconic Credit Opps'
+    )
+  })
+
+  it('aliases the sheet spelling of Alt Inv', () => {
+    assert.equal(resolveReturnCategory('Alternative Investment'), 'Alt Inv')
+  })
+
+  it('passes through anything unrecognised', () => {
+    assert.equal(resolveReturnCategory('Cash'), 'Cash')
+    assert.equal(resolveReturnCategory('Taconic'), 'Taconic')
+  })
+
+  it('actually differentiates the Taconic sub-funds in a weighted return', () => {
+    const named = weightedNominalReturn(
+      [
+        { category: 'Taconic', balance: 1_000_000, accountName: 'Taconic Credit Opportunities Fund L.P.' },
+        { category: 'Taconic', balance: 1_000_000, accountName: 'CRE Dislocation Onshore Fund II L.P.' },
+      ],
+      RETURN_ASSUMPTIONS_BY_PROFILE.Base
+    )
+    // Credit Opps 7.0% and Legacy 1.5% average to 4.25%, not the 4.5% alias.
+    assert.ok(Math.abs(named - 0.0425) < 1e-9, `got ${named}`)
+  })
+})
+
+describe('depletion', () => {
+  it('returns maxYears when nothing is withdrawn', () => {
+    assert.equal(computeYearsUntilDepletion(1_000_000, 0, 0.02), 100)
+  })
+
+  it('depletes faster at a negative real return', () => {
+    const flat = computeYearsUntilDepletion(1_000_000, 100_000, 0)
+    const losing = computeYearsUntilDepletion(1_000_000, 100_000, -0.05)
+    assert.ok(losing < flat)
   })
 })
