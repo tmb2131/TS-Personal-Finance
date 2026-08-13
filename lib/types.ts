@@ -157,7 +157,10 @@ export interface KidsAccount {
 import type { ReturnAssumptions } from '@/lib/return-assumptions'
 
 // Sustainable spending range assumptions (one row per user)
-export type ReturnProfile = 'Conservative' | 'Base' | 'Optimistic'
+// 'Expected' is the probability-weighted centre and sits between Conservative
+// and Base. Conservative is a genuine downside case and may carry negative
+// nominal returns; see lib/return-assumptions.ts.
+export type ReturnProfile = 'Conservative' | 'Expected' | 'Base' | 'Optimistic'
 export type SpendingFloorMode = 'savings_rate' | 'wealth_target'
 /** real = today's purchasing power at horizon; nominal = future account value */
 export type WealthTargetTerms = 'real' | 'nominal'
