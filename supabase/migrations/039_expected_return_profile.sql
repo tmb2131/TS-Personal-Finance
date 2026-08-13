@@ -1,2 +1,0 @@
--- Superseded. This file was briefly numbered 039, which collided with the
--- existing 039_ensure_user_profile_rpc_no_xmax.sql. See 047_expected_return_profile.sql.
