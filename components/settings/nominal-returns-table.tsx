@@ -105,11 +105,11 @@ export function NominalReturnsTable({
         ranges for comparison. Rates may be negative — a Conservative profile that cannot lose money
         is a low-return scenario, not a downside one.
       </p>
-      <div className="rounded-md border border-input">
+      <div className="rounded-md border border-input overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[140px]">Category</TableHead>
+              <TableHead className="w-[160px]">Category</TableHead>
               {RETURN_PROFILE_OPTIONS.map((profile) => {
                 const isActive = profile === activeProfile
                 return (
@@ -118,7 +118,7 @@ export function NominalReturnsTable({
                       type="button"
                       onClick={() => onProfileChange(profile)}
                       className={cn(
-                        'mx-auto inline-flex min-w-[96px] flex-col items-center rounded-md px-2 py-1 text-xs font-semibold transition-colors',
+                        'mx-auto inline-flex min-w-[88px] flex-col items-center rounded-md px-2 py-1 text-xs font-semibold transition-colors',
                         isActive
                           ? 'bg-indigo-500/15 text-indigo-700 ring-1 ring-indigo-500/40'
                           : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'

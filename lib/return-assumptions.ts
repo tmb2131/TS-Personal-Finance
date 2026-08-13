@@ -84,6 +84,7 @@ export const EFFECTIVE_TAX_RATES: Record<string, number> = {
   House: 0.0,
   Property: 0.28,
   Other: 0.3,
+  'Alternative Investment': 0.2,
 }
 
 export const RETURN_ASSUMPTIONS_BY_PROFILE: Record<ReturnProfile, ReturnAssumptions> = {
@@ -182,6 +183,8 @@ export const RETURN_ASSUMPTIONS_BY_PROFILE: Record<ReturnProfile, ReturnAssumpti
 export type AssetMixEntry = {
   category: string
   balance: number
+  /** Optional, used to resolve a Taconic account to its specific sub-fund rate. */
+  accountName?: string | null
 }
 
 export function cloneReturnAssumptions(assumptions: ReturnAssumptions): ReturnAssumptions {
@@ -321,6 +324,40 @@ export function getEffectiveTaxRate(assumptions: ReturnAssumptions, category: st
   return assumptions.defaultEffectiveTaxRate ?? DEFAULT_EFFECTIVE_TAX_RATE
 }
 
+/**
+ * Account categories as stored in `account_balances` do not always match the
+ * return-assumption categories. Two known divergences:
+ *
+ *  - the sheet uses 'Alternative Investment' where the rate table says 'Alt Inv',
+ *    so those balances were silently falling through to defaultNominalReturn;
+ *  - every Taconic fund carries the single category 'Taconic', so the four-way
+ *    split would never be looked up without mapping on the account name.
+ *
+ * Resolution is by account name first, then category alias, then the category
+ * itself. Anything unrecognised is returned unchanged and falls back to the
+ * default rate exactly as before.
+ */
+const CATEGORY_ALIASES: Record<string, string> = {
+  'Alternative Investment': 'Alt Inv',
+}
+
+const TACONIC_FUND_PATTERNS: { match: RegExp; category: AssetReturnCategory }[] = [
+  { match: /credit opportunit/i, category: 'Taconic Credit Opps' },
+  { match: /merger arbitrage/i, category: 'Taconic Merger Arb' },
+  { match: /dislocation/i, category: 'Taconic Legacy' },
+  // Must come last: "Opportunity Fund L.P." would otherwise shadow Credit Opps.
+  { match: /opportunity fund/i, category: 'Taconic Opportunity' },
+]
+
+export function resolveReturnCategory(category: string, accountName?: string | null): string {
+  if (category === 'Taconic' && accountName) {
+    for (const { match, category: mapped } of TACONIC_FUND_PATTERNS) {
+      if (match.test(accountName)) return mapped
+    }
+  }
+  return CATEGORY_ALIASES[category] ?? category
+}
+
 export function nominalToRealReturn(nominalReturn: number, inflationRate = DEFAULT_INFLATION_RATE) {
   return (1 + nominalReturn) / (1 + inflationRate) - 1
 }
@@ -331,7 +368,8 @@ export function weightedNominalReturn(assets: AssetMixEntry[], assumptions: Retu
   if (total <= 0) return 0
 
   return assets.reduce((sum, asset) => {
-    const rate = assumptions.nominalReturns[asset.category] ?? assumptions.defaultNominalReturn
+    const key = resolveReturnCategory(asset.category, asset.accountName)
+    const rate = assumptions.nominalReturns[key] ?? assumptions.defaultNominalReturn
     return sum + (asset.balance / total) * rate
   }, 0)
 }
@@ -349,8 +387,9 @@ export function weightedAfterTaxNominalReturn(
   if (total <= 0) return 0
 
   return assets.reduce((sum, asset) => {
-    const gross = assumptions.nominalReturns[asset.category] ?? assumptions.defaultNominalReturn
-    const tax = getEffectiveTaxRate(assumptions, asset.category)
+    const key = resolveReturnCategory(asset.category, asset.accountName)
+    const gross = assumptions.nominalReturns[key] ?? assumptions.defaultNominalReturn
+    const tax = getEffectiveTaxRate(assumptions, key)
     const net = gross > 0 ? gross * (1 - tax) : gross
     return sum + (asset.balance / total) * net
   }, 0)
@@ -372,4 +411,22 @@ export function weightedAfterTaxRealReturn(
   inflationRate = DEFAULT_INFLATION_RATE
 ) {
   return nominalToRealReturn(weightedAfterTaxNominalReturn(assets, assumptions), inflationRate)
+}
+
+export function computeYearsUntilDepletion(
+  portfolio: number,
+  annualWithdrawal: number,
+  realReturn: number,
+  maxYears = 100
+) {
+  if (annualWithdrawal <= 0) return maxYears
+  if (portfolio <= 0) return 0
+
+  let balance = portfolio
+  for (let year = 1; year <= maxYears; year++) {
+    balance = balance * (1 + realReturn) - annualWithdrawal
+    if (balance <= 0) return year
+  }
+
+  return maxYears
 }
