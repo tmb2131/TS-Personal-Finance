@@ -2,29 +2,33 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import {
-  ASSET_RETURN_CATEGORIES,
+  MAX_EFFECTIVE_TAX_RATE,
   MAX_NOMINAL_RETURN,
+  MIN_NOMINAL_RETURN,
   parseReturnAssumptions,
 } from '@/lib/return-assumptions'
 
 const DEFAULT_GBPUSD_RATE = 1.25
 
-const returnRateSchema = z.number().min(0).max(MAX_NOMINAL_RETURN)
+// Rates may be negative: a Conservative profile has to be able to express a
+// drawdown year.
+const returnRateSchema = z.number().min(MIN_NOMINAL_RETURN).max(MAX_NOMINAL_RETURN)
+const taxRateSchema = z.number().min(0).max(MAX_EFFECTIVE_TAX_RATE)
 
-const nominalReturnsSchema = z.object(
-  Object.fromEntries(ASSET_RETURN_CATEGORIES.map((category) => [category, returnRateSchema])) as Record<
-    (typeof ASSET_RETURN_CATEGORIES)[number],
-    typeof returnRateSchema
-  >
-)
+// Open record rather than a fixed key set built from ASSET_RETURN_CATEGORIES, so
+// adding or splitting a category is not a breaking API change. Unknown keys are
+// dropped and missing ones defaulted by parseReturnAssumptions.
+const nominalReturnsSchema = z.record(z.string(), returnRateSchema)
 
 const ReturnAssumptionsSchema = z.object({
   defaultNominalReturn: returnRateSchema,
   nominalReturns: nominalReturnsSchema,
+  effectiveTaxRates: z.record(z.string(), taxRateSchema).optional(),
+  defaultEffectiveTaxRate: taxRateSchema.optional(),
 })
 
 const UpdateSchema = z.object({
-  return_profile: z.enum(['Conservative', 'Base', 'Optimistic']),
+  return_profile: z.enum(['Conservative', 'Expected', 'Base', 'Optimistic']),
   inflation_rate: z.number().min(0).max(0.25),
   floor_mode: z.enum(['savings_rate', 'wealth_target']),
   target_savings_rate: z.number().min(0).max(1),

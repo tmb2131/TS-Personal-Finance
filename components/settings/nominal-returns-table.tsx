@@ -10,8 +10,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  ASSET_RETURN_CATEGORIES,
+  EDITABLE_RETURN_CATEGORIES,
   MAX_NOMINAL_RETURN,
+  MIN_NOMINAL_RETURN,
   RETURN_ASSUMPTIONS_BY_PROFILE,
   RETURN_PROFILE_OPTIONS,
   type ReturnAssumptions,
@@ -27,11 +28,14 @@ interface NominalReturnsTableProps {
   idPrefix?: string
 }
 
-type RowKey = 'defaultNominalReturn' | (typeof ASSET_RETURN_CATEGORIES)[number]
+type RowKey = 'defaultNominalReturn' | (typeof EDITABLE_RETURN_CATEGORIES)[number]
 
+// EDITABLE_RETURN_CATEGORIES rather than ASSET_RETURN_CATEGORIES so the deprecated
+// pre-split `Taconic` alias, which only exists to keep old stored rows parsing,
+// stays out of the settings UI.
 const TABLE_ROWS: { key: RowKey; label: string }[] = [
   { key: 'defaultNominalReturn', label: 'Default (other)' },
-  ...ASSET_RETURN_CATEGORIES.map((category) => ({ key: category, label: category })),
+  ...EDITABLE_RETURN_CATEGORIES.map((category) => ({ key: category, label: category })),
 ]
 
 function pctToDecimal(value: string): number | null {
@@ -67,7 +71,7 @@ function updateActiveRate(
   pctValue: string
 ): ReturnAssumptions | null {
   const decimal = pctToDecimal(pctValue)
-  if (decimal == null || decimal < 0 || decimal > MAX_NOMINAL_RETURN) return null
+  if (decimal == null || decimal < MIN_NOMINAL_RETURN || decimal > MAX_NOMINAL_RETURN) return null
 
   if (rowKey === 'defaultNominalReturn') {
     return { ...current, defaultNominalReturn: decimal }
@@ -98,13 +102,14 @@ export function NominalReturnsTable({
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
         Nominal return by asset category. Select a profile column to edit; other columns show preset
-        ranges for comparison.
+        ranges for comparison. Rates may be negative — a Conservative profile that cannot lose money
+        is a low-return scenario, not a downside one.
       </p>
-      <div className="rounded-md border border-input">
+      <div className="rounded-md border border-input overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[140px]">Category</TableHead>
+              <TableHead className="w-[160px]">Category</TableHead>
               {RETURN_PROFILE_OPTIONS.map((profile) => {
                 const isActive = profile === activeProfile
                 return (
@@ -113,7 +118,7 @@ export function NominalReturnsTable({
                       type="button"
                       onClick={() => onProfileChange(profile)}
                       className={cn(
-                        'mx-auto inline-flex min-w-[96px] flex-col items-center rounded-md px-2 py-1 text-xs font-semibold transition-colors',
+                        'mx-auto inline-flex min-w-[88px] flex-col items-center rounded-md px-2 py-1 text-xs font-semibold transition-colors',
                         isActive
                           ? 'bg-indigo-500/15 text-indigo-700 ring-1 ring-indigo-500/40'
                           : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
@@ -153,7 +158,7 @@ export function NominalReturnsTable({
                           <Input
                             id={`${idPrefix}-${key}`}
                             type="number"
-                            min="0"
+                            min={MIN_NOMINAL_RETURN * 100}
                             max={MAX_NOMINAL_RETURN * 100}
                             step="0.1"
                             value={decimalToPct(rate)}
@@ -166,7 +171,14 @@ export function NominalReturnsTable({
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm text-muted-foreground">{formatPct(rate)}</span>
+                        <span
+                          className={cn(
+                            'text-sm',
+                            rate < 0 ? 'text-red-600' : 'text-muted-foreground'
+                          )}
+                        >
+                          {formatPct(rate)}
+                        </span>
                       )}
                     </TableCell>
                   )

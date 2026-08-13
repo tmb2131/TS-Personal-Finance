@@ -1,7 +1,7 @@
 import type { ReturnProfile, SpendingFloorMode, WealthTargetTerms } from '@/lib/types'
 import {
   weightedNominalReturn,
-  weightedRealReturn,
+  weightedAfterTaxRealReturn,
   type AssetMixEntry,
   type ReturnAssumptions,
 } from '@/lib/return-assumptions'
@@ -54,6 +54,11 @@ export interface SustainableSpendResult {
   liquidityConstrained: boolean
   /** True when the goal-derived floor fell below committed recurring spend and was raised to it. */
   floorClampedToCommitted: boolean
+  /**
+   * True when committed spending exceeds sustainable spending. Previously impossible
+   * because the floor was clamped down to the ceiling, which hid the state entirely.
+   */
+  floorExceedsCeiling: boolean
   drivers: { floor: string; ceiling: string }
 }
 
@@ -90,14 +95,19 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
 
   const profile = assumptions.returnAssumptions
   const nominalReturn = weightedNominalReturn(assetMix, profile)
-  const realReturn = weightedRealReturn(assetMix, profile, assumptions.inflationRate)
+  // After tax: the ceiling is a spending question, and you cannot spend the
+  // Revenue's share. Gains are taxed; losses are not grossed up.
+  const realReturn = weightedAfterTaxRealReturn(assetMix, profile, assumptions.inflationRate)
   const wealthTargetGrowthRate =
     assumptions.wealthTargetTerms === 'nominal' ? nominalReturn : realReturn
 
   const inflows = Math.max(0, annualIncome) + Math.max(0, annualGiftMoney)
 
   // Ceiling: spend level at which real net worth is preserved.
-  const uncappedCeilingAnnual = inflows + Math.max(0, netWorth * realReturn)
+  // No clamp on the return term. When the real after-tax return is negative the
+  // ceiling is genuinely below inflows, because sustaining spend at that level
+  // erodes capital. Flooring it at zero reported a ceiling that could never fall.
+  const uncappedCeilingAnnual = inflows + netWorth * realReturn
   const liquidityConstrained =
     cashRunwayMonths != null &&
     Number.isFinite(cashRunwayMonths) &&
@@ -121,7 +131,11 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
   const rawFloor = inflows - requiredAnnualSavings
   const committed = Math.max(0, committedAnnualSpend ?? 0)
   const floorClampedToCommitted = committed > rawFloor
-  const floorAnnual = Math.max(0, Math.min(ceilingAnnual, Math.max(rawFloor, committed)))
+  // The floor is no longer clamped down to the ceiling. Committed spending above
+  // sustainable spending is a real and important state, and must surface rather
+  // than be silently collapsed into a zero-width range.
+  const floorAnnual = Math.max(0, Math.max(rawFloor, committed))
+  const floorExceedsCeiling = floorAnnual > ceilingAnnual
 
   const spend = Math.max(0, annualForecastSpend)
   let position: SpendRangePosition
@@ -146,7 +160,7 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
       : `Floor driven by your ${Math.round(assumptions.targetSavingsRate * 100)}% target savings rate`
   const ceilingDriver = liquidityConstrained
     ? `Ceiling capped at income + gifts while cash runway is under your ${assumptions.emergencyFundMonths}-month target`
-    : `Ceiling = income + gifts + ${(realReturn * 100).toFixed(1)}% real return on net worth`
+    : `Ceiling = income + gifts ${realReturn < 0 ? '−' : '+'} ${Math.abs(realReturn * 100).toFixed(1)}% real after-tax return on net worth`
 
   return {
     floorAnnual,
@@ -158,6 +172,7 @@ export function computeSustainableSpendRange(input: SustainableSpendInput): Sust
     requiredAnnualSavings,
     liquidityConstrained,
     floorClampedToCommitted,
+    floorExceedsCeiling,
     drivers: { floor: floorDriver, ceiling: ceilingDriver },
   }
 }

@@ -84,6 +84,16 @@ interface SensitivityChartProps {
   symbol: string
 }
 
+interface SweepPoint {
+  x: number
+  floor: number
+  ceiling: number
+  /** Filled only where the range is the right way up. */
+  sustainable: [number, number] | null
+  /** Filled only where the floor sits above the ceiling. */
+  deficit: [number, number] | null
+}
+
 export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProps) {
   const isMobile = useIsMobile()
   const chartTheme = useChartTheme()
@@ -95,29 +105,44 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
   const effectiveVar = configs[selectedVar] ? selectedVar : availableVars[0]
   const config = configs[effectiveVar]!
 
-  const { data, currentX } = useMemo(() => {
-    const points: { x: number; floor: number; ceiling: number; range: [number, number] }[] = []
+  const { data, currentX, hasDeficit, crossesZero } = useMemo(() => {
+    const points: SweepPoint[] = []
+    let deficit = false
+    let belowZero = false
     for (let i = 0; i < SWEEP_POINTS; i++) {
       const x = config.min + ((config.max - config.min) * i) / (SWEEP_POINTS - 1)
       const result = computeSustainableSpendRange({
         ...inputs,
         assumptions: toSpendAssumptions(config.apply(draft, x)),
       })
+      const inverted = result.floorExceedsCeiling
+      if (inverted) deficit = true
+      if (result.ceilingAnnual < 0) belowZero = true
       points.push({
         x,
         floor: result.floorAnnual,
         ceiling: result.ceilingAnnual,
-        range: [result.floorAnnual, result.ceilingAnnual],
+        // Two bands rather than one. A single [floor, ceiling] Area still fills
+        // when the pair inverts, which silently painted an unsustainable gap in
+        // the same green as a healthy range.
+        sustainable: inverted ? null : [result.floorAnnual, result.ceilingAnnual],
+        deficit: inverted ? [result.ceilingAnnual, result.floorAnnual] : null,
       })
     }
-    return { data: points, currentX: config.current(draft) }
+    return {
+      data: points,
+      currentX: config.current(draft),
+      hasDeficit: deficit,
+      crossesZero: belowZero,
+    }
   }, [inputs, draft, config])
 
   const formatCompact = (value: number) => {
     const abs = Math.abs(value)
-    if (abs >= 1_000_000) return `${symbol}${(value / 1_000_000).toFixed(1)}M`
-    if (abs >= 1_000) return `${symbol}${(value / 1_000).toFixed(0)}k`
-    return `${symbol}${Math.round(value)}`
+    const sign = value < 0 ? '−' : ''
+    if (abs >= 1_000_000) return `${sign}${symbol}${(abs / 1_000_000).toFixed(1)}M`
+    if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(0)}k`
+    return `${sign}${symbol}${Math.round(abs)}`
   }
 
   return (
@@ -130,6 +155,9 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
         <p className="text-xs text-muted-foreground">
           Floor and ceiling as {config.label.toLowerCase()} varies, holding everything else at your
           current settings. Dashed lines mark your current value and forecast spend.
+          {hasDeficit
+            ? ' Amber marks where the floor rises above the ceiling and no sustainable level exists.'
+            : ''}
         </p>
         <div className="flex flex-wrap gap-1.5 pt-1">
           {availableVars.map((v) => (
@@ -193,7 +221,7 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
                 }}
               />
               <Area
-                dataKey="range"
+                dataKey="sustainable"
                 name="Sustainable range"
                 stroke="none"
                 fill="#22c55e"
@@ -201,6 +229,18 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
                 isAnimationActive={false}
                 legendType="none"
                 tooltipType="none"
+                connectNulls={false}
+              />
+              <Area
+                dataKey="deficit"
+                name="No sustainable level"
+                stroke="none"
+                fill="#f59e0b"
+                fillOpacity={0.28}
+                isAnimationActive={false}
+                legendType="none"
+                tooltipType="none"
+                connectNulls={false}
               />
               <Line
                 dataKey="floor"
@@ -218,6 +258,9 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
                 dot={false}
                 isAnimationActive={false}
               />
+              {crossesZero && (
+                <ReferenceLine y={0} stroke={chartTheme.axisStroke} strokeOpacity={0.6} />
+              )}
               <ReferenceLine
                 y={inputs.annualForecastSpend}
                 stroke={chartTheme.labelFill}
@@ -243,6 +286,12 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-4 rounded bg-green-500/25 inline-block" /> Sustainable range
           </span>
+          {hasDeficit && (
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-4 rounded bg-amber-500/35 inline-block" /> No sustainable
+              level
+            </span>
+          )}
           <span className="flex items-center gap-1.5">
             <span className="h-0 w-4 border-t border-dashed border-foreground/70 inline-block" />{' '}
             Current value
