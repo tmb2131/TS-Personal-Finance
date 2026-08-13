@@ -5,6 +5,7 @@ import type { SpendRangePosition, SustainableSpendResult } from '@/lib/sustainab
 import { cn } from '@/utils/cn'
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowDownCircle,
   ArrowUpCircle,
   CheckCircle2,
@@ -55,28 +56,43 @@ interface RangeVisualizationProps {
 export function RangeVisualization({ result, savedResult, symbol }: RangeVisualizationProps) {
   const formatCurrency = (value: number) => {
     const abs = Math.abs(value)
-    if (abs >= 1_000_000) return `${symbol}${(value / 1_000_000).toFixed(1)}M`
-    if (abs >= 1_000) return `${symbol}${(value / 1_000).toFixed(1)}k`
-    return `${symbol}${Math.round(value)}`
+    const sign = value < 0 ? '−' : ''
+    if (abs >= 1_000_000) return `${sign}${symbol}${(abs / 1_000_000).toFixed(1)}M`
+    if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(1)}k`
+    return `${sign}${symbol}${Math.round(abs)}`
   }
   const formatMonthly = (value: number) => `${formatCurrency(value / 12)}/mo`
 
   const config = POSITION_CONFIG[result.position]
   const Icon = config.icon
 
-  const { floorAnnual, ceilingAnnual, currentForecastSpend } = result
+  const { floorAnnual, ceilingAnnual, currentForecastSpend, floorExceedsCeiling } = result
 
-  // Include the saved range in the axis so ghost markers stay on-scale
+  // The ceiling can be negative when the real after-tax return is negative, and
+  // the floor can sit above it when committed spending exceeds what is
+  // sustainable. Both are real states, so the axis has to span them rather than
+  // clamping at zero.
+  const axisMin = Math.min(0, ceilingAnnual * 1.12, (savedResult?.ceilingAnnual ?? 0) * 1.12)
   const axisMax = Math.max(
     ceilingAnnual * 1.12,
+    floorAnnual * 1.12,
     (savedResult?.ceilingAnnual ?? 0) * 1.12,
     currentForecastSpend * 1.05,
     1
   )
-  const pct = (v: number) => Math.max(0, Math.min(100, (v / axisMax) * 100))
+  const span = axisMax - axisMin || 1
+  const pct = (v: number) => Math.max(0, Math.min(100, ((v - axisMin) / span) * 100))
+
+  // Bands are drawn from the lower of the two bounds to the higher, so the same
+  // code path handles a normal range and an inverted one.
+  const lo = Math.min(floorAnnual, ceilingAnnual)
+  const hi = Math.max(floorAnnual, ceilingAnnual)
+  const loPct = pct(lo)
+  const hiPct = pct(hi)
   const floorPct = pct(floorAnnual)
   const ceilingPct = pct(ceilingAnnual)
   const spendPct = pct(currentForecastSpend)
+  const zeroPct = axisMin < 0 ? pct(0) : null
 
   const showGhost =
     savedResult != null &&
@@ -85,8 +101,9 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
 
   const gapToFloor = floorAnnual - currentForecastSpend
   const gapToCeiling = currentForecastSpend - ceilingAnnual
-  const headline =
-    result.position === 'below_floor'
+  const headline = floorExceedsCeiling
+    ? `There is no sustainable range: committed spending of ${formatCurrency(floorAnnual)} already exceeds the ${formatCurrency(ceilingAnnual)} ceiling by ${formatCurrency(floorAnnual - ceilingAnnual)}.`
+    : result.position === 'below_floor'
       ? `Forecast spend is ${formatCurrency(gapToFloor)} below your sustainable floor — you can afford to spend more.`
       : result.position === 'in_range'
         ? 'Forecast spend sits comfortably within your sustainable range.'
@@ -116,6 +133,35 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
+        {floorExceedsCeiling && (
+          <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs space-y-1.5">
+            <p className="flex items-center gap-1.5 font-semibold text-red-600">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Inverted range
+            </p>
+            <p className="text-muted-foreground">
+              The floor sits above the ceiling, so no spending level satisfies both. Everything
+              between {formatCurrency(ceilingAnnual)} and {formatCurrency(floorAnnual)} is
+              contractually committed but erodes real net worth. Closing the gap needs some
+              combination of higher returns, lower commitments, or more inflows — the amber band
+              below is the size of the problem.
+            </p>
+          </div>
+        )}
+        {!floorExceedsCeiling && ceilingAnnual < 0 && (
+          <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs space-y-1.5">
+            <p className="flex items-center gap-1.5 font-semibold text-red-600">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Negative ceiling
+            </p>
+            <p className="text-muted-foreground">
+              The real after-tax return is negative and large enough to outweigh inflows. Preserving
+              real net worth would require adding {formatCurrency(Math.abs(ceilingAnnual))} a year
+              rather than spending anything.
+            </p>
+          </div>
+        )}
+
         {/* Range bar */}
         <div>
           <div className="flex justify-between text-sm mb-2">
@@ -126,17 +172,29 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
             <div className="absolute inset-0 rounded-full overflow-hidden bg-muted" aria-hidden>
               <div
                 className="absolute inset-y-0 left-0 bg-indigo-500/25 transition-all duration-300 ease-out"
-                style={{ width: `${floorPct}%` }}
+                style={{ width: `${loPct}%` }}
               />
               <div
-                className="absolute inset-y-0 bg-green-500/40 transition-all duration-300 ease-out"
-                style={{ left: `${floorPct}%`, width: `${Math.max(0, ceilingPct - floorPct)}%` }}
+                className={cn(
+                  'absolute inset-y-0 transition-all duration-300 ease-out',
+                  floorExceedsCeiling ? 'bg-amber-500/40' : 'bg-green-500/40'
+                )}
+                style={{ left: `${loPct}%`, width: `${Math.max(0, hiPct - loPct)}%` }}
               />
               <div
                 className="absolute inset-y-0 bg-red-500/25 transition-all duration-300 ease-out"
-                style={{ left: `${ceilingPct}%`, width: `${Math.max(0, 100 - ceilingPct)}%` }}
+                style={{ left: `${hiPct}%`, width: `${Math.max(0, 100 - hiPct)}%` }}
               />
             </div>
+            {/* Zero line, only when the axis extends below it */}
+            {zeroPct != null && (
+              <div
+                className="absolute top-0 bottom-0 w-px bg-foreground/30 z-10"
+                style={{ left: `${zeroPct}%` }}
+                title="Zero"
+                aria-hidden
+              />
+            )}
             {/* Ghost markers for the saved-assumptions range */}
             {showGhost && savedResult && (
               <>
@@ -178,13 +236,13 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
           <div className="relative mt-2 h-4 text-[11px] text-muted-foreground" aria-hidden>
             <span
               className="absolute -translate-x-1/2 tabular-nums text-indigo-600 font-medium transition-all duration-300 ease-out"
-              style={{ left: `${Math.max(5, floorPct)}%` }}
+              style={{ left: `${Math.min(95, Math.max(5, floorPct))}%` }}
             >
               {formatCurrency(floorAnnual)}
             </span>
             <span
               className="absolute -translate-x-1/2 tabular-nums text-red-600 font-medium transition-all duration-300 ease-out"
-              style={{ left: `${Math.min(95, ceilingPct)}%` }}
+              style={{ left: `${Math.min(95, Math.max(5, ceilingPct))}%` }}
             >
               {formatCurrency(ceilingAnnual)}
             </span>
@@ -205,7 +263,9 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
             </p>
             <p className="text-xs tabular-nums text-muted-foreground">{formatMonthly(floorAnnual)}</p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              Spend less and you out-save your goal
+              {result.floorClampedToCommitted
+                ? 'Your committed recurring spend'
+                : 'Spend less and you out-save your goal'}
             </p>
             {showGhost && savedResult && Math.abs(savedResult.floorAnnual - floorAnnual) > 1 && (
               <p className="text-[11px] tabular-nums text-muted-foreground mt-0.5">
@@ -234,7 +294,9 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
               {formatMonthly(ceilingAnnual)}
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              Most you can spend and preserve real net worth
+              {ceilingAnnual < 0
+                ? 'Real returns are negative — any spending erodes capital'
+                : 'Most you can spend and preserve real net worth'}
             </p>
             {showGhost && savedResult && Math.abs(savedResult.ceilingAnnual - ceilingAnnual) > 1 && (
               <p className="text-[11px] tabular-nums text-muted-foreground mt-0.5">
