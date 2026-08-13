@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import {
-  ASSET_RETURN_CATEGORIES,
+  EDITABLE_RETURN_CATEGORIES,
   MAX_NOMINAL_RETURN,
+  MIN_NOMINAL_RETURN,
   type ReturnAssumptions,
 } from '@/lib/return-assumptions'
 import { ChevronDown } from 'lucide-react'
@@ -37,7 +38,8 @@ function updateRate(
   pctValue: string
 ): ReturnAssumptions | null {
   const decimal = pctToDecimal(pctValue)
-  if (decimal == null || decimal < 0 || decimal > MAX_NOMINAL_RETURN) return null
+  // Negative rates are valid. A floor of zero cannot express a drawdown year.
+  if (decimal == null || decimal < MIN_NOMINAL_RETURN || decimal > MAX_NOMINAL_RETURN) return null
 
   if (key === 'defaultNominalReturn') {
     return { ...current, defaultNominalReturn: decimal }
@@ -92,7 +94,7 @@ export function NominalReturnsEditor({
               <Input
                 id={`${idPrefix}-default`}
                 type="number"
-                min="0"
+                min={MIN_NOMINAL_RETURN * 100}
                 max={MAX_NOMINAL_RETURN * 100}
                 step="0.1"
                 value={decimalToPct(value.defaultNominalReturn)}
@@ -106,7 +108,7 @@ export function NominalReturnsEditor({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {ASSET_RETURN_CATEGORIES.map((category) => (
+            {EDITABLE_RETURN_CATEGORIES.map((category) => (
               <div key={category} className="space-y-1.5">
                 <Label htmlFor={`${idPrefix}-${category}`} className="text-xs">
                   {category}
@@ -115,7 +117,7 @@ export function NominalReturnsEditor({
                   <Input
                     id={`${idPrefix}-${category}`}
                     type="number"
-                    min="0"
+                    min={MIN_NOMINAL_RETURN * 100}
                     max={MAX_NOMINAL_RETURN * 100}
                     step="0.1"
                     value={decimalToPct(
