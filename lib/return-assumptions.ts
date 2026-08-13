@@ -64,9 +64,6 @@ export const DEFAULT_EFFECTIVE_TAX_RATE = 0.3
  * Effective tax on investment return by category. UK arising basis, US filer.
  * Retirement is zero because Roth withdrawals are untaxed and pension growth is
  * gross-rolled; House is zero on the assumption of main-residence relief.
- *
- * NOTE: these are one user's rates. If this ships to anyone else they need to
- * become per-user configuration rather than module constants.
  */
 export const EFFECTIVE_TAX_RATES: Record<string, number> = {
   Cash: 0.45,
@@ -75,6 +72,10 @@ export const EFFECTIVE_TAX_RATES: Record<string, number> = {
   Brokerage: 0.28,
   Retirement: 0.0,
   'Alt Inv': 0.2,
+  // 45% assumes the funds are NOT UK reporting funds, so gains are taxed as
+  // income rather than at CGT rates. If reporting-fund status is confirmed these
+  // drop to roughly 0.238, worth about GBP 20k a year on the Base profile — more
+  // than the spread between most of these scenarios.
   'Taconic Credit Opps': 0.45,
   'Taconic Merger Arb': 0.45,
   'Taconic Opportunity': 0.45,
@@ -110,7 +111,9 @@ export const RETURN_ASSUMPTIONS_BY_PROFILE: Record<ReturnProfile, ReturnAssumpti
     effectiveTaxRates: EFFECTIVE_TAX_RATES,
   },
   // Probability-weighted centre. Calibrated against realised attribution rather
-  // than interpolated between the other two profiles.
+  // than interpolated between the other two profiles: over the two quarters to
+  // 30 Jun 2026 the restructured Taconic block returned +4.0% annualised and the
+  // legacy dislocation vehicles -2.8%, for a blended Taconic 1.8%.
   Expected: {
     defaultNominalReturn: 0.03,
     defaultEffectiveTaxRate: DEFAULT_EFFECTIVE_TAX_RATE,
