@@ -28,8 +28,17 @@ export type TodayPageData = {
   totalSpentToday: number
   /** Sum of annual budgets for all expense categories (positive number, GBP). */
   expensesBudgetTotal: number
-  /** Current gap to expenses budget using the start-of-day forecast (today's day fraction, YTD excludes today's spend). Positive = under budget. */
+  /**
+   * Current gap to expenses budget using the start-of-day forecast (today's day
+   * fraction, YTD excludes today's spend).
+   *
+   * SIGN CONVENTION: gap = annualBudget - forecast, and expense budgets and
+   * forecasts are both negative, so a budget of -21,000 against a forecast of
+   * -22,676 gives +1,676. Positive therefore means OVER budget, matching
+   * Analysis > Forecast Evolution. Reading positive as "under" is the natural
+   * mistake and it shipped once already.
+   */
   gapToBudgetCurrent: number | null
-  /** Gap to expenses budget at current YTD: expensesBudgetTotal - totalForecastAtCurrentYtd. Uses same day fraction as Dashboard. */
+  /** Gap to expenses budget at current YTD. Same sign convention as `gapToBudgetCurrent`: positive = over budget. */
   gapToBudgetIfNoMoreSpend: number | null
 }

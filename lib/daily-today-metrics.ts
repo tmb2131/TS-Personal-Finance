@@ -69,7 +69,10 @@ export function sumExpenseForecastFromSnapshot(snapshot: SnapshotByCategory): nu
   return total
 }
 
-/** Sum expense gap (budget − forecast) per category. */
+/**
+ * Sum expense gap (budget − forecast) per category.
+ * Expense budgets and forecasts are negative, so positive = over budget.
+ */
 export function sumExpenseGapFromSnapshot(snapshot: SnapshotByCategory): number {
   let total = 0
   for (const [category, values] of snapshot) {

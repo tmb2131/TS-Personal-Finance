@@ -15,7 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { KPICard } from '@/components/kpi-card'
-import { TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
+import { TRUST_EXCLUSION_LABEL, excludeTrustAccounts } from '@/lib/trust-exclusions'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { AccountBalance } from '@/lib/types'
 import { parseLocalDate, todayLocalDateString } from '@/lib/date-utils'
@@ -284,20 +284,28 @@ export function AccountsOverview() {
     return accounts.some((acc) => Math.abs(acc.balance_family_local) > 0)
   }, [accounts])
 
-  // Calculate summary metrics
-  const totalNetWorth = accounts.reduce((sum, acc) => {
+  // Calculate summary metrics.
+  //
+  // These three cards carry TRUST_EXCLUSION_LABEL, so they have to actually
+  // exclude trust capital. Liquid assets did so incidentally (Trust is neither
+  // Cash nor Brokerage), but net worth and illiquid assets were summing every
+  // account while claiming otherwise — Position read £11.8m against Home's
+  // £7.2m for the same figure under the same label.
+  const spendableAccounts = excludeTrustAccounts(accounts)
+
+  const totalNetWorth = spendableAccounts.reduce((sum, acc) => {
     const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
     return sum + converted
   }, 0)
 
-  const liquidAssets = accounts
+  const liquidAssets = spendableAccounts
     .filter((acc) => ['Cash', 'Brokerage'].includes(acc.category))
     .reduce((sum, acc) => {
       const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
       return sum + converted
     }, 0)
 
-  const illiquidAssets = accounts
+  const illiquidAssets = spendableAccounts
     .filter((acc) => !['Cash', 'Brokerage'].includes(acc.category))
     .reduce((sum, acc) => {
       const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
@@ -444,6 +452,11 @@ export function AccountsOverview() {
       <Card className="md:hidden">
         <CardHeader className="px-4 py-3 pb-2">
           <CardTitle className="text-base">Account Category Summary</CardTitle>
+          {hasTrustAccounts && (
+            <p className="text-meta text-muted-foreground">
+              Totals include trust capital, unlike the figures above.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="p-4 pt-2 md:pt-2 space-y-3">
           <div className="rounded-lg border bg-muted/30 p-3">
@@ -538,6 +551,11 @@ export function AccountsOverview() {
         <Card>
           <CardHeader className="px-4 py-3 pb-4">
             <CardTitle className="text-base">Account Category Summary</CardTitle>
+            {hasTrustAccounts && (
+              <p className="text-meta text-muted-foreground">
+                Totals include trust capital, unlike the figures above.
+              </p>
+            )}
           </CardHeader>
           <CardContent className="p-4 pt-2 md:pt-2">
             <Table className={compactTable}>

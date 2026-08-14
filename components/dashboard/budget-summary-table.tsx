@@ -102,11 +102,14 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     )
   }, [totals])
 
+  // The sign goes in front of the symbol: -£36.7k, never £-36.7k. Callers that
+  // render accounting-style parentheses pass an absolute value already.
   const formatCurrency = (value: number) => {
     // Always format as £0.0k (divide by 1000, show 1 decimal place)
-    const valueInK = value / 1000
+    const valueInK = Math.abs(value) / 1000
     const currencySymbol = currency === 'USD' ? '$' : '£'
-    return `${currencySymbol}${valueInK.toFixed(1)}k`
+    const sign = value < 0 ? '-' : ''
+    return `${sign}${currencySymbol}${valueInK.toFixed(1)}k`
   }
 
   const renderCurrencyAligned = (value: number) => {
@@ -132,8 +135,9 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
   const formatCurrencyLarge = (value: number) => {
     const valueInM = Math.abs(value) / 1000000
     const currencySymbol = currency === 'USD' ? '$' : '£'
+    const sign = value < 0 ? '-' : ''
     if (valueInM >= 1) {
-      return `${currencySymbol}${valueInM.toFixed(1)}M`
+      return `${sign}${currencySymbol}${valueInM.toFixed(1)}M`
     }
     return formatCurrency(value)
   }

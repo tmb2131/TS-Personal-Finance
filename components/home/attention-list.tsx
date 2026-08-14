@@ -10,6 +10,13 @@ const CATEGORY_OVER_BUDGET_THRESHOLD = 0.2
 const STALE_SYNC_HOURS = 48
 /** Below this, a percentage overshoot is noise rather than a decision. */
 const NOISE_FLOOR_GBP = 500
+/**
+ * A percentage is only meaningful against a real budget. Placeholder targets of
+ * a few pence otherwise dominate: Reimbursable carries a £0.10 budget, which
+ * turned a £511 overshoot into "tracking 510828% over budget" at the top of the
+ * list, and pushed the largest actual overspend off it.
+ */
+const MIN_MEANINGFUL_BUDGET_GBP = 500
 const MAX_ITEMS = 3
 
 export type ForecastCategoryRow = {
@@ -24,6 +31,14 @@ type AttentionItem = {
   text: string
   href: string
 }
+
+/** Home reports in sterling; these rows are already GBP. */
+const gbpFormat = new Intl.NumberFormat('en-GB', {
+  style: 'currency',
+  currency: 'GBP',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+})
 
 /**
  * Zero to three items, and only when genuinely actionable.
@@ -62,17 +77,21 @@ export function AttentionList({
       })
       .filter(
         (row) =>
-          row.budget > 0 &&
+          row.budget >= MIN_MEANINGFUL_BUDGET_GBP &&
           row.overBy > NOISE_FLOOR_GBP &&
           row.overBy / row.budget > CATEGORY_OVER_BUDGET_THRESHOLD,
       )
-      .sort((a, b) => b.overBy / b.budget - a.overBy / a.budget)
+      // Rank by how much money is involved, not by ratio. Three items is a
+      // short list, and £22k over on a large budget is a bigger call than 98%
+      // over on a small one.
+      .sort((a, b) => b.overBy - a.overBy)
 
     const year = new Date().getFullYear()
     for (const row of overBudget) {
+      const percent = Math.round((row.overBy / row.budget) * 100)
       result.push({
         id: `over-${row.category}`,
-        text: `${row.category} is tracking ${Math.round((row.overBy / row.budget) * 100)}% over budget`,
+        text: `${row.category} is tracking ${gbpFormat.format(row.overBy)} (${percent}%) over budget`,
         href: `/spending?section=transaction-analysis&period=YTD&year=${year}&category=${encodeURIComponent(row.category)}`,
       })
     }

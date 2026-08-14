@@ -37,12 +37,13 @@ export function TodayHeroSummary({
 
   const symbol = currency === 'USD' ? '$' : '£'
 
+  // The sign belongs in front of the symbol: -£313, never £-313.
   const fmt = (value: number) => {
     const abs = Math.abs(value)
-    if (abs >= 1_000_000) return `${symbol}${(value / 1_000_000).toFixed(1)}M`
-    if (abs >= 10_000) return `${symbol}${(value / 1_000).toFixed(1)}k`
-    if (abs >= 1_000) return `${symbol}${(value / 1_000).toFixed(1)}k`
-    return `${symbol}${Math.round(value)}`
+    const sign = value < 0 ? '-' : ''
+    if (abs >= 1_000_000) return `${sign}${symbol}${(abs / 1_000_000).toFixed(1)}M`
+    if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(1)}k`
+    return `${sign}${symbol}${Math.round(abs)}`
   }
 
   const fmtPrecise = (value: number) =>
@@ -194,10 +195,10 @@ export function TodayHeroSummary({
                 <span
                   className={cn(
                     'text-sm font-semibold num',
-                    gapNoMoreSpend >= 0 ? 'text-positive' : 'text-negative'
+                    gapNoMoreSpend > 0 ? 'text-negative' : 'text-positive'
                   )}
                 >
-                  {gapNoMoreSpend >= 0 ? 'Under' : 'Over'} {fmt(Math.abs(gapNoMoreSpend))}
+                  {gapNoMoreSpend > 0 ? 'Over' : 'Under'} {fmt(Math.abs(gapNoMoreSpend))}
                 </span>
               </div>
             )}

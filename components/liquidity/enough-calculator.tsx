@@ -275,11 +275,13 @@ export function EnoughCalculator() {
   ])
 
   const symbol = currency === 'USD' ? '$' : '£'
+  // The sign goes in front of the symbol: -£68.3k, never £-68.3k.
   const formatCompact = (v: number) => {
     const abs = Math.abs(v)
-    if (abs >= 1_000_000) return `${symbol}${(v / 1_000_000).toFixed(1)}M`
-    if (abs >= 1_000) return `${symbol}${(v / 1_000).toFixed(1)}k`
-    return `${symbol}${Math.round(v)}`
+    const sign = v < 0 ? '-' : ''
+    if (abs >= 1_000_000) return `${sign}${symbol}${(abs / 1_000_000).toFixed(1)}M`
+    if (abs >= 1_000) return `${sign}${symbol}${(abs / 1_000).toFixed(1)}k`
+    return `${sign}${symbol}${Math.round(abs)}`
   }
 
   const yearsLabel = (y: number) =>
