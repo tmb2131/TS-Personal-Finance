@@ -36,7 +36,7 @@ export async function GET() {
         .select('category, current_year_method, manual_year_forecast'),
       supabase
         .from('transaction_log')
-        .select('date, category, amount_gbp, amount_usd')
+        .select('date, category, counterparty, amount_gbp, amount_usd')
         .in('date', todayDateCandidates),
     ])
 

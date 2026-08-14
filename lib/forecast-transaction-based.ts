@@ -1,4 +1,4 @@
-import { isExpenseCategory } from '@/lib/category-filters'
+import { isExpenseCashFlowRow } from '@/lib/category-filters'
 import {
   computeExpenseYtdByCategory,
   computeTotalExpenseYtd,
@@ -22,7 +22,7 @@ import {
  * The current year's months 1..currentMonth are always actuals (YTD), regardless of method.
  */
 
-/** @deprecated Use isExpenseCategory() — kept for tests/docs referencing the set. */
+/** @deprecated Use isExpenseCashFlowRow() — kept for tests/docs referencing the set. */
 export const EXCLUDED_FROM_FORECAST = new Set([
   'Excluded',
   'Income',
@@ -275,7 +275,7 @@ export function buildMonthlyGrid(
   const txByCategory: CategoryTxIndex = {}
   for (const row of rows) {
     if (!row.category) continue
-    if (!isExpenseCategory(row.category)) continue
+    if (!isExpenseCashFlowRow(row)) continue
     const amount = normalizeAmountGBP(row.amount_gbp, row.amount_usd, gbpUsdRate)
     if (amount === 0) continue
     const date = toDateOnly(row.date)
@@ -1058,7 +1058,7 @@ function runBacktestForYear(
   const { grid: trainingGrid } = buildMonthlyGrid(trainingRows, gbpUsdRate)
   const trainingTxByCategory: CategoryTxIndex = {}
   for (const row of trainingRows) {
-    if (!row.category || !isExpenseCategory(row.category)) continue
+    if (!row.category || !isExpenseCashFlowRow(row)) continue
     const amt = normalizeAmountGBP(row.amount_gbp, row.amount_usd, gbpUsdRate)
     if (amt >= 0) continue
     trainingTxByCategory[row.category] ??= []

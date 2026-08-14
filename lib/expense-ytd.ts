@@ -1,8 +1,9 @@
-import { isExpenseCategory } from '@/lib/category-filters'
+import { isExpenseCategory, isNonCashCounterparty } from '@/lib/category-filters'
 import { todayLocalDateString } from '@/lib/date-utils'
 
 export type ExpenseYtdTx = {
   category: string | null
+  counterparty?: string | null
   date: string | Date | null | undefined | unknown
   amount_gbp: number | null
   amount_usd: number | null
@@ -62,6 +63,9 @@ export function computeExpenseYtdByCategory(
 
   for (const tx of rows) {
     if (!tx.category) continue
+    // Non-cash valuation entries never count, whether or not the caller has
+    // narrowed to expense categories.
+    if (isNonCashCounterparty(tx.counterparty)) continue
     if (expenseOnly && !isExpenseCategory(tx.category)) continue
     const dateStr = toDateOnly(tx.date)
     if (!dateStr || dateStr < startDate || dateStr > endDate) continue

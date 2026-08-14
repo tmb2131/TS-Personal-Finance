@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeManualYearForecast, getDefaultForecastMethods } from '@/lib/forecasting'
+import { isNonCashCounterparty } from '@/lib/category-filters'
 
 const INCOME_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 const PAGE_SIZE = 1000
@@ -30,6 +31,7 @@ type TimelineBudget = {
 
 type TxRow = {
   category: string
+  counterparty?: string | null
   date: string
   amount_gbp: number | null
   amount_usd: number | null
@@ -188,7 +190,7 @@ const fetchTransactionsPaged = async (
     const to = from + PAGE_SIZE - 1
     const { data, error } = await supabase
       .from('transaction_log')
-      .select('category, date, amount_gbp, amount_usd')
+      .select('category, counterparty, date, amount_gbp, amount_usd')
       .eq('user_id', userId)
       .gte('date', startDate)
       .lte('date', endDate)
@@ -409,6 +411,7 @@ export async function computeForecastSnapshotsForDates(
   const txByDateCategory = new Map<string, Map<string, number>>()
   for (const tx of txRows) {
     if (!tx.category) continue
+    if (isNonCashCounterparty(tx.counterparty)) continue
     const dateStr = toDateOnly(tx.date)
     if (!dateStr) continue
     categories.add(tx.category)

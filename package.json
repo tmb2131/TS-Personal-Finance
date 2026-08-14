@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --experimental-strip-types --test lib/__tests__/*.test.ts",
+    "test": "node --experimental-strip-types --import ./scripts/test-register-hooks.mjs --test lib/__tests__/*.test.ts",
     "eval:app-instructions": "node --experimental-strip-types scripts/eval-app-instructions.mjs"
   },
   "dependencies": {

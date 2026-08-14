@@ -1,4 +1,5 @@
-import { TransactionLog } from '@/lib/types'
+import type { TransactionLog } from '@/lib/types'
+import { isNonCashCounterparty } from '@/lib/category-filters'
 
 export interface DetectedRecurringPayment {
   counterpartyPattern: string
@@ -48,6 +49,9 @@ export function detectRecurringPayments(
   const filteredTransactions = transactions.filter((tx) => {
     if (!tx.date) return false
     if (EXCLUDED_CATEGORIES.includes(tx.category || '')) return false
+    // Mark-to-market entries recur on a schedule and would otherwise be detected
+    // as a recurring inflow.
+    if (isNonCashCounterparty(tx.counterparty_dedup ?? tx.counterparty)) return false
 
     const txDate = typeof tx.date === 'string' ? new Date(tx.date) : new Date(tx.date)
     txDate.setHours(0, 0, 0, 0)

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeExpenseYtdByCategory } from '@/lib/expense-ytd'
+import { isNonCashCounterparty } from '@/lib/category-filters'
 import { todayLocalDateString } from '@/lib/date-utils'
 import { ForecastSetting, AnnualTrend, MonthlyTrend } from '@/lib/types'
 
@@ -201,6 +202,7 @@ export function computeManualMonthForecast(
 
 export type TxRowForecast = {
   category: string
+  counterparty?: string | null
   date: unknown
   amount_gbp: number | null
   amount_usd: number | null
@@ -223,7 +225,7 @@ export async function fetchTransactionsPaged(
   const buildQuery = (from: number, to: number) =>
     supabase
       .from('transaction_log')
-      .select('category, date, amount_gbp, amount_usd', { count: 'exact' })
+      .select('category, counterparty, date, amount_gbp, amount_usd', { count: 'exact' })
       .eq('user_id', userId)
       .gte('date', startDate)
       .order('date', { ascending: true })
@@ -372,8 +374,9 @@ export async function computeAnnualTrends(
   // category -> ytd sum
   const ytd = new Map<string, number>()
 
-  ;(txRes || []).forEach((tx: { category: string; date: any; amount_gbp: number | null; amount_usd: number | null }) => {
+  ;(txRes || []).forEach((tx: TxRowForecast) => {
     if (!tx.category) return
+    if (isNonCashCounterparty(tx.counterparty)) return
     if (!isExpense(tx.category)) return
     const dateStr = toDateOnly(tx.date)
     if (!dateStr) return
@@ -479,8 +482,9 @@ export async function computeMonthlyTrends(
   // category -> monthKey -> sum
   const totals = new Map<string, Map<string, number>>()
 
-  ;(txRes || []).forEach((tx: { category: string; date: any; amount_gbp: number | null; amount_usd: number | null }) => {
+  ;(txRes || []).forEach((tx: TxRowForecast) => {
     if (!tx.category) return
+    if (isNonCashCounterparty(tx.counterparty)) return
     if (!isExpense(tx.category)) return
     const dateStr = toDateOnly(tx.date)
     if (!dateStr) return
