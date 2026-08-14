@@ -175,9 +175,27 @@ ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 
 ## Database Migrations
 
-There are currently **49** migrations (`001` through `049`).
+53 files, numbered `001` through `050` — three numbers were used twice and the
+colliding files carry a `b` suffix (`036b`, `037b`, `038b`).
 
-Next migration should be `050_*.sql`.
+**Next migration is `051_*.sql`.**
+
+The remote ledger (`supabase_migrations.schema_migrations`) matches these
+filenames exactly. Applying a migration through the MCP `apply_migration` tool
+mints a `YYYYMMDDHHMMSS` version instead of a number — rewrite it to match the
+filename afterwards, or the two drift apart.
+
+Two migrations are outstanding and deliberately not applied:
+
+- `030_add_budget_input_mode` — never ran. Leaves a dead
+  `user_profiles.budget_input_mode` column and 115 `budget_targets` rows stuck
+  on `data_source = 'google_sheet'`, which the CRUD routes will not let you
+  edit. None belong to the primary user. Applying it mutates other users' rows.
+- `036b_move_accounts_kids_recurring_to_app_inputs` — **do not apply.**
+  Superseded by `048`; the accounts importer now writes `google_sheet` rows on
+  purpose and scopes its delete-and-replace on that value.
+
+See `supabase/migrations/README.md` for the full picture.
 
 ## Deployment
 
