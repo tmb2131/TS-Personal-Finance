@@ -399,8 +399,17 @@ Key folders:
 ## Automation Shortcuts
 
 ### shipit
-1. Run `npm run build`.
-2. If build fails, fix errors and re-run until green.
+
+This is the **default** for every change, not a command that has to be asked
+for. Finish a piece of work, then ship it without waiting to be told:
+
+1. Run `npm run build`, plus `npx tsc --noEmit`, `npm run lint` and `npm test`.
+2. If anything fails, fix it and re-run until green.
 3. Stage changes.
-4. Commit with concise message.
-5. Push directly to `main`.
+4. Commit with a concise message explaining why, not just what.
+5. Push directly to `main`, rebasing onto `origin/main` first if it has moved.
+   Never force-push.
+
+Only hold off when the change is genuinely unfinished, or when it needs a
+decision that has not been made yet — in which case say so rather than
+leaving work sitting uncommitted.
