@@ -1,0 +1,4 @@
+      {/* Accounts — Mobile card layout */}
+      <div className="flex items-center justify-end gap-2">
+        <ImportAccountsButton />
+        {!bulkEditMode ? (
