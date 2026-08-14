@@ -1,7 +1,7 @@
 'use client'
 
 import { CurrencyToggle } from './currency-toggle'
-import { SyncStatusPill } from './sync-status-pill'
+import { DataStatus } from './data-status'
 import { Button } from './ui/button'
 import { RefreshCw, Plus } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -20,14 +20,7 @@ const HIDE_MIN_DISTANCE_FROM_BOTTOM_PX = 180
 
 export function Header({ initialData: _initialData }: { initialData?: HeaderStatus | null }) {
   const isMobile = useIsMobile()
-  const {
-    syncing,
-    handleSync,
-    latestTransactionDate,
-    maxAccountDate,
-    ingestionStatus,
-    formatDate,
-  } = useSync()
+  const { syncing, handleSync, ingestionStatus } = useSync()
   const [mounted, setMounted] = useState(false)
   const [headerVisible, setHeaderVisible] = useState(true)
   const [scrolled, setScrolled] = useState(false)
@@ -70,65 +63,42 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
   return (
     <header
       className={cn(
-        'z-40 flex min-h-16 shrink-0 items-center justify-between border-b bg-background/95 px-3 pt-[env(safe-area-inset-top,0px)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6 md:pt-0 transition-transform duration-200 ease-out',
+        'z-40 flex min-h-16 shrink-0 items-center justify-between gap-3 border-b bg-background/85 px-3 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md supports-[backdrop-filter]:bg-background/70 md:px-6 md:pt-0 transition-[transform,box-shadow] duration-200 ease-out',
         isMobile && !headerVisible && '-translate-y-full -mt-16',
-        isMobile && scrolled && headerVisible && 'shadow-sm'
+        scrolled && headerVisible && 'shadow-card'
       )}
     >
-      <div className="flex min-w-0 items-center gap-1.5 md:gap-4">
+      {/* Left: is the data current, and can I make it current. Everything else
+          that used to live here is now behind the status pill. */}
+      <div className="flex min-w-0 items-center gap-2">
         <Button
           variant="outline"
           size="sm"
           onClick={handleSync}
           disabled={syncing || (!!ingestionStatus && !ingestionStatus.sheetConnected)}
-          className="h-9 gap-1.5 px-2 text-xs md:px-3 md:text-sm"
-          title={ingestionStatus && !ingestionStatus.sheetConnected ? 'Connect a Google Sheet source in Settings to enable refresh.' : undefined}
+          className="gap-1.5 px-2.5 md:px-3"
+          title={
+            ingestionStatus && !ingestionStatus.sheetConnected
+              ? 'Connect a Google Sheet source in Settings to enable refresh.'
+              : undefined
+          }
         >
-          <RefreshCw className={`h-3 w-3 md:h-4 md:w-4 ${syncing ? 'animate-spin' : ''}`} />
-          {mounted ? (
-            <>
-              <span className="hidden md:inline">Refresh Sheet</span>
-              <span className="md:hidden">Sheet</span>
-            </>
-          ) : (
-            <>
-              <span className="hidden md:inline">Refresh Sheet</span>
-              <span className="md:hidden">Sheet</span>
-            </>
-          )}
+          <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
+          <span className="hidden md:inline">Refresh</span>
         </Button>
-        
-        {mounted && (
-          <>
-            <SyncStatusPill className="md:hidden" />
-            <div className="hidden min-w-0 items-center gap-2 md:flex md:gap-3 lg:gap-4">
-              <SyncStatusPill />
-              <div className="hidden text-xs text-muted-foreground md:block">
-                <span className="font-medium">Sources:</span>{' '}
-                <span className="text-foreground">{ingestionStatus?.connectedSources ?? 0}</span>
-              </div>
-              <div className="hidden text-xs text-muted-foreground lg:block">
-                <span className="font-medium">Latest Transaction:</span>{' '}
-                <span className="text-foreground">{formatDate(latestTransactionDate)}</span>
-              </div>
-              <div className="hidden text-xs text-muted-foreground lg:block">
-                <span className="font-medium">Latest Account:</span>{' '}
-                <span className="text-foreground">{formatDate(maxAccountDate)}</span>
-              </div>
-            </div>
-          </>
-        )}
+
+        {mounted && <DataStatus />}
       </div>
-      {/* Sync status, refresh, currency chip, quick add. Theme and log out
-          moved to Settings — neither is frequent enough to hold permanent chrome. */}
-      <div className="flex items-center gap-1.5 md:gap-2">
+
+      {/* Right: currency chip and quick add. Theme and log out moved to
+          Settings — neither is frequent enough to hold permanent chrome. */}
+      <div className="flex shrink-0 items-center gap-2">
         <CurrencyToggle />
         <Button
           type="button"
-          variant="outline"
           size="sm"
           onClick={() => window.dispatchEvent(new Event('findash:open-quick-add'))}
-          className="h-9 min-h-[44px] gap-1.5 px-3 text-meta md:min-h-0"
+          className="min-h-[44px] gap-1.5 px-3 md:min-h-0"
           title="Quick add"
           aria-label="Quick add"
         >

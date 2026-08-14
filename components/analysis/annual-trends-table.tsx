@@ -304,7 +304,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
     // Positive delta (>= 0) = spending decreased = green
     // Negative delta (< 0) = spending increased = red
     const deltaVs4yrAvg = row.cur_yr_est_vs_4yr_avg
-    const lineColor = deltaVs4yrAvg >= 0 ? '#22c55e' : '#ef4444' // green-500 or red-500
+    const lineColor = deltaVs4yrAvg >= 0 ? 'hsl(var(--positive))' : 'hsl(var(--negative))' // green-500 or red-500
 
     // Calculate min/max for scaling
     const values = sparklineData.map((d) => d.value)
@@ -488,7 +488,7 @@ export function AnnualTrendsTable({ initialData, initialFxRate, initialRatesByYe
     <Card>
       <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Annual Trends</CardTitle>
+          <CardTitle>Annual Trends</CardTitle>
           <div className="flex items-center gap-2">
             <CategoryPlanningDialog triggerLabel="Edit Planning" title="Edit Category Planning" />
             <FullTableViewToggle

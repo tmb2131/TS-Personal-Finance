@@ -235,15 +235,15 @@ export function YoYNetWorthWaterfall() {
   const getBarColor = (type: string) => {
     switch (type) {
       case 'positive':
-        return '#22c55e' // Green for increase
+        return 'hsl(var(--positive))' // Green for increase
       case 'negative':
-        return '#ef4444' // Red for decrease
+        return 'hsl(var(--negative))' // Red for decrease
       case 'net-positive':
-        return '#16a34a' // Darker green for net positive
+        return 'hsl(var(--positive))' // Darker green for net positive
       case 'net-negative':
-        return '#dc2626' // Darker red for net negative
+        return 'hsl(var(--negative))' // Darker red for net negative
       default:
-        return '#6b7280'
+        return 'hsl(var(--chart-axis))'
     }
   }
 
@@ -284,7 +284,7 @@ export function YoYNetWorthWaterfall() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
+          <CardTitle>Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -301,7 +301,7 @@ export function YoYNetWorthWaterfall() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
+          <CardTitle>Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -333,7 +333,7 @@ export function YoYNetWorthWaterfall() {
       <CardHeader>
         <div className="flex flex-col gap-3">
           <div>
-            <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
+            <CardTitle>Forecast Net Worth Change</CardTitle>
             {bridgeSubtitle && (
               <p className="text-sm text-muted-foreground mt-1">{bridgeSubtitle}</p>
             )}
@@ -420,7 +420,7 @@ export function YoYNetWorthWaterfall() {
                       y={0}
                       dy={16}
                       textAnchor="end"
-                      fill={isNetChange ? (chartTheme.isDark ? '#f3f4f6' : '#000') : chartTheme.labelFill}
+                      fill={isNetChange ? (chartTheme.isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))') : chartTheme.labelFill}
                       fontSize={fontSizes.axisTick}
                       fontWeight={isNetChange ? 'bold' : 'normal'}
                       transform="rotate(-45)"
@@ -442,7 +442,7 @@ export function YoYNetWorthWaterfall() {
             {/* Series A: transparent spacer (pedestal) so visible bar starts at running total */}
             <Bar dataKey="min" stackId="waterfall" fill="transparent" stroke="none" />
             {/* Series B: visible delta bar, colored by increase/decrease */}
-            <Bar dataKey="delta" stackId="waterfall" radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} minPointSize={2}>
+            <Bar dataKey="delta" stackId="waterfall" radius={[4, 4, 0, 0]} stroke="hsl(var(--card))" strokeWidth={1} minPointSize={2}>
               {waterfallData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getBarColor(entry.type)} />
               ))}

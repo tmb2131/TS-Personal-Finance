@@ -119,17 +119,17 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     switch (type) {
       case 'start':
       case 'end':
-        return '#6b7280'
+        return 'hsl(var(--chart-axis))'
       case 'end_improved':
-        return '#15803d'
+        return 'hsl(var(--positive))'
       case 'end_worsened':
-        return '#b91c1c'
+        return 'hsl(var(--negative))'
       case 'negative':
-        return '#22c55e'
+        return 'hsl(var(--positive))'
       case 'positive':
-        return '#ef4444'
+        return 'hsl(var(--negative))'
       default:
-        return '#6b7280'
+        return 'hsl(var(--chart-axis))'
     }
   }
 
@@ -168,7 +168,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Forecast Evolution</CardTitle>
+          <CardTitle>Forecast Evolution</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -185,7 +185,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Forecast Evolution</CardTitle>
+          <CardTitle>Forecast Evolution</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -252,7 +252,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
       <CardHeader>
         <div className="flex flex-col gap-3">
           <div>
-            <CardTitle className="text-xl">Forecast Evolution</CardTitle>
+            <CardTitle>Forecast Evolution</CardTitle>
             <p className="text-sm text-muted-foreground mt-0.5">{periodLabel}</p>
           </div>
           <div className={cn("rounded-lg border border-border bg-background p-3 shadow-sm", netChange < 0 ? "border-l-[3px] border-l-positive" : netChange > 0 ? "border-l-[3px] border-l-negative" : "")}>
@@ -346,7 +346,7 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
               dataKey="delta"
               stackId="bridge"
               radius={[4, 4, 0, 0]}
-              stroke="#fff"
+              stroke="hsl(var(--card))"
               strokeWidth={1}
               minPointSize={2}
             >

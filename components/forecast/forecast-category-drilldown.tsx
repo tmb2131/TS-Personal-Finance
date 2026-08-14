@@ -122,7 +122,7 @@ export function ForecastCategoryDrilldown({
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
         <div>
-          <CardTitle className="text-lg md:text-xl">{category} — methodology comparison</CardTitle>
+          <CardTitle className="md:">{category} — methodology comparison</CardTitle>
           <p className="text-xs text-muted-foreground">
             Actuals through {MONTH_LABELS[Math.max(0, data.currentMonth - 1)]} {data.year}, then each
             methodology&apos;s remaining-month forecast.
@@ -161,7 +161,7 @@ export function ForecastCategoryDrilldown({
                 type="monotone"
                 dataKey="high"
                 stroke="none"
-                fill="#6366f1"
+                fill="hsl(var(--chart-2))"
                 fillOpacity={0.12}
                 connectNulls={false}
                 isAnimationActive={false}
@@ -171,7 +171,7 @@ export function ForecastCategoryDrilldown({
                 type="monotone"
                 dataKey="low"
                 stroke="none"
-                fill={chartTheme.isDark ? '#0b0f1a' : '#ffffff'}
+                fill={chartTheme.isDark ? 'hsl(var(--background))' : 'hsl(var(--background))'}
                 fillOpacity={1}
                 connectNulls={false}
                 isAnimationActive={false}
@@ -181,14 +181,14 @@ export function ForecastCategoryDrilldown({
                 type="monotone"
                 dataKey="actual"
                 name="Actual"
-                stroke="#10b981"
+                stroke="hsl(var(--positive))"
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 connectNulls={false}
               />
-              <Line type="monotone" dataKey="m1" name="M1 Seasonal" stroke="#6366f1" strokeWidth={2} dot={false} connectNulls={false} />
-              <Line type="monotone" dataKey="m2" name="M2 Seasonal+Trend" stroke="#f59e0b" strokeWidth={2} dot={false} connectNulls={false} />
-              <Line type="monotone" dataKey="m3" name="M3 Fixed+Variable" stroke="#ec4899" strokeWidth={2} dot={false} connectNulls={false} />
+              <Line type="monotone" dataKey="m1" name="M1 Seasonal" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} connectNulls={false} />
+              <Line type="monotone" dataKey="m2" name="M2 Seasonal+Trend" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={false} connectNulls={false} />
+              <Line type="monotone" dataKey="m3" name="M3 Fixed+Variable" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={false} connectNulls={false} />
               <ReferenceLine
                 x={MONTH_LABELS[Math.max(0, data.currentMonth - 1)]}
                 stroke={chartTheme.axisStroke}

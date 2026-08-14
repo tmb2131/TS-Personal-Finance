@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
+import { Check, ChevronRight } from 'lucide-react'
 import { isExpenseCategory } from '@/lib/category-filters'
 
 /** A category must be this far past its annual budget before it is worth raising. */
@@ -100,15 +101,32 @@ export function AttentionList({
   }, [lastSyncAt, forecastByCategory])
 
   if (items.length === 0) {
-    return <p className="text-body text-muted-foreground mt-1">Nothing needs attention.</p>
+    return (
+      <p className="mt-2 flex items-center gap-2 text-body text-muted-foreground">
+        <Check className="h-4 w-4 shrink-0 text-positive" aria-hidden />
+        Nothing needs attention.
+      </p>
+    )
   }
 
+  /* Full-width rows rather than inline underlined text. Each item is a
+     destination, so the whole row is the target and the chevron says so —
+     three underlined sentences in a stack read as prose you are meant to
+     finish, not as a queue you are meant to work through. */
   return (
-    <ul className="mt-1 space-y-1.5">
+    <ul className="mt-2 -mx-2">
       {items.map((item) => (
-        <li key={item.id} className="text-body">
-          <Link href={item.href} className="underline underline-offset-4 hover:no-underline">
-            {item.text}
+        <li key={item.id}>
+          <Link
+            href={item.href}
+            className="group flex items-center gap-3 rounded-md px-2 py-2.5 text-body transition-colors hover:bg-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-negative"
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1">{item.text}</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-foreground" />
           </Link>
         </li>
       ))}

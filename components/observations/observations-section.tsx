@@ -24,7 +24,7 @@ export function ObservationsSection({ allocation, spending }: ObservationsSectio
       <CardHeader>
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <CardTitle className="text-lg md:text-xl">What your data shows</CardTitle>
+            <CardTitle className="md:">What your data shows</CardTitle>
             <p className="text-xs md:text-sm text-muted-foreground mt-1">
               Top 5 observations from your own data, ranked by magnitude.
             </p>

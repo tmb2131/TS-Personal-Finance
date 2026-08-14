@@ -181,7 +181,7 @@ export function MonthlyCategoryTrendsSection() {
     <Card id="monthly-category-trends" className="scroll-mt-24">
       <CardHeader className="px-4 py-3 pb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle className="text-base">Trends by Category</CardTitle>
+          <CardTitle>Trends by Category</CardTitle>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="inline-flex rounded-md border border-input bg-background p-0.5">
               <button

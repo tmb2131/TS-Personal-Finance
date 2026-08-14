@@ -94,7 +94,7 @@ export function ForecastCategoryTable({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg md:text-xl">Forecast by category</CardTitle>
+        <CardTitle className="md:">Forecast by category</CardTitle>
         <p className="text-xs text-muted-foreground">
           Click a category to see its full history and remaining-month forecast lines.
         </p>

@@ -28,10 +28,10 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { AlertCircle, ListIcon } from 'lucide-react'
 
 const RISK_COLORS: Record<string, string> = {
-  Conservative: '#10b981',
-  Moderate: '#3b82f6',
-  Aggressive: '#ef4444',
-  Unknown: '#94a3b8',
+  Conservative: 'hsl(var(--positive))',
+  Moderate: 'hsl(var(--chart-1))',
+  Aggressive: 'hsl(var(--negative))',
+  Unknown: 'hsl(var(--chart-axis))',
 }
 
 interface RiskGroup {

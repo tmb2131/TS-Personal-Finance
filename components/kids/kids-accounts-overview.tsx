@@ -281,7 +281,7 @@ export function KidsAccountsOverview() {
     return (
       <Card>
         <CardHeader className="px-4 py-3 pb-4">
-          <CardTitle className="text-base">Kids Accounts</CardTitle>
+          <CardTitle>Kids Accounts</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -298,7 +298,7 @@ export function KidsAccountsOverview() {
     return (
       <Card>
         <CardHeader className="px-4 py-3 pb-4">
-          <CardTitle className="text-base">Kids Accounts</CardTitle>
+          <CardTitle>Kids Accounts</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -338,7 +338,7 @@ export function KidsAccountsOverview() {
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
                   <User className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <CardTitle className="text-lg">{summary.childName}</CardTitle>
+                <CardTitle>{summary.childName}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -397,7 +397,7 @@ export function KidsAccountsOverview() {
             {/* Account Type Summary — Mobile cards */}
             <Card className="md:hidden">
               <CardHeader className="px-4 py-3 pb-2">
-                <CardTitle className="text-base">Account Type Summary</CardTitle>
+                <CardTitle>Account Type Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="rounded-lg border bg-muted/30 p-3 min-h-[44px]">
@@ -423,7 +423,7 @@ export function KidsAccountsOverview() {
             {/* Account Type Summary Table — Desktop */}
             <Card className="hidden md:block">
               <CardHeader className="px-4 py-3 pb-4">
-                <CardTitle className="text-base">Account Type Summary</CardTitle>
+                <CardTitle>Account Type Summary</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -491,7 +491,7 @@ export function KidsAccountsOverview() {
             <Card className="md:hidden">
               <CardHeader className="px-4 py-3 pb-2">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Account Details</CardTitle>
+                  <CardTitle>Account Details</CardTitle>
                   <div className="flex items-center gap-2">{bulkEditActions}</div>
                 </div>
               </CardHeader>
@@ -575,7 +575,7 @@ export function KidsAccountsOverview() {
             <Card className="hidden md:block">
               <CardHeader className="px-4 py-3 pb-4">
                 <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base">Account Details</CardTitle>
+                  <CardTitle>Account Details</CardTitle>
                   <div className="flex items-center gap-2">{bulkEditActions}</div>
                 </div>
               </CardHeader>

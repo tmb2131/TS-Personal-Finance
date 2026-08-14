@@ -527,7 +527,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
       <Card id="expenses-table">
         <CardHeader className="px-4 py-3 pb-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <CardTitle className="text-base">Expenses</CardTitle>
+            <CardTitle>Expenses</CardTitle>
             <div className="flex items-center gap-2">
               <FullTableViewToggle
                 fullView={expenseFullView}

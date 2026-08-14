@@ -410,7 +410,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
     // Positive delta (>= 0) = spending decreased = green
     // Negative delta (< 0) = spending increased = red
     const deltaVsL3m = row.delta_vs_l3m
-    const lineColor = deltaVsL3m >= 0 ? '#22c55e' : '#ef4444' // green-500 or red-500
+    const lineColor = deltaVsL3m >= 0 ? 'hsl(var(--positive))' : 'hsl(var(--negative))' // green-500 or red-500
 
     // Calculate min/max for scaling
     const values = sparklineData.map((d) => d.value)
@@ -667,7 +667,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
     <Card>
       <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Monthly Trends</CardTitle>
+          <CardTitle>Monthly Trends</CardTitle>
           <div className="flex items-center gap-2">
             <CategoryPlanningDialog triggerLabel="Edit Planning" title="Edit Category Planning" />
             <FullTableViewToggle

@@ -7,7 +7,7 @@ export function ForecastMethodologyNotes({ data }: { data: TransactionForecastRe
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg md:text-xl">How these forecasts work</CardTitle>
+        <CardTitle className="md:">How these forecasts work</CardTitle>
       </CardHeader>
       <CardContent>
         <details className="text-sm">

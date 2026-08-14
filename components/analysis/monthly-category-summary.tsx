@@ -619,7 +619,7 @@ export function MonthlyCategorySummary({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle className="text-base">
+          <CardTitle>
             {viewMode === 'weekly' ? 'Weekly' : 'Monthly'} Category Summary - {summaryData.categoryName} ({summaryData.monthLabel})
           </CardTitle>
           {categories.length > 0 && (

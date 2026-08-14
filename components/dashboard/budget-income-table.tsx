@@ -146,7 +146,7 @@ export function BudgetIncomeTable({
   return (
     <Card>
       <CardHeader className="px-4 py-3 pb-4">
-        <CardTitle className="text-base">Income</CardTitle>
+        <CardTitle>Income</CardTitle>
         <p className="text-sm text-muted-foreground">All amounts are after tax</p>
       </CardHeader>
       <CardContent className="pt-2 md:pt-2">

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Archivo, Inter } from 'next/font/google'
+import { Archivo, Instrument_Serif, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
@@ -17,15 +17,30 @@ const inter = Inter({
 })
 
 /**
- * Display face for currency figures only. Archivo's numerals are narrow and
- * strongly built, and its weight range gives real contrast against Inter at
- * body sizes — so the headline figure reads as the most important thing on the
- * page without needing colour or a box around it.
+ * Numeric face. Archivo's digits are narrow and strongly built, so a column of
+ * currency stays compact and a headline figure carries weight without needing
+ * colour or a box around it. Used for every figure that gets scanned — KPI
+ * values, table numerals, totals.
  */
 const archivo = Archivo({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-display',
+  variable: '--font-num',
+})
+
+/**
+ * Editorial face, used only for page titles and the single hero figure on Home.
+ *
+ * The pairing is the point: a high-contrast serif against Inter's neutral
+ * grotesque is what gives the app a voice. It has one weight and thin hairlines,
+ * so it works at 30px and falls apart at 14px — never apply it below the figure
+ * step of the type scale.
+ */
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
+  variable: '--font-serif',
 })
 
 export const metadata: Metadata = {
@@ -52,7 +67,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${archivo.variable} font-sans`}>
+      <body
+        className={`${inter.variable} ${archivo.variable} ${instrumentSerif.variable} font-sans`}
+      >
         <ThemeProvider>
           <QueryProvider>
             <CurrencyProvider>

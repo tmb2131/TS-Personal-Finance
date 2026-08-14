@@ -131,7 +131,7 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg md:text-xl">Month-by-month forecast</CardTitle>
+        <CardTitle className="md:">Month-by-month forecast</CardTitle>
         <p className="text-xs text-muted-foreground">
           Solid bars are completed-month actuals. The current month is MTD plus a remaining-days projection
           ({progressPct}% elapsed). Lighter bars are ensemble base forecast for future months; shaded band
@@ -168,7 +168,7 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
                 type="monotone"
                 dataKey="high"
                 stroke="none"
-                fill="#6366f1"
+                fill="hsl(var(--chart-2))"
                 fillOpacity={0.12}
                 connectNulls={false}
                 isAnimationActive={false}
@@ -178,23 +178,23 @@ export function ForecastMonthlyChart({ data }: { data: TransactionForecastResult
                 type="monotone"
                 dataKey="low"
                 stroke="none"
-                fill={chartTheme.isDark ? '#0b0f1a' : '#ffffff'}
+                fill={chartTheme.isDark ? 'hsl(var(--background))' : 'hsl(var(--background))'}
                 fillOpacity={1}
                 connectNulls={false}
                 isAnimationActive={false}
                 legendType="none"
               />
-              <Bar dataKey="actual" name="Actual" fill="#10b981" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="forecast" name="Forecast (base)" fill="#6366f1" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
+              <Bar dataKey="actual" name="Actual" fill="hsl(var(--positive))" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="forecast" name="Forecast (base)" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} fillOpacity={0.85} />
               {bestFit && (
                 <Line
                   type="monotone"
                   dataKey="bestFit"
                   name="Best fit"
-                  stroke="#f59e0b"
+                  stroke="hsl(var(--chart-3))"
                   strokeWidth={2}
                   strokeDasharray="4 3"
-                  dot={{ r: 2.5, fill: '#f59e0b' }}
+                  dot={{ r: 2.5, fill: 'hsl(var(--chart-3))' }}
                   activeDot={{ r: 4 }}
                   connectNulls={false}
                   isAnimationActive={false}

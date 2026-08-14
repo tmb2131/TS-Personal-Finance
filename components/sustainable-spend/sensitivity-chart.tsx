@@ -148,7 +148,7 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
           Sensitivity — how one assumption moves the range
         </CardTitle>
@@ -224,7 +224,7 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
                 dataKey="sustainable"
                 name="Sustainable range"
                 stroke="none"
-                fill="#22c55e"
+                fill="hsl(var(--positive))"
                 fillOpacity={0.18}
                 isAnimationActive={false}
                 legendType="none"
@@ -235,7 +235,7 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
                 dataKey="deficit"
                 name="No sustainable level"
                 stroke="none"
-                fill="#f59e0b"
+                fill="hsl(var(--chart-3))"
                 fillOpacity={0.28}
                 isAnimationActive={false}
                 legendType="none"
@@ -245,7 +245,7 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
               <Line
                 dataKey="floor"
                 name="Floor"
-                stroke="#6366f1"
+                stroke="hsl(var(--chart-2))"
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
@@ -253,7 +253,7 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
               <Line
                 dataKey="ceiling"
                 name="Ceiling"
-                stroke="#ef4444"
+                stroke="hsl(var(--negative))"
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
@@ -278,10 +278,10 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 rounded bg-[#ef4444] inline-block" /> Ceiling
+            <span className="h-0.5 w-4 rounded bg-[hsl(var(--negative))] inline-block" /> Ceiling
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 rounded bg-[#6366f1] inline-block" /> Floor
+            <span className="h-0.5 w-4 rounded bg-[hsl(var(--chart-2))] inline-block" /> Floor
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-4 rounded bg-positive-tint inline-block" /> Sustainable range

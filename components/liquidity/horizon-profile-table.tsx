@@ -28,10 +28,10 @@ import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { AlertCircle, ListIcon } from 'lucide-react'
 
 const HORIZON_COLORS: Record<string, string> = {
-  'Short-Term': '#f59e0b',
-  'Medium-Term': '#3b82f6',
-  'Long-Term': '#8b5cf6',
-  Unknown: '#94a3b8',
+  'Short-Term': 'hsl(var(--chart-3))',
+  'Medium-Term': 'hsl(var(--chart-1))',
+  'Long-Term': 'hsl(var(--chart-4))',
+  Unknown: 'hsl(var(--chart-axis))',
 }
 
 interface HorizonGroup {

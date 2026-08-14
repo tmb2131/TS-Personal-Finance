@@ -253,22 +253,56 @@ breaks otherwise. Verify with `npm run eval:app-instructions`.
 
 ## Design System
 
-Defined in `app/globals.css` and wired through `tailwind.config.ts`.
+Defined in `app/globals.css` and wired through `tailwind.config.ts`. The header
+comment in `globals.css` is the canonical statement; this is the summary.
 
-- **One type scale**, five steps: `--text-display` / `figure` / `title` / `body`
-  / `meta`, available as `text-display` … `text-meta` and as `.type-*` classes.
-  Do not reach for a raw Tailwind size step.
-- **Colour carries exactly one meaning: over or under budget.** Two tokens,
-  `positive` and `negative`, each with a solid and a 10% `-tint` variant. There
-  are no hard-coded `green-*` / `red-*` classes in `components/`; do not add any.
-  Coloured left borders are for cards reporting a variance and nothing else.
-- **No gradients.** Card headers are a plain `border-b` with no fill. The one
-  gradient left is the `.scroll-fade-right` utility, a real scroll-overflow
-  affordance.
-- **`.num` on every currency and percentage figure** for tabular figures.
-  `"tnum"` is deliberately not set globally on `body`.
-- **`.figure`** puts headline currency in the Archivo display face. This is the
-  one place to spend boldness; everything else stays quiet.
+**Surfaces, not outlines.** Four planes — `background` (canvas), `card`,
+`raised`, `sunken` — plus a hairline `border` and a heavier `border-strong`.
+Depth is tonal first and shadowed second, because a shadow is invisible on the
+dark ground. Use the `.surface-card` / `.surface-raised` / `.surface-sunken`
+classes, or the `Card` variants that wrap them, rather than assembling
+`border + bg + shadow` by hand.
+
+**Never nest a bordered card inside a bordered card.** Two concentric rounded
+borders is the single most dating detail in a dashboard. A panel inside a card
+takes `<Card variant="flush">`; a table or totals row inside a card takes
+`variant="sunken"`.
+
+**Three faces, three jobs.**
+- `.editorial` (Instrument Serif) — page titles and the one hero figure per
+  page. One weight, hairline serifs: never use it below the figure step.
+- `.figure` (Archivo) — every working number: KPI values, table cells, totals.
+- Inter — everything else.
+
+**One type scale**, six steps: `--text-display` / `heading` / `figure` /
+`title` / `body` / `meta`, available as `text-display` … `text-meta` and as
+`.type-*` classes. `heading` exists so a page title outranks the KPI values
+under it. Do not reach for a raw Tailwind size step, and do not put a size
+override on `CardTitle`.
+
+**Colour is rationed, not banned.**
+- `primary` (teal) is the brand and lives on chrome — buttons, focus rings,
+  active nav, links, and proportion bars. It is deliberately far in hue from
+  both semantic colours so it never reads as a status.
+- `positive` / `negative` mean over or under, and nothing else. Each has a solid
+  and a 12% `-tint`.
+- `chart-1` … `chart-6` are the ordered series ramp, kept clear of the semantic
+  pair so a series colour is never mistaken for a verdict.
+- There are **no hard-coded hex colours or `green-*` / `red-*` / `blue-*`
+  classes** in `components/`; do not add any. Charts read colour from
+  `useChartTheme()` (which resolves the tokens) or from `hsl(var(--token))`
+  string literals — `var()` resolves correctly in Recharts fills.
+
+**`.num` on every currency and percentage figure** for tabular figures. `"tnum"`
+is deliberately not set globally on `body`. `TableCell numeric` / `TableHead
+numeric` sets alignment and tabular figures together.
+
+**`.meter` / `.meter-fill`** is the one proportion bar. A bar that clamps at
+100% reports nothing an adjacent sentence has not already said — where a value
+can exceed its reference, span the meter across the larger of the two and draw
+the overshoot to scale.
+
+**No gradients** except `.scroll-fade-right`, a real scroll-overflow affordance.
 
 ## API Routes
 

@@ -126,8 +126,8 @@ export default function DebtOverview() {
   }
 
   const chartData = [
-    { name: 'Total Debt', value: totalDebt, color: '#ef4444' },
-    { name: 'Total Assets', value: totalAssets, color: '#10b981' },
+    { name: 'Total Debt', value: totalDebt, color: 'hsl(var(--negative))' },
+    { name: 'Total Assets', value: totalAssets, color: 'hsl(var(--positive))' },
   ]
 
   const fontSizes = getChartFontSizes(isMobile)

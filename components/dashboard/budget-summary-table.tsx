@@ -191,7 +191,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     <Card>
       <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Budget Tracker</CardTitle>
+          <CardTitle>Budget Tracker</CardTitle>
           {isAllGood && (
             <div className="flex items-center gap-2 text-positive">
               <CheckCircle2 className="h-4 w-4" />

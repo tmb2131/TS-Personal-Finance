@@ -79,10 +79,10 @@ export default function CommittedCapitalVsCash() {
     })
 
     return [
-      { name: 'Committed Capital', value: totalCommitted, color: '#ef4444' },
-      { name: 'Cash', value: cash, color: '#10b981' },
-      { name: 'Instant', value: instant, color: '#34d399' },
-      { name: 'Within 6 Months', value: within6Months, color: '#3b82f6' },
+      { name: 'Committed Capital', value: totalCommitted, color: 'hsl(var(--negative))' },
+      { name: 'Cash', value: cash, color: 'hsl(var(--positive))' },
+      { name: 'Instant', value: instant, color: 'hsl(var(--positive) / 0.6)' },
+      { name: 'Within 6 Months', value: within6Months, color: 'hsl(var(--chart-1))' },
     ]
   }, [accounts, debtList, currency, convertAmount, fxRate])
 

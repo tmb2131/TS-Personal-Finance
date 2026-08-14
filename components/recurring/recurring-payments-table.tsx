@@ -233,7 +233,7 @@ export function RecurringPaymentsTable() {
     return (
       <Card>
         <CardHeader className="px-4 py-3 pb-4">
-          <CardTitle className="text-base">Recurring Payments</CardTitle>
+          <CardTitle>Recurring Payments</CardTitle>
           <p className="text-sm text-muted-foreground">
             Manually tracked recurring payments. All amounts shown are annualized values.
           </p>
@@ -253,7 +253,7 @@ export function RecurringPaymentsTable() {
     return (
       <Card>
         <CardHeader className="px-4 py-3 pb-4">
-          <CardTitle className="text-base">Recurring Payments</CardTitle>
+          <CardTitle>Recurring Payments</CardTitle>
           <p className="text-sm text-muted-foreground">
             Manually tracked recurring payments. All amounts shown are annualized values.
           </p>
@@ -270,7 +270,7 @@ export function RecurringPaymentsTable() {
       <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1">
-            <CardTitle className="text-base">Recurring Payments</CardTitle>
+            <CardTitle>Recurring Payments</CardTitle>
             <p className="text-sm text-muted-foreground">
               Manually tracked recurring payments. All amounts shown are annualized values.
             </p>
@@ -304,7 +304,7 @@ export function RecurringPaymentsTable() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-positive" />
-                  <CardTitle className="text-sm font-medium">Flagged for Review</CardTitle>
+                  <CardTitle className="font-medium">Flagged for Review</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
@@ -324,7 +324,7 @@ export function RecurringPaymentsTable() {
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
                     <CreditCard className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <CardTitle className="text-sm font-medium">Payment Count</CardTitle>
+                  <CardTitle className="font-medium">Payment Count</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>

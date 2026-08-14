@@ -26,10 +26,10 @@ import {
 } from 'recharts'
 
 // Net worth category colors - using app's design system palette
-const PERSONAL_FILL = '#3b82f6' // Blue-500
-const FAMILY_FILL = '#22c55e' // Green-500 (matches app's positive/growth color)
-const TRUST_FILL = '#8b5cf6' // Violet-500
-const TOTAL_LINE_STROKE = '#1e40af' // Blue-800 (darker blue for emphasis)
+const PERSONAL_FILL = 'hsl(var(--chart-1))' // Blue-500
+const FAMILY_FILL = 'hsl(var(--positive))' // Green-500 (matches app's positive/growth color)
+const TRUST_FILL = 'hsl(var(--chart-4))' // Violet-500
+const TOTAL_LINE_STROKE = 'hsl(var(--chart-1))' // Blue-800 (darker blue for emphasis)
 
 export type CurrentYearFromAccounts = {
   Personal: { amount_usd: number; amount_gbp: number }
@@ -210,7 +210,7 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
 
   const chartHeader = (
     <div className="flex items-center justify-between gap-3">
-      <CardTitle className="text-xl">Net Worth Over Time</CardTitle>
+      <CardTitle>Net Worth Over Time</CardTitle>
       <EditNetWorthHistoryDialog />
     </div>
   )
@@ -395,7 +395,7 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
                 dataKey="Personal"
                 fill={PERSONAL_FILL}
                 radius={[4, 4, 0, 0]}
-                stroke="#fff"
+                stroke="hsl(var(--card))"
                 strokeWidth={1}
               />
             )}
@@ -404,7 +404,7 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
                 dataKey="Family"
                 fill={FAMILY_FILL}
                 radius={[4, 4, 0, 0]}
-                stroke="#fff"
+                stroke="hsl(var(--card))"
                 strokeWidth={1}
               />
             )}
@@ -413,7 +413,7 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
                 dataKey="Trust"
                 fill={TRUST_FILL}
                 radius={[4, 4, 0, 0]}
-                stroke="#fff"
+                stroke="hsl(var(--card))"
                 strokeWidth={1}
               />
             )}

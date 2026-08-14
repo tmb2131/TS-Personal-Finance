@@ -20,12 +20,17 @@ import {
 
 /** All methodologies for spend; headroom only for Annual and Linear. */
 const METHODOLOGY_ORDER = ['Annual', 'Linear', 'Budget', 'Manual'] as const
-const SPEND_FILL = '#64748b'
-const SPEND_FILL_ALT = '#475569'
-/** Light green for headroom */
-const HEADROOM_FILL = '#86efac'
-const HEADROOM_FILL_ALT = '#bbf7d0'
-const HEADROOM_LABEL_FILL = '#16a34a'
+/**
+ * Spent and remaining are two states of the same allowance, so they are two
+ * values of one hue rather than two different hues. The chart previously put
+ * spend in slate and headroom in a light green, which read as "slate bad, green
+ * good" — a verdict the chart is not making. Solid means gone, faint means
+ * still available.
+ */
+const SPEND_ALPHA = 1
+const SPEND_ALPHA_ALT = 0.78
+const HEADROOM_ALPHA = 0.28
+const HEADROOM_ALPHA_ALT = 0.18
 
 type TodaySpendByMethodologyChartProps = {
   spendByMethodology: Record<string, number>
@@ -145,7 +150,7 @@ export function TodaySpendByMethodologyChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
+        <CardTitle>Today&apos;s spend by forecast methodology</CardTitle>
         <p className="text-sm text-muted-foreground">
           Bar = today&apos;s spend; lighter segment = room to spend by methodology (not the forecast change below).
         </p>
@@ -207,12 +212,16 @@ export function TodaySpendByMethodologyChart({
               stackId="method"
               radius={[4, 0, 0, 0]}
               stroke="transparent"
-              fill={SPEND_FILL}
+              fill={chartTheme.primary}
               cursor={onBarClick ? 'pointer' : undefined}
               onClick={onBarClick ? (data: { name?: string }) => data?.name != null && onBarClick(data.name) : undefined}
             >
               {chartData.map((_, index) => (
-                <Cell key={`spend-${index}`} fill={index % 2 === 0 ? SPEND_FILL : SPEND_FILL_ALT} />
+                <Cell
+                  key={`spend-${index}`}
+                  fill={chartTheme.primary}
+                  fillOpacity={index % 2 === 0 ? SPEND_ALPHA : SPEND_ALPHA_ALT}
+                />
               ))}
             </Bar>
             <Bar
@@ -221,18 +230,22 @@ export function TodaySpendByMethodologyChart({
               stackId="method"
               radius={[0, 4, 4, 0]}
               stroke="transparent"
-              fill={HEADROOM_FILL}
+              fill={chartTheme.primary}
               cursor={onBarClick ? 'pointer' : undefined}
               onClick={onBarClick ? (data: { name?: string }) => data?.name != null && onBarClick(data.name) : undefined}
             >
               {chartData.map((_, index) => (
-                <Cell key={`headroom-${index}`} fill={index % 2 === 0 ? HEADROOM_FILL : HEADROOM_FILL_ALT} />
+                <Cell
+                  key={`headroom-${index}`}
+                  fill={chartTheme.primary}
+                  fillOpacity={index % 2 === 0 ? HEADROOM_ALPHA : HEADROOM_ALPHA_ALT}
+                />
               ))}
               <LabelList
                 dataKey="headroom"
                 position="top"
                 formatter={(value: number) => (value != null && value > 0 ? formatCurrency(value) : '')}
-                style={{ fontSize: fontSizes.axisTick, fill: HEADROOM_LABEL_FILL, fontWeight: 'bold' }}
+                style={{ fontSize: fontSizes.axisTick, fill: chartTheme.labelFill, fontWeight: 'bold' }}
               />
             </Bar>
           </BarChart>

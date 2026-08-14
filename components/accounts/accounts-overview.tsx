@@ -399,6 +399,23 @@ export function AccountsOverview() {
 
   const compactTable = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:num'
 
+  /** Rendered into both the mobile and desktop Accounts card headers. */
+  const bulkEditControls = !bulkEditMode ? (
+    <Button variant="outline" size="sm" onClick={beginBulkEdit}>
+      Edit all
+    </Button>
+  ) : (
+    <>
+      <Button variant="outline" size="sm" onClick={cancelBulkEdit} disabled={bulkSaving}>
+        Cancel
+      </Button>
+      <Button size="sm" onClick={saveBulkChanges} disabled={bulkSaving}>
+        {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Save all
+      </Button>
+    </>
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:pb-0 md:items-stretch">
@@ -416,7 +433,7 @@ export function AccountsOverview() {
       {/* Category Summary — Mobile card layout */}
       <Card className="md:hidden">
         <CardHeader className="px-4 py-3 pb-2">
-          <CardTitle className="text-base">Account Category Summary</CardTitle>
+          <CardTitle>Account Category Summary</CardTitle>
           {hasTrustAccounts && (
             <p className="text-meta text-muted-foreground">
               Totals include trust capital, unlike the figures above.
@@ -457,7 +474,7 @@ export function AccountsOverview() {
             </div>
             <div className="relative h-2 w-full mt-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                className="absolute h-full rounded-full transition-all duration-500 bg-primary left-0 top-0"
                 style={{
                   width: `${Math.min((Math.abs(grandTotals.total) / maxSummaryBalance) * 100, 100)}%`,
                 }}
@@ -485,11 +502,11 @@ export function AccountsOverview() {
                 <>
                   {hasPersonalAndFamily && <div className="border-t border-dashed my-1" />}
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                    <span className="text-positive">GBP</span>
+                    <span className="text-muted-foreground">GBP</span>
                     <span className="num">{item.gbp === 0 ? '–' : formatGBP(item.gbp)}</span>
                   </div>
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                    <span className="text-positive">USD</span>
+                    <span className="text-muted-foreground">USD</span>
                     <span className="num">{item.usd === 0 ? '–' : formatUSD(item.usd)}</span>
                   </div>
                 </>
@@ -500,7 +517,7 @@ export function AccountsOverview() {
               </div>
               <div className="relative h-1.5 w-full mt-2 rounded-full bg-muted overflow-hidden">
                 <div
-                  className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                  className="absolute h-full rounded-full transition-all duration-500 bg-primary left-0 top-0"
                   style={{
                     width: `${Math.min((Math.abs(item.total) / maxSummaryBalance) * 100, 100)}%`,
                   }}
@@ -512,10 +529,10 @@ export function AccountsOverview() {
       </Card>
 
       {/* Category Summary Table — Desktop */}
-      <div className="hidden md:block w-fit">
+      <div className="hidden md:block">
         <Card>
           <CardHeader className="px-4 py-3 pb-4">
-            <CardTitle className="text-base">Account Category Summary</CardTitle>
+            <CardTitle>Account Category Summary</CardTitle>
             {hasTrustAccounts && (
               <p className="text-meta text-muted-foreground">
                 Totals include trust capital, unlike the figures above.
@@ -525,7 +542,7 @@ export function AccountsOverview() {
           <CardContent className="p-4 pt-2 md:pt-2">
             <Table className={compactTable}>
               <TableHeader>
-                <TableRow className="bg-muted">
+                <TableRow>
                   <TableHead className="font-bold text-foreground">Total</TableHead>
                   {hasPersonalAndFamily && (
                     <>
@@ -552,7 +569,7 @@ export function AccountsOverview() {
                   </TableHead>
                   <TableHead className="w-16"></TableHead>
                 </TableRow>
-                <TableRow className="bg-muted">
+                <TableRow>
                   <TableHead>Account Category</TableHead>
                   {hasPersonalAndFamily && (
                     <>
@@ -562,8 +579,8 @@ export function AccountsOverview() {
                   )}
                   {hasMultipleCurrencies && (
                     <>
-                      <TableHead className={cn("text-right text-positive", hasPersonalAndFamily && "border-l-2 border-border")}>GBP</TableHead>
-                      <TableHead className="text-right text-positive">USD</TableHead>
+                      <TableHead className={cn("text-right", hasPersonalAndFamily && "border-l-2 border-border")}>GBP</TableHead>
+                      <TableHead className="text-right">USD</TableHead>
                     </>
                   )}
                   <TableHead className="text-right font-bold">Balance</TableHead>
@@ -602,7 +619,7 @@ export function AccountsOverview() {
                     <TableCell>
                       <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                          className="absolute h-full rounded-full transition-all duration-500 bg-primary left-0 top-0"
                           style={{
                             width: `${Math.min((Math.abs(item.total) / maxSummaryBalance) * 100, 100)}%`,
                           }}
@@ -618,28 +635,10 @@ export function AccountsOverview() {
       </div>
 
       {/* Accounts — Mobile card layout */}
-      <div className="flex items-center justify-end gap-2">
-        {!bulkEditMode ? (
-          <Button variant="outline" size="sm" onClick={beginBulkEdit}>
-            Edit All
-          </Button>
-        ) : (
-          <>
-            <Button variant="outline" size="sm" onClick={cancelBulkEdit} disabled={bulkSaving}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={saveBulkChanges} disabled={bulkSaving}>
-              {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save All
-            </Button>
-          </>
-        )}
-      </div>
-
-      {/* Accounts — Mobile card layout */}
       <Card className="md:hidden">
-        <CardHeader className="px-4 py-3 pb-2">
-          <CardTitle className="text-base">Accounts</CardTitle>
+        <CardHeader className="px-4 py-3 pb-2 flex flex-row items-center justify-between gap-2 space-y-0">
+          <CardTitle>Accounts</CardTitle>
+          <div className="flex items-center gap-2">{bulkEditControls}</div>
         </CardHeader>
         <CardContent className="p-4 pt-2 md:pt-2 space-y-4">
           {groupedByCategory.map((group) => (
@@ -714,7 +713,7 @@ export function AccountsOverview() {
                       )}
                       <div className="relative h-1.5 w-full mt-1.5 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                          className="absolute h-full rounded-full transition-all duration-500 bg-primary left-0 top-0"
                           style={{
                             width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
                           }}
@@ -735,20 +734,26 @@ export function AccountsOverview() {
 
       {/* Accounts Table — Desktop */}
       <Card className="hidden md:block">
-        <CardHeader className="px-4 py-3 pb-4 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Accounts</CardTitle>
-          <FullTableViewToggle
-            fullView={fullTableOpen}
-            onToggle={() => setFullTableOpen((v) => !v)}
-            aria-label="Toggle full table view for Accounts"
-          />
+        <CardHeader className="px-4 py-3 pb-4 flex flex-row items-center justify-between gap-3 space-y-0">
+          <CardTitle>Accounts</CardTitle>
+          {/* Bulk edit and full-table both act on this table, so both live in
+              its header. "Edit All" used to float right-aligned in the gap
+              between two cards, belonging to neither. */}
+          <div className="flex items-center gap-2">
+            {bulkEditControls}
+            <FullTableViewToggle
+              fullView={fullTableOpen}
+              onToggle={() => setFullTableOpen((v) => !v)}
+              aria-label="Toggle full table view for Accounts"
+            />
+          </div>
         </CardHeader>
         <CardContent className="p-4 pt-2 md:pt-2">
           <FullTableViewWrapper
             fullView={fullTableOpen}
             onClose={() => setFullTableOpen(false)}
             fullViewContainerClassName="w-[96vw] max-w-[96vw]"
-            className={`relative max-h-[70vh] overflow-auto border rounded-md ${compactTable}`}
+            className={`relative max-h-[70vh] overflow-auto rounded-md ${compactTable}`}
           >
             {fullTableOpen ? (
               <table className="w-full table-fixed caption-bottom border-collapse text-[11px] leading-4">
@@ -828,15 +833,15 @@ export function AccountsOverview() {
             ) : (
               <table className="w-full caption-bottom text-sm">
                 <TableHeader>
-                  <TableRow className="border-b bg-muted">
-                    <TableHead className="sticky left-0 top-0 z-30 bg-muted">Category</TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-muted">Institution</TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-muted">Account Name</TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-muted">Currency</TableHead>
-                    <TableHead className="sticky top-0 z-20 text-right bg-muted">Balance</TableHead>
-                    <TableHead className="sticky top-0 z-20 w-16 bg-muted"></TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-muted">Last Updated</TableHead>
-                    <TableHead className="sticky top-0 z-20 bg-muted w-10"></TableHead>
+                  <TableRow>
+                    <TableHead className="sticky left-0 top-0 z-30 bg-sunken">Category</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-sunken">Institution</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-sunken">Account Name</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-sunken">Currency</TableHead>
+                    <TableHead className="sticky top-0 z-20 text-right bg-sunken">Balance</TableHead>
+                    <TableHead className="sticky top-0 z-20 w-16 bg-sunken"></TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-sunken">Last Updated</TableHead>
+                    <TableHead className="sticky top-0 z-20 bg-sunken w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -876,7 +881,7 @@ export function AccountsOverview() {
                             <TableCell>
                               <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                                 <div
-                                  className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                                  className="absolute h-full rounded-full transition-all duration-500 bg-primary left-0 top-0"
                                   style={{
                                     width: `${Math.min((Math.abs(convertedBalance) / maxAccountBalance) * 100, 100)}%`,
                                   }}
@@ -911,7 +916,7 @@ export function AccountsOverview() {
                         )
                       })}
                       <TableRow key={`subtotal-${group.category}`} className="bg-muted/50">
-                        <TableCell colSpan={4} className="sticky left-0 z-20 bg-muted/50 font-semibold">
+                        <TableCell colSpan={4} className="sticky left-0 z-20 bg-sunken/50 font-semibold">
                           {group.category} Subtotal
                         </TableCell>
                         <TableCell className="text-right font-semibold">
@@ -920,7 +925,7 @@ export function AccountsOverview() {
                         <TableCell>
                           <div className="relative h-3 w-16 rounded-full bg-muted overflow-hidden">
                             <div
-                              className="absolute h-full rounded-full transition-all duration-500 bg-blue-900 left-0 top-0"
+                              className="absolute h-full rounded-full transition-all duration-500 bg-primary left-0 top-0"
                               style={{
                                 width: `${Math.min((Math.abs(group.subtotal) / maxAccountBalance) * 100, 100)}%`,
                               }}

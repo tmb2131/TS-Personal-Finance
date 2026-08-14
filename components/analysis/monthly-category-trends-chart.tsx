@@ -28,10 +28,10 @@ import {
 const EXCLUDED_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
 // Colors matching the example: light blue for top transaction, light red/pink for rest
-const TOP_TRANSACTION_FILL = '#93c5fd' // Light blue
-const TOP_TRANSACTION_FILL_HIGHLIGHT = '#3b82f6' // Dark blue
-const OTHER_FILL = '#fca5a5' // Light red/pink
-const OTHER_FILL_HIGHLIGHT = '#dc2626' // Dark red
+const TOP_TRANSACTION_FILL = 'hsl(var(--chart-1) / 0.5)' // Light blue
+const TOP_TRANSACTION_FILL_HIGHLIGHT = 'hsl(var(--chart-1))' // Dark blue
+const OTHER_FILL = 'hsl(var(--negative) / 0.55)' // Light red/pink
+const OTHER_FILL_HIGHLIGHT = 'hsl(var(--negative))' // Dark red
 
 interface ChartDataPoint {
   period: string // YYYY-MM or YYYY-Wxx format
@@ -461,7 +461,7 @@ export function MonthlyCategoryTrendsChart({
               stackId="category"
               fill={OTHER_FILL}
               radius={[0, 0, 0, 0]}
-              stroke="#fff"
+              stroke="hsl(var(--card))"
               strokeWidth={1}
               minPointSize={2}
             >
@@ -477,7 +477,7 @@ export function MonthlyCategoryTrendsChart({
               stackId="category"
               fill={TOP_TRANSACTION_FILL}
               radius={[4, 4, 0, 0]}
-              stroke="#fff"
+              stroke="hsl(var(--card))"
               strokeWidth={1}
               minPointSize={2}
             >
@@ -491,7 +491,7 @@ export function MonthlyCategoryTrendsChart({
             <Line
               type="monotone"
               dataKey="trendLine"
-              stroke="#6b7280"
+              stroke="hsl(var(--chart-axis))"
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={false}

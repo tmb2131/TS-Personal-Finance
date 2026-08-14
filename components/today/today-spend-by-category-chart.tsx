@@ -19,17 +19,10 @@ import {
   LabelList,
 } from 'recharts'
 
-/** Distinct per-category palette (works in light and dark). */
-const BAR_COLORS = [
-  '#0ea5e9', // sky
-  '#8b5cf6', // violet
-  '#f59e0b', // amber
-  '#10b981', // emerald
-  '#ef4444', // red
-  '#06b6d4', // cyan
-  '#ec4899', // pink
-  '#64748b', // slate
-]
+/* Category colours come from the shared series ramp. The old local palette
+   included an emerald and a red, which in this app read as "under budget" and
+   "over budget" — so a category could be coloured as a verdict on itself purely
+   by where it landed in the sort order. */
 
 type TodaySpendByCategoryChartProps = {
   spendByCategory: Record<string, number>
@@ -66,7 +59,7 @@ export function TodaySpendByCategoryChart({ spendByCategory, onBarClick }: Today
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Today&apos;s spend by category</CardTitle>
+          <CardTitle>Today&apos;s spend by category</CardTitle>
           <p className="text-sm text-muted-foreground">Expense by category for today</p>
         </CardHeader>
         <CardContent>
@@ -83,7 +76,7 @@ export function TodaySpendByCategoryChart({ spendByCategory, onBarClick }: Today
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Today&apos;s spend by category</CardTitle>
+        <CardTitle>Today&apos;s spend by category</CardTitle>
         <p className="text-sm text-muted-foreground">Expense by category for today</p>
       </CardHeader>
       <CardContent>
@@ -125,7 +118,7 @@ export function TodaySpendByCategoryChart({ spendByCategory, onBarClick }: Today
               onClick={onBarClick ? (data: { name?: string }) => data?.name != null && onBarClick(data.name) : undefined}
             >
               {chartData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={chartTheme.seriesColor(index)} />
               ))}
               <LabelList
                 dataKey="value"

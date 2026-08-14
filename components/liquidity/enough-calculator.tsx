@@ -325,7 +325,7 @@ export function EnoughCalculator() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Financial Independence</CardTitle>
+          <CardTitle>Financial Independence</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-32 w-full" />
@@ -342,7 +342,7 @@ export function EnoughCalculator() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
           Financial Independence
         </CardTitle>

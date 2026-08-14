@@ -135,7 +135,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
       {/* Step 1: real after-tax return */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <StepBadge step={1} />
             <Percent className="h-4 w-4 text-muted-foreground" />
             Real after-tax return on your assets
@@ -221,7 +221,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
       {/* Step 2: ceiling */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <StepBadge step={2} />
             <ArrowUp className="h-4 w-4 text-negative" />
             Ceiling — preserve real net worth
@@ -272,7 +272,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
       {/* Step 3: floor */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <StepBadge step={3} />
             <ArrowDown className="h-4 w-4 text-muted-foreground" />
             Floor — fund your savings goal

@@ -33,11 +33,11 @@ import {
 } from 'recharts'
 
 // Green/teal shades for income stack (dark → light)
-const INCOME_INVESTMENT_FILL = '#166534'
-const INCOME_FILL = '#22c55e'
-const GIFT_MONEY_FILL = '#86efac'
+const INCOME_INVESTMENT_FILL = 'hsl(var(--positive))'
+const INCOME_FILL = 'hsl(var(--positive))'
+const GIFT_MONEY_FILL = 'hsl(var(--positive) / 0.6)'
 // Muted expense color (slate) – integrated, not alarming
-const EXPENSES_FILL = '#64748b'
+const EXPENSES_FILL = 'hsl(var(--chart-axis))'
 
 export interface IncomeVsExpensesChartInitialData {
   budgets: BudgetTarget[]
@@ -164,7 +164,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Income & Expenses</CardTitle>
+          <CardTitle>Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
         <CardContent>
@@ -178,7 +178,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Income & Expenses</CardTitle>
+          <CardTitle>Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
         <CardContent>
@@ -193,7 +193,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Income & Expenses</CardTitle>
+          <CardTitle>Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
         <CardContent className="pt-6 md:pt-6">
@@ -212,7 +212,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   return (
     <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
+          <CardTitle>Est. Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
         </CardHeader>
       <CardContent className="pt-6 md:pt-6">
@@ -286,13 +286,13 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
                 stackId="income"
                 fill={INCOME_INVESTMENT_FILL}
                 radius={[4, 4, 0, 0]}
-                stroke="#fff"
+                stroke="hsl(var(--card))"
                 strokeWidth={1}
               />
             )}
-            <Bar dataKey="Income" stackId="income" fill={INCOME_FILL} radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} />
-            <Bar dataKey="Gift Money" stackId="income" fill={GIFT_MONEY_FILL} radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} />
-            <Bar dataKey="Expenses" stackId="income" fill={EXPENSES_FILL} radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} />
+            <Bar dataKey="Income" stackId="income" fill={INCOME_FILL} radius={[4, 4, 0, 0]} stroke="hsl(var(--card))" strokeWidth={1} />
+            <Bar dataKey="Gift Money" stackId="income" fill={GIFT_MONEY_FILL} radius={[4, 4, 0, 0]} stroke="hsl(var(--card))" strokeWidth={1} />
+            <Bar dataKey="Expenses" stackId="income" fill={EXPENSES_FILL} radius={[4, 4, 0, 0]} stroke="hsl(var(--card))" strokeWidth={1} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

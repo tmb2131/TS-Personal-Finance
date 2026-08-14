@@ -87,7 +87,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Gap to budget over time</CardTitle>
+          <CardTitle>Gap to budget over time</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -104,7 +104,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Gap to budget over time</CardTitle>
+          <CardTitle>Gap to budget over time</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -125,7 +125,7 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Gap to budget over time</CardTitle>
+        <CardTitle>Gap to budget over time</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
           📉 Downward slope: Under Budget (Narrowing) | 📈 Upward slope: Above Budget (Widening)
         </p>
@@ -162,9 +162,9 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
             <Line
               type="monotone"
               dataKey="gap"
-              stroke="#6366f1"
+              stroke="hsl(var(--chart-2))"
               strokeWidth={2}
-              dot={{ fill: '#6366f1', r: 3 }}
+              dot={{ fill: 'hsl(var(--chart-2))', r: 3 }}
               activeDot={{ r: 5 }}
               name="Gap"
             />

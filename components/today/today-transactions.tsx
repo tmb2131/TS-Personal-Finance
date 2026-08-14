@@ -53,7 +53,7 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Today&apos;s transactions</CardTitle>
+          <CardTitle>Today&apos;s transactions</CardTitle>
           <p className="text-sm text-muted-foreground">Expense transactions for today</p>
         </CardHeader>
         <CardContent>
@@ -72,7 +72,7 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
       <CardHeader>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <CardTitle className="text-xl">Today&apos;s transactions</CardTitle>
+            <CardTitle>Today&apos;s transactions</CardTitle>
             <p className="text-sm text-muted-foreground">Expense transactions for today</p>
           </div>
           <p className="text-lg font-semibold num">{totalFormatted}</p>

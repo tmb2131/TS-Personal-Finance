@@ -79,7 +79,7 @@ export function AssumptionsPanel({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between gap-2">
+        <CardTitle className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-muted-foreground" />
             Assumptions

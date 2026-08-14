@@ -498,7 +498,7 @@ export function AnnualCumulativeSpendChart() {
       tooltipItems.push({
         name: displayName,
         value: entry.value,
-        color: entry.color || '#000',
+        color: entry.color || 'hsl(var(--foreground))',
       })
     })
     
@@ -648,7 +648,7 @@ export function AnnualCumulativeSpendChart() {
                   key={year}
                   type="monotone"
                   dataKey={`year${year}`}
-                  stroke="#e5e7eb"
+                  stroke="hsl(var(--chart-grid))"
                   strokeWidth={1}
                   dot={false}
                   name={`year${year}`}
@@ -659,7 +659,7 @@ export function AnnualCumulativeSpendChart() {
                 <Line
                   type="monotone"
                   dataKey={`year${years[3]}`}
-                  stroke="#f59e0b"
+                  stroke="hsl(var(--chart-3))"
                   strokeWidth={2}
                   dot={false}
                   name={`year${years[3]}`}
@@ -669,7 +669,7 @@ export function AnnualCumulativeSpendChart() {
               <Line
                 type="monotone"
                 dataKey="currentYearActual"
-                stroke="#3b82f6"
+                stroke="hsl(var(--chart-1))"
                 strokeWidth={3}
                 dot={false}
                 name="currentYearActual"
@@ -678,7 +678,7 @@ export function AnnualCumulativeSpendChart() {
               <Line
                 type="monotone"
                 dataKey="currentYearForecast"
-                stroke="#3b82f6"
+                stroke="hsl(var(--chart-1))"
                 strokeWidth={3}
                 strokeDasharray="3 3"
                 dot={false}
@@ -688,7 +688,7 @@ export function AnnualCumulativeSpendChart() {
               <Line
                 type="monotone"
                 dataKey="budget"
-                stroke="#374151"
+                stroke="hsl(var(--chart-grid))"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}

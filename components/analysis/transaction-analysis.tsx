@@ -378,7 +378,7 @@ export function TransactionAnalysis({
     return (
       <Card>
         <CardHeader className="px-4 py-3 pb-4">
-          <CardTitle className="text-base">Transaction Analysis</CardTitle>
+          <CardTitle>Transaction Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -395,7 +395,7 @@ export function TransactionAnalysis({
     <Card ref={cardRef} className="">
       <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Transaction Analysis</CardTitle>
+          <CardTitle>Transaction Analysis</CardTitle>
           <FullTableViewToggle
             fullView={fullView}
             onToggle={() => setFullView((v) => !v)}

@@ -114,7 +114,7 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
   return (
     <Card className={cn('border-l-[3px]', config.border)}>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <Scale className="h-4 w-4 text-muted-foreground" />
           Sustainable Spending Range
         </CardTitle>

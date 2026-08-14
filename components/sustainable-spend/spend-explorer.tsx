@@ -176,7 +176,7 @@ export function SpendExplorer() {
       <div className="space-y-4 md:space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Sustainable Spending Range</CardTitle>
+            <CardTitle>Sustainable Spending Range</CardTitle>
           </CardHeader>
           <CardContent>
             <Skeleton className="h-40 w-full" />

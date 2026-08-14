@@ -24,10 +24,10 @@ import {
 } from 'recharts'
 
 // Waterfall bar colors - using app's design system palette
-const START_END_FILL = '#6b7280' // Gray for start/end (neutral)
-const INCOME_FILL = '#22c55e' // Green-500 (matches app's positive/growth color)
-const GAINS_FILL = '#16a34a' // Green-600 (darker green for investment gains)
-const EXPENSES_FILL = '#ef4444' // Red-500 (matches app's negative color)
+const START_END_FILL = 'hsl(var(--chart-axis))' // Gray for start/end (neutral)
+const INCOME_FILL = 'hsl(var(--positive))' // Green-500 (matches app's positive/growth color)
+const GAINS_FILL = 'hsl(var(--positive))' // Green-600 (darker green for investment gains)
+const EXPENSES_FILL = 'hsl(var(--negative))' // Red-500 (matches app's negative color)
 
 export function YoYWaterfallChart() {
   const { currency } = useCurrency()
@@ -183,7 +183,7 @@ export function YoYWaterfallChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+          <CardTitle>Year-over-Year Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -200,7 +200,7 @@ export function YoYWaterfallChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+          <CardTitle>Year-over-Year Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -216,7 +216,7 @@ export function YoYWaterfallChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
+        <CardTitle>Year-over-Year Net Worth Change</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={isMobile ? 260 : 320}>
@@ -268,7 +268,7 @@ export function YoYWaterfallChart() {
                 </span>
               )}
             />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1}>
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="hsl(var(--card))" strokeWidth={1}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getBarColor(entry.type)} />
               ))}

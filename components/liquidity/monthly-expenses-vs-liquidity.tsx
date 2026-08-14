@@ -55,10 +55,10 @@ export default function MonthlyExpensesVsLiquidity() {
     const liquidTotal = toDisplay(liquidAssetsGbp(accountsList, fxRate, 'spendable'))
 
     return [
-      { name: 'Monthly Expenses', value: monthlyExpenses, color: '#3b82f6' },
-      { name: 'Cash', value: cashTotal, color: '#10b981' },
-      { name: 'Instant', value: instantTotal, color: '#34d399' },
-      { name: 'Liquid', value: liquidTotal, color: '#22c55e' },
+      { name: 'Monthly Expenses', value: monthlyExpenses, color: 'hsl(var(--chart-1))' },
+      { name: 'Cash', value: cashTotal, color: 'hsl(var(--positive))' },
+      { name: 'Instant', value: instantTotal, color: 'hsl(var(--positive) / 0.6)' },
+      { name: 'Liquid', value: liquidTotal, color: 'hsl(var(--positive))' },
     ]
   }, [currency, convertAmount, fxRate, accounts, cashRunway])
 

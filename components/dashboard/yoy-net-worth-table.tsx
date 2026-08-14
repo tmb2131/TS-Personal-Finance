@@ -140,7 +140,7 @@ export function YoYNetWorthTable() {
     return (
       <Card>
         <CardHeader className="px-4 py-3 pb-4">
-          <CardTitle className="text-base">Forecast Net Worth Change</CardTitle>
+          <CardTitle>Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -156,7 +156,7 @@ export function YoYNetWorthTable() {
   return (
     <Card>
       <CardHeader className="px-4 py-3 pb-4">
-        <CardTitle className="text-base">Forecast Net Worth Change</CardTitle>
+        <CardTitle>Forecast Net Worth Change</CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
           Year End is a forecast; investment return reflects YTD performance held flat.
         </p>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/utils/cn'
 import { TrendingDown, TrendingUp } from 'lucide-react'
 import type { MonthToDateSummary } from '@/lib/month-to-date'
@@ -97,19 +98,32 @@ export function TodayHeroSummary({
   const daysLeft = monthToDate.daysInMonth - monthToDate.dayOfMonth
 
   return (
-    <div className="space-y-3">
+    /* One card, four bands.
+       These were four sibling boxes with identical borders and identical
+       all-caps labels, which gave a reader no way to tell the headline from its
+       footnotes — the month, the day, the two allowances and the projection all
+       looked equally important. They are one story about this month, so they
+       are now one plane, separated by rules and ordered by weight. */
+    <Card>
       {/* Q1: Month to date against this month's expected run rate.
              This leads because the commitments that drive this household's
              spend — childcare, school fees, holidays, tax — are decided months
              ahead. A daily allowance measures the wrong thing. */}
-      <div className="rounded-xl border bg-card px-4 py-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-          Month to date
-        </p>
-        <p className="mt-1 text-4xl font-bold num leading-tight">{fmtPrecise(mtdSpend)}</p>
+      <CardContent className="p-4 md:p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="eyebrow">Month to date</p>
+          {/* Today, demoted to a trailing figure. Kept because a same-day check
+              is still occasionally useful, but it is no longer the headline and
+              no longer needs a box of its own. */}
+          <p className="text-meta text-muted-foreground">
+            Spent today <span className="num font-semibold text-foreground">{fmtPrecise(spentDisplay)}</span>
+          </p>
+        </div>
+
+        <p className="figure mt-1.5 text-display leading-none">{fmtPrecise(mtdSpend)}</p>
         <p
           className={cn(
-            'mt-1 num text-sm font-medium',
+            'mt-2 num text-body font-semibold',
             mtdVariance > 0 ? 'text-negative' : 'text-positive'
           )}
         >
@@ -119,28 +133,25 @@ export function TodayHeroSummary({
 
         {/* Expected-to-date sits as a marker on the month's expected total, so
             the bar shows position within the month rather than an allowance. */}
-        <div className="relative mt-3 h-3 w-full overflow-hidden rounded-full bg-muted">
+        <div className="meter relative mt-3 h-2.5 w-full">
           <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${mtdPct}%`,
-              background:
-                mtdVariance > 0
-                  ? 'var(--color-negative, #ef4444)'
-                  : 'var(--color-slate-500, #64748b)',
-            }}
+            className={cn(
+              'h-full rounded-full transition-all duration-500',
+              mtdVariance > 0 ? 'bg-negative' : 'bg-primary'
+            )}
+            style={{ width: `${mtdPct}%` }}
           />
           <div
-            className="absolute inset-y-0 w-px bg-foreground/60"
+            className="absolute inset-y-0 w-px bg-foreground"
             style={{ left: `${mtdExpectedPct}%` }}
             aria-hidden
           />
         </div>
-        <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground/60">
+        <div className="mt-1.5 flex items-center justify-between text-meta text-muted-foreground">
           <span className="num">{fmtPrecise(mtdExpectedToDate)} expected by today</span>
           <span className="num">{fmtPrecise(mtdExpectedMonth)} expected this month</span>
         </div>
-        <p className="mt-1 text-[11px] text-muted-foreground/60">
+        <p className="mt-1.5 text-meta text-muted-foreground">
           {daysLeft} {daysLeft === 1 ? 'day' : 'days'} left ·{' '}
           {monthToDate.basis === 'history'
             ? `this month's share of the year, averaged over ${monthToDate.historyYears} prior ${
@@ -148,26 +159,13 @@ export function TodayHeroSummary({
               }`
             : 'no prior years for this month yet, so the year is split evenly'}
         </p>
-      </div>
+      </CardContent>
 
-      {/* Q2: Today, demoted to a single line. Kept because a same-day check is
-             still occasionally useful, but it is no longer the headline. */}
-      <div className="rounded-xl border bg-card px-4 py-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            Spent today
-          </span>
-          <span className="num text-lg font-semibold">{fmtPrecise(spentDisplay)}</span>
-        </div>
-      </div>
-
-      {/* Q3: Room to spend by methodology */}
+      {/* Q2: Room to spend by methodology */}
       {bars.length > 0 && (
-        <div className="rounded-xl border bg-card px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            Room to spend today
-          </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+        <div className="border-t border-border p-4 md:p-5">
+          <p className="eyebrow">Room to spend today</p>
+          <p className="mt-1 text-meta text-muted-foreground">
             Two forecast methodologies, so two allowances. Annual spreads the remaining
             forecast over the days left; Linear spreads the annual budget evenly. Both
             assume spending is smooth, which this household&rsquo;s is not — read them as
@@ -179,38 +177,34 @@ export function TodayHeroSummary({
                 key={bar.method}
                 type="button"
                 className={cn(
-                  'w-full text-left',
+                  'w-full rounded-md text-left',
                   onMethodologyClick && 'active:opacity-70 transition-opacity'
                 )}
                 onClick={() => onMethodologyClick?.(bar.method)}
               >
-                <div className="flex items-baseline justify-between mb-1">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {bar.method}
-                  </span>
-                  <span className="text-xs font-bold num text-positive">
+                <div className="mb-1 flex items-baseline justify-between gap-3">
+                  <span className="text-body font-medium">{bar.method}</span>
+                  <span
+                    className={cn(
+                      'num text-body font-semibold',
+                      bar.headroom > 0 ? 'text-positive' : 'text-negative'
+                    )}
+                  >
                     {bar.headroom > 0 ? `${fmtPrecise(bar.headroom)} left` : 'None'}
                   </span>
                 </div>
-                <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+                <div className="meter h-2 w-full">
                   <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(100, bar.spendPct)}%`,
-                      background:
-                        bar.headroom > 0
-                          ? 'var(--color-slate-500, #64748b)'
-                          : 'var(--color-red-500, #ef4444)',
-                    }}
+                    className={cn(
+                      'h-full rounded-full transition-all duration-500',
+                      bar.headroom > 0 ? 'bg-primary' : 'bg-negative'
+                    )}
+                    style={{ width: `${Math.min(100, bar.spendPct)}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] text-muted-foreground/60 num">
-                    {fmtPrecise(bar.spend)} spent
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/60 num">
-                    {fmtPrecise(bar.total)} total
-                  </span>
+                <div className="mt-1 flex items-center justify-between text-meta text-muted-foreground">
+                  <span className="num">{fmtPrecise(bar.spend)} spent</span>
+                  <span className="num">{fmtPrecise(bar.total)} total</span>
                 </div>
               </button>
             ))}
@@ -218,17 +212,14 @@ export function TodayHeroSummary({
         </div>
       )}
 
-      {/* Q3: End of day projection */}
+      {/* Q3: End of day projection. On the sunken plane because it is a
+             what-if, not a fact about what has happened. */}
       {(hasImpliedChange || gapNoMoreSpend != null) && (
-        <div className="rounded-xl border bg-muted px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            Tomorrow if no more spend
-          </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground/60">
-            Compared with the start of today
-          </p>
+        <div className="surface-sunken border-t border-border p-4 md:p-5">
+          <p className="eyebrow">Tomorrow if no more spend</p>
+          <p className="mt-1 text-meta text-muted-foreground">Compared with the start of today</p>
 
-          <div className="mt-2 space-y-2">
+          <div className="mt-2.5 space-y-2">
             {estAnnualSpendDisplay != null && hasImpliedChange && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Est. annual spend</span>
@@ -274,6 +265,6 @@ export function TodayHeroSummary({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

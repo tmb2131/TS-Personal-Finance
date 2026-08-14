@@ -122,7 +122,7 @@ export function NetWorthStartEndChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
+          <CardTitle>Net Worth: Prior Year-End vs Forecast</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -139,7 +139,7 @@ export function NetWorthStartEndChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
+          <CardTitle>Net Worth: Prior Year-End vs Forecast</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -152,13 +152,13 @@ export function NetWorthStartEndChart() {
     )
   }
 
-  const barColors = ['#6366f1', '#1d4ed8'] // Start = indigo, End = darker blue (factual, not "good")
+  const barColors = ['hsl(var(--chart-2))', 'hsl(var(--chart-1))'] // Start = indigo, End = darker blue (factual, not "good")
   const fontSizes = getChartFontSizes(isMobile)
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
+        <CardTitle>Net Worth: Prior Year-End vs Forecast</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
           {bridgeSubtitle ?? 'Prior year-end net worth compared with forecast Dec 31 net worth'}
         </p>
@@ -189,7 +189,7 @@ export function NetWorthStartEndChart() {
               labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
               contentStyle={getChartTooltipContentStyle(chartTheme, { fontSize: fontSizes.tooltipMin, isMobile })}
             />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="#fff" strokeWidth={1} minPointSize={8}>
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} stroke="hsl(var(--card))" strokeWidth={1} minPointSize={8}>
               {chartData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={barColors[index % barColors.length]} />
               ))}

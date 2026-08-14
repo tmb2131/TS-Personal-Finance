@@ -2,9 +2,11 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useDailySummary } from '@/lib/hooks/queries/use-daily-summary'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { computeGbpAvailable, latestAccountRows } from '@/lib/gbp-available'
 import { isTrustAccount, TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
@@ -16,9 +18,14 @@ import { cn } from '@/utils/cn'
  * Home answers one question: is there anything I need to do?
  *
  * Four blocks in descending order of how often they change a decision, and
- * nothing duplicated from the other four pages. This replaces the Executive
- * Summary card — five cards inside a card, each scrolling to a section lower
- * on the same page, which was navigation dressed as content.
+ * nothing duplicated from the other four pages.
+ *
+ * The shape is deliberate. GBP available is the binding constraint, so it gets
+ * the hero — the editorial face at display size, alone on its plane. The two
+ * standing figures beneath it sit side by side because they are read as a pair,
+ * not a sequence. Previously all four were the same stack of label-and-number
+ * separated by hairlines, which gave the page no centre and left two thirds of
+ * a desktop screen empty.
  */
 export function HomeContent() {
   const { currency, convertAmount, fxRate } = useCurrency()
@@ -82,107 +89,201 @@ export function HomeContent() {
 
   if (accountsLoading || summaryLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
+      <div className="mx-auto w-full max-w-5xl space-y-4">
+        <Skeleton className="h-44 w-full rounded-lg" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Skeleton className="h-36 w-full rounded-lg" />
+          <Skeleton className="h-36 w-full rounded-lg" />
+        </div>
+        <Skeleton className="h-32 w-full rounded-lg" />
       </div>
     )
   }
 
+  const overBudget = budget ? budget.gap < 0 : false
+  /**
+   * The meter spans whichever is larger, the forecast or the budget, so the
+   * overshoot has somewhere to be drawn. A bar that simply clamps at 100% turns
+   * every over-budget year into the same full red rectangle — it reports that
+   * you are over, which the sentence underneath already said, and hides by how
+   * much. Here the coloured tail *is* the overshoot, to scale.
+   */
+  const budgetSpan = budget ? Math.max(budget.forecast, budget.annualBudget) : 0
+  const budgetShare = budget && budgetSpan > 0 ? budget.annualBudget / budgetSpan : 0
+  const forecastShare = budget && budgetSpan > 0 ? budget.forecast / budgetSpan : 0
+
   return (
-    <div className="space-y-6">
+    /* Capped and centred. Home carries four blocks; letting them run the full
+       width of a 27" display stretches a three-word label across 2000px and
+       leaves the page looking emptier the bigger the screen gets. */
+    <div className="mx-auto w-full max-w-5xl space-y-4 animate-rise-in">
       {/* 1. GBP available — the binding operational constraint, and the largest
              type on the page. Deliberately does not follow the currency toggle. */}
-      <section aria-labelledby="gbp-available-label">
-        <p
-          id="gbp-available-label"
-          className="text-meta font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          GBP available
-        </p>
-        <p className="figure type-display mt-1">{gbpFormat.format(gbp.total)}</p>
-        <p className="text-meta text-muted-foreground mt-1">
-          Sterling cash held, not converted{gbp.asOf ? ` · As of ${gbp.asOf}` : ''}
-        </p>
-        <p className="text-meta text-muted-foreground">
-          <span className="num">{displayFormat.format(convertedCash)}</span> all cash converted to{' '}
-          {currency}
-        </p>
-      </section>
+      <Card variant="raised" aria-labelledby="gbp-available-label">
+        <CardContent className="flex flex-col gap-6 p-5 md:flex-row md:items-end md:justify-between md:p-6">
+          <div className="min-w-0">
+            <p id="gbp-available-label" className="eyebrow">
+              GBP available
+            </p>
+            <p className="editorial type-display mt-2 text-foreground">
+              {gbpFormat.format(gbp.total)}
+            </p>
+            <p className="mt-2 text-body text-muted-foreground">
+              Sterling cash held, not converted
+              {gbp.asOf ? <span className="num"> · As of {gbp.asOf}</span> : null}
+            </p>
+          </div>
 
-      {/* 2. Budget status. The headline figure is the forecast — what the year
-             is tracking towards — so it is labelled as such. Under "Budget" it
-             read as the budget itself, which is the £205k comparator below. */}
-      <section aria-labelledby="budget-status-label" className="border-t pt-4">
-        <p
-          id="budget-status-label"
-          className="text-meta font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          Tracking spend
-        </p>
-        {budget ? (
-          <>
-            <p className="figure text-figure mt-1">{displayFormat.format(toDisplay(budget.forecast))}</p>
-            <p
-              className={cn(
-                'num text-body font-medium',
-                budget.gap >= 0 ? 'text-positive' : 'text-negative',
-              )}
-            >
-              {budget.gap >= 0 ? 'Under' : 'Over'} budget by{' '}
-              {displayFormat.format(Math.abs(toDisplay(budget.gap)))}
+          {/* The comparator, set apart rather than stacked underneath: it is a
+              different question ("what if I converted everything"), not a
+              footnote to the figure above. */}
+          <div className="shrink-0 border-t border-border pt-4 md:border-l md:border-t-0 md:pl-6 md:pt-0">
+            <p className="eyebrow">All cash in {currency}</p>
+            <p className="figure mt-1.5 text-figure text-foreground">
+              {displayFormat.format(convertedCash)}
             </p>
-            <p className="text-meta text-muted-foreground">
-              Against a{' '}
-              <span className="num">{displayFormat.format(toDisplay(budget.annualBudget))}</span>{' '}
-              budget for the year ·{' '}
-              <Link href="/spending#budget-table" className="underline underline-offset-4">
-                Spending
-              </Link>
-            </p>
-          </>
-        ) : (
-          <p className="text-body text-muted-foreground mt-1">No budget set.</p>
-        )}
-      </section>
+            <p className="mt-1 text-meta text-muted-foreground">If everything were converted</p>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* 3. Net worth */}
-      <section aria-labelledby="net-worth-label" className="border-t pt-4">
-        <p
-          id="net-worth-label"
-          className="text-meta font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          Net worth
-        </p>
-        {netWorth !== null ? (
-          <>
-            <p className="figure text-figure mt-1">{displayFormat.format(netWorth)}</p>
-            <p className="text-meta text-muted-foreground">
-              {TRUST_EXCLUSION_LABEL} ·{' '}
-              <Link href="/position#net-worth-chart" className="underline underline-offset-4">
-                Position
-              </Link>
+      {/* 2 + 3. The two standing figures, read as a pair. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Budget status. The headline figure is the forecast — what the year is
+            tracking towards — so it is labelled as such. */}
+        <Card aria-labelledby="budget-status-label">
+          <CardContent className="flex h-full flex-col p-5">
+            <p id="budget-status-label" className="eyebrow">
+              Tracking spend
             </p>
-          </>
-        ) : (
-          <p className="text-body text-muted-foreground mt-1">No accounts yet.</p>
-        )}
-      </section>
+            {budget ? (
+              <>
+                <p className="figure mt-1.5 text-figure text-foreground">
+                  {displayFormat.format(toDisplay(budget.forecast))}
+                </p>
+
+                {/* Forecast against the annual budget. The fastest read of "how
+                    much of the year's allowance is spoken for" — a sentence
+                    that previously had to be reconstructed from two separate
+                    currency figures.
+
+                    Under budget: a neutral fill inside the track, the gap being
+                    headroom. Over: the fill runs to the budget mark and a red
+                    tail carries on past it, with a tick showing where the
+                    budget sat. */}
+                <span
+                  className="meter relative mt-3 h-1.5 w-full"
+                  role="img"
+                  aria-label={`Forecast is ${Math.round((budget.forecast / budget.annualBudget) * 100)}% of the annual budget`}
+                >
+                  <span
+                    className="meter-fill absolute inset-y-0 left-0"
+                    style={{ width: `${(overBudget ? budgetShare : forecastShare) * 100}%` }}
+                  />
+                  {overBudget && (
+                    <span
+                      className="absolute inset-y-0 rounded-r-full bg-negative"
+                      style={{
+                        left: `${budgetShare * 100}%`,
+                        width: `${(forecastShare - budgetShare) * 100}%`,
+                      }}
+                    />
+                  )}
+                </span>
+                {overBudget && (
+                  <p className="mt-1.5 flex items-center justify-between text-meta text-muted-foreground">
+                    <span>Budget</span>
+                    <span className="text-negative">Overshoot</span>
+                  </p>
+                )}
+
+                <p
+                  className={cn(
+                    'num mt-2.5 text-body font-semibold',
+                    overBudget ? 'text-negative' : 'text-positive',
+                  )}
+                >
+                  {overBudget ? 'Over' : 'Under'} budget by{' '}
+                  {displayFormat.format(Math.abs(toDisplay(budget.gap)))}
+                </p>
+                <p className="mt-1 text-meta text-muted-foreground">
+                  Against a{' '}
+                  <span className="num">{displayFormat.format(toDisplay(budget.annualBudget))}</span>{' '}
+                  budget for the year
+                </p>
+
+                <DrillIn href="/spending#budget-table" className="mt-auto pt-3">
+                  Spending
+                </DrillIn>
+              </>
+            ) : (
+              <p className="mt-1.5 text-body text-muted-foreground">No budget set.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Net worth */}
+        <Card aria-labelledby="net-worth-label">
+          <CardContent className="flex h-full flex-col p-5">
+            <p id="net-worth-label" className="eyebrow">
+              Net worth
+            </p>
+            {netWorth !== null ? (
+              <>
+                <p className="figure mt-1.5 text-figure text-foreground">
+                  {displayFormat.format(netWorth)}
+                </p>
+                <p className="mt-2.5 text-meta text-muted-foreground">{TRUST_EXCLUSION_LABEL}</p>
+                <DrillIn href="/position#net-worth-chart" className="mt-auto pt-3">
+                  Position
+                </DrillIn>
+              </>
+            ) : (
+              <p className="mt-1.5 text-body text-muted-foreground">No accounts yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 4. Attention — 0-3 items, and only when genuinely actionable. */}
-      <section aria-labelledby="attention-label" className="border-t pt-4">
-        <p
-          id="attention-label"
-          className="text-meta font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          Attention
-        </p>
-        <AttentionList
-          lastSyncAt={summary?.lastSyncDate ?? null}
-          forecastByCategory={(summary?.forecastByCategory ?? []) as ForecastCategoryRow[]}
-        />
-      </section>
+      <Card aria-labelledby="attention-label">
+        <CardContent className="p-5">
+          <p id="attention-label" className="eyebrow">
+            Attention
+          </p>
+          <AttentionList
+            lastSyncAt={summary?.lastSyncDate ?? null}
+            forecastByCategory={(summary?.forecastByCategory ?? []) as ForecastCategoryRow[]}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/**
+ * The "go and look at this properly" link. One shape for all of them, sitting
+ * at the foot of its card, so a drill-in never gets mistaken for part of the
+ * sentence above it — which is what the old inline underlined links did.
+ */
+function DrillIn({
+  href,
+  children,
+  className,
+}: {
+  href: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <Link
+        href={href}
+        className="group inline-flex items-center gap-1 text-meta font-semibold text-primary transition-colors hover:text-foreground"
+      >
+        {children}
+        <ArrowUpRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+      </Link>
     </div>
   )
 }

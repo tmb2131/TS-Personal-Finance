@@ -28,7 +28,7 @@ export function ForecastBacktestPanel({ backtest }: { backtest: BacktestResult }
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg md:text-xl">Backtest — {backtest.year} accuracy</CardTitle>
+        <CardTitle className="md:">Backtest — {backtest.year} accuracy</CardTitle>
         <p className="text-xs text-muted-foreground">
           {backtest.backtestYears.length > 1
             ? `Each methodology was backtested against ${backtest.backtestYears[0]}–${backtest.backtestYears[backtest.backtestYears.length - 1]}; per-category err% is averaged across years.`

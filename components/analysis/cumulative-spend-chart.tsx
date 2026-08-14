@@ -395,7 +395,7 @@ export function CumulativeSpendChart() {
                   }).format(value)
                 }
                 tick={{ fontSize: getChartFontSizes(isMobile).axisTick }}
-                stroke="#82ca9d"
+                stroke="hsl(var(--chart-5))"
                 width={isMobile ? 48 : 60}
               />
               <Tooltip
@@ -425,7 +425,7 @@ export function CumulativeSpendChart() {
                 yAxisId="left"
                 type="monotone"
                 dataKey="ytdSpend"
-                stroke="#8884d8"
+                stroke="hsl(var(--chart-2))"
                 strokeWidth={2}
                 dot={false}
                 name="ytdSpend"
@@ -434,7 +434,7 @@ export function CumulativeSpendChart() {
                 yAxisId="right"
                 type="monotone"
                 dataKey="impliedAnnualSpend"
-                stroke="#82ca9d"
+                stroke="hsl(var(--chart-5))"
                 strokeWidth={2}
                 dot={false}
                 name="impliedAnnualSpend"
