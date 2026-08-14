@@ -2,12 +2,13 @@
 
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useCashRunway } from '@/lib/hooks/queries/use-cash-runway'
 import { AccountBalance } from '@/lib/types'
-import { AlertCircle, Wallet } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 
 const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
 
@@ -107,7 +108,7 @@ export function CashRunwayCards() {
 
   if (loading) {
     return (
-      <Card className="">
+      <Card>
         <CardHeader>
           <CardTitle>Cash Runway</CardTitle>
         </CardHeader>
@@ -124,7 +125,7 @@ export function CashRunwayCards() {
 
   if (error) {
     return (
-      <Card className="">
+      <Card>
         <CardHeader>
           <CardTitle>Cash Runway</CardTitle>
         </CardHeader>
@@ -140,69 +141,45 @@ export function CashRunwayCards() {
   }
 
   return (
-    <Card className="">
+    <Card>
       <CardHeader>
         <CardTitle>Cash Runway</CardTitle>
-        <p className="text-sm text-muted-foreground">Months of cash remaining based on average monthly spend</p>
+        <p className="text-body text-muted-foreground">Months of cash remaining based on average monthly spend</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <div className="grid md:grid-cols-2 gap-6">
-          {/* GBP Runway Card */}
-          {gbpData && (
-            <div className="space-y-3 p-4 rounded-lg border bg-card">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                  <Wallet className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold text-sm uppercase tracking-wide">GBP Runway</h3>
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Months on Hand</p>
-                  <p className="text-2xl font-bold tabular-nums">{formatMonths(gbpData.monthsOnHand)}</p>
-                </div>
-                <div className="space-y-1 pt-2 border-t">
-                  <p className="text-sm">
-                    <span className="text-xs text-muted-foreground">Total Cash: </span>
-                    <span className="font-semibold">{formatCurrency(gbpData.totalCash, 'GBP')}</span>
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-xs text-muted-foreground">Avg Monthly Spend: </span>
-                    <span className="font-semibold">{formatCurrency(gbpData.avgMonthlyBurn, 'GBP')}/mo</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* USD Runway Card */}
-          {usdData && (
-            <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-positive bg-card">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-positive-tint">
-                  <Wallet className="h-5 w-5 text-positive" />
-                </div>
-                <h3 className="font-semibold text-sm uppercase tracking-wide">USD Runway</h3>
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Months on Hand</p>
-                  <p className="text-2xl font-bold tabular-nums">{formatMonths(usdData.monthsOnHand)}</p>
-                </div>
-                <div className="space-y-1 pt-2 border-t">
-                  <p className="text-sm">
-                    <span className="text-xs text-muted-foreground">Total Cash: </span>
-                    <span className="font-semibold">{formatCurrency(usdData.totalCash, 'USD')}</span>
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-xs text-muted-foreground">Avg Monthly Spend: </span>
-                    <span className="font-semibold">{formatCurrency(usdData.avgMonthlyBurn, 'USD')}/mo</span>
-                  </p>
+          {[
+            { label: 'GBP Runway', data: gbpData, code: 'GBP' as const },
+            { label: 'USD Runway', data: usdData, code: 'USD' as const },
+          ]
+            .filter((entry) => entry.data)
+            .map(({ label, data, code }) => (
+              <div key={code} className="space-y-3 rounded-lg border bg-card p-4">
+                <h3 className="text-meta font-semibold uppercase tracking-wide">{label}</h3>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-meta text-muted-foreground mb-1">Months on Hand</p>
+                    <p className="figure text-figure">{formatMonths(data!.monthsOnHand)}</p>
+                  </div>
+                  <div className="space-y-1 border-t pt-2">
+                    <p className="text-body">
+                      <span className="text-meta text-muted-foreground">Total Cash: </span>
+                      <span className="num font-semibold">{formatCurrency(data!.totalCash, code)}</span>
+                    </p>
+                    <p className="text-body">
+                      <span className="text-meta text-muted-foreground">Avg Monthly Spend: </span>
+                      <span className="num font-semibold">
+                        {formatCurrency(data!.avgMonthlyBurn, code)}/mo
+                      </span>
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            ))}
         </div>
+        <p className="text-meta text-muted-foreground">
+          {TRUST_EXCLUSION_LABEL}. Non-cash valuation entries are excluded from the burn.
+        </p>
       </CardContent>
     </Card>
   )

@@ -143,8 +143,8 @@ export function TodaySpendByMethodologyChart({
       : 'text-sm font-bold text-foreground mt-1'
 
   return (
-    <Card className="">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
         <p className="text-sm text-muted-foreground">
           Bar = today&apos;s spend; lighter segment = room to spend by methodology (not the forecast change below).

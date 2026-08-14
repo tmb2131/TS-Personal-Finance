@@ -217,7 +217,7 @@ export default function DebtOverview() {
                           <TableCell className="max-w-xs truncate">
                             {item.purpose || '-'}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-right num">
                             {formatCurrency(amount)}
                           </TableCell>
                           <TableCell className="text-right text-sm text-muted-foreground">
@@ -284,13 +284,13 @@ export default function DebtOverview() {
         <div className="grid grid-cols-2 gap-4 pt-2 border-t">
           <div>
             <p className="text-xs text-muted-foreground">Total Debt</p>
-            <p className="text-lg font-bold tabular-nums">
+            <p className="text-lg font-bold num">
               {formatCurrency(totalDebt)}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Debt Ratio</p>
-            <p className="text-lg font-bold tabular-nums">
+            <p className="text-lg font-bold num">
               {formatPercent(debtRatio)}
             </p>
           </div>

@@ -136,7 +136,7 @@ export function BudgetIncomeTable({
     )
   }
 
-  const compactTableClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
+  const compactTableClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:num'
 
   // Calculate gap percentage
   const gapPercent = totals.annualBudget !== 0
@@ -145,7 +145,7 @@ export function BudgetIncomeTable({
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <CardHeader className="px-4 py-3 pb-4">
         <CardTitle className="text-base">Income</CardTitle>
         <p className="text-sm text-muted-foreground">All amounts are after tax</p>
       </CardHeader>
@@ -164,12 +164,12 @@ export function BudgetIncomeTable({
                 <p className="text-xs text-muted-foreground mb-0.5">vs Budget</p>
                 {totals.gap >= 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><CheckCircle2 className="h-3.5 w-3.5 text-positive" /></div>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-positive" />
                     <p className="text-base font-bold text-positive">Above Budget</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><XCircle className="h-3.5 w-3.5 text-negative" /></div>
+                    <XCircle className="h-3.5 w-3.5 text-negative" />
                     <p className="text-base font-bold text-negative">Below Budget</p>
                   </div>
                 )}
@@ -264,14 +264,14 @@ export function BudgetIncomeTable({
               return (
                 <TableRow key={row.category}>
                   <TableCell className="font-medium">{row.category}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(row.annualBudget)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(row.tracking)}</TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right num">{formatCurrency(row.annualBudget)}</TableCell>
+                  <TableCell className="text-right num">{formatCurrency(row.tracking)}</TableCell>
+                  <TableCell className="text-right num">
                     {row.ytd === 0 ? '-' : formatCurrency(row.ytd)}
                   </TableCell>
                   <TableCell
                     className={cn(
-                      'text-right font-medium tabular-nums',
+                      'text-right font-medium num',
                       isPositive ? 'text-positive' : 'text-negative'
                     )}
                   >
@@ -286,18 +286,18 @@ export function BudgetIncomeTable({
             {/* Total Income Row */}
             <TableRow className="bg-muted/50">
               <TableCell className="font-semibold">Total Income</TableCell>
-              <TableCell className="text-right font-semibold tabular-nums">
+              <TableCell className="text-right font-semibold num">
                 {formatCurrency(totals.annualBudget)}
               </TableCell>
-              <TableCell className="text-right font-semibold tabular-nums">
+              <TableCell className="text-right font-semibold num">
                 {formatCurrency(totals.tracking)}
               </TableCell>
-              <TableCell className="text-right font-semibold tabular-nums">
+              <TableCell className="text-right font-semibold num">
                 {formatCurrency(totals.ytd)}
               </TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-semibold tabular-nums',
+                  'text-right font-semibold num',
                   totals.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >

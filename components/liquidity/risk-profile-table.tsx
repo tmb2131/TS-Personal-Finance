@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { excludeTrustAccounts, TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { AlertCircle, ListIcon } from 'lucide-react'
 
@@ -75,7 +76,7 @@ export default function RiskProfileTable() {
         }
       })
 
-      const latestAccounts = Array.from(accountsMap.values())
+      const latestAccounts = excludeTrustAccounts(Array.from(accountsMap.values()))
 
       // Group by risk_profile
       const groupMap = new Map<string, AccountBalance[]>()
@@ -170,7 +171,7 @@ export default function RiskProfileTable() {
                       style={{ backgroundColor: RISK_COLORS[group.profile] || RISK_COLORS.Unknown }}
                     />
                     <h4 className="font-medium text-sm">{group.profile}</h4>
-                    <span className="text-sm text-muted-foreground ml-auto tabular-nums">
+                    <span className="text-sm text-muted-foreground ml-auto num">
                       {formatCurrency(group.total)}
                     </span>
                   </div>
@@ -206,7 +207,7 @@ export default function RiskProfileTable() {
                                 <TableCell>
                                   <Badge variant="outline">{account.currency}</Badge>
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums">
+                                <TableCell className="text-right num">
                                   {formatCurrency(balance)}
                                 </TableCell>
                               </TableRow>
@@ -239,8 +240,8 @@ export default function RiskProfileTable() {
                     <span className="text-xs text-muted-foreground">{group.accounts.length} accounts</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold tabular-nums">{formatCurrency(group.total)}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums">{pct.toFixed(1)}%</span>
+                    <span className="text-sm font-semibold num">{formatCurrency(group.total)}</span>
+                    <span className="text-xs text-muted-foreground num">{pct.toFixed(1)}%</span>
                   </div>
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-muted">
                     <div
@@ -257,7 +258,7 @@ export default function RiskProfileTable() {
             <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="font-medium">Total</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(grandTotal)}</span>
+                <span className="font-semibold num">{formatCurrency(grandTotal)}</span>
               </div>
             </div>
           </div>
@@ -284,10 +285,10 @@ export default function RiskProfileTable() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">{group.accounts.length}</TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
+                  <TableCell className="text-right num font-medium">
                     {formatCurrency(group.total)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right num">
                     {grandTotal > 0 ? `${((group.total / grandTotal) * 100).toFixed(1)}%` : '–'}
                   </TableCell>
                 </TableRow>
@@ -297,7 +298,7 @@ export default function RiskProfileTable() {
                 <TableCell className="text-right">
                   {groups.reduce((sum, g) => sum + g.accounts.length, 0)}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="text-right num">
                   {formatCurrency(grandTotal)}
                 </TableCell>
                 <TableCell className="text-right">100%</TableCell>
@@ -305,6 +306,7 @@ export default function RiskProfileTable() {
             </TableBody>
           </Table>
         )}
+        <p className="text-meta text-muted-foreground mt-2">{TRUST_EXCLUSION_LABEL}.</p>
       </CardContent>
     </Card>
   )

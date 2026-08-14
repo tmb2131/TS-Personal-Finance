@@ -117,12 +117,12 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     
     if (isNegative) {
       // Negative values: wrap in parentheses
-      return <span className="tabular-nums inline-block w-full text-right">({formatted})</span>
+      return <span className="num inline-block w-full text-right">({formatted})</span>
     }
     // For positive values, add invisible padding to match the width of parentheses
     // Using a zero-width space followed by the value, then another space for closing paren
     // This ensures the numbers align when right-aligned
-    return <span className="tabular-nums inline-block w-full text-right"><span className="invisible">(</span>{formatted}<span className="invisible">)</span></span>
+    return <span className="num inline-block w-full text-right"><span className="invisible">(</span>{formatted}<span className="invisible">)</span></span>
   }
 
   const formatPercentage = (value: number) => {
@@ -167,7 +167,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
     )
   }
 
-  const compactTableClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
+  const compactTableClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:num'
 
   const budgetStatusInfo = getBudgetStatusConfig(totals.netIncome.gap, totals.netIncome.annualBudget)
   const isAllGood = (budgetStatusInfo.level === 'under' || budgetStatusInfo.level === 'on_track') && totals.savings.tracking >= 0
@@ -185,7 +185,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Budget Tracker</CardTitle>
           {isAllGood && (
@@ -262,7 +262,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell className="text-right">{renderCurrencyAligned(totals.income.ytd)}</TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-medium tabular-nums',
+                  'text-right font-medium num',
                   totals.income.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
@@ -281,7 +281,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell className="text-right">{renderCurrencyAligned(-totals.expenses.ytd)}</TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-medium tabular-nums',
+                  'text-right font-medium num',
                   totals.expenses.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
@@ -300,7 +300,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell className="text-right font-semibold">{renderCurrencyAligned(totals.netIncome.ytd)}</TableCell>
               <TableCell
                 className={cn(
-                  'text-right font-semibold tabular-nums',
+                  'text-right font-semibold num',
                   totals.netIncome.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >

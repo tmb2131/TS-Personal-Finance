@@ -77,17 +77,17 @@ export function ForecastBacktestPanel({ backtest }: { backtest: BacktestResult }
                         )}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{fmt(c.actual)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.m1)}</td>
-                    <td className={'px-3 py-2 text-right tabular-nums ' + mapeClass(c.m1Mape, best === 0)}>
+                    <td className="px-3 py-2 text-right num">{fmt(c.actual)}</td>
+                    <td className="px-3 py-2 text-right num text-muted-foreground">{fmt(c.m1)}</td>
+                    <td className={'px-3 py-2 text-right num ' + mapeClass(c.m1Mape, best === 0)}>
                       {fmtPct(c.m1Mape)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.m2)}</td>
-                    <td className={'px-3 py-2 text-right tabular-nums ' + mapeClass(c.m2Mape, best === 1)}>
+                    <td className="px-3 py-2 text-right num text-muted-foreground">{fmt(c.m2)}</td>
+                    <td className={'px-3 py-2 text-right num ' + mapeClass(c.m2Mape, best === 1)}>
                       {fmtPct(c.m2Mape)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.m3)}</td>
-                    <td className={'px-3 py-2 text-right tabular-nums ' + mapeClass(c.m3Mape, best === 2)}>
+                    <td className="px-3 py-2 text-right num text-muted-foreground">{fmt(c.m3)}</td>
+                    <td className={'px-3 py-2 text-right num ' + mapeClass(c.m3Mape, best === 2)}>
                       {fmtPct(c.m3Mape)}
                     </td>
                   </tr>
@@ -95,13 +95,13 @@ export function ForecastBacktestPanel({ backtest }: { backtest: BacktestResult }
               })}
               <tr className="border-t-2 border-border bg-muted/30 font-semibold">
                 <td className="px-3 py-2">Total / Weighted MAPE</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(backtest.totals.actual)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(backtest.totals.m1)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(backtest.totals.m1Mape)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(backtest.totals.m2)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(backtest.totals.m2Mape)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(backtest.totals.m3)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(backtest.totals.m3Mape)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(backtest.totals.actual)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(backtest.totals.m1)}</td>
+                <td className="px-3 py-2 text-right num">{fmtPct(backtest.totals.m1Mape)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(backtest.totals.m2)}</td>
+                <td className="px-3 py-2 text-right num">{fmtPct(backtest.totals.m2Mape)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(backtest.totals.m3)}</td>
+                <td className="px-3 py-2 text-right num">{fmtPct(backtest.totals.m3Mape)}</td>
               </tr>
             </tbody>
           </table>

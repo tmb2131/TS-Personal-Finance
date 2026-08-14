@@ -111,7 +111,7 @@ export function YoYNetWorthTable() {
   if (loading) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50">
+        <CardHeader>
           <Skeleton className="h-6 w-64" />
         </CardHeader>
         <CardContent className="pt-6 md:pt-6">
@@ -139,7 +139,7 @@ export function YoYNetWorthTable() {
   if (error) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardHeader className="px-4 py-3 pb-4">
           <CardTitle className="text-base">Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
@@ -155,14 +155,14 @@ export function YoYNetWorthTable() {
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <CardHeader className="px-4 py-3 pb-4">
         <CardTitle className="text-base">Forecast Net Worth Change</CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
           Year End is a forecast; investment return reflects YTD performance held flat.
         </p>
       </CardHeader>
       <CardContent>
-        <Table className="[&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:text-[13px] [&_td]:tabular-nums">
+        <Table className="[&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:text-[13px] [&_td]:num">
           <TableHeader>
             <TableRow className="bg-muted">
               <TableHead
@@ -198,7 +198,7 @@ export function YoYNetWorthTable() {
                   </TableCell>
                   <TableCell
                     className={cn(
-                      'text-right tabular-nums',
+                      'text-right num',
                       isTotal && 'font-semibold',
                       isNegative ? 'text-negative' : amount !== null && amount > 0 ? 'text-positive' : ''
                     )}

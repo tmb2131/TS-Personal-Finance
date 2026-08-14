@@ -64,8 +64,8 @@ export function TodaySpendByCategoryChart({ spendByCategory, onBarClick }: Today
 
   if (chartData.length === 0) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Today&apos;s spend by category</CardTitle>
           <p className="text-sm text-muted-foreground">Expense by category for today</p>
         </CardHeader>
@@ -81,8 +81,8 @@ export function TodaySpendByCategoryChart({ spendByCategory, onBarClick }: Today
   }
 
   return (
-    <Card className="">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-xl">Today&apos;s spend by category</CardTitle>
         <p className="text-sm text-muted-foreground">Expense by category for today</p>
       </CardHeader>

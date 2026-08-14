@@ -279,8 +279,8 @@ export function KidsAccountsOverview() {
 
   if (error) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <Card>
+        <CardHeader className="px-4 py-3 pb-4">
           <CardTitle className="text-base">Kids Accounts</CardTitle>
         </CardHeader>
         <CardContent>
@@ -296,8 +296,8 @@ export function KidsAccountsOverview() {
 
   if (accounts.length === 0) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <Card>
+        <CardHeader className="px-4 py-3 pb-4">
           <CardTitle className="text-base">Kids Accounts</CardTitle>
         </CardHeader>
         <CardContent>
@@ -344,7 +344,7 @@ export function KidsAccountsOverview() {
             <CardContent className="space-y-2">
               <div>
                 <p className="text-sm text-muted-foreground">Total Net Worth</p>
-                <p className="text-2xl font-bold tabular-nums">{formatCurrency(summary.totalNetWorth)}</p>
+                <p className="text-2xl font-bold num">{formatCurrency(summary.totalNetWorth)}</p>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2 border-t">
                 <div>
@@ -396,21 +396,21 @@ export function KidsAccountsOverview() {
 
             {/* Account Type Summary — Mobile cards */}
             <Card className="md:hidden">
-              <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+              <CardHeader className="px-4 py-3 pb-2">
                 <CardTitle className="text-base">Account Type Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="rounded-lg border bg-muted/30 p-3 min-h-[44px]">
                   <div className="flex justify-between items-baseline">
                     <span className="text-xs font-medium text-muted-foreground uppercase">Total</span>
-                    <span className="font-semibold tabular-nums">{formatCurrency(grandTotal)}</span>
+                    <span className="font-semibold num">{formatCurrency(grandTotal)}</span>
                   </div>
                 </div>
                 {accountTypeSummary.map((item) => (
                   <div key={item.accountType} className="rounded-lg border p-3 min-h-[44px]">
                     <div className="flex justify-between items-baseline gap-2">
                       <span className="font-medium text-sm truncate">{item.accountType}</span>
-                      <span className="font-semibold tabular-nums text-sm shrink-0">{formatCurrency(item.total)}</span>
+                      <span className="font-semibold num text-sm shrink-0">{formatCurrency(item.total)}</span>
                     </div>
                     <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
                       Updated {formatDate(item.accounts.length > 0 ? item.accounts[0].date_updated : null)}
@@ -422,7 +422,7 @@ export function KidsAccountsOverview() {
 
             {/* Account Type Summary Table — Desktop */}
             <Card className="hidden md:block">
-              <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+              <CardHeader className="px-4 py-3 pb-4">
                 <CardTitle className="text-base">Account Type Summary</CardTitle>
               </CardHeader>
               <CardContent>
@@ -489,7 +489,7 @@ export function KidsAccountsOverview() {
 
             {/* Account Details — Mobile cards */}
             <Card className="md:hidden">
-              <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+              <CardHeader className="px-4 py-3 pb-2">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">Account Details</CardTitle>
                   <div className="flex items-center gap-2">{bulkEditActions}</div>
@@ -521,7 +521,7 @@ export function KidsAccountsOverview() {
                                     className="h-8 w-28 text-right text-sm"
                                   />
                                 ) : (
-                                  <span className="font-semibold tabular-nums text-sm">{formatCurrency(convertedBalance)}</span>
+                                  <span className="font-semibold num text-sm">{formatCurrency(convertedBalance)}</span>
                                 )}
                                 <Badge variant="outline" className={cn('text-[11px] px-1.5 py-0', getSourceClass(account.data_source))}>
                                   {getSourceLabel(account.data_source)}
@@ -563,7 +563,7 @@ export function KidsAccountsOverview() {
                       })}
                       <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex justify-between items-center min-h-[44px]">
                         <span className="text-sm font-semibold">{group.accountType} Subtotal</span>
-                        <span className="font-semibold tabular-nums text-sm">{formatCurrency(group.subtotal)}</span>
+                        <span className="font-semibold num text-sm">{formatCurrency(group.subtotal)}</span>
                       </div>
                     </div>
                   </div>
@@ -573,7 +573,7 @@ export function KidsAccountsOverview() {
 
             {/* Detailed Accounts Table — Desktop */}
             <Card className="hidden md:block">
-              <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+              <CardHeader className="px-4 py-3 pb-4">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">Account Details</CardTitle>
                   <div className="flex items-center gap-2">{bulkEditActions}</div>

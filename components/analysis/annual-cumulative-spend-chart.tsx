@@ -540,7 +540,7 @@ export function AnnualCumulativeSpendChart() {
 
   if (loading) {
     return (
-      <Card className="">
+      <Card>
         <CardHeader>
           <CardTitle>Annual Cumulative Spend</CardTitle>
         </CardHeader>
@@ -553,7 +553,7 @@ export function AnnualCumulativeSpendChart() {
 
   if (error) {
     return (
-      <Card className="">
+      <Card>
         <CardHeader>
           <CardTitle>Annual Cumulative Spend</CardTitle>
         </CardHeader>
@@ -569,7 +569,7 @@ export function AnnualCumulativeSpendChart() {
   }
 
   return (
-    <Card className="">
+    <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle>Annual Cumulative Spend</CardTitle>

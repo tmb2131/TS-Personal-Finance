@@ -113,7 +113,7 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
 
   return (
     <Card className={cn('border-l-[3px]', config.border)}>
-      <CardHeader className="bg-muted/50">
+      <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Scale className="h-4 w-4 text-muted-foreground" />
           Sustainable Spending Range
@@ -166,7 +166,7 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
         <div>
           <div className="flex justify-between text-sm mb-2">
             <span className="text-muted-foreground">Annual forecast spend vs sustainable range</span>
-            <span className="tabular-nums font-medium">{formatCurrency(currentForecastSpend)}</span>
+            <span className="num font-medium">{formatCurrency(currentForecastSpend)}</span>
           </div>
           <div className="relative h-6 w-full">
             <div className="absolute inset-0 rounded-full overflow-hidden bg-muted" aria-hidden>
@@ -235,13 +235,13 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
           </div>
           <div className="relative mt-2 h-4 text-[11px] text-muted-foreground" aria-hidden>
             <span
-              className="absolute -translate-x-1/2 tabular-nums text-muted-foreground font-medium transition-all duration-300 ease-out"
+              className="absolute -translate-x-1/2 num text-muted-foreground font-medium transition-all duration-300 ease-out"
               style={{ left: `${Math.min(95, Math.max(5, floorPct))}%` }}
             >
               {formatCurrency(floorAnnual)}
             </span>
             <span
-              className="absolute -translate-x-1/2 tabular-nums text-negative font-medium transition-all duration-300 ease-out"
+              className="absolute -translate-x-1/2 num text-negative font-medium transition-all duration-300 ease-out"
               style={{ left: `${Math.min(95, Math.max(5, ceilingPct))}%` }}
             >
               {formatCurrency(ceilingAnnual)}
@@ -258,17 +258,17 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="rounded-lg border p-3">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Floor</p>
-            <p className="text-xl font-bold tabular-nums text-muted-foreground">
+            <p className="text-xl font-bold num text-muted-foreground">
               {formatCurrency(floorAnnual)}
             </p>
-            <p className="text-xs tabular-nums text-muted-foreground">{formatMonthly(floorAnnual)}</p>
+            <p className="text-xs num text-muted-foreground">{formatMonthly(floorAnnual)}</p>
             <p className="text-[11px] text-muted-foreground mt-1">
               {result.floorClampedToCommitted
                 ? 'Your committed recurring spend'
                 : 'Spend less and you out-save your goal'}
             </p>
             {showGhost && savedResult && Math.abs(savedResult.floorAnnual - floorAnnual) > 1 && (
-              <p className="text-[11px] tabular-nums text-muted-foreground mt-0.5">
+              <p className="text-[11px] num text-muted-foreground mt-0.5">
                 Saved: {formatCurrency(savedResult.floorAnnual)}
               </p>
             )}
@@ -277,20 +277,20 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
               Forecast Spend
             </p>
-            <p className={cn('text-xl font-bold tabular-nums', config.text)}>
+            <p className={cn('text-xl font-bold num', config.text)}>
               {formatCurrency(currentForecastSpend)}
             </p>
-            <p className="text-xs tabular-nums text-muted-foreground">
+            <p className="text-xs num text-muted-foreground">
               {formatMonthly(currentForecastSpend)}
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">This year at current pace</p>
           </div>
-          <div className="rounded-lg border border-l-[3px] border-l-negative p-3">
+          <div className="rounded-lg border p-3">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ceiling</p>
-            <p className="text-xl font-bold tabular-nums text-negative">
+            <p className="text-xl font-bold num text-negative">
               {formatCurrency(ceilingAnnual)}
             </p>
-            <p className="text-xs tabular-nums text-muted-foreground">
+            <p className="text-xs num text-muted-foreground">
               {formatMonthly(ceilingAnnual)}
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">
@@ -299,7 +299,7 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
                 : 'Most you can spend and preserve real net worth'}
             </p>
             {showGhost && savedResult && Math.abs(savedResult.ceilingAnnual - ceilingAnnual) > 1 && (
-              <p className="text-[11px] tabular-nums text-muted-foreground mt-0.5">
+              <p className="text-[11px] num text-muted-foreground mt-0.5">
                 Saved: {formatCurrency(savedResult.ceilingAnnual)}
               </p>
             )}

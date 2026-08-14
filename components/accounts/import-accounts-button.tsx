@@ -126,13 +126,13 @@ export function ImportAccountsButton() {
                   {preview.changed.map((row) => (
                     <tr key={row.account_name} className="border-t">
                       <td className="px-2 py-1.5 truncate max-w-[180px]">{row.account_name}</td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
+                      <td className="px-2 py-1.5 text-right num text-muted-foreground">
                         {row.from == null ? 'new' : format(row.from)}
                       </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums font-medium">
+                      <td className="px-2 py-1.5 text-right num font-medium">
                         {format(row.to)}
                       </td>
-                      <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">
+                      <td className="px-2 py-1.5 text-right num text-muted-foreground">
                         {row.date}
                       </td>
                     </tr>

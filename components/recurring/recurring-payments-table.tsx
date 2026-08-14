@@ -232,7 +232,7 @@ export function RecurringPaymentsTable() {
   if (loading) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardHeader className="px-4 py-3 pb-4">
           <CardTitle className="text-base">Recurring Payments</CardTitle>
           <p className="text-sm text-muted-foreground">
             Manually tracked recurring payments. All amounts shown are annualized values.
@@ -252,7 +252,7 @@ export function RecurringPaymentsTable() {
   if (error) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardHeader className="px-4 py-3 pb-4">
           <CardTitle className="text-base">Recurring Payments</CardTitle>
           <p className="text-sm text-muted-foreground">
             Manually tracked recurring payments. All amounts shown are annualized values.
@@ -267,7 +267,7 @@ export function RecurringPaymentsTable() {
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1">
             <CardTitle className="text-base">Recurring Payments</CardTitle>
@@ -300,20 +300,18 @@ export function RecurringPaymentsTable() {
         {!loading && !error && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <KPICard title="Total Annualized" value={kpiData.totalAnnualized} />
-            <Card className={cn('h-full w-full min-w-0 border-l-[3px] border-l-positive')}>
+            <Card className={'h-full w-full min-w-0'}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-positive-tint">
-                    <AlertTriangle className="h-5 w-5 text-positive" />
-                  </div>
+                  <AlertTriangle className="h-5 w-5 text-positive" />
                   <CardTitle className="text-sm font-medium">Flagged for Review</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold tabular-nums">{kpiData.flaggedCount}</span>
+                  <span className="text-2xl font-bold num">{kpiData.flaggedCount}</span>
                   {kpiData.flaggedAnnualized > 0 && (
-                    <span className="text-sm text-muted-foreground tabular-nums">
+                    <span className="text-sm text-muted-foreground num">
                       ({formatCurrency(kpiData.flaggedAnnualized)}/yr)
                     </span>
                   )}
@@ -330,7 +328,7 @@ export function RecurringPaymentsTable() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold tabular-nums">{kpiData.paymentCount}</div>
+                <div className="text-2xl font-bold num">{kpiData.paymentCount}</div>
               </CardContent>
             </Card>
           </div>
@@ -376,7 +374,7 @@ export function RecurringPaymentsTable() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="font-semibold tabular-nums text-sm">{formatCurrency(payment.annualizedAmount)}</span>
+                      <span className="font-semibold num text-sm">{formatCurrency(payment.annualizedAmount)}</span>
                       <span className="text-xs text-muted-foreground">Annual</span>
                     </div>
                   </div>

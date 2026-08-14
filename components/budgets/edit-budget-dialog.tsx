@@ -370,7 +370,7 @@ export function EditBudgetDialog() {
               }}
             />
           ) : (
-            <span className="tabular-nums">{formatAmount(displayAmount)}</span>
+            <span className="num">{formatAmount(displayAmount)}</span>
           )}
         </TableCell>
         <TableCell className="text-right w-24">
@@ -450,7 +450,7 @@ export function EditBudgetDialog() {
               }}
             />
           ) : (
-            <span className="tabular-nums">{formatAmount(displayAmount)}</span>
+            <span className="num">{formatAmount(displayAmount)}</span>
           )}
         </TableCell>
         <TableCell className="text-right w-24">

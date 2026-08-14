@@ -6,6 +6,7 @@ import { AccountBalance } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { excludeTrustAccounts, TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
@@ -62,7 +63,7 @@ export default function LiquidityDistribution() {
         }
       })
 
-      const latestAccounts = Array.from(accountsMap.values())
+      const latestAccounts = excludeTrustAccounts(Array.from(accountsMap.values()))
 
       // Group by liquidity profile
       const liquidityGroups: Record<string, number> = {}
@@ -175,6 +176,7 @@ export default function LiquidityDistribution() {
             />
           </PieChart>
         </ResponsiveContainer>
+        <p className="text-meta text-muted-foreground mt-2">{TRUST_EXCLUSION_LABEL}.</p>
       </CardContent>
     </Card>
   )

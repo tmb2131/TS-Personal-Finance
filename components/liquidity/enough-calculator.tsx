@@ -284,7 +284,7 @@ export function EnoughCalculator() {
 
   if (loading) {
     return (
-      <Card className="">
+      <Card>
         <CardHeader>
           <CardTitle className="text-base">Financial Independence</CardTitle>
         </CardHeader>
@@ -333,7 +333,7 @@ export function EnoughCalculator() {
   }, [resolvedReturnAssumptions])
 
   return (
-    <Card className="">
+    <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Shield className="h-4 w-4 text-muted-foreground" />
@@ -396,7 +396,7 @@ export function EnoughCalculator() {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Years of Expenses Covered</p>
                 <p className={cn(
-                  'text-2xl font-bold tabular-nums',
+                  'text-2xl font-bold num',
                   metrics.yearsTotal >= 10 ? 'text-muted-foreground' : metrics.yearsTotal >= 5 ? 'text-muted-foreground' : 'text-muted-foreground'
                 )}>
                   {yearsLabel(metrics.yearsTotal)}
@@ -434,7 +434,7 @@ export function EnoughCalculator() {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Years from Liquid Assets Only</p>
                 <p className={cn(
-                  'text-2xl font-bold tabular-nums',
+                  'text-2xl font-bold num',
                   metrics.yearsLiquid >= 5 ? 'text-muted-foreground' : metrics.yearsLiquid >= 2 ? 'text-muted-foreground' : 'text-muted-foreground'
                 )}>
                   {yearsLabel(metrics.yearsLiquid)}
@@ -463,13 +463,11 @@ export function EnoughCalculator() {
           </div>
 
           {/* Custom Mix */}
-          <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-positive bg-card">
+          <div className="space-y-3 p-4 rounded-lg border bg-card">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-positive-tint">
-                  <SlidersHorizontal className="h-5 w-5 text-positive" />
-                </div>
-                <h3 className="font-semibold text-sm uppercase tracking-wide">Custom Mix</h3>
+                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-meta font-semibold uppercase tracking-wide">Custom Mix</h3>
               </div>
               <div className="relative" ref={pickerRef}>
                 <Button
@@ -520,7 +518,7 @@ export function EnoughCalculator() {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Years from Custom Mix</p>
                 <p className={cn(
-                  'text-2xl font-bold tabular-nums',
+                  'text-2xl font-bold num',
                   metrics.yearsCustom >= 5 ? 'text-positive' : metrics.yearsCustom >= 2 ? 'text-positive' : 'text-muted-foreground'
                 )}>
                   {yearsLabel(metrics.yearsCustom)}

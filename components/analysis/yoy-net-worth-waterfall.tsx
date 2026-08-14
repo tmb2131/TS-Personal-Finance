@@ -262,8 +262,8 @@ export function YoYNetWorthWaterfall() {
 
   if (loading) {
     return (
-      <Card className="border-l-[3px] border-l-positive">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <Skeleton className="h-6 w-64" />
         </CardHeader>
         <CardContent>
@@ -282,8 +282,8 @@ export function YoYNetWorthWaterfall() {
 
   if (error) {
     return (
-      <Card className="border-l-[3px] border-l-positive">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
@@ -299,8 +299,8 @@ export function YoYNetWorthWaterfall() {
 
   if (waterfallData.length === 0) {
     return (
-      <Card className="border-l-[3px] border-l-positive">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
@@ -329,8 +329,8 @@ export function YoYNetWorthWaterfall() {
   }
 
   return (
-    <Card className="border-l-[3px] border-l-positive">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <div className="flex flex-col gap-3">
           <div>
             <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
@@ -340,7 +340,7 @@ export function YoYNetWorthWaterfall() {
           </div>
           {netChange !== null && (
             <div className={cn("rounded-lg border border-border bg-background p-3 shadow-sm", netChange > 0 ? "border-l-[3px] border-l-positive" : netChange < 0 ? "border-l-[3px] border-l-negative" : "")}>
-              <span className="text-sm font-medium tabular-nums">
+              <span className="text-sm font-medium num">
                 {netChange > 0 && (
                   <>
                     Forecast net worth change to Dec 31: up{' '}

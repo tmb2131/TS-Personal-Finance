@@ -153,12 +153,12 @@ export function ForecastCategoryTable({
                     }
                   >
                     <td className="px-3 py-2 font-medium">{c.category}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{fmt(c.ytd)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.byMethodology.m1)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.byMethodology.m2)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(c.byMethodology.m3)}</td>
+                    <td className="px-3 py-2 text-right num">{fmt(c.ytd)}</td>
+                    <td className="px-3 py-2 text-right num text-muted-foreground">{fmt(c.byMethodology.m1)}</td>
+                    <td className="px-3 py-2 text-right num text-muted-foreground">{fmt(c.byMethodology.m2)}</td>
+                    <td className="px-3 py-2 text-right num text-muted-foreground">{fmt(c.byMethodology.m3)}</td>
                     {bestFit && (
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="px-3 py-2 text-right num">
                         {(() => {
                           const pick = pickByCategory.get(c.category)
                           if (!pick) return <span className="text-muted-foreground">—</span>
@@ -176,13 +176,13 @@ export function ForecastCategoryTable({
                         })()}
                       </td>
                     )}
-                    <td className="px-3 py-2 text-right tabular-nums text-xs text-muted-foreground">
+                    <td className="px-3 py-2 text-right num text-xs text-muted-foreground">
                       {fmt(c.fullYearLow)}
                       <span className="px-1">–</span>
                       {fmt(c.fullYearHigh)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmt(c.fullYearBase)}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">
+                    <td className="px-3 py-2 text-right num font-semibold">{fmt(c.fullYearBase)}</td>
+                    <td className="px-3 py-2 text-right num">
                       {pyDelta == null ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
@@ -203,12 +203,12 @@ export function ForecastCategoryTable({
               })}
               <tr className="border-t-2 border-border bg-muted/30 font-semibold">
                 <td className="px-3 py-2">Total</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.ytd)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.byMethodology.m1)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.byMethodology.m2)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.byMethodology.m3)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(totals.ytd)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(totals.byMethodology.m1)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(totals.byMethodology.m2)}</td>
+                <td className="px-3 py-2 text-right num">{fmt(totals.byMethodology.m3)}</td>
                 {bestFit && (
-                  <td className="px-3 py-2 text-right tabular-nums">
+                  <td className="px-3 py-2 text-right num">
                     <span className="inline-flex flex-col items-end leading-tight">
                       <span>{fmt(bestFit.fullYearTotal)}</span>
                       <span className="text-[10px] font-normal text-muted-foreground">
@@ -223,13 +223,13 @@ export function ForecastCategoryTable({
                     </span>
                   </td>
                 )}
-                <td className="px-3 py-2 text-right tabular-nums text-xs">
+                <td className="px-3 py-2 text-right num text-xs">
                   {fmt(totals.fullYearLow)}
                   <span className="px-1">–</span>
                   {fmt(totals.fullYearHigh)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.fullYearBase)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">
+                <td className="px-3 py-2 text-right num">{fmt(totals.fullYearBase)}</td>
+                <td className="px-3 py-2 text-right num">
                   {totals.priorYearActual > 0 ? (
                     <span>
                       {((totals.fullYearBase - totals.priorYearActual) / totals.priorYearActual) * 100 >= 0

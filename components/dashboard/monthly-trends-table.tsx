@@ -586,7 +586,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
   if (loading) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50">
+        <CardHeader>
           <Skeleton className="h-6 w-40" />
         </CardHeader>
         <CardContent className="pt-6 md:pt-6">
@@ -649,7 +649,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
   if (error) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50">
+        <CardHeader>
           <CardTitle>Monthly Trends</CardTitle>
         </CardHeader>
         <CardContent>
@@ -665,7 +665,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
 
   return (
     <Card>
-      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Monthly Trends</CardTitle>
           <div className="flex items-center gap-2">
@@ -699,12 +699,12 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                 {topMovers.totalVariance < 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                    <TrendingUp className="h-3.5 w-3.5 text-negative" />
                     <p className="text-base font-bold text-negative">Higher Than Average</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                    <TrendingDown className="h-3.5 w-3.5 text-positive" />
                     <p className="text-base font-bold text-positive">Lower Than Average</p>
                   </div>
                 )}
@@ -751,7 +751,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
               {/* MoM Increases in Spend (Top Categories Spending More) */}
               <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-negative bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                  <TrendingUp className="h-3.5 w-3.5 text-negative" />
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Increases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -759,7 +759,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topIncreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                        <TrendingUp className="h-3.5 w-3.5 text-negative" />
                         <p className="text-base font-bold text-negative">Top Categories Higher Than Average</p>
                       </div>
                     ) : (
@@ -789,7 +789,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
               {/* MoM Decreases in Spend (Top Categories Spending Less) */}
               <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                  <TrendingDown className="h-3.5 w-3.5 text-positive" />
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Decreases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -797,7 +797,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topDecreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                        <TrendingDown className="h-3.5 w-3.5 text-positive" />
                         <p className="text-base font-bold text-positive">Top Categories Lower Than Average</p>
                       </div>
                     ) : (
@@ -830,7 +830,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
               {/* MoM Decreases in Spend (Top Categories Spending Less) — first when Spending Less */}
               <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                  <TrendingDown className="h-3.5 w-3.5 text-positive" />
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Decreases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -838,7 +838,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topDecreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                        <TrendingDown className="h-3.5 w-3.5 text-positive" />
                         <p className="text-base font-bold text-positive">Top Categories Lower Than Average</p>
                       </div>
                     ) : (
@@ -868,7 +868,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
               {/* MoM Increases in Spend (Top Categories Spending More) */}
               <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-negative bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                  <TrendingUp className="h-3.5 w-3.5 text-negative" />
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Increases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -876,7 +876,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topIncreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                        <TrendingUp className="h-3.5 w-3.5 text-negative" />
                         <p className="text-base font-bold text-negative">Top Categories Higher Than Average</p>
                       </div>
                     ) : (
@@ -914,7 +914,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         <FullTableViewWrapper
           fullView={fullView}
           onClose={() => setFullView(false)}
-          className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums"
+          className="hidden md:block relative max-h-[75vh] overflow-auto border rounded-md [&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:num"
         >
             <table className="w-full caption-bottom text-sm">
             <TableHeader>

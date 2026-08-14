@@ -166,7 +166,7 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
                         <p className="font-medium truncate">{t.counterparty?.trim() || '—'}</p>
                         <p className="text-sm text-muted-foreground">{t.category}</p>
                       </div>
-                      <span className="shrink-0 tabular-nums font-medium">
+                      <span className="shrink-0 num font-medium">
                         {formatTransactionAmount(t, currency, fxRate ?? 1)}
                       </span>
                     </li>

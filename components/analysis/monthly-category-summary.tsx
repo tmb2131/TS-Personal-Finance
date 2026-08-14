@@ -559,12 +559,12 @@ export function MonthlyCategorySummary({
                   {changeAmount !== null ? (
                     isSpendingLess ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-4 w-4 text-positive" /></div>
+                        <TrendingDown className="h-4 w-4 text-positive" />
                         <p className="text-lg font-bold text-positive">Lower Than Average</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-4 w-4 text-negative" /></div>
+                        <TrendingUp className="h-4 w-4 text-negative" />
                         <p className="text-lg font-bold text-negative">Higher Than Average</p>
                       </div>
                     )
@@ -616,7 +616,7 @@ export function MonthlyCategorySummary({
   }
 
   return (
-    <Card className="">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle className="text-base">

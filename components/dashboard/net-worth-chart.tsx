@@ -217,8 +217,8 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
 
   if (loading) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           {chartHeader}
         </CardHeader>
         <CardContent>
@@ -240,8 +240,8 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
 
   if (error) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           {chartHeader}
         </CardHeader>
         <CardContent>
@@ -257,8 +257,8 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
 
   if (data.length === 0) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           {chartHeader}
         </CardHeader>
         <CardContent>
@@ -275,8 +275,8 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
   // Defer chart render until after mount to avoid hydration mismatch (isMobile / Recharts differ server vs client)
   if (!mounted) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           {chartHeader}
         </CardHeader>
         <CardContent className="pt-6 md:pt-6">
@@ -305,8 +305,8 @@ export function NetWorthChart({ initialData, currentYearFromAccounts }: NetWorth
   }
 
   return (
-    <Card className="">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         {chartHeader}
       </CardHeader>
       <CardContent className="pt-6 md:pt-6">

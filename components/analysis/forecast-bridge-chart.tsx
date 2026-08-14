@@ -153,8 +153,8 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
 
   if (loading) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <Skeleton className="h-6 w-64" />
         </CardHeader>
         <CardContent>
@@ -166,8 +166,8 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
 
   if (error) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Forecast Evolution</CardTitle>
         </CardHeader>
         <CardContent>
@@ -183,8 +183,8 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
 
   if (!data || waterfallData.length === 0) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Forecast Evolution</CardTitle>
         </CardHeader>
         <CardContent>
@@ -248,15 +248,15 @@ export function ForecastBridgeChart({ startDate, endDate }: ForecastBridgeChartP
   const formatPercent = (value: number) => `${Math.abs(value).toFixed(1)}%`
 
   return (
-    <Card className="">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <div className="flex flex-col gap-3">
           <div>
             <CardTitle className="text-xl">Forecast Evolution</CardTitle>
             <p className="text-sm text-muted-foreground mt-0.5">{periodLabel}</p>
           </div>
           <div className={cn("rounded-lg border border-border bg-background p-3 shadow-sm", netChange < 0 ? "border-l-[3px] border-l-positive" : netChange > 0 ? "border-l-[3px] border-l-negative" : "")}>
-            <span className="text-sm font-medium tabular-nums">
+            <span className="text-sm font-medium num">
               {netChange < 0 && (
                 <>
                   Gap to budget narrowed by{' '}

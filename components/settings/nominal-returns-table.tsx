@@ -149,7 +149,7 @@ export function NominalReturnsTable({
                     <TableCell
                       key={profile}
                       className={cn(
-                        'text-center tabular-nums',
+                        'text-center num',
                         isActive && 'bg-muted'
                       )}
                     >

@@ -299,7 +299,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
   const expenseMid = Math.ceil(expenseData.length / 2)
   const expenseLeftRows = expenseData.slice(0, expenseMid)
   const expenseRightRows = expenseData.slice(expenseMid)
-  const expenseCompactClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
+  const expenseCompactClass = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:num'
 
   // Calculate top categories above/below budget — only surface material variances (≥ 2% of total budget)
   const topCategories = useMemo(() => {
@@ -395,7 +395,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
       <div className="space-y-6">
         {/* Summary Table Skeleton */}
         <Card>
-          <CardHeader className="bg-muted/50">
+          <CardHeader>
             <Skeleton className="h-6 w-40" />
           </CardHeader>
           <CardContent className="pt-6 md:pt-6">
@@ -424,7 +424,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
 
         {/* Income Table Skeleton */}
         <Card>
-          <CardHeader className="bg-muted/50">
+          <CardHeader>
             <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent className="pt-6 md:pt-6">
@@ -453,7 +453,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
 
         {/* Expenses Table Skeleton */}
         <Card>
-          <CardHeader className="bg-muted/50">
+          <CardHeader>
             <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent className="pt-6 md:pt-6">
@@ -486,7 +486,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
   if (error) {
     return (
       <Card>
-        <CardHeader className="bg-muted/50">
+        <CardHeader>
           <CardTitle>Budget Tracker</CardTitle>
         </CardHeader>
         <CardContent>
@@ -522,7 +522,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
 
       {/* Expenses Table - on mobile collapsed by default, expand with "Show expenses breakdown" */}
       <Card id="expenses-table">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <CardHeader className="px-4 py-3 pb-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <CardTitle className="text-base">Expenses</CardTitle>
             <div className="flex items-center gap-2">
@@ -617,7 +617,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                   {/* Top Categories Under Budget (Lower Than Budgeted) */}
                   <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                      <TrendingDown className="h-3.5 w-3.5 text-positive" />
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Under Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -625,7 +625,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                         <p className="text-xs text-muted-foreground mb-0.5">Lower Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><CheckCircle2 className="h-3.5 w-3.5 text-positive" /></div>
+                            <CheckCircle2 className="h-3.5 w-3.5 text-positive" />
                             <p className="text-base font-bold text-positive">Under Budget</p>
                           </div>
                         ) : (
@@ -734,7 +734,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                   {/* Top Categories Under Budget (Lower Than Budgeted) */}
                   <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                      <TrendingDown className="h-3.5 w-3.5 text-positive" />
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Under Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -742,7 +742,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                         <p className="text-xs text-muted-foreground mb-0.5">Lower Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><CheckCircle2 className="h-3.5 w-3.5 text-positive" /></div>
+                            <CheckCircle2 className="h-3.5 w-3.5 text-positive" />
                             <p className="text-base font-bold text-positive">Under Budget</p>
                           </div>
                         ) : (
@@ -788,7 +788,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                     <div className="font-medium text-sm truncate">{row.category}</div>
                     <span
                       className={cn(
-                        'font-semibold tabular-nums text-sm shrink-0',
+                        'font-semibold num text-sm shrink-0',
                         isMaterial
                           ? isPositive ? 'text-positive' : 'text-negative'
                           : 'text-muted-foreground'

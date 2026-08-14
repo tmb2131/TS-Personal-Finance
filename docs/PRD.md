@@ -104,75 +104,127 @@ Migrations currently run through **035** (`supabase/migrations/001` ... `035`).
 ### 4.0 Login (`/login`)
 
 - Google OAuth via Supabase.
-- Callback at `/auth/callback` exchanges code, upserts `user_profiles`, and redirects to `/insights`.
+- Callback at `/auth/callback` exchanges code, upserts `user_profiles`, and redirects to `/`.
 - New users get dummy sheet ID + background sync.
-- Signed-in users visiting `/login` are redirected to `/insights`.
+- Signed-in users visiting `/login` are redirected to `/`.
 
-### 4.1 Dashboard (`/`)
+### 4.1 Home (`/`)
 
-- At-a-glance cards + section navigation.
-- Net worth chart (historical, Trust-aware handling).
-- Income vs Expenses chart.
-- Budget table with in-app editing entry points (budget + category planning).
-- Annual and Monthly trends tables are computed from app logic (`lib/forecasting.ts`) rather than legacy trends tables.
-- Supports full-table view overlays.
+Merges the former Daily Summary and Key Insights pages, which overlapped on net
+worth, budget, income vs expenses, and trends. Home answers one question: is
+there anything I need to do? Target is a primary read that fits one mobile
+screen without scrolling.
 
-### 4.2 Key Insights (`/insights`)
+Four blocks, in order:
 
-- KPI/summary cards built from budgets, computed trends, historical net worth, and latest balances.
-- Daily Summary modal (on-mount + header-triggered).
-- Connect Sheet modal when sheet setup is missing.
-- Dummy-data banner shown when using seeded sample sheet.
+1. **GBP available** — sterling cash actually held across the UK accounts,
+   largest type on the page. Deliberately does **not** follow the currency
+   toggle: roughly 95% of the working pool is USD-denominated, so a converted
+   total would read as sterling that is not there. The converted all-cash total
+   is shown separately and labelled.
+2. **Budget status** — full-year tracking against budget, with the over/under gap.
+3. **Net worth** — latest total, excluding trust capital, with the exclusion
+   labelled rather than silent.
+4. **Attention** — zero to three items, and only when genuinely actionable
+   (sync stale beyond 48h, a category more than 20% over budget). The empty
+   state is one line, not a card.
 
-### 4.3 Accounts (`/accounts`)
+The Executive Summary card and the Milestones banner were removed. Nothing on
+Home is duplicated from the other four pages.
 
-- Account listing with latest per account.
-- Add/Edit/Delete manual account rows.
-- Non-manual rows are read-only in edit/delete APIs.
+### 4.2 Spending (`/spending`)
 
-### 4.4 Liquidity (`/liquidity`)
+- Today section: today's headroom, spend by category and by forecast methodology.
+- Budget table with in-app editing entry points (section id `budget-table`).
+- Transaction Analysis, with period/year/month/category deep links preserved
+  from the retired `/analysis?section=transaction-analysis` URLs.
+- Transactions list: search, filter, review; manual CRUD.
+- Recurring: table plus detection summary from `lib/utils/detect-recurring-payments.ts`.
 
-- KPIs: Total Cash, Liquid Assets, Instant Liquidity.
-- Committed capital vs liquidity chart.
-- Monthly expenses vs liquidity chart.
-- Debt overview + distribution/risk/horizon views.
-- Debt is app-managed (manual source).
+### 4.3 Position (`/position`)
 
-### 4.5 Kids Accounts (`/kids`)
+- Accounts: listing with latest row per account; manual add/edit/delete, with
+  non-manual rows read-only in the edit/delete APIs.
+- Net worth chart over time (section id `net-worth-chart`).
+- Cash runway (section id `cash-runway`).
+- Liquidity: Total Cash, Liquid Assets, Instant Liquidity; committed capital vs
+  liquidity; monthly expenses vs liquidity; debt overview; distribution, risk
+  and horizon views. Debt is app-managed (manual source).
+- Sustainable spend explorer.
+- Kids accounts, hidden entirely when there is no kids data.
 
-- Kids balances + notes/purpose.
-- Supports sheet-synced rows plus manual rows.
-- Sidebar hides Kids nav when no kids data exists.
+**Trust exclusion.** The Brosens 2012 Children's Trust line is a 25% interest in
+a larger trust and is preserve-and-pass-down capital; the education trust is
+ring-fenced for Kiran's and Nilan's education and is tracked separately in
+`kids_accounts`. Neither belongs in runway, liquidity, or spendable-capital
+figures. The headline figures already excluded trust capital before this was
+made explicit, but only incidentally — the account's category is `Trust` and its
+liquidity profile is `Locked Up`, so it missed the Cash/Brokerage and Instant
+filters by accident of categorisation. `lib/trust-exclusions.ts` now makes the
+exclusion load-bearing, and every surface carries a visible label for it.
 
-### 4.6 Recurring (`/recurring`)
+### 4.4 Trends (`/trends`)
 
-- Recurring table + detection summary.
-- Recurring detection from transaction history (`lib/utils/detect-recurring-payments.ts`).
-- Supports manual recurring entries while preserving synced rows.
+Cut from the seven sections the old Analysis page carried down to a shorter set:
 
-### 4.7 Import (`/import`)
+- Observations: top ranked allocation and spending observations.
+- **Forecast**: one section with a period toggle across year-to-date, full-year,
+  and how the forecast changed. These were three separate sections
+  (`ytd-spend`, `annual-cumulative`, `forecast-evolution`) — three renderings of
+  one question. Each old fragment still lands here and opens the matching period.
+- Methodologies: three forecast methodologies and the scenario band.
+- YoY Net Worth (section id `yoy-net-worth`).
+- Monthly Category Trends (section id `monthly-category-trends`).
+- Annual and monthly trends tables, computed from `lib/forecasting.ts`.
 
-- CSV upload, column mapping, preview, import summary.
-- API route: `POST /api/import/csv`.
-- Dedup key: `date + normalized counterparty + amount`.
-- Imported rows use `data_source = 'csv'`.
+Forecast evolution endpoints use rollback history computation
+(`forecast_settings_history`, `budget_targets_history`) via
+`lib/forecast-evolution.ts`.
 
-### 4.8 Settings (`/settings`)
+### 4.5 Settings (`/settings`)
 
 - Google Sheet connection + template copy workflow.
+- CSV import (absorbed from the retired `/import` route, `?target=` preserved):
+  upload, column mapping, preview, import summary. `POST /api/import/csv`,
+  dedup key `date + normalized counterparty + amount`, rows written with
+  `data_source = 'csv'`.
 - Default currency preference (`user_profiles.default_currency`).
-- Category Planning section to manage annual budget + forecast methods + manual overrides by category.
+- Category Planning: annual budget, forecast methods, manual overrides.
+- Financial assumptions.
 - Appearance (Light/Dark/System) via `next-themes`.
+- Account: log out.
 - Saving settings with a sheet ID triggers sync.
 
-### 4.9 Analysis (`/analysis`)
+### 4.6 Navigation and chrome
 
-- Sections: Cash Runway, Transaction Analysis, Forecast Evolution, YTD Cumulative, Annual Cumulative, YoY Net Worth, Monthly Category Trends.
-- Deep-link support via hash and query params.
-- Add Transaction dialog (manual transaction CRUD).
-- Forecast evolution endpoints use rollback history computation (`forecast_settings_history`, `budget_targets_history`) via `lib/forecast-evolution.ts`.
+- Five destinations, flat: Home, Spending, Position, Trends, Settings. Five
+  items do not need grouping headers, and the mobile bar holds all five — there
+  is no "More" sheet, and every destination is one tap.
+- Header: sync status, refresh, currency chip, quick add. The currency toggle is
+  a single chip showing the active currency; theme and log out moved to Settings.
+- One floating button: the AI assistant. Quick Add moved into the header.
+- Retained: scroll-to-hide header, pull-to-refresh, safe-area insets, skip link.
 
-### 4.10 AI Assistant
+### 4.7 Retired routes
+
+Every retired route redirects and no bookmark 404s. Single-destination routes
+redirect in `next.config.ts`; `/dashboard` and `/analysis` resolve on the client,
+because their sections split across more than one destination and a URL fragment
+never reaches the server. New pages reuse the old section ids so fragments and
+query params survive. Full table in `docs/AI-PAGE-COVERAGE-MATRIX.md`.
+
+### 4.8 Non-cash ledger entries
+
+Ledger rows with counterparty "Valuation change" are non-cash mark-to-market
+entries that book as sterling inflows. They arrive categorised `Excluded`, so
+the category filters already kept them out of most totals — but that depends on
+the source sheet staying categorised correctly, and a single recategorisation
+upstream would reintroduce phantom income. The exclusion is enforced on the
+counterparty as well, in `lib/category-filters.ts` and in the cash runway RPC,
+matched on the exact normalized name so genuine expenses such as "Prestige
+Valuations" keep flowing through.
+
+### 4.9 AI Assistant
 
 - Chat widget available in app shell.
 - Route: `POST /api/chat`.

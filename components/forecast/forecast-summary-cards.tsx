@@ -58,7 +58,7 @@ export function ForecastSummaryCards({ data }: { data: TransactionForecastResult
           <div className="text-xs uppercase tracking-wide text-muted-foreground">
             Scenario range
           </div>
-          <div className="mt-1 text-xl md:text-2xl font-semibold tabular-nums">
+          <div className="mt-1 text-xl md:text-2xl font-semibold num">
             {fmt(t.fullYearLow)}
             <span className="px-1 text-muted-foreground">–</span>
             {fmt(t.fullYearHigh)}

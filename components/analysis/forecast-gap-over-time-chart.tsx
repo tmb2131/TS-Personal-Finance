@@ -72,8 +72,8 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
 
   if (loading) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <Skeleton className="h-6 w-48" />
         </CardHeader>
         <CardContent>
@@ -85,8 +85,8 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
 
   if (error) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Gap to budget over time</CardTitle>
         </CardHeader>
         <CardContent>
@@ -102,8 +102,8 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
 
   if (data.length === 0) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Gap to budget over time</CardTitle>
         </CardHeader>
         <CardContent>
@@ -123,8 +123,8 @@ export function ForecastGapOverTimeChart({ startDate, endDate }: ForecastGapOver
   }))
 
   return (
-    <Card className="">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-xl">Gap to budget over time</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
           📉 Downward slope: Under Budget (Narrowing) | 📈 Upward slope: Above Budget (Widening)

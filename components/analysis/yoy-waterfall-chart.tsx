@@ -168,8 +168,8 @@ export function YoYWaterfallChart() {
 
   if (loading) {
     return (
-      <Card className="border-l-[3px] border-l-positive">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <Skeleton className="h-6 w-64" />
         </CardHeader>
         <CardContent>
@@ -181,8 +181,8 @@ export function YoYWaterfallChart() {
 
   if (error) {
     return (
-      <Card className="border-l-[3px] border-l-positive">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
@@ -198,8 +198,8 @@ export function YoYWaterfallChart() {
 
   if (data.length === 0) {
     return (
-      <Card className="border-l-[3px] border-l-positive">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
         </CardHeader>
         <CardContent>
@@ -214,8 +214,8 @@ export function YoYWaterfallChart() {
   }
 
   return (
-    <Card className="border-l-[3px] border-l-positive">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-xl">Year-over-Year Net Worth Change</CardTitle>
       </CardHeader>
       <CardContent>

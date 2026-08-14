@@ -130,7 +130,7 @@ export function FullTableViewWrapper({
           fullViewContainerClassName,
           'animate-in fade-in-0 zoom-in-95 duration-200',
           /* Denser table in full view: smaller font and row height, keep widths/styles */
-          '[&_table]:text-[11px] [&_th]:h-7 [&_td]:h-7 [&_th]:py-0.5 [&_td]:py-0.5 [&_th]:px-2 [&_td]:px-2 [&_th]:text-[11px] [&_td]:tabular-nums'
+          '[&_table]:text-[11px] [&_th]:h-7 [&_td]:h-7 [&_th]:py-0.5 [&_td]:py-0.5 [&_th]:px-2 [&_td]:px-2 [&_th]:text-[11px] [&_td]:num'
         )}
       >
         <div

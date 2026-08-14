@@ -48,7 +48,7 @@ function SliderRow({
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
         <Label className="text-xs">{label}</Label>
-        <span className="text-sm font-semibold tabular-nums">{valueLabel}</span>
+        <span className="text-sm font-semibold num">{valueLabel}</span>
       </div>
       <Slider
         min={min}
@@ -73,7 +73,7 @@ export function AssumptionsPanel({
   symbol,
 }: AssumptionsPanelProps) {
   return (
-    <Card className="">
+    <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between gap-2">
           <span className="flex items-center gap-2">

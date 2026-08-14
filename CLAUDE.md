@@ -175,9 +175,9 @@ ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 
 ## Database Migrations
 
-There are currently **38** migrations (`001` through `038`).
+There are currently **49** migrations (`001` through `049`).
 
-Next migration should be `039_*.sql`.
+Next migration should be `050_*.sql`.
 
 ## Deployment
 
@@ -192,21 +192,54 @@ All cron routes require `Authorization: Bearer <CRON_SECRET>` and are enforced i
 
 ## Pages & Navigation
 
-Sidebar order (`components/sidebar.tsx`):
-1. `Daily Summary` (`/`)
-2. `Key Insights` (`/insights`)
-3. `Dashboard` (`/dashboard`)
-4. `Today` (`/today`)
-5. `Accounts` (`/accounts`)
-6. `Transactions` (`/transactions`)
-7. `Liquidity` (`/liquidity`)
-8. `Kids Accounts` (`/kids`) - hidden if no kids data
-9. `Analysis` (`/analysis`)
-10. `Forecast` (`/forecast`)
-11. `Sustainable Spend` (`/sustainable-spend`) - interactive sustainable spend range explorer
-12. `Recurring` (`/recurring`)
-13. `Import` (`/import`)
-14. `Settings` (`/settings`)
+Five destinations, flat — no grouping headers on desktop, no "More" sheet on
+mobile (`components/sidebar.tsx`):
+
+1. `Home` (`/`) — GBP available, budget status, net worth, 0-3 attention items
+2. `Spending` (`/spending`) — today, budget table, transaction analysis, transactions, recurring
+3. `Position` (`/position`) — accounts, net worth chart, cash runway, liquidity, sustainable spend, kids (hidden when empty)
+4. `Trends` (`/trends`) — observations, forecast (period toggle), methodologies, YoY net worth, category trends, annual/monthly tables
+5. `Settings` (`/settings`) — data sources, CSV import, category planning, assumptions, appearance, account
+
+Header carries sync status, refresh, the currency chip, and quick add. Theme and
+log out live in Settings. One floating button only: the AI assistant.
+
+### Retired routes
+
+All redirect; nothing 404s. Single-destination routes redirect in
+`next.config.ts`. `/dashboard` and `/analysis` resolve on the client
+(`components/nav/hash-redirect.tsx`) because their sections split across more
+than one destination and a fragment never reaches the server. New pages reuse
+the old section ids, so `/analysis#forecast-evolution` and
+`/analysis?section=transaction-analysis&period=YTD` both still land correctly.
+
+`/insights` → `/` · `/accounts` `/liquidity` `/kids` `/sustainable-spend` →
+`/position` · `/transactions` `/recurring` `/today` → `/spending` · `/forecast`
+→ `/trends` · `/import` → `/settings`
+
+When adding or moving a route, update `lib/ai/app-knowledge.ts`, `PAGE_ALIASES`
+in the same file, `lib/ai/evals/app-instructions-cases.ts`, and
+`docs/AI-PAGE-COVERAGE-MATRIX.md` in the same change — the assistant's routing
+breaks otherwise. Verify with `npm run eval:app-instructions`.
+
+## Design System
+
+Defined in `app/globals.css` and wired through `tailwind.config.ts`.
+
+- **One type scale**, five steps: `--text-display` / `figure` / `title` / `body`
+  / `meta`, available as `text-display` … `text-meta` and as `.type-*` classes.
+  Do not reach for a raw Tailwind size step.
+- **Colour carries exactly one meaning: over or under budget.** Two tokens,
+  `positive` and `negative`, each with a solid and a 10% `-tint` variant. There
+  are no hard-coded `green-*` / `red-*` classes in `components/`; do not add any.
+  Coloured left borders are for cards reporting a variance and nothing else.
+- **No gradients.** Card headers are a plain `border-b` with no fill. The one
+  gradient left is the `.scroll-fade-right` utility, a real scroll-overflow
+  affordance.
+- **`.num` on every currency and percentage figure** for tabular figures.
+  `"tnum"` is deliberately not set globally on `body`.
+- **`.figure`** puts headline currency in the Archivo display face. This is the
+  one place to spend boldness; everything else stays quiet.
 
 ## API Routes
 

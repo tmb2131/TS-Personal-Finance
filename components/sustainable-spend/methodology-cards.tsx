@@ -50,7 +50,7 @@ function FormulaRow({
       <div className="flex items-baseline gap-2 min-w-0">
         <span
           className={cn(
-            'w-3 shrink-0 text-center font-semibold tabular-nums',
+            'w-3 shrink-0 text-center font-semibold num',
             operator === '−' ? 'text-negative' : operator === '+' ? 'text-positive' : 'text-muted-foreground'
           )}
         >
@@ -63,7 +63,7 @@ function FormulaRow({
       </div>
       <span
         className={cn(
-          'tabular-nums text-sm shrink-0',
+          'num text-sm shrink-0',
           emphasis ? 'font-bold text-base' : 'font-medium',
           valueClass
         )}
@@ -159,12 +159,12 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                     style={{ width: `${Math.max(1, row.weight * 100)}%` }}
                   />
                 </div>
-                <span className="w-10 shrink-0 text-right tabular-nums text-xs text-muted-foreground">
+                <span className="w-10 shrink-0 text-right num text-xs text-muted-foreground">
                   {formatPct(row.weight, 0)}
                 </span>
                 <span
                   className={cn(
-                    'w-14 shrink-0 text-right tabular-nums text-xs',
+                    'w-14 shrink-0 text-right num text-xs',
                     row.nominal < 0 ? 'text-negative' : 'text-muted-foreground'
                   )}
                 >
@@ -172,7 +172,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 </span>
                 <span
                   className={cn(
-                    'w-16 shrink-0 text-right tabular-nums text-xs font-medium',
+                    'w-16 shrink-0 text-right num text-xs font-medium',
                     row.net < 0 ? 'text-negative' : ''
                   )}
                   title={`${formatPct(row.tax, 0)} effective tax`}
@@ -188,17 +188,17 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
               <span className="text-muted-foreground">
                 Weighted nominal return on {formatCurrency(totalAssets)} of assets
               </span>
-              <span className="tabular-nums font-medium">{formatPct(weightedNominal)}</span>
+              <span className="num font-medium">{formatPct(weightedNominal)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tax on gains</span>
-              <span className="tabular-nums font-medium text-negative">
+              <span className="num font-medium text-negative">
                 −{formatPct(weightedNominal - weightedNet)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Inflation adjustment</span>
-              <span className="tabular-nums font-medium text-negative">
+              <span className="num font-medium text-negative">
                 −{formatPct(draft.inflationRate)}
               </span>
             </div>
@@ -206,7 +206,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
               <span className="font-semibold">Real after-tax return</span>
               <span
                 className={cn(
-                  'tabular-nums font-bold',
+                  'num font-bold',
                   result.realReturn >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
@@ -219,7 +219,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
       </Card>
 
       {/* Step 2: ceiling */}
-      <Card className="border-l-[3px] border-l-negative">
+      <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <StepBadge step={2} />
@@ -261,7 +261,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 {draft.emergencyFundMonths}-month emergency fund target, so the ceiling is capped at
                 income + gifts until the buffer is rebuilt.
               </p>
-              <p className="font-semibold tabular-nums text-foreground">
+              <p className="font-semibold num text-foreground">
                 Capped ceiling = {formatCurrency(result.ceilingAnnual)}
               </p>
             </div>
@@ -270,7 +270,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
       </Card>
 
       {/* Step 3: floor */}
-      <Card className="">
+      <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <StepBadge step={3} />
@@ -331,7 +331,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 Your recurring commitments total {formatCurrency(inputs.committedAnnualSpend)} per
                 year — more than the goal-derived floor — so the floor is raised to cover them.
               </p>
-              <p className="font-semibold tabular-nums text-foreground">
+              <p className="font-semibold num text-foreground">
                 Floor = {formatCurrency(result.floorAnnual)}
               </p>
             </div>

@@ -5,6 +5,10 @@ import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { AccountBalance } from '@/lib/types'
 import { KPICard } from '@/components/kpi-card'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import {
+  excludeTrustAccounts,
+  TRUST_EXCLUSION_LABEL,
+} from '@/lib/trust-exclusions'
 
 export default function LiquidityOverviewKPIs() {
   const { currency, convertAmount, fxRate } = useCurrency()
@@ -29,7 +33,11 @@ export default function LiquidityOverviewKPIs() {
       }
     })
 
-    const latestAccounts = Array.from(accountsMap.values())
+    // The trust line never reached these totals before, but only because its
+    // category is `Trust` and its liquidity profile is `Locked Up`. Make the
+    // exclusion explicit so a recategorisation upstream cannot pull £6.2m of
+    // untouchable capital into the numbers most likely to be acted on.
+    const latestAccounts = excludeTrustAccounts(Array.from(accountsMap.values()))
 
     // Calculate totals by liquidity level
     let cash = 0
@@ -74,9 +82,9 @@ export default function LiquidityOverviewKPIs() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <KPICard title="Total Cash" value={cashTotal} subtitle="Cash accounts" />
-      <KPICard title="Liquid Assets" value={liquidTotal} subtitle="Cash + Brokerage" />
-      <KPICard title="Instant Liquidity" value={instantTotal} subtitle="Instant access only" />
+      <KPICard title="Total Cash" value={cashTotal} subtitle="Cash accounts" note={TRUST_EXCLUSION_LABEL} />
+      <KPICard title="Liquid Assets" value={liquidTotal} subtitle="Cash + Brokerage" note={TRUST_EXCLUSION_LABEL} />
+      <KPICard title="Instant Liquidity" value={instantTotal} subtitle="Instant access only" note={TRUST_EXCLUSION_LABEL} />
     </div>
   )
 }

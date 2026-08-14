@@ -51,8 +51,8 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
 
   if (transactions.length === 0) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Today&apos;s transactions</CardTitle>
           <p className="text-sm text-muted-foreground">Expense transactions for today</p>
         </CardHeader>
@@ -68,14 +68,14 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
   }
 
   return (
-    <Card className="">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <CardTitle className="text-xl">Today&apos;s transactions</CardTitle>
             <p className="text-sm text-muted-foreground">Expense transactions for today</p>
           </div>
-          <p className="text-lg font-semibold tabular-nums">{totalFormatted}</p>
+          <p className="text-lg font-semibold num">{totalFormatted}</p>
         </div>
       </CardHeader>
       <CardContent>
@@ -86,7 +86,7 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
                 <p className="font-medium truncate">{t.counterparty?.trim() || '—'}</p>
                 <p className="text-sm text-muted-foreground">{t.category}</p>
               </div>
-              <span className="shrink-0 tabular-nums font-medium">{formatAmount(t)}</span>
+              <span className="shrink-0 num font-medium">{formatAmount(t)}</span>
             </li>
           ))}
         </ul>

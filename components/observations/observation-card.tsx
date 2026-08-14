@@ -97,7 +97,7 @@ export function ObservationCard({ observation }: { observation: Observation }) {
                   )}
                 >
                   <dt className="text-muted-foreground">{row.label}</dt>
-                  <dd className="font-mono tabular-nums">{row.value}</dd>
+                  <dd className="font-mono num">{row.value}</dd>
                 </div>
               ))}
             </dl>

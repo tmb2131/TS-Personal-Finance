@@ -341,8 +341,8 @@ export function TransactionAnalysis({
 
   if (loading) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <Skeleton className="h-6 w-48" />
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
@@ -376,8 +376,8 @@ export function TransactionAnalysis({
 
   if (error) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <Card>
+        <CardHeader className="px-4 py-3 pb-4">
           <CardTitle className="text-base">Transaction Analysis</CardTitle>
         </CardHeader>
         <CardContent>
@@ -393,7 +393,7 @@ export function TransactionAnalysis({
 
   return (
     <Card ref={cardRef} className="">
-      <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+      <CardHeader className="px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Transaction Analysis</CardTitle>
           <FullTableViewToggle
@@ -516,7 +516,7 @@ export function TransactionAnalysis({
                           <span className="text-xs text-yellow-600 dark:text-yellow-400 font-semibold">Top 80%</span>
                         )}
                       </div>
-                      <span className="font-semibold tabular-nums text-sm shrink-0">{formatCurrency(tx.amount)}</span>
+                      <span className="font-semibold num text-sm shrink-0">{formatCurrency(tx.amount)}</span>
                     </div>
                     <div className="mt-2 pt-2 border-t text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0">
                       <span>{tx.transactionCount} txns</span>
@@ -562,16 +562,16 @@ export function TransactionAnalysis({
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
+                        <TableCell className="text-right font-medium num">
                           {formatCurrency(tx.amount)}
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground tabular-nums">
+                        <TableCell className="text-right text-muted-foreground num">
                           {tx.transactionCount}
                         </TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">
+                        <TableCell className="text-right font-semibold num">
                           {formatCurrency(tx.cumulative)}
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground tabular-nums">
+                        <TableCell className="text-right text-muted-foreground num">
                           {cumulativePercentage.toFixed(1)}%
                         </TableCell>
                       </TableRow>

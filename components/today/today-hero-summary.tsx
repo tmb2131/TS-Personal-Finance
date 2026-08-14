@@ -89,7 +89,7 @@ export function TodayHeroSummary({
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
           Spent today
         </p>
-        <p className="mt-1 text-4xl font-bold tabular-nums leading-tight">
+        <p className="mt-1 text-4xl font-bold num leading-tight">
           {fmtPrecise(spentDisplay)}
         </p>
       </div>
@@ -118,7 +118,7 @@ export function TodayHeroSummary({
                   <span className="text-xs font-medium text-muted-foreground">
                     {bar.method}
                   </span>
-                  <span className="text-xs font-bold tabular-nums text-positive">
+                  <span className="text-xs font-bold num text-positive">
                     {bar.headroom > 0 ? `${fmtPrecise(bar.headroom)} left` : 'None'}
                   </span>
                 </div>
@@ -135,10 +135,10 @@ export function TodayHeroSummary({
                   />
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+                  <span className="text-[10px] text-muted-foreground/60 num">
                     {fmtPrecise(bar.spend)} spent
                   </span>
-                  <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+                  <span className="text-[10px] text-muted-foreground/60 num">
                     {fmtPrecise(bar.total)} total
                   </span>
                 </div>
@@ -163,12 +163,12 @@ export function TodayHeroSummary({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Est. annual spend</span>
                 <span className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold tabular-nums">
+                  <span className="text-sm font-semibold num">
                     {fmt(estAnnualSpendDisplay)}
                   </span>
                   <span
                     className={cn(
-                      'flex items-center gap-0.5 text-xs font-bold tabular-nums',
+                      'flex items-center gap-0.5 text-xs font-bold num',
                       impliedForecastChange! > 0
                         ? 'text-negative'
                         : impliedForecastChange! < 0
@@ -193,7 +193,7 @@ export function TodayHeroSummary({
                 <span className="text-sm text-muted-foreground">Gap to budget</span>
                 <span
                   className={cn(
-                    'text-sm font-semibold tabular-nums',
+                    'text-sm font-semibold num',
                     gapNoMoreSpend >= 0 ? 'text-positive' : 'text-negative'
                   )}
                 >

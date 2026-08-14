@@ -107,8 +107,8 @@ export function NetWorthStartEndChart() {
 
   if (loading) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <Skeleton className="h-6 w-48" />
         </CardHeader>
         <CardContent>
@@ -120,8 +120,8 @@ export function NetWorthStartEndChart() {
 
   if (error) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
         </CardHeader>
         <CardContent>
@@ -137,8 +137,8 @@ export function NetWorthStartEndChart() {
 
   if (chartData.length === 0) {
     return (
-      <Card className="">
-        <CardHeader className="bg-muted/50">
+      <Card>
+        <CardHeader>
           <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
         </CardHeader>
         <CardContent>
@@ -156,8 +156,8 @@ export function NetWorthStartEndChart() {
   const fontSizes = getChartFontSizes(isMobile)
 
   return (
-    <Card className="">
-      <CardHeader className="bg-muted/50">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-xl">Net Worth: Prior Year-End vs Forecast</CardTitle>
         <p className="text-sm text-muted-foreground mt-1">
           {bridgeSubtitle ?? 'Prior year-end net worth compared with forecast Dec 31 net worth'}

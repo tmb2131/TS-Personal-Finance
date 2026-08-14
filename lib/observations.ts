@@ -188,7 +188,7 @@ function detectTopAccountConcentration(input: ObservationsInput): Observation[] 
       ],
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: '/accounts', label: 'View accounts' },
+      drillIn: { href: '/position#accounts', label: 'View accounts' },
       rankScore: 0,
     })
   }
@@ -217,7 +217,7 @@ function detectTopAccountConcentration(input: ObservationsInput): Observation[] 
         ],
         baseCurrency: input.baseCurrency,
         asOf: input.asOf,
-        drillIn: { href: '/accounts', label: 'View accounts' },
+        drillIn: { href: '/position#accounts', label: 'View accounts' },
         rankScore: 0,
       })
     }
@@ -270,7 +270,7 @@ function detectCashLowYield(input: ObservationsInput): Observation[] {
       ],
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: '/liquidity', label: 'View liquidity' },
+      drillIn: { href: '/position#liquidity', label: 'View liquidity' },
       rankScore: 0,
     },
   ]
@@ -320,7 +320,7 @@ function detectFxExposure(input: ObservationsInput): Observation[] {
       ],
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: '/liquidity', label: 'View liquidity' },
+      drillIn: { href: '/position#liquidity', label: 'View liquidity' },
       rankScore: 0,
     },
   ]
@@ -364,7 +364,7 @@ function detectStaleBalances(input: ObservationsInput): Observation[] {
         .map(({ days: _days, ...row }) => row),
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: '/accounts', label: 'View accounts' },
+      drillIn: { href: '/position#accounts', label: 'View accounts' },
       rankScore: 0,
     },
   ]
@@ -402,7 +402,7 @@ function detectRecurringReviewBacklog(input: ObservationsInput): Observation[] {
       ],
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: '/recurring', label: 'View recurring' },
+      drillIn: { href: '/spending#recurring', label: 'View recurring' },
       rankScore: 0,
     },
   ]
@@ -577,7 +577,7 @@ function detectRecurringRunRate(input: ObservationsInput): Observation[] {
       ],
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: '/recurring', label: 'View recurring' },
+      drillIn: { href: '/spending#recurring', label: 'View recurring' },
       rankScore: 0,
     },
   ]

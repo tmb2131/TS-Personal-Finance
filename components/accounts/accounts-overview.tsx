@@ -409,7 +409,7 @@ export function AccountsOverview() {
 
   if (error) {
     return (
-      <Card className="">
+      <Card>
         <CardHeader>
           <CardTitle>Accounts</CardTitle>
         </CardHeader>
@@ -424,7 +424,7 @@ export function AccountsOverview() {
     )
   }
 
-  const compactTable = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:tabular-nums'
+  const compactTable = '[&_th]:h-8 [&_th]:px-2 [&_th]:py-1 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-wider [&_th]:font-medium [&_td]:h-8 [&_td]:px-2 [&_td]:py-1 [&_td]:text-[13px] [&_td]:num'
 
   return (
     <div className="space-y-4">
@@ -442,7 +442,7 @@ export function AccountsOverview() {
 
       {/* Category Summary — Mobile card layout */}
       <Card className="md:hidden">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+        <CardHeader className="px-4 py-3 pb-2">
           <CardTitle className="text-base">Account Category Summary</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-2 md:pt-2 space-y-3">
@@ -452,11 +452,11 @@ export function AccountsOverview() {
               <>
                 <div className="flex justify-between items-baseline gap-2 mb-1">
                   <span className="text-sm">Personal</span>
-                  <span className="font-medium tabular-nums">{formatCurrency(grandTotals.personal)}</span>
+                  <span className="font-medium num">{formatCurrency(grandTotals.personal)}</span>
                 </div>
                 <div className="flex justify-between items-baseline gap-2 mb-1">
                   <span className="text-sm">Family</span>
-                  <span className="font-medium tabular-nums">{formatCurrency(grandTotals.family)}</span>
+                  <span className="font-medium num">{formatCurrency(grandTotals.family)}</span>
                 </div>
               </>
             )}
@@ -465,17 +465,17 @@ export function AccountsOverview() {
                 {hasPersonalAndFamily && <div className="border-t border-dashed my-1" />}
                 <div className="flex justify-between items-baseline gap-2 mb-1">
                   <span className="text-sm">GBP</span>
-                  <span className="font-medium tabular-nums">{formatGBP(grandTotals.gbp)}</span>
+                  <span className="font-medium num">{formatGBP(grandTotals.gbp)}</span>
                 </div>
                 <div className="flex justify-between items-baseline gap-2 mb-1">
                   <span className="text-sm">USD</span>
-                  <span className="font-medium tabular-nums">{formatUSD(grandTotals.usd)}</span>
+                  <span className="font-medium num">{formatUSD(grandTotals.usd)}</span>
                 </div>
               </>
             )}
             <div className="flex justify-between items-baseline gap-2 pt-2 border-t">
               <span className="text-sm font-semibold">Total</span>
-              <span className="font-semibold tabular-nums">{formatCurrency(grandTotals.total)}</span>
+              <span className="font-semibold num">{formatCurrency(grandTotals.total)}</span>
             </div>
             <div className="relative h-2 w-full mt-2 rounded-full bg-muted overflow-hidden">
               <div
@@ -495,11 +495,11 @@ export function AccountsOverview() {
                 <>
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
                     <span className="text-muted-foreground">Personal</span>
-                    <span className="tabular-nums">{item.personal === 0 ? '–' : formatCurrency(item.personal)}</span>
+                    <span className="num">{item.personal === 0 ? '–' : formatCurrency(item.personal)}</span>
                   </div>
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
                     <span className="text-muted-foreground">Family</span>
-                    <span className="tabular-nums">{item.family === 0 ? '–' : formatCurrency(item.family)}</span>
+                    <span className="num">{item.family === 0 ? '–' : formatCurrency(item.family)}</span>
                   </div>
                 </>
               )}
@@ -508,17 +508,17 @@ export function AccountsOverview() {
                   {hasPersonalAndFamily && <div className="border-t border-dashed my-1" />}
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
                     <span className="text-positive">GBP</span>
-                    <span className="tabular-nums">{item.gbp === 0 ? '–' : formatGBP(item.gbp)}</span>
+                    <span className="num">{item.gbp === 0 ? '–' : formatGBP(item.gbp)}</span>
                   </div>
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
                     <span className="text-positive">USD</span>
-                    <span className="tabular-nums">{item.usd === 0 ? '–' : formatUSD(item.usd)}</span>
+                    <span className="num">{item.usd === 0 ? '–' : formatUSD(item.usd)}</span>
                   </div>
                 </>
               )}
               <div className="flex justify-between items-baseline gap-2 text-sm pt-2 border-t mt-1">
                 <span className="font-medium">Balance</span>
-                <span className="font-medium tabular-nums">{formatCurrency(item.total)}</span>
+                <span className="font-medium num">{formatCurrency(item.total)}</span>
               </div>
               <div className="relative h-1.5 w-full mt-2 rounded-full bg-muted overflow-hidden">
                 <div
@@ -535,8 +535,8 @@ export function AccountsOverview() {
 
       {/* Category Summary Table — Desktop */}
       <div className="hidden md:block w-fit">
-        <Card className="">
-          <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
+        <Card>
+          <CardHeader className="px-4 py-3 pb-4">
             <CardTitle className="text-base">Account Category Summary</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-2 md:pt-2">
@@ -655,7 +655,7 @@ export function AccountsOverview() {
 
       {/* Accounts — Mobile card layout */}
       <Card className="md:hidden">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
+        <CardHeader className="px-4 py-3 pb-2">
           <CardTitle className="text-base">Accounts</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-2 md:pt-2 space-y-4">
@@ -724,7 +724,7 @@ export function AccountsOverview() {
                           <span className="text-xs text-muted-foreground block">
                             Updated {formatDate(account.date_updated)}
                           </span>
-                          <span className="font-semibold tabular-nums text-sm shrink-0">
+                          <span className="font-semibold num text-sm shrink-0">
                             {formatCurrency(convertedBalance)}
                           </span>
                         </div>
@@ -742,7 +742,7 @@ export function AccountsOverview() {
                 })}
                 <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex justify-between items-center">
                   <span className="text-sm font-semibold">{group.category} Subtotal</span>
-                  <span className="font-semibold tabular-nums text-sm">{formatCurrency(group.subtotal)}</span>
+                  <span className="font-semibold num text-sm">{formatCurrency(group.subtotal)}</span>
                 </div>
               </div>
             </div>
@@ -752,7 +752,7 @@ export function AccountsOverview() {
 
       {/* Accounts Table — Desktop */}
       <Card className="hidden md:block">
-        <CardHeader className="bg-muted/50 px-4 py-3 pb-4 flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="px-4 py-3 pb-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Accounts</CardTitle>
           <FullTableViewToggle
             fullView={fullTableOpen}
