@@ -282,28 +282,14 @@ export function EnoughCalculator() {
     return `${symbol}${Math.round(v)}`
   }
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Financial Independence</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-32 w-full" />
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (!metrics) {
-    return null
-  }
-
   const yearsLabel = (y: number) =>
     y >= 100 ? '100+ years' : y >= 10 ? `${Math.round(y)} years` : `${y.toFixed(1)} years`
   const returnLabel = (realReturn: number) => `${realReturn >= 0 ? '+' : ''}${(realReturn * 100).toFixed(1)}% real return`
   const percentLabel = (value: number) => `${(value * 100).toFixed(1).replace(/\.0$/, '')}%`
 
+  // Declared above the early returns below: this used to sit after them, so the
+  // first (loading) render produced fewer hooks than the next one and React
+  // threw "Rendered more hooks than during the previous render".
   const groupedReturnLines = useMemo(() => {
     const groups: { label: string; categories: string[] }[] = [
       { label: 'Cash / Checking / Savings', categories: ['Cash', 'Checking', 'Savings'] },
@@ -331,6 +317,24 @@ export function EnoughCalculator() {
       return `${label}: ${rateLabel}`
     })
   }, [resolvedReturnAssumptions])
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Financial Independence</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-32 w-full" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!metrics) {
+    return null
+  }
+
 
   return (
     <Card>

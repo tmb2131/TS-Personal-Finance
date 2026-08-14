@@ -29,6 +29,11 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
   const pathname = usePathname()
   const isLogin = pathname === '/login'
 
+  // Read before the login early return, not after it. Navigating between /login
+  // and the app changes which branch renders, and a hook called only on one
+  // branch changes the hook count between renders.
+  const { handleSync, syncing, ingestionStatus } = useSync()
+
   if (isLogin) {
     return (
       <>
@@ -49,8 +54,6 @@ export function AppShell({ children, initialHeaderData }: AppShellProps) {
       </>
     )
   }
-
-  const { handleSync, syncing, ingestionStatus } = useSync()
 
   return (
     <>

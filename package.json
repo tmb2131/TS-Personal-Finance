@@ -6,7 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint components app lib",
     "test": "node --experimental-strip-types --import ./scripts/test-register-hooks.mjs --test lib/__tests__/*.test.ts",
     "eval:app-instructions": "node --experimental-strip-types scripts/eval-app-instructions.mjs"
   },
