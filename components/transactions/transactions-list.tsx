@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { TransactionLog } from '@/lib/types'
 import { useCurrency } from '@/lib/contexts/currency-context'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Receipt } from 'lucide-react'
@@ -24,6 +25,16 @@ import {
 import { FilteredTotalsRow } from './filtered-totals-row'
 
 const VALID_PRESET_IDS = new Set<DatePresetId>(DATE_PRESETS.map((p) => p.id))
+
+/**
+ * The list renders one ~66px card per transaction, grouped by day. The default
+ * three-month range is around a thousand rows for an active account, which is
+ * roughly 70,000px — fine when this was its own page, far too much as one
+ * section among five on /spending. Render a screenful and let the reader ask
+ * for more; the totals row above still reports the whole filtered set.
+ */
+const INITIAL_VISIBLE = 25
+const LOAD_MORE_STEP = 50
 
 function readPreset(value: string | null): DatePresetId {
   if (value && VALID_PRESET_IDS.has(value as DatePresetId)) return value as DatePresetId
@@ -54,6 +65,7 @@ export function TransactionsList() {
     [],
   )
   const [filter, setFilter] = useState<TransactionFilterValue>(initialFilter)
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE)
 
   // Reflect filter into URL so views are shareable.
   useEffect(() => {
@@ -67,6 +79,11 @@ export function TransactionsList() {
       router.replace(next ? `?${next}` : '?', { scroll: false })
     }
   }, [filter, router, searchParams])
+
+  // A previous expansion should not carry into a different result set.
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE)
+  }, [filter.search, filter.preset, filter.categories])
 
   const fetchDays = useMemo(() => fetchDaysForPreset(filter.preset), [filter.preset])
   const { data: transactions = [], isLoading: loading, error: queryError } =
@@ -142,16 +159,22 @@ export function TransactionsList() {
     return sum
   }, [priorTransactions, priorWindow, toDisplay])
 
+  const visibleTransactions = useMemo(
+    () => filteredTransactions.slice(0, visibleCount),
+    [filteredTransactions, visibleCount],
+  )
+  const hiddenCount = filteredTransactions.length - visibleTransactions.length
+
   const transactionsByDay = useMemo(() => {
     const byDay = new Map<string, TransactionLog[]>()
-    for (const t of filteredTransactions) {
+    for (const t of visibleTransactions) {
       const dateStr = t.date
       if (!byDay.has(dateStr)) byDay.set(dateStr, [])
       byDay.get(dateStr)!.push(t)
     }
     const sortedDates = Array.from(byDay.keys()).sort((a, b) => b.localeCompare(a))
     return sortedDates.map((dateStr) => ({ dateStr, transactions: byDay.get(dateStr)! }))
-  }, [filteredTransactions])
+  }, [visibleTransactions])
 
   const symbol = currency === 'GBP' ? '£' : '$'
 
@@ -275,6 +298,22 @@ export function TransactionsList() {
               </section>
             )
           })}
+
+          {hiddenCount > 0 && (
+            <div className="flex flex-col items-center gap-2 border-t pt-4">
+              <p className="num text-meta text-muted-foreground">
+                Showing {visibleTransactions.length} of {filteredTransactions.length}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}
+              >
+                Show {Math.min(LOAD_MORE_STEP, hiddenCount)} more
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
