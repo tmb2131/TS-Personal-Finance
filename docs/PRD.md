@@ -168,8 +168,8 @@ exclusion load-bearing, and every surface carries a visible label for it.
 Cut from the seven sections the old Analysis page carried down to a shorter set:
 
 - Observations: top ranked allocation and spending observations.
-- **Forecast**: one section with a period toggle across year-to-date, full-year,
-  and how the forecast changed. These were three separate sections
+- **Forecast**: one section with a period toggle, opening on **how the forecast
+  changed** (bridge + gap-over-time), with year-to-date and full-year alongside. These were three separate sections
   (`ytd-spend`, `annual-cumulative`, `forecast-evolution`) — three renderings of
   one question. Each old fragment still lands here and opens the matching period.
 - Methodologies: three forecast methodologies and the scenario band.

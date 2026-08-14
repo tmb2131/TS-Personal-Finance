@@ -13,15 +13,18 @@ import { cn } from '@/utils/cn'
  * and a toggle rather than three scroll positions.
  */
 const PERIODS = [
+  { id: 'evolution', label: 'How it changed', legacyHash: 'forecast-evolution' },
   { id: 'ytd', label: 'Year to date', legacyHash: 'ytd-spend' },
   { id: 'annual', label: 'Full year', legacyHash: 'annual-cumulative' },
-  { id: 'evolution', label: 'How it changed', legacyHash: 'forecast-evolution' },
 ] as const
 
 type PeriodId = (typeof PERIODS)[number]['id']
 
 export function ForecastSection() {
-  const [period, setPeriod] = useState<PeriodId>('ytd')
+  // "How it changed" leads: the other two describe where the year stands,
+  // this one explains what moved the forecast, which is the question worth
+  // landing on.
+  const [period, setPeriod] = useState<PeriodId>('evolution')
 
   // Old deep links pointed at one of the three former sections. Open the toggle
   // on whichever the reader asked for.
@@ -60,14 +63,15 @@ export function ForecastSection() {
         </div>
       </div>
 
-      {/* Anchors for the retired per-section fragments, so old links still land. */}
-      <div id="ytd-spend" className="scroll-mt-24" />
-      <div id="annual-cumulative" className="scroll-mt-24" />
-      <div id="forecast-evolution" className="scroll-mt-24" />
-
-      {period === 'ytd' && <CumulativeSpendChart />}
-      {period === 'annual' && <AnnualCumulativeSpendChart />}
-      {period === 'evolution' && <ForecastEvolutionSection />}
+      {/* The active view carries the retired section's fragment id, so old deep
+          links still resolve to something scrollable. Three empty anchor divs
+          would not: HashScroll ignores targets under 150px tall, so a
+          zero-height anchor selects the right view and then never scrolls. */}
+      <div id={PERIODS.find((option) => option.id === period)!.legacyHash} className="scroll-mt-24">
+        {period === 'ytd' && <CumulativeSpendChart />}
+        {period === 'annual' && <AnnualCumulativeSpendChart />}
+        {period === 'evolution' && <ForecastEvolutionSection />}
+      </div>
     </div>
   )
 }

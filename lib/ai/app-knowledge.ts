@@ -125,7 +125,7 @@ export const APP_PAGE_KNOWLEDGE_INDEX: AppPageKnowledgeEntry[] = [
     purpose: 'How the year is tracking, and how it compares with the years before it.',
     primaryContent: [
       'Observations: top ranked allocation and spending observations from the data',
-      'Forecast: one section with a period toggle across year-to-date, full-year, and how the forecast changed. Replaces the three former sections ytd-spend, annual-cumulative and forecast-evolution, whose fragments still land here.',
+      'Forecast: one section with a period toggle. Opens on "How it changed" — the forecast bridge and gap-over-time charts that explain what moved the forecast — with year-to-date and full-year one tap away. Replaces the three former sections ytd-spend, annual-cumulative and forecast-evolution, whose fragments still land here and open the matching view.',
       'Methodologies: three forecast methodologies and the scenario band across them',
       'Year-over-year net worth bridge and waterfall (section id yoy-net-worth)',
       'Monthly category trends (section id monthly-category-trends)',

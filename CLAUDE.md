@@ -227,7 +227,7 @@ mobile (`components/sidebar.tsx`):
 1. `Home` (`/`) — GBP available, budget status, net worth, 0-3 attention items
 2. `Spending` (`/spending`) — today, budget table, transaction analysis, transactions, recurring
 3. `Position` (`/position`) — accounts, net worth chart, cash runway, liquidity, sustainable spend, kids (hidden when empty)
-4. `Trends` (`/trends`) — observations, forecast (period toggle), methodologies, YoY net worth, category trends, annual/monthly tables
+4. `Trends` (`/trends`) — observations, forecast (period toggle, opens on "How it changed"), methodologies, YoY net worth, category trends, annual/monthly tables
 5. `Settings` (`/settings`) — data sources, CSV import, category planning, assumptions, appearance, account
 
 Header carries sync status, refresh, the currency chip, and quick add. Theme and
