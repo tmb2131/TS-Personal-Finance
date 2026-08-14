@@ -67,8 +67,8 @@ const config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "var(--font-sans)", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans, system-ui)", "system-ui", "sans-serif"],
+        display: ["var(--font-display, ui-sans-serif)", "var(--font-sans, system-ui)", "sans-serif"],
       },
       fontSize: {
         display: ["var(--text-display)", { lineHeight: "var(--leading-display)", letterSpacing: "-0.03em" }],

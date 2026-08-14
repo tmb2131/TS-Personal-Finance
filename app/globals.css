@@ -129,7 +129,10 @@
   /* Currency gets a display face — the one place worth spending boldness on.
      Everything else stays in the body face and stays quiet. */
   .figure {
-    font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+    /* Each var carries its own fallback: an undefined custom property makes the
+       whole font-family declaration invalid at computed-value time, which drops
+       the element to the serif default rather than to the next name in the list. */
+    font-family: var(--font-display, ui-sans-serif), var(--font-sans, system-ui), sans-serif;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
     font-weight: 600;
