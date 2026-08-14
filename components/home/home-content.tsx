@@ -111,13 +111,15 @@ export function HomeContent() {
         </p>
       </section>
 
-      {/* 2. Budget status */}
+      {/* 2. Budget status. The headline figure is the forecast — what the year
+             is tracking towards — so it is labelled as such. Under "Budget" it
+             read as the budget itself, which is the £205k comparator below. */}
       <section aria-labelledby="budget-status-label" className="border-t pt-4">
         <p
           id="budget-status-label"
           className="text-meta font-medium uppercase tracking-wide text-muted-foreground"
         >
-          Budget
+          Tracking spend
         </p>
         {budget ? (
           <>
@@ -132,9 +134,9 @@ export function HomeContent() {
               {displayFormat.format(Math.abs(toDisplay(budget.gap)))}
             </p>
             <p className="text-meta text-muted-foreground">
-              Tracking against{' '}
-              <span className="num">{displayFormat.format(toDisplay(budget.annualBudget))}</span> for
-              the year ·{' '}
+              Against a{' '}
+              <span className="num">{displayFormat.format(toDisplay(budget.annualBudget))}</span>{' '}
+              budget for the year ·{' '}
               <Link href="/spending#budget-table" className="underline underline-offset-4">
                 Spending
               </Link>

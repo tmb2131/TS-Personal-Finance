@@ -138,6 +138,17 @@ Not synced from sheet anymore:
 ## Key Files
 
 - `lib/sync-google-sheet.ts`: Google Sheets sync mappings + per-table merge strategy
+- `lib/account-totals.ts`: **the** source of total assets, liquid assets and cash.
+  One `LIQUID_CATEGORIES` (Cash + Brokerage), one dedupe, one category
+  normalization, one GBP conversion. Both the trust-inclusive and
+  trust-exclusive bases derive from `totalAssetsGbp`. Never total accounts
+  inline in a component — that is how three surfaces ended up with three
+  answers for the same figure.
+- `lib/app-sections.ts`: the five destinations and the section ids each renders,
+  plus fragment aliases. `hrefResolves()` backs the drill-in link test; add new
+  sections here in the same change.
+- `lib/month-to-date.ts`: MTD spend vs this month's expected run rate, where the
+  month's share of the year comes from history rather than a flat twelfth
 - `lib/forecasting.ts`: Annual/monthly trend + forecast computation
 - `lib/forecast-evolution.ts`: rollback-based forecast snapshots and gap series
 - `lib/snapshot-historical-net-worth.ts`: rebuild app-generated historical net worth
@@ -175,10 +186,10 @@ ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 
 ## Database Migrations
 
-53 files, numbered `001` through `050` — three numbers were used twice and the
+54 files, numbered `001` through `051` — three numbers were used twice and the
 colliding files carry a `b` suffix (`036b`, `037b`, `038b`).
 
-**Next migration is `051_*.sql`.**
+**Next migration is `052_*.sql`.**
 
 The remote ledger (`supabase_migrations.schema_migrations`) matches these
 filenames exactly. Applying a migration through the MCP `apply_migration` tool
@@ -269,7 +280,9 @@ Defined in `app/globals.css` and wired through `tailwind.config.ts`.
 - `GET /api/ai/quality-report`
 
 ### Forecast/Analysis
-- `GET /api/cash-runway`
+- `GET /api/cash-runway` — one currency-independent burn: trailing-12-full-month
+  mean of all expense cash flow in GBP (`get_cash_runway_total_burn`). Never
+  split the runway denominator by the currency an account is held in.
 - `GET /api/forecast-bridge`
 - `GET /api/forecast-gap-over-time`
 - `GET /api/forecast-snapshots`

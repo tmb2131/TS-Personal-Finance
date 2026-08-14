@@ -1,16 +1,16 @@
 # Migrations
 
-Versions are zero-padded sequential numbers (`001` … `050`), not the Supabase
+Versions are zero-padded sequential numbers (`001` … `051`), not the Supabase
 CLI's default `YYYYMMDDHHMMSS` timestamps. The remote ledger
 (`supabase_migrations.schema_migrations`) matches these filenames exactly, so
 `version` and file prefix can be compared directly.
 
-**Next migration is `051`.**
+**Next migration is `052`.**
 
 Applying via the MCP `apply_migration` tool mints a timestamp version rather
 than a number. If you use it, rewrite the recorded version afterwards to match
-the filename, or the two drift apart. `049` and `050` were applied that way and
-have been corrected.
+the filename, or the two drift apart. `049`, `050` and `051` were applied that
+way and have been corrected.
 
 ## Known anomalies
 

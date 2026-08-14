@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/utils/cn'
 import { Wallet, TrendingUp } from 'lucide-react'
 import type { Observation } from '@/lib/observations'
+import { TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
 import { ObservationCard } from './observation-card'
 
 interface ObservationsSectionProps {
@@ -27,6 +28,14 @@ export function ObservationsSection({ allocation, spending }: ObservationsSectio
             <p className="text-xs md:text-sm text-muted-foreground mt-1">
               Top 5 observations from your own data, ranked by magnitude.
             </p>
+            {/* Allocation figures here read the same spendable basis as Position
+                and Home. Without this label the panel narrated a balance sheet
+                on a different basis from the one the rest of the app reports. */}
+            {tab === 'allocation' && (
+              <p className="text-xs md:text-sm text-muted-foreground">
+                {TRUST_EXCLUSION_LABEL}.
+              </p>
+            )}
           </div>
           <div className="inline-flex rounded-lg border bg-muted/40 p-1 text-xs md:text-sm">
             <button

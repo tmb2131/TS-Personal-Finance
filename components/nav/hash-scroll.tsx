@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import { resolveSectionId } from '@/lib/app-sections'
 
 const HEADER_OFFSET = 100
 const MOBILE_BREAKPOINT = 768
@@ -25,7 +26,7 @@ export function HashScroll() {
   const searchParams = useSearchParams()
   const lastScrolledId = useRef<string | null>(null)
 
-  const scrollToTarget = useCallback((targetId: string) => {
+  const scrollToTarget = useCallback((targetId: string, force = false) => {
     if (!targetId) return
     const element = document.getElementById(targetId)
     const main = document.querySelector('.main-content') as HTMLElement | null
@@ -33,7 +34,9 @@ export function HashScroll() {
 
     const elementRect = element.getBoundingClientRect()
     // Not laid out yet: a retry will catch it once the section has height.
-    if (elementRect.height < MIN_SECTION_HEIGHT) return
+    // `force` is the last retry — a genuinely short section (one that never
+    // reaches MIN_SECTION_HEIGHT) would otherwise never be scrolled to at all.
+    if (!force && elementRect.height < MIN_SECTION_HEIGHT) return
 
     const relativeTop = elementRect.top - main.getBoundingClientRect().top + main.scrollTop
     const behavior: ScrollBehavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -45,9 +48,12 @@ export function HashScroll() {
   }, [])
 
   useEffect(() => {
+    // A fragment is whatever the linker typed. `/position#runway` is a
+    // reasonable guess that matched no element, so the page silently stayed at
+    // the top; the section is `cash-runway`. Aliases live in lib/app-sections.
     const getTargetId = () => {
-      const hashId = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
-      return hashId || searchParams.get('section') || ''
+      const hashId = typeof window !== 'undefined' ? decodeURIComponent(window.location.hash.slice(1)) : ''
+      return resolveSectionId(hashId || searchParams.get('section') || '')
     }
 
     const targetId = getTargetId()
@@ -60,8 +66,11 @@ export function HashScroll() {
       frame = requestAnimationFrame(() => requestAnimationFrame(run))
       const delay = window.innerWidth < MOBILE_BREAKPOINT ? 300 : 150
       timeouts.push(window.setTimeout(run, delay))
-      RETRY_DELAYS.forEach((ms) => {
-        timeouts.push(window.setTimeout(() => requestAnimationFrame(run), ms))
+      RETRY_DELAYS.forEach((ms, index) => {
+        const isLast = index === RETRY_DELAYS.length - 1
+        timeouts.push(
+          window.setTimeout(() => requestAnimationFrame(() => scrollToTarget(targetId, isLast)), ms)
+        )
       })
     }
 

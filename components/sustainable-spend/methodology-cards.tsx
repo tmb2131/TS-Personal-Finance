@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { SustainableSpendInputsData } from '@/lib/hooks/use-sustainable-spend'
 import type { SustainableSpendResult } from '@/lib/sustainable-spend'
-import { getEffectiveTaxRate } from '@/lib/return-assumptions'
+import { getEffectiveTaxRate, returnProfileLabel } from '@/lib/return-assumptions'
 import { wealthTargetTermsShortLabel } from '@/lib/wealth-target-terms'
 import { cn } from '@/utils/cn'
 import { AlertTriangle, ArrowDown, ArrowUp, Percent } from 'lucide-react'
@@ -142,7 +142,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             Each asset category uses your configured nominal return (based on the{' '}
-            {draft.returnProfile.toLowerCase()} profile unless customized), net of its effective tax
+            {returnProfileLabel(draft.returnProfile).toLowerCase()} profile unless customized), net of its effective tax
             rate, weighted by balance, then adjusted for {formatPct(draft.inflationRate)} inflation.
             Tax applies to gains only — a loss is not grossed up, because relief is neither
             guaranteed nor available in the year it arises.

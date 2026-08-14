@@ -2,13 +2,10 @@
 
 import { useMemo } from 'react'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
-import { AccountBalance } from '@/lib/types'
 import { KPICard } from '@/components/kpi-card'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import {
-  excludeTrustAccounts,
-  TRUST_EXCLUSION_LABEL,
-} from '@/lib/trust-exclusions'
+import { TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
+import { accountsOnBasis, liquidAssetsGbp, toGbp } from '@/lib/account-totals'
 
 export default function LiquidityOverviewKPIs() {
   const { currency, convertAmount, fxRate } = useCurrency()
@@ -20,54 +17,26 @@ export default function LiquidityOverviewKPIs() {
       return { cashTotal: 0, liquidTotal: 0, instantTotal: 0 }
     }
 
-    const accountsMap = new Map<string, AccountBalance>()
-    // Deduplicate by institution + account_name, keeping most recent
-    accounts.forEach((account) => {
-      const key = `${account.institution}-${account.account_name}`
-      const existing = accountsMap.get(key)
-      if (
-        !existing ||
-        new Date(account.date_updated) > new Date(existing.date_updated)
-      ) {
-        accountsMap.set(key, account)
-      }
-    })
+    // Dedupe, category normalization and the trust exclusion all live in
+    // lib/account-totals, so this card reads the same "liquid" as Position's
+    // KPI row and as the observations panel on Trends.
+    const latestAccounts = accountsOnBasis(accounts, 'spendable')
+    const toDisplay = (gbpValue: number) => convertAmount(gbpValue, 'GBP', fxRate)
 
-    // The trust line never reached these totals before, but only because its
-    // category is `Trust` and its liquidity profile is `Locked Up`. Make the
-    // exclusion explicit so a recategorisation upstream cannot pull £6.2m of
-    // untouchable capital into the numbers most likely to be acted on.
-    const latestAccounts = excludeTrustAccounts(Array.from(accountsMap.values()))
-
-    // Calculate totals by liquidity level
-    let cash = 0
-    let liquid = 0
-    let instant = 0
+    let cashGbp = 0
+    let instantGbp = 0
 
     latestAccounts.forEach((account) => {
-      const amount = convertAmount(
-        account.balance_total_local ?? 0,
-        account.currency ?? 'USD',
-        fxRate
-      )
-
-      // Cash: Cash category
-      if (account.category === 'Cash') {
-        cash += amount
-      }
-
-      // Liquid Assets: Cash + Brokerage categories
-      if (account.category === 'Cash' || account.category === 'Brokerage') {
-        liquid += amount
-      }
-
-      // Instant: Instant liquidity profile
-      if (account.liquidity_profile === 'Instant') {
-        instant += amount
-      }
+      const gbp = toGbp(account.balance_total_local ?? 0, account.currency, fxRate)
+      if (account.category === 'Cash') cashGbp += gbp
+      if (account.liquidity_profile === 'Instant') instantGbp += gbp
     })
 
-    return { cashTotal: cash, liquidTotal: liquid, instantTotal: instant }
+    return {
+      cashTotal: toDisplay(cashGbp),
+      liquidTotal: toDisplay(liquidAssetsGbp(accounts, fxRate, 'spendable')),
+      instantTotal: toDisplay(instantGbp),
+    }
   }, [data, currency, convertAmount, fxRate])
 
   if (isLoading) {

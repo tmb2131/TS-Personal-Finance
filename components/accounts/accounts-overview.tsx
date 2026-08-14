@@ -15,7 +15,16 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { KPICard } from '@/components/kpi-card'
-import { TRUST_EXCLUSION_LABEL, excludeTrustAccounts } from '@/lib/trust-exclusions'
+import { TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
+import {
+  assetsByCategoryGbp,
+  illiquidAssetsGbp,
+  latestAccountsByKey,
+  liquidAssetsGbp,
+  normalizeAccountCategory,
+  presentCategories,
+  totalAssetsGbp,
+} from '@/lib/account-totals'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { AccountBalance } from '@/lib/types'
 import { parseLocalDate, todayLocalDateString } from '@/lib/date-utils'
@@ -29,8 +38,6 @@ import { toast } from 'sonner'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { queryKeys } from '@/lib/query-keys'
 
-const CATEGORIES = ['Cash', 'Brokerage', 'Alt Inv', 'Retirement', 'Taconic', 'House', 'Trust']
-
 const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   'Cash': 'Cash',
   'Brokerage': 'Brokerage',
@@ -39,34 +46,6 @@ const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
   'Taconic': 'Taconic',
   'House': 'House',
   'Trust': 'Trust',
-}
-
-// Normalize category names from database to standard category names
-const normalizeCategory = (category: string): string => {
-  const normalized = category.trim()
-  
-  // Map variations of "Alternative Investment" to "Alt Inv"
-  if (normalized.toLowerCase().includes('alternative') || 
-      normalized.toLowerCase().includes('alt inv') ||
-      normalized.toLowerCase().startsWith('alt')) {
-    return 'Alt Inv'
-  }
-  
-  // Map exact matches for other categories
-  if (CATEGORIES.includes(normalized)) {
-    return normalized
-  }
-  
-  // Try case-insensitive match
-  const lowerNormalized = normalized.toLowerCase()
-  for (const cat of CATEGORIES) {
-    if (cat.toLowerCase() === lowerNormalized) {
-      return cat
-    }
-  }
-  
-  // Return original if no match found
-  return normalized
 }
 
 function toDateInputValue(value: string | null | undefined) {
@@ -93,18 +72,14 @@ export function AccountsOverview() {
   const [bulkSaving, setBulkSaving] = useState(false)
   const [bulkDrafts, setBulkDrafts] = useState<Record<string, { balance_total_local: string; date_updated: string }>>({})
 
-  const accounts = useMemo(() => {
-    if (!rawAccounts) return []
-    const accountsMap = new Map<string, AccountBalance>()
-    rawAccounts.forEach((account: AccountBalance) => {
-      const key = `${account.institution}-${account.account_name}`
-      const existing = accountsMap.get(key)
-      if (!existing || new Date(account.date_updated) > new Date(existing.date_updated)) {
-        accountsMap.set(key, { ...account, category: normalizeCategory(account.category) })
-      }
-    })
-    return Array.from(accountsMap.values())
-  }, [rawAccounts])
+  const accounts = useMemo(
+    () =>
+      latestAccountsByKey(rawAccounts ?? []).map((account) => ({
+        ...account,
+        category: normalizeAccountCategory(account.category),
+      })),
+    [rawAccounts]
+  )
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -268,10 +243,10 @@ export function AccountsOverview() {
     return accounts.some((acc) => acc.category === 'Trust' && Math.abs(acc.balance_total_local) > 0)
   }, [accounts])
 
-  // Filter categories to exclude Trust if no Trust accounts exist
-  const visibleCategories = useMemo(() => {
-    return hasTrustAccounts ? CATEGORIES : CATEGORIES.filter((cat) => cat !== 'Trust')
-  }, [hasTrustAccounts])
+  // Every category actually present, not a hard-coded list. The old list dropped
+  // any category nobody had thought of, so the summary table and its own grand
+  // total could disagree while both looked complete.
+  const visibleCategories = useMemo(() => presentCategories(accounts, 'all'), [accounts])
 
   // Check if dataset has multiple currencies
   const hasMultipleCurrencies = useMemo(() => {
@@ -284,61 +259,51 @@ export function AccountsOverview() {
     return accounts.some((acc) => Math.abs(acc.balance_family_local) > 0)
   }, [accounts])
 
-  // Calculate summary metrics.
-  //
-  // These three cards carry TRUST_EXCLUSION_LABEL, so they have to actually
-  // exclude trust capital. Liquid assets did so incidentally (Trust is neither
-  // Cash nor Brokerage), but net worth and illiquid assets were summing every
-  // account while claiming otherwise — Position read £11.8m against Home's
-  // £7.2m for the same figure under the same label.
-  const spendableAccounts = excludeTrustAccounts(accounts)
+  // Every figure below comes out of lib/account-totals in GBP and is restated
+  // into the display currency here. Totals are a fact about the balance sheet;
+  // the currency toggle is a formatting choice, and mixing the two is how three
+  // surfaces ended up with three answers for total assets.
+  const toDisplay = useMemo(
+    () => (gbpValue: number) => convertAmount(gbpValue, 'GBP', fxRate),
+    [convertAmount, fxRate]
+  )
 
-  const totalNetWorth = spendableAccounts.reduce((sum, acc) => {
-    const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
-    return sum + converted
-  }, 0)
+  // These three cards carry TRUST_EXCLUSION_LABEL, so they take the spendable
+  // basis. Liquid + illiquid sum to net worth by construction.
+  const totalNetWorth = toDisplay(totalAssetsGbp(accounts, fxRate, 'spendable'))
+  const liquidAssets = toDisplay(liquidAssetsGbp(accounts, fxRate, 'spendable'))
+  const illiquidAssets = toDisplay(illiquidAssetsGbp(accounts, fxRate, 'spendable'))
 
-  const liquidAssets = spendableAccounts
-    .filter((acc) => ['Cash', 'Brokerage'].includes(acc.category))
-    .reduce((sum, acc) => {
-      const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
-      return sum + converted
-    }, 0)
-
-  const illiquidAssets = spendableAccounts
-    .filter((acc) => !['Cash', 'Brokerage'].includes(acc.category))
-    .reduce((sum, acc) => {
-      const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
-      return sum + converted
-    }, 0)
-
-  // Calculate merged category summary (Personal/Family + Currency breakdown)
+  // Calculate merged category summary (Personal/Family + Currency breakdown).
+  // Trust-inclusive, and labelled as such below.
   const categorySummary = useMemo(() => {
-    return visibleCategories.map((category) => {
-      const categoryAccounts = accounts.filter((acc) => acc.category === category)
+    const totalsByCategory = assetsByCategoryGbp(accounts, fxRate, 'all')
 
-      const personal = categoryAccounts.reduce((sum, acc) => {
-        return sum + convertAmount(acc.balance_personal_local, acc.currency, fxRate)
-      }, 0)
+    return visibleCategories
+      .map((category) => {
+        const categoryAccounts = accounts.filter((acc) => acc.category === category)
 
-      const family = categoryAccounts.reduce((sum, acc) => {
-        return sum + convertAmount(acc.balance_family_local, acc.currency, fxRate)
-      }, 0)
+        const personal = categoryAccounts.reduce((sum, acc) => {
+          return sum + convertAmount(acc.balance_personal_local, acc.currency, fxRate)
+        }, 0)
 
-      const gbp = categoryAccounts
-        .filter((acc) => acc.currency === 'GBP')
-        .reduce((sum, acc) => sum + acc.balance_total_local, 0)
+        const family = categoryAccounts.reduce((sum, acc) => {
+          return sum + convertAmount(acc.balance_family_local, acc.currency, fxRate)
+        }, 0)
 
-      const usd = categoryAccounts
-        .filter((acc) => acc.currency === 'USD')
-        .reduce((sum, acc) => sum + acc.balance_total_local, 0)
+        const gbp = categoryAccounts
+          .filter((acc) => acc.currency === 'GBP')
+          .reduce((sum, acc) => sum + acc.balance_total_local, 0)
 
-      const total = categoryAccounts.reduce((sum, acc) => {
-        return sum + convertAmount(acc.balance_total_local, acc.currency, fxRate)
-      }, 0)
+        const usd = categoryAccounts
+          .filter((acc) => acc.currency === 'USD')
+          .reduce((sum, acc) => sum + acc.balance_total_local, 0)
 
-      return { category, personal, family, gbp, usd, total }
-    }).filter((item) => item.total !== 0)
+        const total = convertAmount(totalsByCategory.get(category) ?? 0, 'GBP', fxRate)
+
+        return { category, personal, family, gbp, usd, total }
+      })
+      .filter((item) => item.total !== 0)
   }, [accounts, fxRate, convertAmount, visibleCategories])
 
   // Calculate grand totals
@@ -362,27 +327,27 @@ export function AccountsOverview() {
 
   // Group accounts by category and sort by balance (descending)
   const groupedByCategory = useMemo(() => {
-    return visibleCategories.map((category) => {
-      const categoryAccounts = accounts.filter((acc) => acc.category === category)
-      
-      // Sort accounts by converted balance in descending order
-      const sortedAccounts = [...categoryAccounts].sort((a, b) => {
-        const balanceA = convertAmount(a.balance_total_local, a.currency, fxRate)
-        const balanceB = convertAmount(b.balance_total_local, b.currency, fxRate)
-        return balanceB - balanceA // Descending order
+    const totalsByCategory = assetsByCategoryGbp(accounts, fxRate, 'all')
+
+    return visibleCategories
+      .map((category) => {
+        const categoryAccounts = accounts.filter((acc) => acc.category === category)
+
+        // Sort accounts by converted balance in descending order
+        const sortedAccounts = [...categoryAccounts].sort((a, b) => {
+          const balanceA = convertAmount(a.balance_total_local, a.currency, fxRate)
+          const balanceB = convertAmount(b.balance_total_local, b.currency, fxRate)
+          return balanceB - balanceA // Descending order
+        })
+
+        return {
+          category,
+          accounts: sortedAccounts,
+          // Same source as the summary table's row, so the two cannot drift.
+          subtotal: convertAmount(totalsByCategory.get(category) ?? 0, 'GBP', fxRate),
+        }
       })
-      
-      const subtotal = sortedAccounts.reduce((sum, acc) => {
-        const converted = convertAmount(acc.balance_total_local, acc.currency, fxRate)
-        return sum + converted
-      }, 0)
-      
-      return {
-        category,
-        accounts: sortedAccounts,
-        subtotal,
-      }
-    }).filter((group) => group.accounts.length > 0)
+      .filter((group) => group.accounts.length > 0)
   }, [accounts, fxRate, convertAmount, visibleCategories])
 
   // Calculate max balance for scaling bars in accounts table

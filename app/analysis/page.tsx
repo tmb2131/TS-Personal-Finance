@@ -15,7 +15,14 @@ export const metadata = {
  */
 const DESTINATIONS: Record<string, string> = {
   'cash-runway': '/position',
+  runway: '/position',
   'transaction-analysis': '/spending',
+  // Old drill-in links used `?section=transactions`, meaning transaction
+  // analysis. Both land on /spending, so both are listed rather than relying on
+  // the fallback, which goes to /trends.
+  transactions: '/spending',
+  'monthly-trends': '/trends',
+  'annual-trends': '/trends',
   'forecast-evolution': '/trends',
   'ytd-spend': '/trends',
   'annual-cumulative': '/trends',

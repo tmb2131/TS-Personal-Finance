@@ -68,8 +68,23 @@ const dayOfYear = (date: Date) => {
   return Math.floor((Number(date) - Number(start)) / MS_PER_DAY)
 }
 
+/**
+ * Latest GBP→USD rate.
+ *
+ * `fx_rate_current` is named for one row but holds one row per day, so the
+ * `limit(1)` here without an `order` returned whatever the planner felt like —
+ * usually not today. The browser's currency context always ordered by date, so
+ * server-rendered totals and client-rendered totals converted the same USD
+ * balances at rates a few days apart. On ~£9.2m of dollar assets that showed up
+ * as Position and Trends reporting total assets £7,569 apart.
+ */
 export async function fetchFxRateGBPUSD(supabase: SupabaseClient): Promise<number> {
-  const { data } = await supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single()
+  const { data } = await supabase
+    .from('fx_rate_current')
+    .select('gbpusd_rate')
+    .order('date', { ascending: false })
+    .limit(1)
+    .single()
   const rate = data?.gbpusd_rate
   return rate && rate > 0 ? rate : 1.25
 }

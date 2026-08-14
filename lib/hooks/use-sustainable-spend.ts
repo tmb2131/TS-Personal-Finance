@@ -17,9 +17,9 @@ import {
 } from '@/lib/sustainable-spend'
 import type { AssetMixEntry } from '@/lib/return-assumptions'
 import { resolveReturnAssumptions } from '@/lib/return-assumptions'
+import { totalCashGbp } from '@/lib/account-totals'
 import type { AccountBalance, Debt, FinancialAssumptions } from '@/lib/types'
 
-const CASH_CATEGORIES = ['Cash', 'Checking', 'Savings']
 const EXCLUDED_EXPENSE_CATEGORIES = ['Income', 'Gift Money', 'Other Income', 'Excluded']
 
 export const DEFAULT_FINANCIAL_ASSUMPTIONS: Omit<
@@ -189,30 +189,20 @@ export function useSustainableSpendInputs(includeTrust: boolean): {
       return sum + Math.max(0, amount)
     }, 0)
 
-    // Cash runway months (same approach as the financial health banner)
+    // Cash runway in months. Both sides are GBP and the ratio is unitless, so
+    // this no longer changes when the header currency toggle changes — the old
+    // version converted cash and burn into the display currency separately and
+    // round-tripped one of them through 1/fxRate.
     let cashRunwayMonths: number | null = null
     if (burnRes) {
-      const burn = { gbpNet: Number(burnRes.gbpNet ?? 0), usdNet: Number(burnRes.usdNet ?? 0) }
-      const cashByCurrency = { GBP: 0, USD: 0 }
-      latest.forEach((a) => {
-        if (CASH_CATEGORIES.includes(a.category)) {
-          const cur = a.currency.toUpperCase() as 'GBP' | 'USD'
-          if (cur === 'GBP' || cur === 'USD') {
-            cashByCurrency[cur] += a.balance_total_local || 0
-          }
-        }
-      })
-      const totalCash =
-        currency === 'USD'
-          ? cashByCurrency.USD + convertAmount(cashByCurrency.GBP, 'GBP', fxRate)
-          : cashByCurrency.GBP + convertAmount(cashByCurrency.USD, 'USD', 1 / fxRate)
-      const gbpBurn = Math.max(0, -burn.gbpNet) / 3
-      const usdBurn = Math.max(0, -burn.usdNet) / 3
-      const totalBurn =
-        currency === 'USD'
-          ? usdBurn + convertAmount(gbpBurn, 'GBP', fxRate)
-          : gbpBurn + convertAmount(usdBurn, 'USD', 1 / fxRate)
-      cashRunwayMonths = totalBurn > 0 ? totalCash / totalBurn : totalCash > 0 ? Infinity : 0
+      const monthlyBurnGbp = Number(burnRes.monthlyBurnGbp ?? 0)
+      const totalCashGbpValue = totalCashGbp(latest, fxRate, 'spendable')
+      cashRunwayMonths =
+        monthlyBurnGbp > 0
+          ? totalCashGbpValue / monthlyBurnGbp
+          : totalCashGbpValue > 0
+            ? Infinity
+            : 0
     }
 
     return {

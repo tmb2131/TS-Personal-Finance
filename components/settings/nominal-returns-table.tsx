@@ -15,6 +15,7 @@ import {
   MIN_NOMINAL_RETURN,
   RETURN_ASSUMPTIONS_BY_PROFILE,
   RETURN_PROFILE_OPTIONS,
+  returnProfileLabel,
   type ReturnAssumptions,
 } from '@/lib/return-assumptions'
 import type { ReturnProfile } from '@/lib/types'
@@ -125,7 +126,7 @@ export function NominalReturnsTable({
                       )}
                       aria-pressed={isActive}
                     >
-                      {profile}
+                      {returnProfileLabel(profile)}
                       {isActive && (
                         <span className="text-[10px] font-normal text-muted-foreground/80">Active</span>
                       )}

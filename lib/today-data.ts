@@ -12,6 +12,7 @@ import {
 } from '@/lib/forecasting'
 import { isExpenseCategory } from '@/lib/category-filters'
 import { computeTodayHeadroom, type YearMethod } from '@/lib/today-headroom'
+import { computeMonthToDate } from '@/lib/month-to-date'
 import type { TodayPageData, TodayTransactionRow } from '@/lib/today-types'
 import { computeForecastSnapshotsForDates } from '@/lib/forecast-evolution'
 import type { SnapshotPreloaded } from '@/lib/forecast-evolution'
@@ -66,7 +67,13 @@ export async function fetchTodayData(): Promise<TodayPageData | null> {
         .in('date', todayDateCandidates),
       supabase.from('forecast_settings').select('category, current_year_method, manual_year_forecast'),
       supabase.from('budget_targets').select('category, annual_budget_gbp'),
-      supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single(),
+      // One row per day; ordering keeps this in step with every other surface.
+      supabase
+        .from('fx_rate_current')
+        .select('gbpusd_rate')
+        .order('date', { ascending: false })
+        .limit(1)
+        .single(),
       computeAnnualForecasts(supabase, user.id),
       fetchTransactionsPaged(supabase, user.id, txStartDate),
     ])
@@ -251,6 +258,16 @@ export async function fetchTodayData(): Promise<TodayPageData | null> {
   })
 
   const totalSpentToday = Object.values(spendByCategory).reduce((sum, v) => sum + v, 0)
+
+  // Lead figure: month to date against what this month normally costs. The
+  // annual forecast comes from the same snapshot the rest of this page reads,
+  // so the two cannot disagree.
+  const monthToDate = computeMonthToDate({
+    transactions: transactionRows ?? [],
+    annualForecastSpend: Math.abs(totalForecastAtCurrentYtd ?? 0),
+    gbpUsdRate: fxRate,
+    asOf: localTodayStr,
+  })
   const gapToBudgetCurrent = computeStartOfDayExpenseGap(
     todaySnapshot,
     localTodayStr,
@@ -276,5 +293,6 @@ export async function fetchTodayData(): Promise<TodayPageData | null> {
     ),
     gapToBudgetCurrent,
     gapToBudgetIfNoMoreSpend,
+    monthToDate,
   }
 }

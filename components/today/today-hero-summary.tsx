@@ -3,8 +3,10 @@
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { cn } from '@/utils/cn'
 import { TrendingDown, TrendingUp } from 'lucide-react'
+import type { MonthToDateSummary } from '@/lib/month-to-date'
 
 type TodayHeroSummaryProps = {
+  monthToDate: MonthToDateSummary
   totalSpentToday: number
   spendByMethodology: Record<string, number>
   headroomByMethodology: Record<string, number | null>
@@ -20,6 +22,7 @@ type TodayHeroSummaryProps = {
 const METHODS_WITH_HEADROOM = ['Annual', 'Linear'] as const
 
 export function TodayHeroSummary({
+  monthToDate,
   totalSpentToday,
   spendByMethodology,
   headroomByMethodology,
@@ -83,26 +86,92 @@ export function TodayHeroSummary({
       ? toDisplay(gapToBudgetIfNoMoreSpend)
       : null
 
+  const mtdSpend = toDisplay(monthToDate.spendToDate)
+  const mtdExpectedToDate = toDisplay(monthToDate.expectedToDate)
+  const mtdExpectedMonth = toDisplay(monthToDate.expectedMonthTotal)
+  const mtdVariance = toDisplay(monthToDate.varianceToDate)
+  const mtdPct =
+    mtdExpectedMonth > 0 ? Math.min(100, (mtdSpend / mtdExpectedMonth) * 100) : 0
+  const mtdExpectedPct =
+    mtdExpectedMonth > 0 ? Math.min(100, (mtdExpectedToDate / mtdExpectedMonth) * 100) : 0
+  const daysLeft = monthToDate.daysInMonth - monthToDate.dayOfMonth
+
   return (
     <div className="space-y-3">
-      {/* Q1: Spent today */}
+      {/* Q1: Month to date against this month's expected run rate.
+             This leads because the commitments that drive this household's
+             spend — childcare, school fees, holidays, tax — are decided months
+             ahead. A daily allowance measures the wrong thing. */}
       <div className="rounded-xl border bg-card px-4 py-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-          Spent today
+          Month to date
         </p>
-        <p className="mt-1 text-4xl font-bold num leading-tight">
-          {fmtPrecise(spentDisplay)}
+        <p className="mt-1 text-4xl font-bold num leading-tight">{fmtPrecise(mtdSpend)}</p>
+        <p
+          className={cn(
+            'mt-1 num text-sm font-medium',
+            mtdVariance > 0 ? 'text-negative' : 'text-positive'
+          )}
+        >
+          {mtdVariance > 0 ? 'Ahead of' : 'Behind'} the run rate by{' '}
+          {fmtPrecise(Math.abs(mtdVariance))}
+        </p>
+
+        {/* Expected-to-date sits as a marker on the month's expected total, so
+            the bar shows position within the month rather than an allowance. */}
+        <div className="relative mt-3 h-3 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${mtdPct}%`,
+              background:
+                mtdVariance > 0
+                  ? 'var(--color-negative, #ef4444)'
+                  : 'var(--color-slate-500, #64748b)',
+            }}
+          />
+          <div
+            className="absolute inset-y-0 w-px bg-foreground/60"
+            style={{ left: `${mtdExpectedPct}%` }}
+            aria-hidden
+          />
+        </div>
+        <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground/60">
+          <span className="num">{fmtPrecise(mtdExpectedToDate)} expected by today</span>
+          <span className="num">{fmtPrecise(mtdExpectedMonth)} expected this month</span>
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground/60">
+          {daysLeft} {daysLeft === 1 ? 'day' : 'days'} left ·{' '}
+          {monthToDate.basis === 'history'
+            ? `this month's share of the year, averaged over ${monthToDate.historyYears} prior ${
+                monthToDate.historyYears === 1 ? 'year' : 'years'
+              }`
+            : 'no prior years for this month yet, so the year is split evenly'}
         </p>
       </div>
 
-      {/* Q2: Room to spend by methodology */}
+      {/* Q2: Today, demoted to a single line. Kept because a same-day check is
+             still occasionally useful, but it is no longer the headline. */}
+      <div className="rounded-xl border bg-card px-4 py-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+            Spent today
+          </span>
+          <span className="num text-lg font-semibold">{fmtPrecise(spentDisplay)}</span>
+        </div>
+      </div>
+
+      {/* Q3: Room to spend by methodology */}
       {bars.length > 0 && (
         <div className="rounded-xl border bg-card px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-            Room to spend
+            Room to spend today
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground/60">
-            Available daily allocation based on your annual budget
+            Two forecast methodologies, so two allowances. Annual spreads the remaining
+            forecast over the days left; Linear spreads the annual budget evenly. Both
+            assume spending is smooth, which this household&rsquo;s is not — read them as
+            a sense check, not a limit.
           </p>
           <div className="mt-3 space-y-3">
             {bars.map((bar) => (

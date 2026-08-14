@@ -5,6 +5,12 @@ import type {
   RecurringPayment,
 } from '@/lib/types'
 import type { ForecastByCategoryItem } from '@/lib/insights-data'
+import {
+  LIQUID_CATEGORIES,
+  accountsOnBasis,
+  toGbp,
+  totalAssetsGbp,
+} from '@/lib/account-totals'
 
 export type ObservationKind = 'allocation' | 'spending'
 export type ObservationSeverity = 'info' | 'notable' | 'attention'
@@ -66,27 +72,20 @@ const YOY_SPIKE_THRESHOLD = 0.25
 const Z_SCORE_THRESHOLD = 2
 const FORECAST_OVER_BUDGET_THRESHOLD = 1.1
 
-const LIQUID_CATEGORIES = new Set([
-  'Cash',
-  'Checking',
-  'Savings',
-  'Brokerage',
-  'Retirement',
-  'Alt Inv',
-])
 const LOW_YIELD_CATEGORIES = new Set(['Cash', 'Checking'])
+
+/**
+ * Spending is in sterling, so non-GBP holdings carry the FX risk regardless of
+ * which currency the screen is currently displaying. Anchoring the exposure to
+ * `baseCurrency` meant toggling the header to USD inverted the observation and
+ * called sterling holdings the exposure.
+ */
+const SPENDING_CURRENCY = 'GBP'
 
 const BANLIST_REGEX = /\b(move|switch|consider|should|recommend(?:ed|s)?|buy|sell|invest in|cut|reduce|trim|increase|decrease|allocate|reallocate)\b/i
 
-function convertToGbp(amountLocal: number, currency: string, rate: number): number {
-  if (currency === 'GBP') return amountLocal
-  if (currency === 'USD') return rate > 0 ? amountLocal / rate : amountLocal
-  if (currency === 'EUR') {
-    const usd = amountLocal * 1.08
-    return rate > 0 ? usd / rate : usd
-  }
-  return amountLocal
-}
+/** Shared with every other surface — see lib/account-totals. */
+const convertToGbp = toGbp
 
 function convertGbpToBase(amountGbp: number, baseCurrency: 'GBP' | 'USD', rate: number): number {
   if (baseCurrency === 'GBP') return amountGbp
@@ -103,6 +102,26 @@ function daysSince(dateISO: string, asOfISO: string): number {
   const b = new Date(asOfISO).getTime()
   if (Number.isNaN(a) || Number.isNaN(b)) return 0
   return Math.max(0, Math.round((b - a) / (1000 * 60 * 60 * 24)))
+}
+
+/** Past this, a day count stops being information. */
+const AGE_AS_DATE_DAYS = 180
+
+/**
+ * "2517+ days" is not a fact anyone can use. Past roughly six months a date
+ * reads better than a day count — "since May 2019" lands immediately.
+ */
+function formatAge(dateISO: string | null | undefined, asOfISO: string): string {
+  const days = daysSince(dateISO ?? '', asOfISO)
+  if (days <= AGE_AS_DATE_DAYS) return `${days} days`
+
+  const date = new Date(dateISO ?? '')
+  if (Number.isNaN(date.getTime())) return `${days} days`
+  return `since ${date.toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })}`
 }
 
 function clamp01(v: number): number {
@@ -133,23 +152,22 @@ const SEVERITY_WEIGHT: Record<ObservationSeverity, number> = {
   attention: 6,
 }
 
-function dedupeAccounts(accounts: AccountBalance[]): AccountBalance[] {
-  const map = new Map<string, AccountBalance>()
-  for (const acc of accounts) {
-    const key = `${acc.institution ?? ''}-${acc.account_name ?? ''}`
-    const existing = map.get(key)
-    if (
-      !existing ||
-      (acc.date_updated && (!existing.date_updated || new Date(acc.date_updated) > new Date(existing.date_updated)))
-    ) {
-      map.set(key, acc)
-    }
-  }
-  return Array.from(map.values())
+/**
+ * Deduped, category-normalized, trust-excluded account rows.
+ *
+ * This module used to sum every account into `totalAssetsGbp`, so the Brosens
+ * 2012 trust was silently the largest holding in the app's own narration of the
+ * balance sheet — "39% of assets in one account · JP Morgan Chase" was an
+ * artefact of counting capital every other surface had decided not to count.
+ * Every allocation detector now reads the spendable basis, and the panel
+ * carries TRUST_EXCLUSION_LABEL to say so.
+ */
+function spendableAccounts(accounts: AccountBalance[]) {
+  return accountsOnBasis(accounts, 'spendable')
 }
 
 function detectTopAccountConcentration(input: ObservationsInput): Observation[] {
-  const accounts = dedupeAccounts(input.accounts)
+  const accounts = spendableAccounts(input.accounts)
   const valued = accounts
     .map((acc) => {
       const gbp = convertToGbp(acc.balance_total_local ?? 0, acc.currency, input.gbpUsdRate)
@@ -164,12 +182,14 @@ function detectTopAccountConcentration(input: ObservationsInput): Observation[] 
     .filter((a) => a.gbp > 0)
     .sort((a, b) => b.gbp - a.gbp)
 
-  const totalAssetsGbp = valued.reduce((s, a) => s + a.gbp, 0)
-  if (totalAssetsGbp <= 0 || valued.length === 0) return []
+  // The one function that produces total assets, on the spendable basis. The
+  // shares below are stated against the same denominator Position reports.
+  const totalAssets = totalAssetsGbp(input.accounts, input.gbpUsdRate, 'spendable')
+  if (totalAssets <= 0 || valued.length === 0) return []
 
   const out: Observation[] = []
   const top1 = valued[0]
-  const top1Pct = top1.gbp / totalAssetsGbp
+  const top1Pct = top1.gbp / totalAssets
 
   if (top1Pct >= CONCENTRATION_TOP1_THRESHOLD) {
     const severity: ObservationSeverity =
@@ -180,11 +200,11 @@ function detectTopAccountConcentration(input: ObservationsInput): Observation[] 
       detector: 'top-account-concentration',
       severity,
       title: `${(top1Pct * 100).toFixed(0)}% of assets in one account`,
-      oneLiner: `${top1.institution} · ${top1.account_name} holds ${formatCurrency(top1.base, input.baseCurrency)} of your ${formatCurrency(convertGbpToBase(totalAssetsGbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency)} total assets.`,
+      oneLiner: `${top1.institution} · ${top1.account_name} holds ${formatCurrency(top1.base, input.baseCurrency)} of your ${formatCurrency(convertGbpToBase(totalAssets, input.baseCurrency, input.gbpUsdRate), input.baseCurrency)} total assets.`,
       metric: { label: 'Top-1 account share', value: top1Pct * 100, unit: '%' },
       evidence: [
         { label: `${top1.institution} · ${top1.account_name}`, value: formatCurrency(top1.base, input.baseCurrency) },
-        { label: 'Total assets', value: formatCurrency(convertGbpToBase(totalAssetsGbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency), subtotal: true },
+        { label: 'Total assets', value: formatCurrency(convertGbpToBase(totalAssets, input.baseCurrency, input.gbpUsdRate), input.baseCurrency), subtotal: true },
       ],
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
@@ -196,7 +216,7 @@ function detectTopAccountConcentration(input: ObservationsInput): Observation[] 
   if (valued.length >= 3) {
     const top3 = valued.slice(0, 3)
     const top3Sum = top3.reduce((s, a) => s + a.gbp, 0)
-    const top3Pct = top3Sum / totalAssetsGbp
+    const top3Pct = top3Sum / totalAssets
     if (top3Pct >= CONCENTRATION_TOP3_THRESHOLD && top1Pct < 0.5) {
       const severity: ObservationSeverity = top3Pct >= 0.8 ? 'notable' : 'info'
       out.push({
@@ -213,7 +233,7 @@ function detectTopAccountConcentration(input: ObservationsInput): Observation[] 
             value: formatCurrency(convertGbpToBase(a.gbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency),
           })),
           { label: 'Top-3 subtotal', value: formatCurrency(convertGbpToBase(top3Sum, input.baseCurrency, input.gbpUsdRate), input.baseCurrency), subtotal: true },
-          { label: 'Total assets', value: formatCurrency(convertGbpToBase(totalAssetsGbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency), subtotal: true },
+          { label: 'Total assets', value: formatCurrency(convertGbpToBase(totalAssets, input.baseCurrency, input.gbpUsdRate), input.baseCurrency), subtotal: true },
         ],
         baseCurrency: input.baseCurrency,
         asOf: input.asOf,
@@ -227,7 +247,7 @@ function detectTopAccountConcentration(input: ObservationsInput): Observation[] 
 }
 
 function detectCashLowYield(input: ObservationsInput): Observation[] {
-  const accounts = dedupeAccounts(input.accounts)
+  const accounts = spendableAccounts(input.accounts)
   const liquid = accounts.filter((a) => LIQUID_CATEGORIES.has(a.category))
   const totalLiquidGbp = liquid.reduce(
     (s, a) => s + convertToGbp(a.balance_total_local ?? 0, a.currency, input.gbpUsdRate),
@@ -276,8 +296,18 @@ function detectCashLowYield(input: ObservationsInput): Observation[] {
   ]
 }
 
+/**
+ * FX exposure is a fact about the mismatch between what is held and what is
+ * spent, not about what the screen is currently displaying.
+ *
+ * This compared each account's currency against `input.baseCurrency`, so
+ * flipping the header toggle to USD inverted the finding and reported sterling
+ * holdings as the exposure. Spending is in sterling; non-GBP holdings carry the
+ * risk either way. `baseCurrency` now affects formatting only, so the measured
+ * exposure is identical under both settings.
+ */
 function detectFxExposure(input: ObservationsInput): Observation[] {
-  const accounts = dedupeAccounts(input.accounts)
+  const accounts = spendableAccounts(input.accounts)
   const liquid = accounts.filter((a) => LIQUID_CATEGORIES.has(a.category))
   const totalLiquidGbp = liquid.reduce(
     (s, a) => s + convertToGbp(a.balance_total_local ?? 0, a.currency, input.gbpUsdRate),
@@ -285,17 +315,20 @@ function detectFxExposure(input: ObservationsInput): Observation[] {
   )
   if (totalLiquidGbp <= 0) return []
 
-  const nonBase = liquid.filter((a) => a.currency !== input.baseCurrency)
-  const nonBaseGbp = nonBase.reduce(
+  const nonSterling = liquid.filter(
+    (a) => (a.currency ?? '').trim().toUpperCase() !== SPENDING_CURRENCY
+  )
+  const nonSterlingGbp = nonSterling.reduce(
     (s, a) => s + convertToGbp(a.balance_total_local ?? 0, a.currency, input.gbpUsdRate),
     0
   )
-  const pct = nonBaseGbp / totalLiquidGbp
+  const pct = nonSterlingGbp / totalLiquidGbp
   if (pct < FX_EXPOSURE_THRESHOLD) return []
 
-  const byCurrency = nonBase.reduce<Record<string, number>>((acc, a) => {
+  const byCurrency = nonSterling.reduce<Record<string, number>>((acc, a) => {
     const gbp = convertToGbp(a.balance_total_local ?? 0, a.currency, input.gbpUsdRate)
-    acc[a.currency] = (acc[a.currency] ?? 0) + gbp
+    const code = (a.currency ?? '').trim().toUpperCase()
+    acc[code] = (acc[code] ?? 0) + gbp
     return acc
   }, {})
 
@@ -306,9 +339,9 @@ function detectFxExposure(input: ObservationsInput): Observation[] {
       kind: 'allocation',
       detector: 'fx-exposure',
       severity,
-      title: `${(pct * 100).toFixed(0)}% of liquid assets in non-${input.baseCurrency} currencies`,
-      oneLiner: `${formatCurrency(convertGbpToBase(nonBaseGbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency)} of liquid net worth is held in currencies other than ${input.baseCurrency}.`,
-      metric: { label: 'Non-base FX share', value: pct * 100, unit: '%' },
+      title: `${(pct * 100).toFixed(0)}% of liquid assets in non-${SPENDING_CURRENCY} currencies`,
+      oneLiner: `${formatCurrency(convertGbpToBase(nonSterlingGbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency)} of liquid net worth is held in currencies other than ${SPENDING_CURRENCY}, while spending is in ${SPENDING_CURRENCY}.`,
+      metric: { label: `Non-${SPENDING_CURRENCY} FX share`, value: pct * 100, unit: '%' },
       evidence: [
         ...Object.entries(byCurrency)
           .sort(([, a], [, b]) => b - a)
@@ -327,7 +360,7 @@ function detectFxExposure(input: ObservationsInput): Observation[] {
 }
 
 function detectStaleBalances(input: ObservationsInput): Observation[] {
-  const accounts = dedupeAccounts(input.accounts)
+  const accounts = spendableAccounts(input.accounts)
   const stale = accounts.filter(
     (a) => a.date_updated && daysSince(a.date_updated, input.asOf) > STALE_DAYS
   )
@@ -339,10 +372,12 @@ function detectStaleBalances(input: ObservationsInput): Observation[] {
   )
   if (totalStaleGbp < NOISE_FLOOR_GBP) return []
 
-  const oldest = stale.reduce((max, a) => {
-    const days = daysSince(a.date_updated, input.asOf)
-    return days > max ? days : max
-  }, 0)
+  const oldestRow = stale.reduce((oldestSoFar, a) =>
+    daysSince(a.date_updated, input.asOf) > daysSince(oldestSoFar.date_updated, input.asOf)
+      ? a
+      : oldestSoFar
+  )
+  const oldest = daysSince(oldestRow.date_updated, input.asOf)
 
   const severity: ObservationSeverity = oldest > 180 ? 'notable' : 'info'
   return [
@@ -352,12 +387,12 @@ function detectStaleBalances(input: ObservationsInput): Observation[] {
       detector: 'stale-balances',
       severity,
       title: `${stale.length} account${stale.length === 1 ? '' : 's'} not updated in over ${STALE_DAYS} days`,
-      oneLiner: `${formatCurrency(convertGbpToBase(totalStaleGbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency)} sits in accounts whose last update is ${oldest}+ days old as of ${input.asOf}.`,
+      oneLiner: `${formatCurrency(convertGbpToBase(totalStaleGbp, input.baseCurrency, input.gbpUsdRate), input.baseCurrency)} sits in accounts whose oldest balance has stood ${formatAge(oldestRow.date_updated, input.asOf)}.`,
       metric: { label: 'Stale accounts', value: stale.length, unit: 'count' },
       evidence: stale
         .map((a) => ({
           label: `${a.institution} · ${a.account_name}`,
-          value: `${daysSince(a.date_updated, input.asOf)} days · ${formatCurrency(convertGbpToBase(convertToGbp(a.balance_total_local ?? 0, a.currency, input.gbpUsdRate), input.baseCurrency, input.gbpUsdRate), input.baseCurrency)}`,
+          value: `${formatAge(a.date_updated, input.asOf)} · ${formatCurrency(convertGbpToBase(convertToGbp(a.balance_total_local ?? 0, a.currency, input.gbpUsdRate), input.baseCurrency, input.gbpUsdRate), input.baseCurrency)}`,
           days: daysSince(a.date_updated, input.asOf),
         }))
         .sort((a, b) => b.days - a.days)
@@ -445,7 +480,7 @@ function detectYoyCategorySpike(input: ObservationsInput): Observation[] {
       comparators: { vsLastYear: top.pct },
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: `/analysis?section=transactions&category=${encodeURIComponent(top.category)}`, label: 'View transactions' },
+      drillIn: { href: `/spending?section=transaction-analysis&category=${encodeURIComponent(top.category)}`, label: 'View transactions' },
       rankScore: 0,
     },
   ]
@@ -486,7 +521,7 @@ function detectMonthlyOutlier(input: ObservationsInput): Observation[] {
       comparators: { zScore: z },
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: `/analysis?section=monthly-trends&category=${encodeURIComponent(top.category)}`, label: 'View monthly trends' },
+      drillIn: { href: '/trends#monthly-category-trends', label: 'View monthly trends' },
       rankScore: 0,
     },
   ]
@@ -528,7 +563,7 @@ function detectForecastVsBudgetGap(input: ObservationsInput): Observation[] {
       comparators: { vsBudget: top.ratio },
       baseCurrency: input.baseCurrency,
       asOf: input.asOf,
-      drillIn: { href: `/analysis?section=transactions&category=${encodeURIComponent(top.category)}`, label: 'View category' },
+      drillIn: { href: `/spending?section=transaction-analysis&category=${encodeURIComponent(top.category)}`, label: 'View category' },
       rankScore: 0,
     },
   ]

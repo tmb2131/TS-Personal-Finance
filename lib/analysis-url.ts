@@ -1,5 +1,10 @@
 /**
- * Build URL to Analysis page → Transaction Analysis section with optional period and category.
+ * Build a URL to the Transaction Analysis section, which lives on /spending.
+ *
+ * This still pointed at `/analysis`, whose client-side redirect keys on the URL
+ * fragment. These links carry `?section=` and no fragment, so every clickable
+ * cell in the annual and monthly trends tables fell through to the fallback
+ * and landed on /trends instead of the transactions it promised.
  */
 export function buildTransactionAnalysisUrl(params: {
   period: 'YTD' | 'MTD'
@@ -17,5 +22,5 @@ export function buildTransactionAnalysisUrl(params: {
   if (params.category) {
     search.set('category', params.category)
   }
-  return `/analysis?${search.toString()}`
+  return `/spending?${search.toString()}`
 }

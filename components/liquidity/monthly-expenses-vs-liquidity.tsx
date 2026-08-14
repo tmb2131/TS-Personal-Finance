@@ -3,11 +3,11 @@
 import { useMemo } from 'react'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useCashRunway } from '@/lib/hooks/queries/use-cash-runway'
-import { AccountBalance } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCurrency } from '@/lib/contexts/currency-context'
-import { excludeTrustAccounts, TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
+import { TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
+import { accountsOnBasis, liquidAssetsGbp, toGbp } from '@/lib/account-totals'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useChartTheme } from '@/lib/hooks/use-chart-theme'
 import { getChartFontSizes, getChartTooltipContentStyle, getChartTooltipWrapperStyle } from '@/lib/chart-styles'
@@ -31,50 +31,28 @@ export default function MonthlyExpensesVsLiquidity() {
   const loading = accountsLoading || cashRunwayLoading
 
   const chartData = useMemo(() => {
-    const burnJson = cashRunway ?? {}
-    const monthlyExpenses =
-      currency === 'USD'
-        ? Math.max(0, -Number(burnJson.usdNet ?? 0)) / 3
-        : Math.max(0, -Number(burnJson.gbpNet ?? 0)) / 3
+    // Same denominator as the Runway cards: one GBP burn, restated for display.
+    // This previously picked the GBP-only or USD-only burn depending on the
+    // currency toggle, so the bar changed meaning when you flipped the header.
+    const monthlyExpenses = convertAmount(Number(cashRunway?.monthlyBurnGbp ?? 0), 'GBP', fxRate)
 
     const accountsList = accounts ?? []
-    const accountsMap = new Map<string, AccountBalance>()
-    accountsList.forEach((account) => {
-      const key = `${account.institution}-${account.account_name}`
-      const existing = accountsMap.get(key)
-      if (
-        !existing ||
-        new Date(account.date_updated) > new Date(existing.date_updated)
-      ) {
-        accountsMap.set(key, account)
-      }
-    })
+    const latestAccounts = accountsOnBasis(accountsList, 'spendable')
+    const toDisplay = (gbpValue: number) => convertAmount(gbpValue, 'GBP', fxRate)
 
-    const latestAccounts = excludeTrustAccounts(Array.from(accountsMap.values()))
-
-    let cashTotal = 0
-    let liquidTotal = 0
-    let instantTotal = 0
+    let cashGbp = 0
+    let instantGbp = 0
 
     latestAccounts.forEach((account) => {
-      const amount = convertAmount(
-        account.balance_total_local ?? 0,
-        account.currency ?? 'USD',
-        fxRate
-      )
-
-      if (account.category === 'Cash') {
-        cashTotal += amount
-      }
-
-      if (account.category === 'Cash' || account.category === 'Brokerage') {
-        liquidTotal += amount
-      }
-
-      if (account.liquidity_profile === 'Instant') {
-        instantTotal += amount
-      }
+      const gbp = toGbp(account.balance_total_local ?? 0, account.currency, fxRate)
+      if (account.category === 'Cash') cashGbp += gbp
+      if (account.liquidity_profile === 'Instant') instantGbp += gbp
     })
+
+    const cashTotal = toDisplay(cashGbp)
+    const instantTotal = toDisplay(instantGbp)
+    // Same `liquid` as every other surface: Cash + Brokerage, trust excluded.
+    const liquidTotal = toDisplay(liquidAssetsGbp(accountsList, fxRate, 'spendable'))
 
     return [
       { name: 'Monthly Expenses', value: monthlyExpenses, color: '#3b82f6' },

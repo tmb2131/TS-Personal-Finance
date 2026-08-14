@@ -45,7 +45,14 @@ async function fetchTransactionsForForecast(
 }
 
 async function fetchFxRateGBPUSD(supabase: SupabaseClient): Promise<number> {
-  const { data } = await supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single()
+  // `fx_rate_current` holds one row per day; without the order this picked an
+  // arbitrary one and quietly disagreed with every other surface.
+  const { data } = await supabase
+    .from('fx_rate_current')
+    .select('gbpusd_rate')
+    .order('date', { ascending: false })
+    .limit(1)
+    .single()
   const rate = data?.gbpusd_rate
   return rate && rate > 0 ? rate : 1.25
 }

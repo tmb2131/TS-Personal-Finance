@@ -7,7 +7,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
-import { RETURN_PROFILE_OPTIONS, RETURN_ASSUMPTIONS_BY_PROFILE } from '@/lib/return-assumptions'
+import {
+  RETURN_PROFILE_OPTIONS,
+  RETURN_ASSUMPTIONS_BY_PROFILE,
+  returnProfileLabel,
+} from '@/lib/return-assumptions'
 import type { ReturnProfile, SpendingFloorMode } from '@/lib/types'
 import { wealthTargetInputLabel, wealthTargetTermsHelper } from '@/lib/wealth-target-terms'
 import { cn } from '@/utils/cn'
@@ -114,7 +118,7 @@ export function AssumptionsPanel({
                 }
                 className="h-8 px-1 text-xs"
               >
-                {profile}
+                {returnProfileLabel(profile)}
               </Button>
             ))}
           </div>

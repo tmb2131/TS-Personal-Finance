@@ -31,10 +31,26 @@ export const TRUST_EXCLUSION_LABEL = 'Excludes trust capital'
 export const TRUST_EXCLUSION_NOTE =
   'Excludes the Brosens 2012 Children’s Trust and the education trust — preserve-and-pass-down capital that is not spendable.'
 
+/**
+ * Account categories that hold trust capital.
+ *
+ * Matched on the exact normalized name, never as a substring — the same rule
+ * `category-filters.ts` applies to counterparties so that "Prestige Valuations"
+ * survives. Substring matching here would silently drop a category such as
+ * "Trustee Fees" out of every spendable figure, and the drop would be invisible
+ * because the figure would simply be smaller.
+ *
+ * A genuinely new trust category has to be added here. That is the point: it
+ * makes the exclusion a decision rather than an accident of spelling.
+ */
+const TRUST_CATEGORY_NAMES = ['trust', 'education trust'] as const
+
+const TRUST_CATEGORY_SET = new Set<string>(TRUST_CATEGORY_NAMES)
+
 export function isTrustAccount(account: TrustExcludableAccount): boolean {
   const category = (account.category ?? '').trim().toLowerCase()
   if (!category) return false
-  return category === 'trust' || category.includes('trust')
+  return TRUST_CATEGORY_SET.has(category)
 }
 
 /** Drop trust-held accounts from a list before totalling spendable capital. */

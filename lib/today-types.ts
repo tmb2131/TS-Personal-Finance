@@ -1,3 +1,5 @@
+import type { MonthToDateSummary } from '@/lib/month-to-date'
+
 export type TodayTransactionRow = {
   id: string
   date: string
@@ -41,4 +43,10 @@ export type TodayPageData = {
   gapToBudgetCurrent: number | null
   /** Gap to expenses budget at current YTD. Same sign convention as `gapToBudgetCurrent`: positive = over budget. */
   gapToBudgetIfNoMoreSpend: number | null
+  /**
+   * Month-to-date spend against this month's expected run rate. The lead
+   * figure for the Today section — see lib/month-to-date.ts for why a daily
+   * allowance was the wrong instrument for this household.
+   */
+  monthToDate: MonthToDateSummary
 }

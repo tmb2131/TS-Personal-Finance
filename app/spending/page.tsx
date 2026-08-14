@@ -22,7 +22,9 @@ export const metadata = {
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>
 
 const SECTIONS = [
-  { id: 'today', label: 'Today' },
+  // Id stays `today` — /today and old fragments still deep-link here — but the
+  // section now leads with the month, not the day.
+  { id: 'today', label: 'This month' },
   { id: 'budget-table', label: 'Budget' },
   { id: 'transaction-analysis', label: 'Analysis' },
   { id: 'transactions', label: 'Transactions' },

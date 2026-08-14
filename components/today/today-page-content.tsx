@@ -114,6 +114,7 @@ export function TodayPageContent({ data }: TodayPageContentProps) {
   return (
     <div className="space-y-4 md:space-y-6">
       <TodayHeroSummary
+        monthToDate={data.monthToDate}
         totalSpentToday={data.totalSpentToday}
         spendByMethodology={data.spendByMethodology}
         headroomByMethodology={data.headroomByMethodology}

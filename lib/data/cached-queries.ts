@@ -53,7 +53,13 @@ export const fetchFxRatesRange = cache(async (minDate: string, maxDate: string):
 /** Fetch the current FX rate (global table) */
 export const fetchCurrentFxRate = cache(async (): Promise<number> => {
   const supabase = await createClient()
-  const { data } = await supabase.from('fx_rate_current').select('gbpusd_rate').limit(1).single()
+  // One row per day in this table, so the order is load-bearing.
+  const { data } = await supabase
+    .from('fx_rate_current')
+    .select('gbpusd_rate')
+    .order('date', { ascending: false })
+    .limit(1)
+    .single()
   return data?.gbpusd_rate ?? 1.25
 })
 

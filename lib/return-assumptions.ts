@@ -14,12 +14,34 @@ export type ReturnAssumptions = {
   defaultEffectiveTaxRate?: number
 }
 
+/** Ascending by return, which is also the order they are displayed in. */
 export const RETURN_PROFILE_OPTIONS: ReturnProfile[] = [
   'Conservative',
   'Expected',
   'Base',
   'Optimistic',
 ]
+
+/**
+ * `Base` is the stored value; "Strong" is what it is shown as.
+ *
+ * The four profiles are already monotonic in return — 0% / 3% / 4% / 5% — so
+ * the ordering was never the problem. The name was: "Base" reads as the central
+ * case, and users anchor on it, when the central case is Expected and Base is
+ * roughly a 65th-percentile year. Renaming the stored value would mean a CHECK
+ * constraint change and rewriting existing `financial_assumptions` rows, so the
+ * fix is display-only.
+ */
+export const RETURN_PROFILE_LABELS: Record<ReturnProfile, string> = {
+  Conservative: 'Conservative',
+  Expected: 'Expected',
+  Base: 'Strong',
+  Optimistic: 'Optimistic',
+}
+
+export function returnProfileLabel(profile: ReturnProfile): string {
+  return RETURN_PROFILE_LABELS[profile] ?? profile
+}
 
 export const ASSET_RETURN_CATEGORIES = [
   'Cash',

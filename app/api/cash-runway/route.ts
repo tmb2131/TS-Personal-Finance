@@ -1,10 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+/** Trailing window for the burn mean, in full calendar months. */
+const BURN_WINDOW_MONTHS = 12
+
 /**
  * GET /api/cash-runway
- * Returns net burn (expenses + refunds) for last 3 full calendar months (UTC), aggregated in DB (no row limit).
- * Same filters as SQL: category NOT IN ('Income', 'Excluded', 'Gift Money'); USD = currency IS NULL OR 'USD'; GBP = 'GBP'.
+ *
+ * Returns ONE burn: the trailing-12-full-calendar-month mean of every expense
+ * cash-flow row, in GBP, aggregated in the database.
+ *
+ * It is deliberately not split by currency. Spending is sterling; which
+ * counterparty happens to bill in dollars is an accident of vendor choice, not
+ * a fact about liquidity. Dividing dollar cash by dollar-denominated spend
+ * produced a "USD runway" of 54.7 months sitting next to a sterling runway of
+ * 6.7 — two numbers answering the same question, one of them meaningless.
+ *
+ * Twelve months rather than three because this household's spending is lumpy:
+ * school fees, tax and holidays land in particular months, so a three-month
+ * window reports whichever quarter you happen to be standing in.
  */
 export async function GET() {
   const supabase = await createClient()
@@ -15,20 +29,18 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Full calendar months only — the current partial month would drag the mean
+  // down by however far into it we happen to be.
   const now = new Date()
   const utcYear = now.getUTCFullYear()
   const utcMonth = now.getUTCMonth()
-  const startMonth = utcMonth - 3
-  const startYear = startMonth < 0 ? utcYear - 1 : utcYear
-  const adjustedStartMonth = startMonth < 0 ? startMonth + 12 : startMonth
-  const endMonth = utcMonth - 1
-  const endYear = endMonth < 0 ? utcYear - 1 : utcYear
-  const adjustedEndMonth = endMonth < 0 ? endMonth + 12 : endMonth
-  const startDateStr = `${startYear}-${String(adjustedStartMonth + 1).padStart(2, '0')}-01`
-  const lastDay = new Date(Date.UTC(endYear, adjustedEndMonth + 1, 0))
-  const endDateStr = lastDay.toISOString().split('T')[0]
 
-  const { data: rpcData, error: rpcError } = await supabase.rpc('get_cash_runway_net_burn', {
+  const start = new Date(Date.UTC(utcYear, utcMonth - BURN_WINDOW_MONTHS, 1))
+  const end = new Date(Date.UTC(utcYear, utcMonth, 0))
+  const startDateStr = start.toISOString().split('T')[0]
+  const endDateStr = end.toISOString().split('T')[0]
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_cash_runway_total_burn', {
     p_start: startDateStr,
     p_end: endDateStr,
   })
@@ -39,13 +51,19 @@ export async function GET() {
   }
 
   const row = Array.isArray(rpcData) ? rpcData[0] : rpcData
-  const gbpNet = row?.gbp_net != null ? Number(row.gbp_net) : 0
-  const usdNet = row?.usd_net != null ? Number(row.usd_net) : 0
+  const totalNetGbp =
+    typeof row === 'number' ? Number(row) : row?.total_gbp_net != null ? Number(row.total_gbp_net) : 0
+
+  // Net is negative when money went out; burn is the positive magnitude. A net
+  // inflow over the window is zero burn, not negative burn.
+  const totalBurnGbp = Math.max(0, -totalNetGbp)
+  const monthlyBurnGbp = totalBurnGbp / BURN_WINDOW_MONTHS
 
   return NextResponse.json({
     startDate: startDateStr,
     endDate: endDateStr,
-    gbpNet,
-    usdNet,
+    months: BURN_WINDOW_MONTHS,
+    totalBurnGbp,
+    monthlyBurnGbp,
   })
 }

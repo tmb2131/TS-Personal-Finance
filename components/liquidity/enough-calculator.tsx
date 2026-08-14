@@ -17,6 +17,7 @@ import {
   DEFAULT_INFLATION_RATE,
   RETURN_ASSUMPTIONS_BY_PROFILE,
   RETURN_PROFILE_OPTIONS,
+  returnProfileLabel,
   computeYearsUntilDepletion,
   resolveReturnAssumptions,
   weightedRealReturn,
@@ -364,7 +365,7 @@ export function EnoughCalculator() {
               <TooltipContent className="max-w-sm p-3 text-left">
                 <div className="space-y-1">
                   <p className="font-semibold">Nominal return assumptions</p>
-                  <p>Profile: {returnProfile}</p>
+                  <p>Profile: {returnProfileLabel(returnProfile)}</p>
                   <p>Inflation assumption: {percentLabel(inflationRate)}</p>
                   {groupedReturnLines.map((line) => (
                     <p key={line}>{line}</p>
@@ -383,7 +384,7 @@ export function EnoughCalculator() {
               onClick={() => handleSelectProfile(profile)}
               className="h-7 px-2 text-xs"
             >
-              {profile}
+              {returnProfileLabel(profile)}
             </Button>
           ))}
         </div>
@@ -553,7 +554,7 @@ export function EnoughCalculator() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground/70 mt-4 italic">
-          Uses estimated annual Income, Gift Money, and Expenses from your app forecast. Assumes {returnProfile.toLowerCase()} returns by asset type and {(inflationRate * 100).toFixed(1).replace(/\.0$/, '')}% annual inflation (edit in Settings &gt; Financial Assumptions).
+          Uses estimated annual Income, Gift Money, and Expenses from your app forecast. Assumes {returnProfileLabel(returnProfile).toLowerCase()} returns by asset type and {(inflationRate * 100).toFixed(1).replace(/\.0$/, '')}% annual inflation (edit in Settings &gt; Financial Assumptions).
         </p>
       </CardContent>
     </Card>
