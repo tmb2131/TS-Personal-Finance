@@ -284,7 +284,7 @@ export function EnoughCalculator() {
 
   if (loading) {
     return (
-      <Card className="border-l-[3px] border-l-indigo-500">
+      <Card className="">
         <CardHeader>
           <CardTitle className="text-base">Financial Independence</CardTitle>
         </CardHeader>
@@ -333,10 +333,10 @@ export function EnoughCalculator() {
   }, [resolvedReturnAssumptions])
 
   return (
-    <Card className="border-l-[3px] border-l-indigo-500">
+    <Card className="">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Shield className="h-4 w-4 text-indigo-600" />
+          <Shield className="h-4 w-4 text-muted-foreground" />
           Financial Independence
         </CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -385,10 +385,10 @@ export function EnoughCalculator() {
       <CardContent>
         <div className="grid md:grid-cols-3 gap-6">
           {/* Total Net Worth */}
-          <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-indigo-500 bg-card">
+          <div className="space-y-3 p-4 rounded-lg border bg-card">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500/15">
-                <Shield className="h-5 w-5 text-indigo-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                <Shield className="h-5 w-5 text-muted-foreground" />
               </div>
               <h3 className="font-semibold text-sm uppercase tracking-wide">Total Assets</h3>
             </div>
@@ -397,7 +397,7 @@ export function EnoughCalculator() {
                 <p className="text-xs text-muted-foreground mb-1">Years of Expenses Covered</p>
                 <p className={cn(
                   'text-2xl font-bold tabular-nums',
-                  metrics.yearsTotal >= 10 ? 'text-indigo-600' : metrics.yearsTotal >= 5 ? 'text-blue-600' : 'text-amber-600'
+                  metrics.yearsTotal >= 10 ? 'text-muted-foreground' : metrics.yearsTotal >= 5 ? 'text-muted-foreground' : 'text-muted-foreground'
                 )}>
                   {yearsLabel(metrics.yearsTotal)}
                 </p>
@@ -423,10 +423,10 @@ export function EnoughCalculator() {
           </div>
 
           {/* Liquid Assets Only */}
-          <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-blue-500 bg-card">
+          <div className="space-y-3 p-4 rounded-lg border bg-card">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/15">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                <TrendingUp className="h-5 w-5 text-muted-foreground" />
               </div>
               <h3 className="font-semibold text-sm uppercase tracking-wide">Liquid Assets</h3>
             </div>
@@ -435,7 +435,7 @@ export function EnoughCalculator() {
                 <p className="text-xs text-muted-foreground mb-1">Years from Liquid Assets Only</p>
                 <p className={cn(
                   'text-2xl font-bold tabular-nums',
-                  metrics.yearsLiquid >= 5 ? 'text-blue-600' : metrics.yearsLiquid >= 2 ? 'text-blue-600' : 'text-amber-600'
+                  metrics.yearsLiquid >= 5 ? 'text-muted-foreground' : metrics.yearsLiquid >= 2 ? 'text-muted-foreground' : 'text-muted-foreground'
                 )}>
                   {yearsLabel(metrics.yearsLiquid)}
                 </p>
@@ -463,11 +463,11 @@ export function EnoughCalculator() {
           </div>
 
           {/* Custom Mix */}
-          <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-emerald-500 bg-card">
+          <div className="space-y-3 p-4 rounded-lg border border-l-[3px] border-l-positive bg-card">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
-                  <SlidersHorizontal className="h-5 w-5 text-emerald-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-positive-tint">
+                  <SlidersHorizontal className="h-5 w-5 text-positive" />
                 </div>
                 <h3 className="font-semibold text-sm uppercase tracking-wide">Custom Mix</h3>
               </div>
@@ -521,7 +521,7 @@ export function EnoughCalculator() {
                 <p className="text-xs text-muted-foreground mb-1">Years from Custom Mix</p>
                 <p className={cn(
                   'text-2xl font-bold tabular-nums',
-                  metrics.yearsCustom >= 5 ? 'text-emerald-600' : metrics.yearsCustom >= 2 ? 'text-emerald-600' : 'text-amber-600'
+                  metrics.yearsCustom >= 5 ? 'text-positive' : metrics.yearsCustom >= 2 ? 'text-positive' : 'text-muted-foreground'
                 )}>
                   {yearsLabel(metrics.yearsCustom)}
                 </p>

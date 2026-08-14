@@ -82,7 +82,7 @@ export function SectionNavigation({
       })}
       </div>
       {mobileScrollable && (
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent md:hidden" aria-hidden />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 scroll-fade-right md:hidden" aria-hidden />
       )}
     </>
   )

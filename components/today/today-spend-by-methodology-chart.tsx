@@ -136,14 +136,14 @@ export function TodaySpendByMethodologyChart({
   const impliedChangeClassName =
     displayedChange != null
       ? displayedChange > 0
-        ? 'text-sm font-bold text-red-600 dark:text-red-400 mt-1'
+        ? 'text-sm font-bold text-negative mt-1'
         : displayedChange < 0
-          ? 'text-sm font-bold text-green-600 dark:text-green-400 mt-1'
+          ? 'text-sm font-bold text-positive mt-1'
           : 'text-sm font-bold text-foreground mt-1'
       : 'text-sm font-bold text-foreground mt-1'
 
   return (
-    <Card className="border-l-[3px] border-l-slate-500">
+    <Card className="">
       <CardHeader className="bg-muted/50">
         <CardTitle className="text-xl">Today&apos;s spend by forecast methodology</CardTitle>
         <p className="text-sm text-muted-foreground">

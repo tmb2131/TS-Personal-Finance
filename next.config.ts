@@ -33,6 +33,28 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns', 'recharts'],
   },
+  // Every retired route keeps working. Browsers carry the fragment across a 308,
+  // and Next forwards the query string, so `/analysis#forecast-evolution` and
+  // `/analysis?section=transaction-analysis&period=YTD` both survive — the new
+  // pages deliberately reuse the old section ids for exactly this reason.
+  //
+  // `/dashboard` and `/analysis` are absent here: their sections were split
+  // across more than one destination and the fragment never reaches the server,
+  // so those two resolve their target on the client instead.
+  async redirects() {
+    return [
+      { source: '/insights', destination: '/', permanent: true },
+      { source: '/accounts', destination: '/position', permanent: true },
+      { source: '/liquidity', destination: '/position', permanent: true },
+      { source: '/kids', destination: '/position', permanent: true },
+      { source: '/sustainable-spend', destination: '/position', permanent: true },
+      { source: '/transactions', destination: '/spending', permanent: true },
+      { source: '/recurring', destination: '/spending', permanent: true },
+      { source: '/today', destination: '/spending', permanent: true },
+      { source: '/forecast', destination: '/trends', permanent: true },
+      { source: '/import', destination: '/settings', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {

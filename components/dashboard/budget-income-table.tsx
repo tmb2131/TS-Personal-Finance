@@ -126,7 +126,7 @@ export function BudgetIncomeTable({
         <div
           className={cn(
             'absolute h-full rounded-full transition-all duration-500',
-            isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+            isPositive ? 'bg-positive right-0' : 'bg-negative left-0'
           )}
           style={{
             width: `${gapPercent}%`,
@@ -152,10 +152,10 @@ export function BudgetIncomeTable({
       <CardContent className="pt-2 md:pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {/* Summary card - left; on mobile show first (order-1) */}
-          <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card min-w-0 max-md:order-1", totals.gap >= 0 ? "border-l-green-500" : "border-l-red-500")}>
+          <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card min-w-0 max-md:order-1", totals.gap >= 0 ? "border-l-positive" : "border-l-negative")}>
             <div className="flex items-center gap-1.5">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/15">
-                <DollarSign className="h-3.5 w-3.5 text-blue-600" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
               <h3 className="font-semibold text-xs uppercase tracking-wide">Income Status</h3>
             </div>
@@ -164,19 +164,19 @@ export function BudgetIncomeTable({
                 <p className="text-xs text-muted-foreground mb-0.5">vs Budget</p>
                 {totals.gap >= 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                    <p className="text-base font-bold text-green-600">Above Budget</p>
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><CheckCircle2 className="h-3.5 w-3.5 text-positive" /></div>
+                    <p className="text-base font-bold text-positive">Above Budget</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><XCircle className="h-3.5 w-3.5 text-red-600" /></div>
-                    <p className="text-base font-bold text-red-600">Below Budget</p>
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><XCircle className="h-3.5 w-3.5 text-negative" /></div>
+                    <p className="text-base font-bold text-negative">Below Budget</p>
                   </div>
                 )}
               </div>
               <div className="space-y-0.5 pt-1.5 border-t">
                 <p className="text-xs">
-                  <span className={cn('font-semibold', totals.gap >= 0 ? 'text-green-600' : 'text-red-600')}>
+                  <span className={cn('font-semibold', totals.gap >= 0 ? 'text-positive' : 'text-negative')}>
                     {formatCurrency(Math.abs(totals.gap))}
                   </span>
                   <span className="text-muted-foreground ml-1">
@@ -184,7 +184,7 @@ export function BudgetIncomeTable({
                   </span>
                 </p>
                 <p className="text-xs">
-                  <span className={`font-medium ${totals.gap >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={`font-medium ${totals.gap >= 0 ? 'text-positive' : 'text-negative'}`}>
                     {formatPercentAbs(gapPercent)}
                   </span>
                   <span className="text-muted-foreground ml-1">
@@ -272,7 +272,7 @@ export function BudgetIncomeTable({
                   <TableCell
                     className={cn(
                       'text-right font-medium tabular-nums',
-                      isPositive ? 'text-green-600' : 'text-red-600'
+                      isPositive ? 'text-positive' : 'text-negative'
                     )}
                   >
                     {gap === 0 ? '-' : formatCurrency(gap)}
@@ -298,7 +298,7 @@ export function BudgetIncomeTable({
               <TableCell
                 className={cn(
                   'text-right font-semibold tabular-nums',
-                  totals.gap >= 0 ? 'text-green-600' : 'text-red-600'
+                  totals.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
                 {formatCurrency(totals.gap)}

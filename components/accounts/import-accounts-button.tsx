@@ -143,8 +143,8 @@ export function ImportAccountsButton() {
           )}
 
           {preview && preview.skipped.length > 0 && (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs">
-              <p className="flex items-center gap-1.5 font-semibold text-amber-600 mb-1">
+            <div className="rounded-md border border-amber-500/40 bg-muted p-2.5 text-xs">
+              <p className="flex items-center gap-1.5 font-semibold text-muted-foreground mb-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {preview.skipped.length} row{preview.skipped.length === 1 ? '' : 's'} skipped
               </p>

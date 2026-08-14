@@ -262,7 +262,7 @@ export function YoYNetWorthWaterfall() {
 
   if (loading) {
     return (
-      <Card className="border-l-[3px] border-l-emerald-500">
+      <Card className="border-l-[3px] border-l-positive">
         <CardHeader className="bg-muted/50">
           <Skeleton className="h-6 w-64" />
         </CardHeader>
@@ -282,7 +282,7 @@ export function YoYNetWorthWaterfall() {
 
   if (error) {
     return (
-      <Card className="border-l-[3px] border-l-emerald-500">
+      <Card className="border-l-[3px] border-l-positive">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
         </CardHeader>
@@ -299,7 +299,7 @@ export function YoYNetWorthWaterfall() {
 
   if (waterfallData.length === 0) {
     return (
-      <Card className="border-l-[3px] border-l-emerald-500">
+      <Card className="border-l-[3px] border-l-positive">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Forecast Net Worth Change</CardTitle>
         </CardHeader>
@@ -329,7 +329,7 @@ export function YoYNetWorthWaterfall() {
   }
 
   return (
-    <Card className="border-l-[3px] border-l-emerald-500">
+    <Card className="border-l-[3px] border-l-positive">
       <CardHeader className="bg-muted/50">
         <div className="flex flex-col gap-3">
           <div>
@@ -339,18 +339,18 @@ export function YoYNetWorthWaterfall() {
             )}
           </div>
           {netChange !== null && (
-            <div className={cn("rounded-lg border border-border bg-background p-3 shadow-sm", netChange > 0 ? "border-l-[3px] border-l-green-500" : netChange < 0 ? "border-l-[3px] border-l-red-500" : "")}>
+            <div className={cn("rounded-lg border border-border bg-background p-3 shadow-sm", netChange > 0 ? "border-l-[3px] border-l-positive" : netChange < 0 ? "border-l-[3px] border-l-negative" : "")}>
               <span className="text-sm font-medium tabular-nums">
                 {netChange > 0 && (
                   <>
                     Forecast net worth change to Dec 31: up{' '}
-                    <span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>
+                    <span className={cn('font-bold', 'text-positive')}>
                       {formatCurrencyFull(Math.abs(netChange))}
                     </span>
                     {percentChange !== null && (
                       <>
                         {' '}(
-                        <span className={cn('font-bold', 'text-green-600 dark:text-green-500')}>
+                        <span className={cn('font-bold', 'text-positive')}>
                           {formatPercent(percentChange)}
                         </span>
                         )
@@ -361,13 +361,13 @@ export function YoYNetWorthWaterfall() {
                 {netChange < 0 && (
                   <>
                     Forecast net worth change to Dec 31: down{' '}
-                    <span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>
+                    <span className={cn('font-bold', 'text-negative')}>
                       {formatCurrencyFull(Math.abs(netChange))}
                     </span>
                     {percentChange !== null && (
                       <>
                         {' '}(
-                        <span className={cn('font-bold', 'text-red-600 dark:text-red-500')}>
+                        <span className={cn('font-bold', 'text-negative')}>
                           {formatPercent(percentChange)}
                         </span>
                         )

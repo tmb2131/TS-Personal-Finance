@@ -73,15 +73,15 @@ export function AssumptionsPanel({
   symbol,
 }: AssumptionsPanelProps) {
   return (
-    <Card className="border-l-[3px] border-l-indigo-500">
+    <Card className="">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between gap-2">
           <span className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-indigo-600" />
+            <Settings2 className="h-4 w-4 text-muted-foreground" />
             Assumptions
           </span>
           {dirty ? (
-            <Badge variant="outline" className="text-amber-600 border-amber-500/50">
+            <Badge variant="outline" className="text-muted-foreground border-amber-500/50">
               Unsaved what-if
             </Badge>
           ) : !hasCustomAssumptions ? (

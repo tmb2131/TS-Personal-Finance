@@ -118,7 +118,7 @@ export function TodayHeroSummary({
                   <span className="text-xs font-medium text-muted-foreground">
                     {bar.method}
                   </span>
-                  <span className="text-xs font-bold tabular-nums text-green-600 dark:text-green-400">
+                  <span className="text-xs font-bold tabular-nums text-positive">
                     {bar.headroom > 0 ? `${fmtPrecise(bar.headroom)} left` : 'None'}
                   </span>
                 </div>
@@ -150,7 +150,7 @@ export function TodayHeroSummary({
 
       {/* Q3: End of day projection */}
       {(hasImpliedChange || gapNoMoreSpend != null) && (
-        <div className="rounded-xl border border-l-[3px] border-l-blue-500 bg-blue-500/5 px-4 py-4">
+        <div className="rounded-xl border bg-muted px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
             Tomorrow if no more spend
           </p>
@@ -170,9 +170,9 @@ export function TodayHeroSummary({
                     className={cn(
                       'flex items-center gap-0.5 text-xs font-bold tabular-nums',
                       impliedForecastChange! > 0
-                        ? 'text-red-600 dark:text-red-400'
+                        ? 'text-negative'
                         : impliedForecastChange! < 0
-                          ? 'text-green-600 dark:text-green-400'
+                          ? 'text-positive'
                           : 'text-muted-foreground'
                     )}
                   >
@@ -194,7 +194,7 @@ export function TodayHeroSummary({
                 <span
                   className={cn(
                     'text-sm font-semibold tabular-nums',
-                    gapNoMoreSpend >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                    gapNoMoreSpend >= 0 ? 'text-positive' : 'text-negative'
                   )}
                 >
                   {gapNoMoreSpend >= 0 ? 'Under' : 'Over'} {fmt(Math.abs(gapNoMoreSpend))}

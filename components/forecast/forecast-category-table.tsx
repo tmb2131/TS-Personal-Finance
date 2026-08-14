@@ -189,8 +189,8 @@ export function ForecastCategoryTable({
                         <span
                           className={
                             pyDelta >= 0
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-emerald-600 dark:text-emerald-400'
+                              ? 'text-muted-foreground dark:text-muted-foreground'
+                              : 'text-positive'
                           }
                         >
                           {pyDelta >= 0 ? '+' : ''}
@@ -286,9 +286,9 @@ function readKey(
 }
 
 const BADGE_STYLES: Record<MethodologyId, string> = {
-  m1: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
-  m2: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
-  m3: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  m1: 'bg-muted text-muted-foreground dark:text-muted-foreground',
+  m2: 'bg-muted text-muted-foreground dark:text-muted-foreground',
+  m3: 'bg-positive-tint text-positive',
 }
 
 function MethodologyBadge({

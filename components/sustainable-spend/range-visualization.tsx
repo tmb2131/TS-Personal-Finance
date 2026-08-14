@@ -17,30 +17,30 @@ const POSITION_CONFIG: Record<
   { border: string; text: string; bg: string; icon: typeof CheckCircle2; label: string }
 > = {
   below_floor: {
-    border: 'border-l-indigo-500',
-    text: 'text-indigo-600',
-    bg: 'bg-indigo-500/15',
+    border: '',
+    text: 'text-muted-foreground',
+    bg: 'bg-muted',
     icon: ArrowDownCircle,
     label: 'Below your spending floor',
   },
   in_range: {
-    border: 'border-l-green-500',
-    text: 'text-green-600',
-    bg: 'bg-green-500/15',
+    border: 'border-l-positive',
+    text: 'text-positive',
+    bg: 'bg-positive-tint',
     icon: CheckCircle2,
     label: 'Within your sustainable range',
   },
   near_ceiling: {
-    border: 'border-l-amber-500',
-    text: 'text-amber-600',
-    bg: 'bg-amber-500/15',
+    border: '',
+    text: 'text-muted-foreground',
+    bg: 'bg-muted',
     icon: AlertCircle,
     label: 'Approaching your sustainable ceiling',
   },
   above_ceiling: {
-    border: 'border-l-red-500',
-    text: 'text-red-600',
-    bg: 'bg-red-500/15',
+    border: 'border-l-negative',
+    text: 'text-negative',
+    bg: 'bg-negative-tint',
     icon: ArrowUpCircle,
     label: 'Above your sustainable ceiling',
   },
@@ -134,8 +134,8 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
         {floorExceedsCeiling && (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs space-y-1.5">
-            <p className="flex items-center gap-1.5 font-semibold text-red-600">
+          <div className="rounded-md border border-negative bg-negative-tint p-3 text-xs space-y-1.5">
+            <p className="flex items-center gap-1.5 font-semibold text-negative">
               <AlertTriangle className="h-3.5 w-3.5" />
               Inverted range
             </p>
@@ -149,8 +149,8 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
           </div>
         )}
         {!floorExceedsCeiling && ceilingAnnual < 0 && (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs space-y-1.5">
-            <p className="flex items-center gap-1.5 font-semibold text-red-600">
+          <div className="rounded-md border border-negative bg-negative-tint p-3 text-xs space-y-1.5">
+            <p className="flex items-center gap-1.5 font-semibold text-negative">
               <AlertTriangle className="h-3.5 w-3.5" />
               Negative ceiling
             </p>
@@ -171,18 +171,18 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
           <div className="relative h-6 w-full">
             <div className="absolute inset-0 rounded-full overflow-hidden bg-muted" aria-hidden>
               <div
-                className="absolute inset-y-0 left-0 bg-indigo-500/25 transition-all duration-300 ease-out"
+                className="absolute inset-y-0 left-0 bg-muted transition-all duration-300 ease-out"
                 style={{ width: `${loPct}%` }}
               />
               <div
                 className={cn(
                   'absolute inset-y-0 transition-all duration-300 ease-out',
-                  floorExceedsCeiling ? 'bg-amber-500/40' : 'bg-green-500/40'
+                  floorExceedsCeiling ? 'bg-muted' : 'bg-positive-tint'
                 )}
                 style={{ left: `${loPct}%`, width: `${Math.max(0, hiPct - loPct)}%` }}
               />
               <div
-                className="absolute inset-y-0 bg-red-500/25 transition-all duration-300 ease-out"
+                className="absolute inset-y-0 bg-negative-tint transition-all duration-300 ease-out"
                 style={{ left: `${hiPct}%`, width: `${Math.max(0, 100 - hiPct)}%` }}
               />
             </div>
@@ -205,7 +205,7 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
                   aria-hidden
                 />
                 <div
-                  className="absolute -top-1.5 bottom-0 w-0.5 min-w-[2px] border-l-2 border-dashed border-red-400/70 -translate-x-1/2 z-10"
+                  className="absolute -top-1.5 bottom-0 w-0.5 min-w-[2px] border-l-2 border-dashed border-negative -translate-x-1/2 z-10"
                   style={{ left: `${pct(savedResult.ceilingAnnual)}%` }}
                   title={`Saved ceiling: ${formatCurrency(savedResult.ceilingAnnual)}`}
                   aria-hidden
@@ -220,7 +220,7 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
               aria-hidden
             />
             <div
-              className="absolute top-0 bottom-0 w-0.5 min-w-[2px] bg-red-600 -translate-x-1/2 rounded z-10 transition-all duration-300 ease-out"
+              className="absolute top-0 bottom-0 w-0.5 min-w-[2px] bg-negative -translate-x-1/2 rounded z-10 transition-all duration-300 ease-out"
               style={{ left: `${ceilingPct}%` }}
               title={`Ceiling: ${formatCurrency(ceilingAnnual)}`}
               aria-hidden
@@ -235,13 +235,13 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
           </div>
           <div className="relative mt-2 h-4 text-[11px] text-muted-foreground" aria-hidden>
             <span
-              className="absolute -translate-x-1/2 tabular-nums text-indigo-600 font-medium transition-all duration-300 ease-out"
+              className="absolute -translate-x-1/2 tabular-nums text-muted-foreground font-medium transition-all duration-300 ease-out"
               style={{ left: `${Math.min(95, Math.max(5, floorPct))}%` }}
             >
               {formatCurrency(floorAnnual)}
             </span>
             <span
-              className="absolute -translate-x-1/2 tabular-nums text-red-600 font-medium transition-all duration-300 ease-out"
+              className="absolute -translate-x-1/2 tabular-nums text-negative font-medium transition-all duration-300 ease-out"
               style={{ left: `${Math.min(95, Math.max(5, ceilingPct))}%` }}
             >
               {formatCurrency(ceilingAnnual)}
@@ -256,9 +256,9 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
 
         {/* Floor / spend / ceiling stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-lg border border-l-[3px] border-l-indigo-500 p-3">
+          <div className="rounded-lg border p-3">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Floor</p>
-            <p className="text-xl font-bold tabular-nums text-indigo-600">
+            <p className="text-xl font-bold tabular-nums text-muted-foreground">
               {formatCurrency(floorAnnual)}
             </p>
             <p className="text-xs tabular-nums text-muted-foreground">{formatMonthly(floorAnnual)}</p>
@@ -285,9 +285,9 @@ export function RangeVisualization({ result, savedResult, symbol }: RangeVisuali
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">This year at current pace</p>
           </div>
-          <div className="rounded-lg border border-l-[3px] border-l-red-500 p-3">
+          <div className="rounded-lg border border-l-[3px] border-l-negative p-3">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Ceiling</p>
-            <p className="text-xl font-bold tabular-nums text-red-600">
+            <p className="text-xl font-bold tabular-nums text-negative">
               {formatCurrency(ceilingAnnual)}
             </p>
             <p className="text-xs tabular-nums text-muted-foreground">

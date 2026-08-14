@@ -54,6 +54,28 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // The only two hues outside the neutral/primary scale. Colour means
+        // over or under budget and nothing else, so reach for these rather
+        // than a raw green-*/red-* step.
+        positive: {
+          DEFAULT: "hsl(var(--positive))",
+          tint: "hsl(var(--positive) / 0.1)",
+        },
+        negative: {
+          DEFAULT: "hsl(var(--negative))",
+          tint: "hsl(var(--negative) / 0.1)",
+        },
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "system-ui", "sans-serif"],
+      },
+      fontSize: {
+        display: ["var(--text-display)", { lineHeight: "var(--leading-display)", letterSpacing: "-0.03em" }],
+        figure: ["var(--text-figure)", { lineHeight: "var(--leading-figure)", letterSpacing: "-0.02em" }],
+        title: ["var(--text-title)", { lineHeight: "var(--leading-title)", letterSpacing: "-0.01em" }],
+        body: ["var(--text-body)", { lineHeight: "var(--leading-body)" }],
+        meta: ["var(--text-meta)", { lineHeight: "var(--leading-meta)" }],
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -80,14 +80,14 @@ export function ForecastSummaryCards({ data }: { data: TransactionForecastResult
             ) : (
               <>
                 {pyDelta >= 0 ? (
-                  <TrendingUp className="h-5 w-5 text-amber-500" />
+                  <TrendingUp className="h-5 w-5 text-muted-foreground" />
                 ) : (
-                  <TrendingDown className="h-5 w-5 text-emerald-500" />
+                  <TrendingDown className="h-5 w-5 text-positive" />
                 )}
                 <span
                   className={
                     'text-xl md:text-2xl font-semibold ' +
-                    (pyDelta >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')
+                    (pyDelta >= 0 ? 'text-muted-foreground dark:text-muted-foreground' : 'text-positive')
                   }
                 >
                   {pyDelta >= 0 ? '+' : ''}

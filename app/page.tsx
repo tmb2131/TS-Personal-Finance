@@ -1,13 +1,9 @@
-import { SummaryPageContent } from '@/components/summary/summary-page-content'
+import { HomeContent } from '@/components/home/home-content'
 
 export const metadata = {
-  title: 'Daily Summary',
+  title: 'Home',
 }
 
-export default function SummaryPage() {
-  return (
-    <div className="space-y-4 md:space-y-6">
-      <SummaryPageContent />
-    </div>
-  )
+export default function HomePage() {
+  return <HomeContent />
 }

@@ -27,8 +27,8 @@ function statusVariant(status: 'healthy' | 'attention' | 'idle'): 'default' | 's
 }
 
 function sourceAccent(status: 'healthy' | 'attention' | 'idle'): string {
-  if (status === 'healthy') return 'border-emerald-500/40 bg-emerald-500/5'
-  if (status === 'attention') return 'border-amber-500/40 bg-amber-500/5'
+  if (status === 'healthy') return 'border-positive bg-positive-tint'
+  if (status === 'attention') return 'border-amber-500/40 bg-muted'
   return 'border-border bg-muted/30'
 }
 
@@ -54,7 +54,7 @@ export function SourceHealthPanel({
   const readinessPercent = ingestionStatus ? Math.round((ingestionStatus.readyDatasets / 3) * 100) : 0
 
   return (
-    <Card className="overflow-hidden border border-border/70 bg-gradient-to-br from-background via-background to-muted/20">
+    <Card className="overflow-hidden border border-border/70 bg-card">
       <CardHeader className="border-b border-border/60 bg-muted/20">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1.5">
@@ -150,9 +150,9 @@ export function SourceHealthPanel({
                     </div>
                   </div>
                   {reviewState ? (
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <CheckCircle2 className="h-4 w-4 text-positive" />
                   )}
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">

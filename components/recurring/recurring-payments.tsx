@@ -276,7 +276,7 @@ export function RecurringPayments() {
         className={cn(
           'p-4 rounded-lg border bg-card transition-all',
           ignored && 'opacity-40',
-          upcoming && !ignored && 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20'
+          upcoming && !ignored && 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-muted'
         )}
       >
         <div className="flex items-start justify-between gap-4">
@@ -293,7 +293,7 @@ export function RecurringPayments() {
                 {payment.frequency}
               </Badge>
               {upcoming && !ignored && (
-                <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700">
+                <Badge variant="outline" className="text-muted-foreground dark:text-muted-foreground border-orange-300 dark:border-orange-700">
                   Upcoming
                 </Badge>
               )}

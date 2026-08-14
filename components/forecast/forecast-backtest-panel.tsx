@@ -37,7 +37,7 @@ export function ForecastBacktestPanel({ backtest }: { backtest: BacktestResult }
       </CardHeader>
       <CardContent className="px-0 md:px-6">
         <div className="px-3 md:px-0 mb-3 flex flex-wrap items-center gap-2">
-          <Trophy className="h-4 w-4 text-amber-500" />
+          <Trophy className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm">
             Best methodology for your data:{' '}
             <span className="font-semibold">{METHOD_LABEL[backtest.bestOverall]}</span>{' '}
@@ -119,7 +119,7 @@ function bestOf(a: number, b: number, c: number): 0 | 1 | 2 {
 }
 
 function mapeClass(mape: number, isBest: boolean): string {
-  if (isBest) return 'text-emerald-600 dark:text-emerald-400 font-semibold'
-  if (mape > 0.3) return 'text-amber-600 dark:text-amber-400'
+  if (isBest) return 'text-positive font-semibold'
+  if (mape > 0.3) return 'text-muted-foreground dark:text-muted-foreground'
   return ''
 }

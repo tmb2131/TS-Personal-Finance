@@ -19,7 +19,7 @@ interface MethodologyCardsProps {
 
 function StepBadge({ step }: { step: number }) {
   return (
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 text-[11px] font-bold text-indigo-600">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
       {step}
     </span>
   )
@@ -51,7 +51,7 @@ function FormulaRow({
         <span
           className={cn(
             'w-3 shrink-0 text-center font-semibold tabular-nums',
-            operator === '−' ? 'text-red-600' : operator === '+' ? 'text-green-600' : 'text-muted-foreground'
+            operator === '−' ? 'text-negative' : operator === '+' ? 'text-positive' : 'text-muted-foreground'
           )}
         >
           {operator ?? ''}
@@ -155,7 +155,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 <span className="w-28 shrink-0 truncate text-muted-foreground">{row.category}</span>
                 <div className="relative h-3 flex-1 rounded-full bg-muted overflow-hidden">
                   <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60 transition-all duration-300 ease-out"
+                    className="absolute inset-y-0 left-0 rounded-full bg-muted transition-all duration-300 ease-out"
                     style={{ width: `${Math.max(1, row.weight * 100)}%` }}
                   />
                 </div>
@@ -165,7 +165,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 <span
                   className={cn(
                     'w-14 shrink-0 text-right tabular-nums text-xs',
-                    row.nominal < 0 ? 'text-red-600' : 'text-muted-foreground'
+                    row.nominal < 0 ? 'text-negative' : 'text-muted-foreground'
                   )}
                 >
                   {formatPct(row.nominal)}
@@ -173,7 +173,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
                 <span
                   className={cn(
                     'w-16 shrink-0 text-right tabular-nums text-xs font-medium',
-                    row.net < 0 ? 'text-red-600' : ''
+                    row.net < 0 ? 'text-negative' : ''
                   )}
                   title={`${formatPct(row.tax, 0)} effective tax`}
                 >
@@ -192,13 +192,13 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tax on gains</span>
-              <span className="tabular-nums font-medium text-red-600">
+              <span className="tabular-nums font-medium text-negative">
                 −{formatPct(weightedNominal - weightedNet)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Inflation adjustment</span>
-              <span className="tabular-nums font-medium text-red-600">
+              <span className="tabular-nums font-medium text-negative">
                 −{formatPct(draft.inflationRate)}
               </span>
             </div>
@@ -207,7 +207,7 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
               <span
                 className={cn(
                   'tabular-nums font-bold',
-                  result.realReturn >= 0 ? 'text-green-600' : 'text-red-600'
+                  result.realReturn >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
                 {result.realReturn >= 0 ? '+' : ''}
@@ -219,11 +219,11 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
       </Card>
 
       {/* Step 2: ceiling */}
-      <Card className="border-l-[3px] border-l-red-500">
+      <Card className="border-l-[3px] border-l-negative">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <StepBadge step={2} />
-            <ArrowUp className="h-4 w-4 text-red-600" />
+            <ArrowUp className="h-4 w-4 text-negative" />
             Ceiling — preserve real net worth
           </CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -241,18 +241,18 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
             detail={`${formatCurrency(inputs.netWorth)} net worth × ${formatPct(result.realReturn)} real after-tax return`}
             value={formatCurrency(returnsContribution)}
             operator={returnsContribution < 0 ? '−' : '+'}
-            valueClass={returnsContribution < 0 ? 'text-red-600' : undefined}
+            valueClass={returnsContribution < 0 ? 'text-negative' : undefined}
           />
           <FormulaRow
             label={result.liquidityConstrained ? 'Uncapped ceiling' : 'Ceiling'}
             value={formatCurrency(result.uncappedCeilingAnnual)}
             operator="="
             emphasis
-            valueClass={result.liquidityConstrained ? 'line-through text-muted-foreground' : 'text-red-600'}
+            valueClass={result.liquidityConstrained ? 'line-through text-muted-foreground' : 'text-negative'}
           />
           {result.liquidityConstrained && (
-            <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs space-y-1.5">
-              <p className="flex items-center gap-1.5 font-semibold text-amber-600">
+            <div className="mt-2 rounded-md border border-amber-500/40 bg-muted p-3 text-xs space-y-1.5">
+              <p className="flex items-center gap-1.5 font-semibold text-muted-foreground">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Liquidity cap applied
               </p>
@@ -270,11 +270,11 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
       </Card>
 
       {/* Step 3: floor */}
-      <Card className="border-l-[3px] border-l-indigo-500">
+      <Card className="">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <StepBadge step={3} />
-            <ArrowDown className="h-4 w-4 text-indigo-600" />
+            <ArrowDown className="h-4 w-4 text-muted-foreground" />
             Floor — fund your savings goal
           </CardTitle>
           <p className="text-xs text-muted-foreground">
@@ -318,12 +318,12 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
             operator="="
             emphasis
             valueClass={
-              result.floorClampedToCommitted ? 'line-through text-muted-foreground' : 'text-indigo-600'
+              result.floorClampedToCommitted ? 'line-through text-muted-foreground' : 'text-muted-foreground'
             }
           />
           {result.floorClampedToCommitted && (
-            <div className="mt-2 rounded-md border border-indigo-500/40 bg-indigo-500/10 p-3 text-xs space-y-1.5">
-              <p className="flex items-center gap-1.5 font-semibold text-indigo-600">
+            <div className="mt-2 rounded-md border border-indigo-500/40 bg-muted p-3 text-xs space-y-1.5">
+              <p className="flex items-center gap-1.5 font-semibold text-muted-foreground">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Raised to committed spend
               </p>
@@ -337,8 +337,8 @@ export function MethodologyCards({ inputs, result, draft, symbol }: MethodologyC
             </div>
           )}
           {result.floorExceedsCeiling && (
-            <div className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-xs space-y-1.5">
-              <p className="flex items-center gap-1.5 font-semibold text-red-600">
+            <div className="mt-2 rounded-md border border-negative bg-negative-tint p-3 text-xs space-y-1.5">
+              <p className="flex items-center gap-1.5 font-semibold text-negative">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Floor is above the ceiling
               </p>

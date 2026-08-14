@@ -120,14 +120,14 @@ export function NominalReturnsTable({
                       className={cn(
                         'mx-auto inline-flex min-w-[88px] flex-col items-center rounded-md px-2 py-1 text-xs font-semibold transition-colors',
                         isActive
-                          ? 'bg-indigo-500/15 text-indigo-700 ring-1 ring-indigo-500/40'
+                          ? 'bg-muted text-muted-foreground ring-1 ring-indigo-500/40'
                           : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                       )}
                       aria-pressed={isActive}
                     >
                       {profile}
                       {isActive && (
-                        <span className="text-[10px] font-normal text-indigo-600/80">Active</span>
+                        <span className="text-[10px] font-normal text-muted-foreground/80">Active</span>
                       )}
                     </button>
                   </TableHead>
@@ -150,7 +150,7 @@ export function NominalReturnsTable({
                       key={profile}
                       className={cn(
                         'text-center tabular-nums',
-                        isActive && 'bg-indigo-500/5'
+                        isActive && 'bg-muted'
                       )}
                     >
                       {isActive ? (
@@ -174,7 +174,7 @@ export function NominalReturnsTable({
                         <span
                           className={cn(
                             'text-sm',
-                            rate < 0 ? 'text-red-600' : 'text-muted-foreground'
+                            rate < 0 ? 'text-negative' : 'text-muted-foreground'
                           )}
                         >
                           {formatPct(rate)}

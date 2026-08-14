@@ -162,7 +162,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
 
   if (loading) {
     return (
-      <Card className="border-l-[3px] border-l-emerald-500">
+      <Card className="border-l-[3px] border-l-positive">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
@@ -176,7 +176,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
 
   if (error) {
     return (
-      <Card className="border-l-[3px] border-l-emerald-500">
+      <Card className="border-l-[3px] border-l-positive">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
@@ -191,7 +191,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   // Defer chart render until after mount to avoid hydration mismatch (isMobile / Recharts differ server vs client)
   if (!mounted) {
     return (
-      <Card className="border-l-[3px] border-l-emerald-500">
+      <Card className="border-l-[3px] border-l-positive">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>
@@ -210,7 +210,7 @@ export function IncomeVsExpensesChart({ initialData }: IncomeVsExpensesChartProp
   }
 
   return (
-    <Card className="border-l-[3px] border-l-emerald-500">
+    <Card className="border-l-[3px] border-l-positive">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Est. Income & Expenses</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">For {new Date().getFullYear()} (All amounts are after tax)</p>

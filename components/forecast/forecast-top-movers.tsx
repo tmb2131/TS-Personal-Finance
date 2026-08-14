@@ -105,8 +105,8 @@ function MoverList({ heading, icon: Icon, tone, movers, symbol }: MoverListProps
         className={cn(
           'flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide',
           tone === 'up'
-            ? 'text-red-600 dark:text-red-400'
-            : 'text-emerald-600 dark:text-emerald-400',
+            ? 'text-negative'
+            : 'text-positive',
         )}
       >
         <Icon className="h-3.5 w-3.5" aria-hidden />
@@ -129,8 +129,8 @@ function MoverList({ heading, icon: Icon, tone, movers, symbol }: MoverListProps
                   className={cn(
                     'text-sm font-semibold',
                     tone === 'up'
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-emerald-600 dark:text-emerald-400',
+                      ? 'text-negative'
+                      : 'text-positive',
                   )}
                 >
                   {tone === 'up' ? '+' : ''}

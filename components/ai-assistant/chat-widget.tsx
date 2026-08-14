@@ -621,10 +621,12 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Floating Action Button */}
+      {/* The app's only floating button. Quick Add moved into the header, so
+          this no longer competes for the same corner on mobile; it sits clear
+          of the bottom nav and the home indicator. */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-6 z-50 hidden h-14 w-14 rounded-full bg-primary shadow-lg hover:bg-primary/90 md:inline-flex"
+        className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-50 h-14 w-14 rounded-full bg-primary shadow-lg hover:bg-primary/90 md:bottom-4 md:right-6"
         size="icon"
         aria-label="Open the AI Financial Assistant"
       >
@@ -1006,7 +1008,7 @@ export function ChatWidget() {
                                 title="Copy to clipboard"
                               >
                                 {copiedMessageId === message.id ? (
-                                  <Check className="h-3.5 w-3.5 text-green-600" />
+                                  <Check className="h-3.5 w-3.5 text-positive" />
                                 ) : (
                                   <Copy className="h-3.5 w-3.5" />
                                 )}

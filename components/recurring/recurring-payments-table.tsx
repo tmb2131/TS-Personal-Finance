@@ -299,17 +299,12 @@ export function RecurringPaymentsTable() {
         {/* KPI Cards */}
         {!loading && !error && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-            <KPICard
-              title="Total Annualized"
-              value={kpiData.totalAnnualized}
-              icon={Calculator}
-              accentColor="violet"
-            />
-            <Card className={cn('h-full w-full min-w-0 border-l-[3px] border-l-emerald-500')}>
+            <KPICard title="Total Annualized" value={kpiData.totalAnnualized} />
+            <Card className={cn('h-full w-full min-w-0 border-l-[3px] border-l-positive')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
-                    <AlertTriangle className="h-5 w-5 text-emerald-600" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-positive-tint">
+                    <AlertTriangle className="h-5 w-5 text-positive" />
                   </div>
                   <CardTitle className="text-sm font-medium">Flagged for Review</CardTitle>
                 </div>
@@ -325,11 +320,11 @@ export function RecurringPaymentsTable() {
                 </div>
               </CardContent>
             </Card>
-            <Card className={cn('h-full w-full min-w-0 border-l-[3px] border-l-blue-500')}>
+            <Card className={cn('h-full w-full min-w-0')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-sm font-medium">Payment Count</CardTitle>
                 </div>
@@ -341,15 +336,15 @@ export function RecurringPaymentsTable() {
           </div>
         )}
         {!fullView && paymentsWithCumulative.length > 0 && !showOnlyFlagged && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
-            <p className="text-sm text-blue-900 dark:text-blue-200">
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-muted border border-blue-200 dark:border-blue-900 rounded-md">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
               <span className="font-semibold">Showing top 80% of recurring payments.</span> Click <span className="font-medium">&quot;Full table view&quot;</span> above to see all payments.
             </p>
           </div>
         )}
         {showOnlyFlagged && (
-          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-md">
-            <p className="text-sm text-orange-900 dark:text-orange-200">
+          <div className="mb-4 p-3 bg-orange-50 dark:bg-muted border border-orange-200 dark:border-orange-900 rounded-md">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
               <span className="font-semibold">Showing all payments flagged for review.</span> Uncheck the filter above to see all payments.
             </p>
           </div>
@@ -392,7 +387,7 @@ export function RecurringPaymentsTable() {
                       onClick={() => toggleReviewFlag(payment.name, payment.needsReview)}
                       className={cn(
                         'h-9 min-h-[44px] flex-1 justify-center text-xs',
-                        payment.needsReview && 'text-orange-600 dark:text-orange-400'
+                        payment.needsReview && 'text-muted-foreground dark:text-muted-foreground'
                       )}
                     >
                       {payment.needsReview ? (
@@ -471,7 +466,7 @@ export function RecurringPaymentsTable() {
                             size="sm"
                             onClick={() => toggleReviewFlag(payment.name, payment.needsReview)}
                             className={cn(
-                              payment.needsReview && 'text-orange-600 dark:text-orange-400'
+                              payment.needsReview && 'text-muted-foreground dark:text-muted-foreground'
                             )}
                           >
                             {payment.needsReview ? (

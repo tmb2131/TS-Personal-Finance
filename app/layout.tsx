@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Archivo, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import './globals.css'
 import { CurrencyProvider } from '@/lib/contexts/currency-context'
@@ -13,6 +13,19 @@ import { fetchHeaderStatus } from '@/lib/data/cached-queries'
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
+  variable: '--font-sans',
+})
+
+/**
+ * Display face for currency figures only. Archivo's numerals are narrow and
+ * strongly built, and its weight range gives real contrast against Inter at
+ * body sizes — so the headline figure reads as the most important thing on the
+ * page without needing colour or a box around it.
+ */
+const archivo = Archivo({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
 })
 
 export const metadata: Metadata = {
@@ -39,7 +52,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${archivo.variable} font-sans`}>
         <ThemeProvider>
           <QueryProvider>
             <CurrencyProvider>

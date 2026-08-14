@@ -197,7 +197,7 @@ export function ImportPreview({ target, rows, onImportComplete, onBack }: Import
           </TableBody>
         </Table>
         </div>
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent rounded-r-md" aria-hidden />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 scroll-fade-right rounded-r-md" aria-hidden />
       </div>
 
       <div className="flex gap-3">

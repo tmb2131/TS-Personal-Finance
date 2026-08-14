@@ -383,7 +383,7 @@ export function EditBudgetDialog() {
                 onClick={() => saveEdit(budget)}
                 disabled={saving}
               >
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-positive" />
               </Button>
               <Button
                 variant="ghost"
@@ -463,7 +463,7 @@ export function EditBudgetDialog() {
                 onClick={() => saveInvestmentEdit(ir)}
                 disabled={saving}
               >
-                <Check className="h-4 w-4 text-green-600" />
+                <Check className="h-4 w-4 text-positive" />
               </Button>
               <Button
                 variant="ghost"

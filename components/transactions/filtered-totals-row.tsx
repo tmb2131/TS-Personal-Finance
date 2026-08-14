@@ -47,7 +47,7 @@ export function FilteredTotalsRow({
         </div>
         <div>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">In</p>
-          <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+          <p className="text-lg font-semibold text-positive">
             {formatMoney(totalIn, symbol)}
           </p>
         </div>
@@ -63,7 +63,7 @@ export function FilteredTotalsRow({
             <p
               className={cn(
                 'text-lg font-semibold',
-                net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground',
+                net >= 0 ? 'text-positive' : 'text-foreground',
               )}
             >
               {formatMoney(net, symbol)}
@@ -75,8 +75,8 @@ export function FilteredTotalsRow({
                   delta === 0
                     ? 'text-muted-foreground'
                     : delta > 0
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-red-600 dark:text-red-400',
+                      ? 'text-positive'
+                      : 'text-negative',
                 )}
                 title="vs comparable prior period"
               >

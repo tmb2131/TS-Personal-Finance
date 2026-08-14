@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { KPICard } from '@/components/kpi-card'
+import { TRUST_EXCLUSION_LABEL } from '@/lib/trust-exclusions'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { AccountBalance } from '@/lib/types'
 import { parseLocalDate, todayLocalDateString } from '@/lib/date-utils'
@@ -392,7 +393,7 @@ export function AccountsOverview() {
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="border-l-[3px] border-l-blue-500">
+            <Card key={i} className="">
               <CardHeader>
                 <div className="h-4 w-24 bg-muted animate-pulse rounded" />
               </CardHeader>
@@ -408,7 +409,7 @@ export function AccountsOverview() {
 
   if (error) {
     return (
-      <Card className="border-l-[3px] border-l-blue-500">
+      <Card className="">
         <CardHeader>
           <CardTitle>Accounts</CardTitle>
         </CardHeader>
@@ -429,18 +430,18 @@ export function AccountsOverview() {
     <div className="space-y-4">
       <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:pb-0 md:items-stretch">
         <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
-          <KPICard title="Total Net Worth" value={totalNetWorth} icon={LineChart} accentColor="blue" />
+          <KPICard title="Total Net Worth" value={totalNetWorth} note={TRUST_EXCLUSION_LABEL} />
         </div>
         <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
-          <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" icon={Wallet} accentColor="emerald" />
+          <KPICard title="Liquid Assets" value={liquidAssets} subtitle="Cash + Brokerage" note={TRUST_EXCLUSION_LABEL} />
         </div>
         <div className="shrink-0 w-[85%] min-w-[85%] snap-center md:w-full md:min-w-0">
-          <KPICard title="Illiquid Assets" value={illiquidAssets} icon={Building2} accentColor="violet" />
+          <KPICard title="Illiquid Assets" value={illiquidAssets} note={TRUST_EXCLUSION_LABEL} />
         </div>
       </div>
 
       {/* Category Summary — Mobile card layout */}
-      <Card className="md:hidden border-l-[3px] border-l-blue-500">
+      <Card className="md:hidden">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
           <CardTitle className="text-base">Account Category Summary</CardTitle>
         </CardHeader>
@@ -493,11 +494,11 @@ export function AccountsOverview() {
               {hasPersonalAndFamily && (
                 <>
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                    <span className="text-blue-700">Personal</span>
+                    <span className="text-muted-foreground">Personal</span>
                     <span className="tabular-nums">{item.personal === 0 ? '–' : formatCurrency(item.personal)}</span>
                   </div>
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                    <span className="text-blue-700">Family</span>
+                    <span className="text-muted-foreground">Family</span>
                     <span className="tabular-nums">{item.family === 0 ? '–' : formatCurrency(item.family)}</span>
                   </div>
                 </>
@@ -506,11 +507,11 @@ export function AccountsOverview() {
                 <>
                   {hasPersonalAndFamily && <div className="border-t border-dashed my-1" />}
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                    <span className="text-emerald-700">GBP</span>
+                    <span className="text-positive">GBP</span>
                     <span className="tabular-nums">{item.gbp === 0 ? '–' : formatGBP(item.gbp)}</span>
                   </div>
                   <div className="flex justify-between items-baseline gap-2 text-sm mb-1">
-                    <span className="text-emerald-700">USD</span>
+                    <span className="text-positive">USD</span>
                     <span className="tabular-nums">{item.usd === 0 ? '–' : formatUSD(item.usd)}</span>
                   </div>
                 </>
@@ -534,7 +535,7 @@ export function AccountsOverview() {
 
       {/* Category Summary Table — Desktop */}
       <div className="hidden md:block w-fit">
-        <Card className="border-l-[3px] border-l-blue-500">
+        <Card className="">
           <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
             <CardTitle className="text-base">Account Category Summary</CardTitle>
           </CardHeader>
@@ -572,14 +573,14 @@ export function AccountsOverview() {
                   <TableHead>Account Category</TableHead>
                   {hasPersonalAndFamily && (
                     <>
-                      <TableHead className="text-right text-blue-700">Personal</TableHead>
-                      <TableHead className="text-right text-blue-700">Family</TableHead>
+                      <TableHead className="text-right text-muted-foreground">Personal</TableHead>
+                      <TableHead className="text-right text-muted-foreground">Family</TableHead>
                     </>
                   )}
                   {hasMultipleCurrencies && (
                     <>
-                      <TableHead className={cn("text-right text-emerald-700", hasPersonalAndFamily && "border-l-2 border-border")}>GBP</TableHead>
-                      <TableHead className="text-right text-emerald-700">USD</TableHead>
+                      <TableHead className={cn("text-right text-positive", hasPersonalAndFamily && "border-l-2 border-border")}>GBP</TableHead>
+                      <TableHead className="text-right text-positive">USD</TableHead>
                     </>
                   )}
                   <TableHead className="text-right font-bold">Balance</TableHead>
@@ -653,7 +654,7 @@ export function AccountsOverview() {
       </div>
 
       {/* Accounts — Mobile card layout */}
-      <Card className="md:hidden border-l-[3px] border-l-blue-500">
+      <Card className="md:hidden">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-2">
           <CardTitle className="text-base">Accounts</CardTitle>
         </CardHeader>
@@ -750,7 +751,7 @@ export function AccountsOverview() {
       </Card>
 
       {/* Accounts Table — Desktop */}
-      <Card className="hidden md:block border-l-[3px] border-l-blue-500">
+      <Card className="hidden md:block">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Accounts</CardTitle>
           <FullTableViewToggle

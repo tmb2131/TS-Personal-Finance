@@ -384,7 +384,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
     if (value === 0) return 'bg-background'
     const intensity = Math.min(Math.abs(value) / maxValues.monthly, 1)
     const opacity = 0.1 + intensity * 0.4 // Range from 0.1 to 0.5
-    return `bg-red-100`
+    return `bg-negative`
   }
 
   // Get background color intensity for monthly values - reduced opacity for readability
@@ -463,7 +463,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
         <span
           className={cn(
             'font-medium',
-            value >= 0 ? 'text-green-600' : 'text-red-600'
+            value >= 0 ? 'text-positive' : 'text-negative'
           )}
         >
           {value === 0
@@ -477,7 +477,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             <div
               className={cn(
                 'absolute h-full rounded-full transition-all duration-500',
-                value >= 0 ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                value >= 0 ? 'bg-positive right-0' : 'bg-negative left-0'
               )}
               style={{
                 width: `${Math.min((Math.abs(value) / maxValue) * 100, 100)}%`,
@@ -685,12 +685,12 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           <div className={cn(
             "space-y-2 p-3 rounded-lg border border-l-[3px]",
             topMovers.totalVariance < 0
-              ? "border-l-red-500 bg-gradient-to-r from-red-500/10 via-red-500/5 to-transparent"
-              : "border-l-green-500 bg-gradient-to-r from-green-500/10 via-green-500/5 to-transparent"
+              ? "border-l-negative bg-negative-tint"
+              : "border-l-positive bg-positive-tint"
           )}>
             <div className="flex items-center gap-1.5">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500/15">
-                <Calendar className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground dark:text-muted-foreground" />
               </div>
               <h3 className="font-semibold text-xs uppercase tracking-wide">Total Variance</h3>
             </div>
@@ -699,19 +699,19 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                 {topMovers.totalVariance < 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                    <p className="text-base font-bold text-red-600">Higher Than Average</p>
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                    <p className="text-base font-bold text-negative">Higher Than Average</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                    <p className="text-base font-bold text-green-600">Lower Than Average</p>
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                    <p className="text-base font-bold text-positive">Lower Than Average</p>
                   </div>
                 )}
               </div>
               <div className="space-y-0.5 pt-1.5 border-t">
                 <p className="text-sm">
-                  <span className={cn('font-semibold', topMovers.totalVariance < 0 ? 'text-red-600' : 'text-green-600')}>
+                  <span className={cn('font-semibold', topMovers.totalVariance < 0 ? 'text-negative' : 'text-positive')}>
                     {formatCurrency(Math.abs(topMovers.totalVariance))}
                   </span>
                   <span className="text-xs text-muted-foreground ml-1">
@@ -719,7 +719,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   </span>
                 </p>
                 <p className="text-xs">
-                  <span className={`font-medium ${topMovers.totalVariance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <span className={`font-medium ${topMovers.totalVariance < 0 ? 'text-negative' : 'text-positive'}`}>
                     {formatPercentAbs(topMovers.totalVariancePercent)}
                   </span>
                   <span className="text-muted-foreground ml-1">
@@ -749,9 +749,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           {topMovers.totalVariance < 0 ? (
             <>
               {/* MoM Increases in Spend (Top Categories Spending More) */}
-              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-red-500 bg-card">
+              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-negative bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Increases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -759,8 +759,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topIncreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                        <p className="text-base font-bold text-red-600">Top Categories Higher Than Average</p>
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                        <p className="text-base font-bold text-negative">Top Categories Higher Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Increases</p>
@@ -774,9 +774,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                           <div key={item.category} className="flex items-center gap-1.5">
                             <span className="text-xs w-24 truncate">{item.category}</span>
                             <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                              <div className="h-full bg-negative rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-medium text-red-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                            <span className="text-xs font-medium text-negative w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                           </div>
                         )
                       })
@@ -787,9 +787,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 </div>
               </div>
               {/* MoM Decreases in Spend (Top Categories Spending Less) */}
-              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
+              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Decreases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -797,8 +797,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topDecreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                        <p className="text-base font-bold text-green-600">Top Categories Lower Than Average</p>
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                        <p className="text-base font-bold text-positive">Top Categories Lower Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Decreases</p>
@@ -812,9 +812,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                           <div key={item.category} className="flex items-center gap-1.5">
                             <span className="text-xs w-24 truncate">{item.category}</span>
                             <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                              <div className="h-full bg-positive rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-medium text-green-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                            <span className="text-xs font-medium text-positive w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                           </div>
                         )
                       })
@@ -828,9 +828,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
           ) : (
             <>
               {/* MoM Decreases in Spend (Top Categories Spending Less) — first when Spending Less */}
-              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
+              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Decreases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -838,8 +838,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topDecreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
-                        <p className="text-base font-bold text-green-600">Top Categories Lower Than Average</p>
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
+                        <p className="text-base font-bold text-positive">Top Categories Lower Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Decreases</p>
@@ -853,9 +853,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                           <div key={item.category} className="flex items-center gap-1.5">
                             <span className="text-xs w-24 truncate">{item.category}</span>
                             <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                              <div className="h-full bg-positive rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-medium text-green-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                            <span className="text-xs font-medium text-positive w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                           </div>
                         )
                       })
@@ -866,9 +866,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 </div>
               </div>
               {/* MoM Increases in Spend (Top Categories Spending More) */}
-              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-red-500 bg-card">
+              <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-negative bg-card">
                 <div className="flex items-center gap-1.5">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
                   <h3 className="font-semibold text-xs uppercase tracking-wide">MoM Increases in Spend</h3>
                 </div>
                 <div className="space-y-1">
@@ -876,8 +876,8 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                     <p className="text-xs text-muted-foreground mb-0.5">{getComparisonText(topMovers.deltaForCards)}</p>
                     {topMovers.topIncreases.length > 0 ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-3.5 w-3.5 text-red-600" /></div>
-                        <p className="text-base font-bold text-red-600">Top Categories Higher Than Average</p>
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-3.5 w-3.5 text-negative" /></div>
+                        <p className="text-base font-bold text-negative">Top Categories Higher Than Average</p>
                       </div>
                     ) : (
                       <p className="text-base font-bold text-muted-foreground">No Increases</p>
@@ -891,9 +891,9 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                           <div key={item.category} className="flex items-center gap-1.5">
                             <span className="text-xs w-24 truncate">{item.category}</span>
                             <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full bg-red-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                              <div className="h-full bg-negative rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-xs font-medium text-red-600 w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
+                            <span className="text-xs font-medium text-negative w-12 text-right">{formatCurrency(Math.abs(item.change))}</span>
                           </div>
                         )
                       })
@@ -919,7 +919,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
             <table className="w-full caption-bottom text-sm">
             <TableHeader>
               <TableRow className="border-b bg-muted">
-              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'category' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 w-28 min-w-[7rem] bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'category' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('category')}
                   className={cn('flex items-center hover:opacity-70 transition-opacity', sortField === 'category' && 'font-semibold text-primary')}
@@ -928,7 +928,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="category" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_3' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_3' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_3')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_3' && 'font-semibold text-primary')}
@@ -937,7 +937,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="cur_month_minus_3" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_2' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_2' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_2')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_2' && 'font-semibold text-primary')}
@@ -946,7 +946,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="cur_month_minus_2" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_1' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_minus_1' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('cur_month_minus_1')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_minus_1' && 'font-semibold text-primary')}
@@ -955,7 +955,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="cur_month_minus_1" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-gray-700 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_est' && 'bg-gradient-to-r from-primary/15 to-primary/8 border-b-primary/40 shadow-md')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 border-l-2 border-r-2 border-gray-700 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'cur_month_est' && 'bg-muted border-b-primary/40 shadow-md')}>
                 <button
                   onClick={() => handleSort('cur_month_est')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'cur_month_est' && 'font-semibold text-primary')}
@@ -965,7 +965,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 </button>
               </TableHead>
               {fullView && (
-                <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'mtd' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+                <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'mtd' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                   <button
                     onClick={() => handleSort('mtd')}
                     className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'mtd' && 'font-semibold text-primary')}
@@ -976,7 +976,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                 </TableHead>
               )}
               <TableHead className="sticky top-0 z-20 w-14 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent">Trend</TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'ttm_avg' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-16 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'ttm_avg' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('ttm_avg')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'ttm_avg' && 'font-semibold text-primary')}
@@ -985,7 +985,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="ttm_avg" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'z_score' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'z_score' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('z_score')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'z_score' && 'font-semibold text-primary')}
@@ -994,7 +994,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="z_score" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_last_month' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_last_month' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('delta_last_month')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_last_month' && 'font-semibold text-primary')}
@@ -1003,7 +1003,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="delta_last_month" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_l3m' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_l3m' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('delta_l3m')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l3m' && 'font-semibold text-primary')}
@@ -1012,7 +1012,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                   <SortIcon field="delta_l3m" />
                 </button>
               </TableHead>
-              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_l12m' && 'bg-gradient-to-r from-primary/10 to-primary/5 border-b-primary/30 shadow-sm')}>
+              <TableHead className={cn('sticky top-0 z-20 text-right w-20 bg-muted/95 backdrop-blur-sm border-b-2 border-transparent transition-all duration-200', sortField === 'delta_l12m' && 'bg-muted/60 border-b-primary/30 shadow-sm')}>
                 <button
                   onClick={() => handleSort('delta_l12m')}
                   className={cn('flex items-center justify-end ml-auto hover:opacity-70 transition-opacity', sortField === 'delta_l12m' && 'font-semibold text-primary')}
@@ -1103,7 +1103,7 @@ export function MonthlyTrendsTable({ initialData, initialRatesByMonth }: Monthly
                         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted-foreground/50 border-dashed -translate-x-1/2"></div>
                         {row.z_score !== 0 && (
                           <div
-                            className={cn('absolute h-1 top-0.5 rounded-sm', row.z_score >= 0 ? 'bg-green-500' : 'bg-purple-500')}
+                            className={cn('absolute h-1 top-0.5 rounded-sm', row.z_score >= 0 ? 'bg-positive' : 'bg-purple-500')}
                             style={{ left: row.z_score >= 0 ? '50%' : `${Math.max(2, 50 - Math.min(Math.abs(row.z_score) * 8, 48))}%`, width: `${Math.min(Math.abs(row.z_score) * 8, 48)}%` }}
                           />
                         )}

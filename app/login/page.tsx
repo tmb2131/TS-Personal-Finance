@@ -135,7 +135,7 @@ function LoginForm() {
             {loading ? 'Redirecting...' : 'Sign in with Google'}
           </Button>
           {message && (
-            <p className="text-sm text-red-600">
+            <p className="text-sm text-negative">
               {message}
             </p>
           )}

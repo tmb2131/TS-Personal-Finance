@@ -376,9 +376,9 @@ export function MonthlyCategorySummary({
 
   // Get icon and color for each comparison type
   const getComparisonIcon = (label: string) => {
-    if (label.includes('L3')) return { Icon: Calendar, color: 'text-indigo-600 dark:text-indigo-400', pill: 'bg-indigo-500/15' }
-    if (label.includes('L12')) return { Icon: Calendar, color: 'text-purple-600 dark:text-purple-400', pill: 'bg-purple-500/15' }
-    if (label.includes('LY')) return { Icon: Calendar, color: 'text-orange-600 dark:text-orange-400', pill: 'bg-orange-500/15' }
+    if (label.includes('L3')) return { Icon: Calendar, color: 'text-muted-foreground dark:text-muted-foreground', pill: 'bg-muted' }
+    if (label.includes('L12')) return { Icon: Calendar, color: 'text-muted-foreground dark:text-muted-foreground', pill: 'bg-muted' }
+    if (label.includes('LY')) return { Icon: Calendar, color: 'text-muted-foreground dark:text-muted-foreground', pill: 'bg-muted' }
     return { Icon: Calendar, color: 'text-muted-foreground', pill: 'bg-muted' }
   }
 
@@ -419,7 +419,7 @@ export function MonthlyCategorySummary({
       parts.push(
         <>
           {periodDesc}{' '}
-          <span className="font-bold text-green-600">decreased</span> relative to{' '}
+          <span className="font-bold text-positive">decreased</span> relative to{' '}
           <span className="font-bold">recent short-term and long-term averages</span>
         </>
       )
@@ -427,7 +427,7 @@ export function MonthlyCategorySummary({
       parts.push(
         <>
           {periodDesc}{' '}
-          <span className="font-bold text-red-600">increased</span> relative to{' '}
+          <span className="font-bold text-negative">increased</span> relative to{' '}
           <span className="font-bold">recent short-term and long-term averages</span>
         </>
       )
@@ -437,7 +437,7 @@ export function MonthlyCategorySummary({
       const l12mAbs = Math.abs(vsL12MPct || 0)
       if (l3mAbs > l12mAbs && vsL3M !== null) {
         const direction = vsL3M < 0 ? 'decreased' : 'increased'
-        const color = vsL3M < 0 ? 'text-green-600' : 'text-red-600'
+        const color = vsL3M < 0 ? 'text-positive' : 'text-negative'
         parts.push(
           <>
             {periodDesc}{' '}
@@ -447,7 +447,7 @@ export function MonthlyCategorySummary({
         )
       } else if (vsL12M !== null) {
         const direction = vsL12M < 0 ? 'decreased' : 'increased'
-        const color = vsL12M < 0 ? 'text-green-600' : 'text-red-600'
+        const color = vsL12M < 0 ? 'text-positive' : 'text-negative'
         parts.push(
           <>
             {periodDesc}{' '}
@@ -467,7 +467,7 @@ export function MonthlyCategorySummary({
       const lyPct = Math.abs(longTermTrend.pct)
       const lySign = longTermTrend.value > 0 ? 'up' : 'down'
       const lyDirection = longTermTrend.value > 0 ? 'significantly higher' : 'significantly lower'
-      const lyColor = longTermTrend.value > 0 ? 'text-red-600' : 'text-green-600'
+      const lyColor = longTermTrend.value > 0 ? 'text-negative' : 'text-positive'
       
       // Add year-over-year comparison if meaningful (>5%)
       if (lyPct > 5) {
@@ -513,8 +513,8 @@ export function MonthlyCategorySummary({
 
   const summaryAccent = summaryData.absolute.total.vsL3M !== null
     ? summaryData.absolute.total.vsL3M < 0
-      ? 'border-l-[3px] border-l-green-500'
-      : 'border-l-[3px] border-l-red-500'
+      ? 'border-l-[3px] border-l-positive'
+      : 'border-l-[3px] border-l-negative'
     : ''
 
   const content = (
@@ -559,13 +559,13 @@ export function MonthlyCategorySummary({
                   {changeAmount !== null ? (
                     isSpendingLess ? (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-4 w-4 text-green-600" /></div>
-                        <p className="text-lg font-bold text-green-600">Lower Than Average</p>
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-4 w-4 text-positive" /></div>
+                        <p className="text-lg font-bold text-positive">Lower Than Average</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500/15"><TrendingUp className="h-4 w-4 text-red-600" /></div>
-                        <p className="text-lg font-bold text-red-600">Higher Than Average</p>
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-negative-tint"><TrendingUp className="h-4 w-4 text-negative" /></div>
+                        <p className="text-lg font-bold text-negative">Higher Than Average</p>
                       </div>
                     )
                   ) : (
@@ -577,7 +577,7 @@ export function MonthlyCategorySummary({
                     <p className="text-sm">
                       <span className={cn(
                         'font-semibold',
-                        isSpendingLess ? 'text-green-600' : 'text-red-600'
+                        isSpendingLess ? 'text-positive' : 'text-negative'
                       )}>
                         {isSpendingLess ? '' : '+'}{formatCurrency(Math.abs(changeAmount))}
                       </span>
@@ -589,7 +589,7 @@ export function MonthlyCategorySummary({
                       <p className="text-xs">
                         <span className={cn(
                           'font-medium',
-                          isSpendingLess ? 'text-green-600' : 'text-red-600'
+                          isSpendingLess ? 'text-positive' : 'text-negative'
                         )}>
                           {formatPercentage(changePercentage)}
                         </span>
@@ -605,7 +605,7 @@ export function MonthlyCategorySummary({
           })}
         </div>
         {isMobile && (
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-background to-transparent" aria-hidden />
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 scroll-fade-right" aria-hidden />
         )}
       </div>
     </div>
@@ -616,7 +616,7 @@ export function MonthlyCategorySummary({
   }
 
   return (
-    <Card className="border-l-[3px] border-l-orange-500">
+    <Card className="">
       <CardHeader className="pb-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle className="text-base">

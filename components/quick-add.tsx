@@ -15,11 +15,11 @@ import { AddTransactionDialog } from './transactions/add-transaction-dialog'
 const QUICK_ADD_EVENT = 'findash:open-quick-add'
 
 const SHORTCUTS: { href: string; label: string; description: string; icon: typeof Receipt }[] = [
-  { href: '/accounts', label: 'Account', description: 'Add a checking, brokerage or other account', icon: Wallet },
-  { href: '/recurring', label: 'Recurring payment', description: 'Track a subscription or fixed expense', icon: Repeat },
-  { href: '/liquidity', label: 'Debt', description: 'Mortgage, loan, credit card or commitment', icon: CreditCard },
-  { href: '/kids', label: 'Kids account', description: '529, UGMA or other custodial account', icon: Baby },
-  { href: '/import', label: 'Import CSV', description: 'Bulk import transactions or balances', icon: FileUp },
+  { href: '/position#accounts', label: 'Account', description: 'Add a checking, brokerage or other account', icon: Wallet },
+  { href: '/spending#recurring', label: 'Recurring payment', description: 'Track a subscription or fixed expense', icon: Repeat },
+  { href: '/position#liquidity', label: 'Debt', description: 'Mortgage, loan, credit card or commitment', icon: CreditCard },
+  { href: '/position#kids', label: 'Kids account', description: '529, UGMA or other custodial account', icon: Baby },
+  { href: '/settings#import', label: 'Import CSV', description: 'Bulk import transactions or balances', icon: FileUp },
 ]
 
 export function QuickAdd() {

@@ -157,7 +157,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
         <div
           className={cn(
             'absolute h-full rounded-full transition-all duration-500',
-            isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+            isPositive ? 'bg-positive right-0' : 'bg-negative left-0'
           )}
           style={{
             width: `${gapPercent}%`,
@@ -189,7 +189,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Budget Tracker</CardTitle>
           {isAllGood && (
-            <div className="flex items-center gap-2 text-green-600">
+            <div className="flex items-center gap-2 text-positive">
               <CheckCircle2 className="h-4 w-4" />
               <span className="text-xs font-medium">All Good</span>
             </div>
@@ -201,8 +201,8 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
           {/* Summary card - left; on mobile show first (order-1) */}
           <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card min-w-0 max-md:order-1", budgetStatusInfo.borderClass)}>
             <div className="flex items-center gap-1.5">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/15">
-                <Target className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                <Target className="h-3.5 w-3.5 text-muted-foreground dark:text-muted-foreground" />
               </div>
               <h3 className="font-semibold text-xs uppercase tracking-wide">Budget Status</h3>
             </div>
@@ -263,7 +263,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell
                 className={cn(
                   'text-right font-medium tabular-nums',
-                  totals.income.gap >= 0 ? 'text-green-600' : 'text-red-600'
+                  totals.income.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
                 {formatCurrency(totals.income.gap)}
@@ -282,7 +282,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell
                 className={cn(
                   'text-right font-medium tabular-nums',
-                  totals.expenses.gap >= 0 ? 'text-green-600' : 'text-red-600'
+                  totals.expenses.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
                 {formatCurrency(totals.expenses.gap)}
@@ -301,7 +301,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell
                 className={cn(
                   'text-right font-semibold tabular-nums',
-                  totals.netIncome.gap >= 0 ? 'text-green-600' : 'text-red-600'
+                  totals.netIncome.gap >= 0 ? 'text-positive' : 'text-negative'
                 )}
               >
                 {formatCurrency(totals.netIncome.gap)}
@@ -317,7 +317,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell
                 className={cn(
                   'text-right italic',
-                  totals.savings.budget < 0 ? 'text-red-600' : 'text-green-600'
+                  totals.savings.budget < 0 ? 'text-negative' : 'text-positive'
                 )}
               >
                 {formatPercentage(totals.savings.budget)}
@@ -325,7 +325,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell
                 className={cn(
                   'text-right italic',
-                  totals.savings.tracking < 0 ? 'text-red-600' : 'text-green-600'
+                  totals.savings.tracking < 0 ? 'text-negative' : 'text-positive'
                 )}
               >
                 {formatPercentage(totals.savings.tracking)}
@@ -333,7 +333,7 @@ export function BudgetSummaryTable({ incomeData, expenseData }: BudgetSummaryTab
               <TableCell
                 className={cn(
                   'text-right italic',
-                  totals.savings.ytd < 0 ? 'text-red-600' : 'text-green-600'
+                  totals.savings.ytd < 0 ? 'text-negative' : 'text-positive'
                 )}
               >
                 {formatPercentage(totals.savings.ytd)}

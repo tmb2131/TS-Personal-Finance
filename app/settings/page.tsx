@@ -4,9 +4,33 @@ import { SettingsForm } from '@/components/settings/settings-form'
 import { AppearanceForm } from '@/components/settings/appearance-form'
 import { CategoryPlanningSection } from '@/components/settings/category-planning-section'
 import { FinancialAssumptionsSection } from '@/components/settings/financial-assumptions-section'
+import { AccountActions } from '@/components/settings/account-actions'
+import { CsvImportFlow } from '@/components/import/csv-upload'
+import { SourceHealthPanel } from '@/components/ingestion/source-health-panel'
+import { SectionNav } from '@/components/nav/section-nav'
+import { HashScroll } from '@/components/nav/hash-scroll'
 import { PageHeader } from '@/components/ui/page-header'
 
-export default async function SettingsPage() {
+export const metadata = {
+  title: 'Settings',
+}
+
+interface SettingsPageProps {
+  searchParams?: Promise<{ target?: string | string[] }>
+}
+
+const IMPORT_TARGETS = new Set(['transactions', 'account_balances', 'recurring_payments'] as const)
+
+const SECTIONS = [
+  { id: 'google-sheet', label: 'Data sources' },
+  { id: 'import', label: 'Import' },
+  { id: 'category-planning', label: 'Category planning' },
+  { id: 'financial-assumptions', label: 'Assumptions' },
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'account', label: 'Account' },
+]
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -24,36 +48,50 @@ export default async function SettingsPage() {
 
   const defaultCurrency = profile?.default_currency === 'GBP' ? 'GBP' : 'USD'
 
+  // Preserved from the retired /import?target=... deep links.
+  const resolvedParams = searchParams ? await searchParams : undefined
+  const rawTarget = resolvedParams?.target
+  const candidate = Array.isArray(rawTarget) ? rawTarget[0] : rawTarget
+  const initialTarget = IMPORT_TARGETS.has((candidate as any) ?? '')
+    ? (candidate as 'transactions' | 'account_balances' | 'recurring_payments')
+    : 'transactions'
+
   return (
     <div className="space-y-4 md:space-y-6">
+      <HashScroll />
       <PageHeader
         title="Settings"
-        description="Preferences, data sources, category planning, and appearance."
-        accent="slate"
+        description="Data sources, import, category planning, assumptions, and appearance."
       />
-      <nav className="flex flex-wrap gap-x-4 gap-y-1 -mt-2 text-sm" aria-label="Settings sections">
-        <a href="#google-sheet" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-          Data sources
-        </a>
-        <a href="#category-planning" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-          Category Planning
-        </a>
-        <a href="#financial-assumptions" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-          Financial Assumptions
-        </a>
-        <a href="#appearance" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-          Appearance
-        </a>
-      </nav>
+
+      <SectionNav sections={SECTIONS} />
+
       <SettingsForm
         initialSpreadsheetId={profile?.google_spreadsheet_id ?? ''}
         initialDisplayName={profile?.display_name ?? ''}
         initialDefaultCurrency={defaultCurrency}
         serviceAccountEmail={process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? ''}
       />
+
+      <section id="import" className="scroll-mt-24 border-t pt-4 md:pt-6 space-y-4 md:space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-title">Import CSV data</h2>
+          <p className="text-body text-muted-foreground">
+            Load transactions, balances, or recurring payments without maintaining a live
+            spreadsheet. Feeds the same forecast pipeline as the sheet sync.
+          </p>
+        </div>
+        <SourceHealthPanel
+          title="Before you import"
+          description="Check which datasets already exist so you can decide whether to append, review, or backfill with CSV."
+        />
+        <CsvImportFlow initialTarget={initialTarget} />
+      </section>
+
       <CategoryPlanningSection />
       <FinancialAssumptionsSection />
       <AppearanceForm />
+      <AccountActions />
     </div>
   )
 }

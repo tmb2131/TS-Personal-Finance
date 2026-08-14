@@ -19,19 +19,19 @@ export function SyncStatusPill({ className }: SyncStatusPillProps) {
   if (syncing) {
     label = 'Syncing…'
     dotClass = 'bg-blue-500 animate-pulse'
-    pillClass = 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+    pillClass = 'border-blue-500/30 bg-muted text-muted-foreground dark:text-muted-foreground'
   } else if (freshness === 'setup') {
     label = 'Add a source'
     dotClass = 'bg-amber-500'
-    pillClass = 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+    pillClass = 'border-amber-500/30 bg-muted text-muted-foreground dark:text-muted-foreground'
   } else if (freshness === 'stale') {
     label = `Stale · ${formatLastSheetSync(lastRefreshDate)}`
     dotClass = 'bg-amber-500'
-    pillClass = 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+    pillClass = 'border-amber-500/30 bg-muted text-muted-foreground dark:text-muted-foreground'
   } else if (freshness === 'fresh') {
     label = `Fresh · ${formatLastSheetSync(lastRefreshDate)}`
-    dotClass = 'bg-emerald-500'
-    pillClass = 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+    dotClass = 'bg-positive'
+    pillClass = 'border-positive bg-positive-tint text-positive'
   } else {
     label = formatLastSheetSync(lastRefreshDate)
     dotClass = 'bg-muted-foreground'

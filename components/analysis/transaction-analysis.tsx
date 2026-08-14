@@ -341,7 +341,7 @@ export function TransactionAnalysis({
 
   if (loading) {
     return (
-      <Card className="border-l-[3px] border-l-orange-500">
+      <Card className="">
         <CardHeader className="bg-muted/50">
           <Skeleton className="h-6 w-48" />
         </CardHeader>
@@ -376,7 +376,7 @@ export function TransactionAnalysis({
 
   if (error) {
     return (
-      <Card className="border-l-[3px] border-l-orange-500">
+      <Card className="">
         <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
           <CardTitle className="text-base">Transaction Analysis</CardTitle>
         </CardHeader>
@@ -392,7 +392,7 @@ export function TransactionAnalysis({
   }
 
   return (
-    <Card ref={cardRef} className="border-l-[3px] border-l-orange-500">
+    <Card ref={cardRef} className="">
       <CardHeader className="bg-muted/50 px-4 py-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">Transaction Analysis</CardTitle>
@@ -487,8 +487,8 @@ export function TransactionAnalysis({
 
         {/* Instructional text */}
         {!fullView && transactionsWithCumulative.length > 0 && (
-          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-md">
-            <p className="text-sm text-blue-900 dark:text-blue-200">
+          <div className="p-3 bg-blue-50 dark:bg-muted border border-blue-200 dark:border-blue-900 rounded-md">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
               <span className="font-semibold">Showing top 80% of transactions.</span> Click <span className="font-medium">"Full table view"</span> above to see all transactions for the selected period and category.
             </p>
           </div>

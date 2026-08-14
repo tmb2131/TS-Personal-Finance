@@ -540,7 +540,7 @@ export function AnnualCumulativeSpendChart() {
 
   if (loading) {
     return (
-      <Card className="border-l-[3px] border-l-purple-500">
+      <Card className="">
         <CardHeader>
           <CardTitle>Annual Cumulative Spend</CardTitle>
         </CardHeader>
@@ -553,7 +553,7 @@ export function AnnualCumulativeSpendChart() {
 
   if (error) {
     return (
-      <Card className="border-l-[3px] border-l-purple-500">
+      <Card className="">
         <CardHeader>
           <CardTitle>Annual Cumulative Spend</CardTitle>
         </CardHeader>
@@ -569,7 +569,7 @@ export function AnnualCumulativeSpendChart() {
   }
 
   return (
-    <Card className="border-l-[3px] border-l-purple-500">
+    <Card className="">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle>Annual Cumulative Spend</CardTitle>

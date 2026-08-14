@@ -1,10 +1,9 @@
 'use client'
 
 import { CurrencyToggle } from './currency-toggle'
-import { ThemeToggle } from './theme-toggle'
 import { SyncStatusPill } from './sync-status-pill'
 import { Button } from './ui/button'
-import { RefreshCw, MessageCircle, Plus } from 'lucide-react'
+import { RefreshCw, Plus } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useIsMobile } from '@/lib/hooks/use-is-mobile'
 import { useSync } from '@/lib/contexts/sync-context'
@@ -120,31 +119,22 @@ export function Header({ initialData: _initialData }: { initialData?: HeaderStat
           </>
         )}
       </div>
+      {/* Sync status, refresh, currency chip, quick add. Theme and log out
+          moved to Settings — neither is frequent enough to hold permanent chrome. */}
       <div className="flex items-center gap-1.5 md:gap-2">
+        <CurrencyToggle />
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={() => window.dispatchEvent(new Event('findash:open-quick-add'))}
-          className="hidden h-9 gap-1.5 px-2 text-xs md:inline-flex md:px-3 md:text-sm"
-          title="Quick add (⌘K)"
+          className="h-9 min-h-[44px] gap-1.5 px-3 text-meta md:min-h-0"
+          title="Quick add"
           aria-label="Quick add"
         >
           <Plus className="h-4 w-4" />
           <span className="hidden lg:inline">Quick add</span>
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="md:hidden h-11 w-11 min-h-[44px] min-w-[44px]"
-          onClick={() => window.dispatchEvent(new Event('findash:open-chat-widget'))}
-          aria-label="Open AI Assistant"
-        >
-          <MessageCircle className="h-5 w-5" />
-        </Button>
-        <ThemeToggle />
-        <CurrencyToggle />
       </div>
     </header>
   )

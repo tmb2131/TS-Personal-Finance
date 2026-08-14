@@ -1,93 +1,20 @@
-import { Suspense } from 'react'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { NetWorthChartWrapper } from '@/components/dashboard/net-worth-chart-wrapper'
-import { BudgetTableWrapper } from '@/components/dashboard/budget-table-wrapper'
-import { AnnualTrendsTableWrapper } from '@/components/dashboard/annual-trends-table-wrapper'
-import { MonthlyTrendsTableWrapper } from '@/components/dashboard/monthly-trends-table-wrapper'
-import { DashboardAtAGlanceWrapper } from '@/components/dashboard/dashboard-at-a-glance-wrapper'
-import { DashboardNavigation } from '@/components/dashboard/dashboard-navigation'
-import { DashboardBackToTop } from '@/components/dashboard/dashboard-back-to-top'
-import { DashboardHashScroll } from '@/components/dashboard/dashboard-hash-scroll'
-import {
-  NetWorthChartSkeleton,
-  BudgetTableSkeleton,
-  TrendsTableSkeleton,
-  IncomeVsExpensesChartSkeleton,
-} from '@/components/dashboard/skeletons'
-import { IncomeVsExpensesChartWrapper } from '@/components/dashboard/income-vs-expenses-chart-wrapper'
-import { PageHeader } from '@/components/ui/page-header'
+import { HashRedirect } from '@/components/nav/hash-redirect'
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export const metadata = {
+  title: 'Moved',
+}
 
-  if (!user) {
-    redirect('/login')
-  }
+/**
+ * The Dashboard's sections now live on three different pages, so the
+ * destination depends on the fragment. See components/nav/hash-redirect.tsx.
+ */
+const DESTINATIONS: Record<string, string> = {
+  'net-worth-chart': '/position',
+  'budget-table': '/spending',
+  'annual-trends': '/trends',
+  'monthly-trends': '/trends',
+}
 
-  return (
-    <div className="w-full max-w-7xl mx-auto space-y-2 md:space-y-3 flex flex-col">
-      <DashboardHashScroll />
-      {/* Header - on mobile, the Executive Summary is shown first via order so users see data before chrome */}
-      <div className="max-md:order-2">
-        <PageHeader
-          title="Dashboard"
-          description="Overview of your financial position and trends"
-          accent="blue"
-        />
-      </div>
-
-      <div className="max-md:order-1">
-        <Suspense fallback={<div className="skeleton-shimmer h-48 rounded-lg bg-muted" />}>
-          <DashboardAtAGlanceWrapper />
-        </Suspense>
-      </div>
-
-      <div className="max-md:order-2 space-y-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Jump to section</p>
-        <DashboardNavigation />
-      </div>
-
-      {/* Section 1: Net Worth + Income vs Expenses */}
-      <section id="net-worth-chart" className="scroll-mt-24 max-md:order-2">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-          <Suspense fallback={<NetWorthChartSkeleton />}>
-            <NetWorthChartWrapper />
-          </Suspense>
-          <Suspense fallback={<IncomeVsExpensesChartSkeleton />}>
-            <IncomeVsExpensesChartWrapper />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Section 2: Budget Table */}
-      <section id="budget-table" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border max-md:order-2">
-        <Suspense fallback={<BudgetTableSkeleton />}>
-          <BudgetTableWrapper />
-        </Suspense>
-      </section>
-
-      {/* Section 3: Annual Trends */}
-      <section id="annual-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border max-md:order-2">
-        <Suspense fallback={<TrendsTableSkeleton />}>
-          <AnnualTrendsTableWrapper />
-        </Suspense>
-      </section>
-
-      {/* Section 4: Monthly Trends */}
-      <section id="monthly-trends" className="scroll-mt-24 pt-3 md:pt-4 border-t border-border max-md:order-2">
-        <Suspense fallback={<TrendsTableSkeleton />}>
-          <MonthlyTrendsTableWrapper />
-        </Suspense>
-      </section>
-
-      {/* Footer: back to top */}
-      <footer className="pt-3 md:pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-end gap-3 max-md:order-2">
-        <DashboardBackToTop />
-      </footer>
-    </div>
-  )
+export default function DashboardRedirectPage() {
+  return <HashRedirect map={DESTINATIONS} fallback="/" />
 }

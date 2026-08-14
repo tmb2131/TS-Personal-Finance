@@ -51,7 +51,7 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
 
   if (transactions.length === 0) {
     return (
-      <Card className="border-l-[3px] border-l-slate-500">
+      <Card className="">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl">Today&apos;s transactions</CardTitle>
           <p className="text-sm text-muted-foreground">Expense transactions for today</p>
@@ -68,7 +68,7 @@ export function TodayTransactions({ transactions }: TodayTransactionsProps) {
   }
 
   return (
-    <Card className="border-l-[3px] border-l-slate-500">
+    <Card className="">
       <CardHeader className="bg-muted/50">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>

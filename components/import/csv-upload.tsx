@@ -474,7 +474,7 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
               <span
                 className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-semibold ${
                   done
-                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                    ? 'border-positive bg-positive text-white'
                     : active
                       ? 'border-primary bg-primary text-primary-foreground'
                       : 'border-muted-foreground/40'
@@ -503,7 +503,7 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              <CheckCircle2 className="h-5 w-5 text-positive" />
               Import Complete
             </CardTitle>
             <CardDescription>
@@ -512,17 +512,17 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-3 text-center">
-                <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{result.imported}</div>
+              <div className="rounded-lg bg-positive-tint p-3 text-center">
+                <div className="text-2xl font-bold text-positive">{result.imported}</div>
                 <div className="text-sm text-muted-foreground">Imported</div>
               </div>
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3 text-center">
-                <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">{result.duplicates}</div>
+              <div className="rounded-lg bg-amber-50 dark:bg-muted p-3 text-center">
+                <div className="text-2xl font-bold text-muted-foreground dark:text-muted-foreground">{result.duplicates}</div>
                 <div className="text-sm text-muted-foreground">Duplicates skipped</div>
               </div>
               {result.errors > 0 && (
-                <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-center">
-                  <div className="text-2xl font-bold text-red-700 dark:text-red-400">{result.errors}</div>
+                <div className="rounded-lg bg-negative-tint p-3 text-center">
+                  <div className="text-2xl font-bold text-negative">{result.errors}</div>
                   <div className="text-sm text-muted-foreground">Errors</div>
                 </div>
               )}
@@ -671,7 +671,7 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
             )}
 
             {!hasRequiredMapping && (
-              <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground dark:text-muted-foreground">
                 <AlertCircle className="h-4 w-4" />
                 Required fields: {missingRequired.map(getMappingLabel).join(', ')}
               </div>
@@ -704,7 +704,7 @@ export function CsvImportFlow({ initialTarget = 'transactions' }: CsvImportFlowP
                     </TableBody>
                   </Table>
                 </div>
-                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent rounded-r-md" aria-hidden />
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 scroll-fade-right rounded-r-md" aria-hidden />
               </div>
             </div>
 

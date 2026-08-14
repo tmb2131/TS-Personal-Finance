@@ -284,11 +284,11 @@ export function SensitivityChart({ inputs, draft, symbol }: SensitivityChartProp
             <span className="h-0.5 w-4 rounded bg-[#6366f1] inline-block" /> Floor
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-4 rounded bg-green-500/25 inline-block" /> Sustainable range
+            <span className="h-2.5 w-4 rounded bg-positive-tint inline-block" /> Sustainable range
           </span>
           {hasDeficit && (
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-4 rounded bg-amber-500/35 inline-block" /> No sustainable
+              <span className="h-2.5 w-4 rounded bg-muted inline-block" /> No sustainable
               level
             </span>
           )}

@@ -567,8 +567,8 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                 return (
                   <div className={cn("space-y-2 p-3 rounded-lg border border-l-[3px] bg-card", expStatus.borderClass)}>
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/15">
-                        <Receipt className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                        <Receipt className="h-3.5 w-3.5 text-muted-foreground dark:text-muted-foreground" />
                       </div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Expenses Status</h3>
                     </div>
@@ -615,9 +615,9 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
               {expenseTotals.gap >= 0 ? (
                 <>
                   {/* Top Categories Under Budget (Lower Than Budgeted) */}
-                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Under Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -625,8 +625,8 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                         <p className="text-xs text-muted-foreground mb-0.5">Lower Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                            <p className="text-base font-bold text-green-600">Under Budget</p>
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><CheckCircle2 className="h-3.5 w-3.5 text-positive" /></div>
+                            <p className="text-base font-bold text-positive">Under Budget</p>
                           </div>
                         ) : (
                           <p className="text-base font-bold text-muted-foreground">None</p>
@@ -640,9 +640,9 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                               <div key={item.category} className="flex items-center gap-1.5">
                                 <span className="text-xs w-24 truncate">{item.category}</span>
                                 <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                  <div className="h-full bg-positive rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
+                                <span className="text-xs font-medium text-positive w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
                               </div>
                             )
                           })
@@ -653,9 +653,9 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                     </div>
                   </div>
                   {/* Top Categories Above Budget (Higher Than Budgeted) */}
-                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-amber-500 bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><TrendingUp className="h-3.5 w-3.5 text-amber-600" /></div>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted"><TrendingUp className="h-3.5 w-3.5 text-muted-foreground" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -663,8 +663,8 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                         <p className="text-xs text-muted-foreground mb-0.5">Higher Than Budgeted</p>
                         {topCategories.belowBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><MinusCircle className="h-3.5 w-3.5 text-amber-600" /></div>
-                            <p className="text-base font-bold text-amber-600">Above Budget</p>
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted"><MinusCircle className="h-3.5 w-3.5 text-muted-foreground" /></div>
+                            <p className="text-base font-bold text-muted-foreground">Above Budget</p>
                           </div>
                         ) : (
                           <p className="text-base font-bold text-muted-foreground">None</p>
@@ -680,7 +680,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                                 <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
                                   <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-xs font-medium text-amber-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
+                                <span className="text-xs font-medium text-muted-foreground w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
                               </div>
                             )
                           })
@@ -694,9 +694,9 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
               ) : (
                 <>
                   {/* Top Categories Above Budget (Higher Than Budgeted) — first when above budget overall */}
-                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-amber-500 bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><TrendingUp className="h-3.5 w-3.5 text-amber-600" /></div>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted"><TrendingUp className="h-3.5 w-3.5 text-muted-foreground" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Above Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -704,8 +704,8 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                         <p className="text-xs text-muted-foreground mb-0.5">Higher Than Budgeted</p>
                         {topCategories.belowBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15"><MinusCircle className="h-3.5 w-3.5 text-amber-600" /></div>
-                            <p className="text-base font-bold text-amber-600">Above Budget</p>
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted"><MinusCircle className="h-3.5 w-3.5 text-muted-foreground" /></div>
+                            <p className="text-base font-bold text-muted-foreground">Above Budget</p>
                           </div>
                         ) : (
                           <p className="text-base font-bold text-muted-foreground">None</p>
@@ -721,7 +721,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                                 <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
                                   <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-xs font-medium text-amber-600 w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
+                                <span className="text-xs font-medium text-muted-foreground w-14 text-right">{formatCurrencyCompact(Math.abs(item.gap))}</span>
                               </div>
                             )
                           })
@@ -732,9 +732,9 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                     </div>
                   </div>
                   {/* Top Categories Under Budget (Lower Than Budgeted) */}
-                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-green-500 bg-card">
+                  <div className="space-y-2 p-3 rounded-lg border border-l-[3px] border-l-positive bg-card">
                     <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><TrendingDown className="h-3.5 w-3.5 text-green-600" /></div>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><TrendingDown className="h-3.5 w-3.5 text-positive" /></div>
                       <h3 className="font-semibold text-xs uppercase tracking-wide">Top Categories Under Budget</h3>
                     </div>
                     <div className="space-y-1">
@@ -742,8 +742,8 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                         <p className="text-xs text-muted-foreground mb-0.5">Lower Than Budgeted</p>
                         {topCategories.aboveBudget.length > 0 ? (
                           <div className="flex items-center gap-1.5">
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15"><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /></div>
-                            <p className="text-base font-bold text-green-600">Under Budget</p>
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-positive-tint"><CheckCircle2 className="h-3.5 w-3.5 text-positive" /></div>
+                            <p className="text-base font-bold text-positive">Under Budget</p>
                           </div>
                         ) : (
                           <p className="text-base font-bold text-muted-foreground">None</p>
@@ -757,9 +757,9 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                               <div key={item.category} className="flex items-center gap-1.5">
                                 <span className="text-xs w-24 truncate">{item.category}</span>
                                 <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
-                                  <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                  <div className="h-full bg-positive rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                                 </div>
-                                <span className="text-xs font-medium text-green-600 w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
+                                <span className="text-xs font-medium text-positive w-14 text-right">{formatCurrencyCompact(item.gap)}</span>
                               </div>
                             )
                           })
@@ -790,7 +790,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                       className={cn(
                         'font-semibold tabular-nums text-sm shrink-0',
                         isMaterial
-                          ? isPositive ? 'text-green-600' : 'text-red-600'
+                          ? isPositive ? 'text-positive' : 'text-negative'
                           : 'text-muted-foreground'
                       )}
                     >
@@ -893,7 +893,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                         if (delta === undefined || delta === 0) return '–'
                         const pos = delta >= 0
                         return (
-                          <span className={cn('font-medium', pos ? 'text-green-600' : 'text-red-600')}>
+                          <span className={cn('font-medium', pos ? 'text-positive' : 'text-negative')}>
                             {formatCurrencyCompact(delta)}
                           </span>
                         )
@@ -914,7 +914,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                             className={cn(
                               'text-right font-medium',
                               isMaterial
-                                ? isPositive ? 'text-green-600' : 'text-red-600'
+                                ? isPositive ? 'text-positive' : 'text-negative'
                                 : 'text-muted-foreground'
                             )}
                           >
@@ -926,7 +926,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                                 <div
                                   className={cn(
                                     'absolute h-full',
-                                    isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                    isPositive ? 'bg-positive right-0' : 'bg-negative left-0'
                                   )}
                                   style={{ width: `${gapPercent}%` }}
                                 />
@@ -1018,7 +1018,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                               className={cn(
                                 'text-right font-medium',
                                 isMaterial
-                                  ? isPositive ? 'text-green-600' : 'text-red-600'
+                                  ? isPositive ? 'text-positive' : 'text-negative'
                                   : 'text-muted-foreground'
                               )}
                             >
@@ -1030,7 +1030,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                                   <div
                                     className={cn(
                                       'absolute h-full',
-                                      isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                      isPositive ? 'bg-positive right-0' : 'bg-negative left-0'
                                     )}
                                     style={{ width: `${gapPercent}%` }}
                                   />
@@ -1077,7 +1077,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                               className={cn(
                                 'text-right font-medium',
                                 isMaterial
-                                  ? isPositive ? 'text-green-600' : 'text-red-600'
+                                  ? isPositive ? 'text-positive' : 'text-negative'
                                   : 'text-muted-foreground'
                               )}
                             >
@@ -1089,7 +1089,7 @@ export function BudgetTable({ initialData, initialAnnualForecasts }: BudgetTable
                                   <div
                                     className={cn(
                                       'absolute h-full',
-                                      isPositive ? 'bg-green-500 right-0' : 'bg-red-500 left-0'
+                                      isPositive ? 'bg-positive right-0' : 'bg-negative left-0'
                                     )}
                                     style={{ width: `${gapPercent}%` }}
                                   />

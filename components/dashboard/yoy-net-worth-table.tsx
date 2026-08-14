@@ -200,7 +200,7 @@ export function YoYNetWorthTable() {
                     className={cn(
                       'text-right tabular-nums',
                       isTotal && 'font-semibold',
-                      isNegative ? 'text-red-600' : amount !== null && amount > 0 ? 'text-green-600' : ''
+                      isNegative ? 'text-negative' : amount !== null && amount > 0 ? 'text-positive' : ''
                     )}
                   >
                     {amount !== null ? formatCurrencyLarge(amount) : '-'}
