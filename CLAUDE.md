@@ -186,10 +186,10 @@ ALLOWED_EMAILS=                    # helper exists but not wired into auth flow
 
 ## Database Migrations
 
-54 files, numbered `001` through `051` — three numbers were used twice and the
+55 files, numbered `001` through `052` — three numbers were used twice and the
 colliding files carry a `b` suffix (`036b`, `037b`, `038b`).
 
-**Next migration is `052_*.sql`.**
+**Next migration is `053_*.sql`.**
 
 The remote ledger (`supabase_migrations.schema_migrations`) matches these
 filenames exactly. Applying a migration through the MCP `apply_migration` tool
