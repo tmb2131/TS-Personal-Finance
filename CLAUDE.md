@@ -147,6 +147,14 @@ Not synced from sheet anymore:
 - `lib/app-sections.ts`: the five destinations and the section ids each renders,
   plus fragment aliases. `hrefResolves()` backs the drill-in link test; add new
   sections here in the same change.
+- `lib/gbp-available.ts`: the Home hero figure. Sterling cash accounts only, no
+  currency conversion, and **rolled forward**: the balance snapshot is only as
+  fresh as the accounts tab, so sterling ledger rows dated after it are netted
+  on. Only rows whose `currency` is GBP count — `amount_gbp` is populated on
+  dollar rows too, as the converted figure, and summing it blind spends sterling
+  for dollars that left a dollar account. `useGbpLedger` fetches exactly the
+  window from the snapshot date forward, never a fixed lookback, so the
+  roll-forward cannot be silently truncated.
 - `lib/month-to-date.ts`: MTD spend vs this month's expected run rate, where the
   month's share of the year comes from history rather than a flat twelfth
 - `lib/forecasting.ts`: Annual/monthly trend + forecast computation
@@ -224,7 +232,8 @@ All cron routes require `Authorization: Bearer <CRON_SECRET>` and are enforced i
 Five destinations, flat — no grouping headers on desktop, no "More" sheet on
 mobile (`components/sidebar.tsx`):
 
-1. `Home` (`/`) — GBP available, budget status, net worth, 0-3 attention items
+1. `Home` (`/`) — GBP available (rolled forward off the balance snapshot by the
+   sterling ledger booked since), budget status, net worth, 0-3 attention items
 2. `Spending` (`/spending`) — today, budget table, transaction analysis, transactions, recurring
 3. `Position` (`/position`) — accounts, net worth chart, cash runway, liquidity, sustainable spend, kids (hidden when empty)
 4. `Trends` (`/trends`) — observations, forecast (period toggle, opens on "How it changed"), methodologies, YoY net worth, category trends, annual/monthly tables

@@ -34,6 +34,7 @@ export const APP_PAGE_KNOWLEDGE_INDEX: AppPageKnowledgeEntry[] = [
       'Answer one question: is there anything I need to do? Merges the former Daily Summary and Key Insights pages.',
     primaryContent: [
       'GBP available: sterling cash actually held across the UK accounts. Does NOT follow the currency toggle, because most of the working pool is USD-denominated and a converted total would read as sterling that is not there. The converted all-cash total is shown separately and labelled.',
+      'GBP available is rolled forward: the account balances are a snapshot typed in monthly at best, so sterling transactions booked after that snapshot date are netted onto it. The card names both parts — the snapshot figure and date, and the net booked since — so the two can be checked separately. Only GBP-denominated rows count; dollar transactions carry a converted GBP amount but leave a dollar account. The budget, net worth and all-cash figures below it are still read straight off the snapshot.',
       'Budget status: full-year tracking against budget, with the over/under gap',
       'Net worth: latest total excluding trust capital',
       'Attention: zero to three actionable items (stale sync, category well over budget). Shows "Nothing needs attention." when there are none.',
@@ -45,6 +46,7 @@ export const APP_PAGE_KNOWLEDGE_INDEX: AppPageKnowledgeEntry[] = [
     commonQuestions: [
       'How much sterling do I actually have?',
       'Why is GBP available different from my total cash?',
+      'Why does GBP available not match my last account update?',
       'Am I over or under budget?',
       'Is there anything I need to deal with?',
     ],
@@ -53,6 +55,7 @@ export const APP_PAGE_KNOWLEDGE_INDEX: AppPageKnowledgeEntry[] = [
       'components/home/home-content.tsx',
       'components/home/attention-list.tsx',
       'lib/gbp-available.ts',
+      'lib/hooks/queries/use-gbp-ledger.ts',
     ],
   },
   {

@@ -1,6 +1,7 @@
 export const queryKeys = {
   accounts: ['accounts'] as const,
   transactions: (days: number | null) => ['transactions', days] as const,
+  gbpLedger: (since: string | null) => ['gbp-ledger', since] as const,
   dailySummary: ['daily-summary'] as const,
   insights: ['insights'] as const,
   budgets: ['budgets'] as const,

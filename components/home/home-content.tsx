@@ -6,6 +6,7 @@ import { ArrowUpRight } from 'lucide-react'
 import { useCurrency } from '@/lib/contexts/currency-context'
 import { useAccounts } from '@/lib/hooks/queries/use-accounts'
 import { useDailySummary } from '@/lib/hooks/queries/use-daily-summary'
+import { useGbpLedger } from '@/lib/hooks/queries/use-gbp-ledger'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { computeGbpAvailable, latestAccountRows } from '@/lib/gbp-available'
@@ -26,13 +27,32 @@ import { cn } from '@/utils/cn'
  * not a sequence. Previously all four were the same stack of label-and-number
  * separated by hairlines, which gave the page no centre and left two thirds of
  * a desktop screen empty.
+ *
+ * The hero figure is rolled forward off the account snapshot by the sterling
+ * ledger booked since it, so it tracks the month rather than freezing on the day
+ * the balances were last typed in. The two figures beneath it are still read
+ * straight off the snapshot: they answer questions about position, where a
+ * balance-date figure is the honest one, and rolling them forward would need
+ * dollar flows this ledger cannot attribute to an account.
  */
 export function HomeContent() {
   const { currency, convertAmount, fxRate } = useCurrency()
   const { data: accounts, isLoading: accountsLoading } = useAccounts()
   const { data: summary, isLoading: summaryLoading } = useDailySummary()
 
-  const gbp = useMemo(() => computeGbpAvailable(accounts ?? []), [accounts])
+  /**
+   * Two passes: the first establishes the snapshot date so the ledger query
+   * knows how far back to reach, the second folds that ledger in. Both are
+   * memoized reductions over a handful of account rows, so the repeat costs
+   * nothing worth avoiding, and the alternative — a second exported function
+   * duplicating the contributing-account filter — is how the two drift apart.
+   */
+  const balancesOnly = useMemo(() => computeGbpAvailable(accounts ?? []), [accounts])
+  const { data: gbpLedger, isLoading: gbpLedgerLoading } = useGbpLedger(balancesOnly.balancesAsOf)
+  const gbp = useMemo(
+    () => computeGbpAvailable(accounts ?? [], gbpLedger ?? []),
+    [accounts, gbpLedger],
+  )
 
   const convertedCash = useMemo(() => {
     const rows = latestAccountRows(accounts ?? []).filter(
@@ -87,7 +107,7 @@ export function HomeContent() {
   const toDisplay = (gbpValue: number) =>
     currency === 'USD' ? convertAmount(gbpValue, 'GBP', fxRate) : gbpValue
 
-  if (accountsLoading || summaryLoading) {
+  if (accountsLoading || summaryLoading || gbpLedgerLoading) {
     return (
       <div className="mx-auto w-full max-w-5xl space-y-4">
         <Skeleton className="h-44 w-full rounded-lg" />
@@ -101,6 +121,12 @@ export function HomeContent() {
   }
 
   const overBudget = budget ? budget.gap < 0 : false
+  /**
+   * Only claim a roll-forward when it moves the figure by a whole pound. The
+   * card rounds to the pound, so a sub-£1 net would otherwise render as "less
+   * £0 booked since" against an unchanged total.
+   */
+  const rolledForward = Math.round(gbp.sinceBalances) !== 0
   /**
    * The meter spans whichever is larger, the forecast or the budget, so the
    * overshoot has somewhere to be drawn. A bar that simply clamps at 100% turns
@@ -130,8 +156,35 @@ export function HomeContent() {
             </p>
             <p className="mt-2 text-body text-muted-foreground">
               Sterling cash held, not converted
-              {gbp.asOf ? <span className="num"> · As of {gbp.asOf}</span> : null}
             </p>
+            {/* Where the figure came from, and over what window. Naming the
+                snapshot and the movement separately is the difference between a
+                number the reader can check against their bank and one they have
+                to take on trust — and it makes an unusually large swing legible
+                as a big month rather than as a bug. The closing date is the last
+                row the ledger actually carries, not today: a quiet ledger and a
+                quiet month look identical from here, and only one of them means
+                the figure is current. */}
+            {gbp.balancesAsOf ? (
+              <p className="mt-1 text-meta text-muted-foreground">
+                {rolledForward ? (
+                  <>
+                    <span className="num">{gbpFormat.format(gbp.balances)}</span> at{' '}
+                    <span className="num">{gbp.balancesAsOf}</span>,{' '}
+                    {gbp.sinceBalances < 0 ? 'less' : 'plus'}{' '}
+                    <span className="num">
+                      {gbpFormat.format(Math.abs(gbp.sinceBalances))}
+                    </span>{' '}
+                    booked to <span className="num">{gbp.asOf}</span>
+                  </>
+                ) : (
+                  <>
+                    As of <span className="num">{gbp.balancesAsOf}</span>, with nothing booked
+                    since
+                  </>
+                )}
+              </p>
+            ) : null}
           </div>
 
           {/* The comparator, set apart rather than stacked underneath: it is a
