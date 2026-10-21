@@ -93,13 +93,14 @@ export function ImportAccountsButton() {
         ) : (
           <Download className="mr-2 h-4 w-4" />
         )}
-        Import from Sheet
+        <span className="hidden sm:inline">Sync from spreadsheet</span>
+        <span className="sm:hidden">Sync</span>
       </Button>
 
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Import account balances</DialogTitle>
+            <DialogTitle>Sync account balances</DialogTitle>
             <DialogDescription>
               {preview?.rowsParsed ?? 0} rows read from the Accounts tab
               {preview?.latestDate ? `, newest dated ${preview.latestDate}` : ''}.

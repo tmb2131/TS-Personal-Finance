@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AccountsOverview } from '@/components/accounts/accounts-overview'
 import { AddAccountDialog } from '@/components/accounts/add-account-dialog'
-import { ImportAccountsButton } from '@/components/accounts/import-accounts-button'
 import { NetWorthChartWrapper } from '@/components/dashboard/net-worth-chart-wrapper'
 import { NetWorthChartSkeleton } from '@/components/dashboard/skeletons'
 import { CashRunwayCards } from '@/components/analysis/cash-runway-cards'
@@ -52,14 +51,11 @@ export default async function PositionPage() {
         title="Position"
         description="Accounts, net worth, liquidity, and what is actually spendable."
         actions={
-          <div className="flex items-center gap-2">
-            <ImportAccountsButton />
-            <AddAccountDialog
-              triggerLabel="Add account"
-              triggerVariant="default"
-              triggerSize="default"
-            />
-          </div>
+          <AddAccountDialog
+            triggerLabel="Add account"
+            triggerVariant="default"
+            triggerSize="default"
+          />
         }
       />
 

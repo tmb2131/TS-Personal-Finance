@@ -32,6 +32,7 @@ import { Button } from '@/components/ui/button'
 import { AlertCircle, Building2, LineChart, Loader2, Pencil, Wallet } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { EditAccountDialog } from '@/components/accounts/edit-account-dialog'
+import { ImportAccountsButton } from '@/components/accounts/import-accounts-button'
 import { FullTableViewWrapper } from '@/components/dashboard/full-table-view-wrapper'
 import { FullTableViewToggle } from '@/components/dashboard/full-table-view-toggle'
 import { toast } from 'sonner'
@@ -401,9 +402,12 @@ export function AccountsOverview() {
 
   /** Rendered into both the mobile and desktop Accounts card headers. */
   const bulkEditControls = !bulkEditMode ? (
-    <Button variant="outline" size="sm" onClick={beginBulkEdit}>
-      Edit all
-    </Button>
+    <>
+      <ImportAccountsButton />
+      <Button variant="outline" size="sm" onClick={beginBulkEdit}>
+        Edit all
+      </Button>
+    </>
   ) : (
     <>
       <Button variant="outline" size="sm" onClick={cancelBulkEdit} disabled={bulkSaving}>
